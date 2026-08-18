@@ -102,7 +102,7 @@ describe("Verificação de e-mail (e2e)", () => {
 
     // sendEmailVerification(to, link, locale, idempotencyKey?)
     const [, link] = fakeMailer.sendEmailVerification.mock.calls[callIndex] ?? []
-    const token = new URL(link!).searchParams.get("token")
+    const token = new URL(link).searchParams.get("token")
     expect(token).toBeTruthy()
     return { sessionCookie, token: token! }
   }

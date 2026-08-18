@@ -10,7 +10,7 @@ export interface CreateUserInput {
   name: string;
   email: string;
   accessProfile: AccessProfile;
-  attendsGuests?: boolean;
+  servesClients?: boolean;
   createdByUserId?: string | null;
 }
 
@@ -24,9 +24,9 @@ export interface UserProps {
   readonly pendingEmail: string | null;
   // Classificação fixa (não concede acesso — o guard checa user_permissions). Detalhe no ADR 0028.
   readonly accessProfile: AccessProfile;
-  // Atende hóspede: entra nos seletores, nos mapas e na escala. Independente do
+  // Atende cliente: entra nos seletores, nos mapas e na escala. Independente do
   // accessProfile — agendista e recepção também atendem (ADR 0082).
-  readonly attendsGuests: boolean;
+  readonly servesClients: boolean;
   readonly passwordHash: string | null;
   readonly pepperVersion: number;
   readonly status: UserStatus;
@@ -74,7 +74,7 @@ export class User {
       emailVerified: false,
       pendingEmail: null,
       accessProfile: 'admin',
-      attendsGuests: false,
+      servesClients: false,
       passwordHash,
       pepperVersion,
       status: 'active',
@@ -96,7 +96,7 @@ export class User {
     name,
     email,
     accessProfile,
-    attendsGuests,
+    servesClients,
     createdByUserId,
   }: CreateUserInput): User {
     const now = new Date();
@@ -107,7 +107,7 @@ export class User {
       emailVerified: false,
       pendingEmail: null,
       accessProfile,
-      attendsGuests: attendsGuests ?? false,
+      servesClients: servesClients ?? false,
       passwordHash: null,
       pepperVersion: 1,
       status: 'pending',
@@ -210,14 +210,14 @@ export class User {
 
   /** Edição pelo admin: não toca e-mail, senha nem status da conta. */
   updateProfile(
-    input: { name: string; accessProfile: AccessProfile; attendsGuests: boolean },
+    input: { name: string; accessProfile: AccessProfile; servesClients: boolean },
     now: Date,
   ): User {
     return new User({
       ...this.props,
       name: input.name.trim(),
       accessProfile: input.accessProfile,
-      attendsGuests: input.attendsGuests,
+      servesClients: input.servesClients,
       updatedAt: now,
     });
   }

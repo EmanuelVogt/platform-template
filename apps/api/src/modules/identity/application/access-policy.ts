@@ -1,10 +1,10 @@
+import { requiresPermissionFloor } from "../../../shared/kernel/access/permission.types"
 import {
   InvalidPermissionSetError,
   InvalidProfessionalScopeError,
   InvalidSchedulingAreasError,
   PermissionGrantNotAllowedError,
 } from "../domain/errors"
-import { requiresPermissionFloor } from "../../../shared/kernel/access/permission.types"
 import { moduleOf, requiresOf } from "../domain/permissions/permission-catalog"
 
 import type {
@@ -70,7 +70,7 @@ export function assertCanGrant(
 export async function resolveUserAccess(
   input: {
     accessProfile: AssignableAccessProfile
-    attendsGuests: boolean
+    servesClients: boolean
     permissions: readonly PermissionKey[]
     areaIds: readonly string[]
     serviceIds: readonly string[]
@@ -97,13 +97,13 @@ export async function resolveUserAccess(
 
 async function resolveAttendanceScope(
   input: {
-    attendsGuests: boolean
+    servesClients: boolean
     areaIds: readonly string[]
     serviceIds: readonly string[]
   },
   scope: ProfessionalScope,
 ): Promise<{ areaIds: string[]; serviceIds: string[] }> {
-  if (!input.attendsGuests) return { areaIds: [], serviceIds: [] }
+  if (!input.servesClients) return { areaIds: [], serviceIds: [] }
   if (input.areaIds.length === 0) {
     throw new InvalidProfessionalScopeError(
       "Selecione ao menos uma área de atuação.",

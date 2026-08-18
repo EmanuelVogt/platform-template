@@ -36,7 +36,7 @@ describe("DrizzleUserRepository — escopo profissional (int)", () => {
     const id = ulid()
     await pool.query(
       `INSERT INTO identity.users
-         (id, name, email, access_profile, attends_guests, status, created_at, updated_at)
+         (id, name, email, access_profile, serves_clients, status, created_at, updated_at)
        VALUES ($1, $2, $3, 'professional', true, 'active', now(), now())`,
       [id, `User ${id}`, `${id}@test.local`]
     )

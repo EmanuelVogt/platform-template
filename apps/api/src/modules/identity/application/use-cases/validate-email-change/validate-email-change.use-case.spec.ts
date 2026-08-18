@@ -16,7 +16,7 @@ function makeUser(over: Partial<UserProps> = {}): User {
     emailVerified: true,
     pendingEmail: "nova@example.com",
     accessProfile: "admin",
-    attendsGuests: false,
+    servesClients: false,
     failedLoginAttempts: 0,
     lockedUntil: null,
     lastResetRequestedAt: null,

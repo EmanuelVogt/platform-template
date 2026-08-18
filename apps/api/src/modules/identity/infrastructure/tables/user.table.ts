@@ -27,9 +27,9 @@ export const users = identitySchema.table(
     // E-mail novo aguardando confirmação na troca self-service; null = sem troca pendente.
     pendingEmail: text("pending_email"),
     accessProfile: accessProfile("access_profile").notNull().default("admin"),
-    // Atende hóspede: entra nos seletores, nos mapas e na escala. NÃO deriva do
+    // Atende cliente: entra nos seletores, nos mapas e na escala. NÃO deriva do
     // access_profile — agendista e recepção também atendem (ADR 0082).
-    attendsGuests: boolean("attends_guests").notNull().default(false),
+    servesClients: boolean("serves_clients").notNull().default(false),
     passwordHash: text("password_hash"),
     status: userStatus("status").notNull().default("active"),
     pepperVersion: integer("pepper_version").notNull().default(1),

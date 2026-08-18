@@ -54,33 +54,33 @@ describe("DrizzleUserRepository (int)", () => {
     expect(found?.props.email).toBe("alice@example.com")
   })
 
-  it("atendimento a hóspede: insert grava a marcação e update a desliga", async () => {
+  it("atendimento a cliente: insert grava a marcação e update a desliga", async () => {
     const user = User.fromProps({
       ...makeUser("atende@example.com").props,
-      attendsGuests: true,
+      servesClients: true,
     })
     await repo.insert(user)
-    expect((await repo.findById(user.props.id))?.props.attendsGuests).toBe(true)
+    expect((await repo.findById(user.props.id))?.props.servesClients).toBe(true)
 
     await repo.update(
       user.updateProfile(
-        { name: user.props.name, accessProfile: "admin", attendsGuests: false },
+        { name: user.props.name, accessProfile: "admin", servesClients: false },
         new Date()
       )
     )
-    expect((await repo.findById(user.props.id))?.props.attendsGuests).toBe(false)
+    expect((await repo.findById(user.props.id))?.props.servesClients).toBe(false)
   })
 
   it("gate da configuração de horários segue a marcação, não o perfil", async () => {
     const atende = User.fromProps({
       ...makeUser("agendista.atende@example.com").props,
       accessProfile: "admin",
-      attendsGuests: true,
+      servesClients: true,
     })
     const naoAtende = User.fromProps({
       ...makeUser("profissional.fora@example.com").props,
       accessProfile: "professional",
-      attendsGuests: false,
+      servesClients: false,
     })
     await repo.insert(atende)
     await repo.insert(naoAtende)

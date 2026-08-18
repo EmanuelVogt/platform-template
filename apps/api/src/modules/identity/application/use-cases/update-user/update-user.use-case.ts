@@ -70,8 +70,8 @@ export class UpdateUserUseCase
       throw new ForbiddenError()
     }
     await this.assertCanStopAttending(user.props.id, {
-      was: user.props.attendsGuests,
-      now: input.attendsGuests,
+      was: user.props.servesClients,
+      now: input.servesClients,
     })
     const access = await resolveUserAccess(input, this.scope, {
       actor: store.access,
@@ -83,7 +83,7 @@ export class UpdateUserUseCase
         {
           name: input.name,
           accessProfile: input.accessProfile,
-          attendsGuests: input.attendsGuests,
+          servesClients: input.servesClients,
         },
         this.clock.now()
       )

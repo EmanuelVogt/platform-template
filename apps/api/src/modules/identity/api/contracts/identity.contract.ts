@@ -109,9 +109,9 @@ export const userListItemSchema = z.object({
   email: z.string(),
   emailVerified: z.boolean(),
   accessProfile: accessProfileSchema,
-  attendsGuests: z.boolean(),
+  servesClients: z.boolean(),
   permissions: permissionSetSchema,
-  // Áreas/serviços de atuação (quem atende hóspede). Vazios para os demais.
+  // Áreas/serviços de atuação (quem atende cliente). Vazios para os demais.
   areaIds: z.array(z.string()),
   serviceIds: z.array(z.string()),
   // Áreas de agendamento (perfil Agendamentos). Vazias para os demais.
@@ -145,10 +145,10 @@ export const createUserSchema = z.object({
   name: z.string().trim().min(1, "Informe o nome."),
   email,
   accessProfile: assignableAccessProfileSchema,
-  // Atende hóspede: independe do perfil de acesso (ADR 0082).
-  attendsGuests: z.boolean().default(false),
+  // Atende cliente: independe do perfil de acesso (ADR 0082).
+  servesClients: z.boolean().default(false),
   permissions: permissionSetSchema,
-  // Quem atende hóspede. Omitidos/[] para os demais (o server os ignora).
+  // Quem atende cliente. Omitidos/[] para os demais (o server os ignora).
   areaIds: areaIdsSchema.default([]),
   serviceIds: serviceIdsSchema.default([]),
   // Perfil Agendamentos. Omitido/[] nos demais perfis (o server o ignora).
@@ -162,10 +162,10 @@ export type CreateUserInput = z.infer<typeof createUserSchema>
 export const updateUserSchema = z.object({
   name: z.string().trim().min(1, "Informe o nome."),
   accessProfile: assignableAccessProfileSchema,
-  // Atende hóspede: independe do perfil de acesso (ADR 0082).
-  attendsGuests: z.boolean().default(false),
+  // Atende cliente: independe do perfil de acesso (ADR 0082).
+  servesClients: z.boolean().default(false),
   permissions: permissionSetSchema,
-  // Quem atende hóspede. Omitidos/[] para os demais (o server os ignora).
+  // Quem atende cliente. Omitidos/[] para os demais (o server os ignora).
   areaIds: areaIdsSchema.default([]),
   serviceIds: serviceIdsSchema.default([]),
   // Perfil Agendamentos. Omitido/[] nos demais perfis (o server o ignora).

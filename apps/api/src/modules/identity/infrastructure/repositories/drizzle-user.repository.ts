@@ -89,7 +89,7 @@ export class DrizzleUserRepository implements UserRepository {
       .where(
         and(
           eq(users.id, userId),
-          eq(users.attendsGuests, true),
+          eq(users.servesClients, true),
           eq(users.status, "active"),
           visible
         )
@@ -103,7 +103,7 @@ export class DrizzleUserRepository implements UserRepository {
       .select({ id: users.id })
       .from(users)
       .where(
-        and(eq(users.id, userId), eq(users.attendsGuests, true), visible)
+        and(eq(users.id, userId), eq(users.servesClients, true), visible)
       )
       .limit(1)
     return rows.length > 0
@@ -503,7 +503,7 @@ export class DrizzleUserRepository implements UserRepository {
         emailVerified: p.emailVerified,
         pendingEmail: p.pendingEmail,
         accessProfile: p.accessProfile,
-        attendsGuests: p.attendsGuests,
+        servesClients: p.servesClients,
         status: p.status,
         passwordHash: p.passwordHash,
         pepperVersion: p.pepperVersion,
@@ -540,7 +540,7 @@ export class DrizzleUserRepository implements UserRepository {
         emailVerified: p.emailVerified,
         pendingEmail: p.pendingEmail,
         accessProfile: p.accessProfile,
-        attendsGuests: p.attendsGuests,
+        servesClients: p.servesClients,
         status: p.status,
         passwordHash: p.passwordHash,
         pepperVersion: p.pepperVersion,
@@ -763,7 +763,7 @@ export class DrizzleUserRepository implements UserRepository {
       emailVerified: row.emailVerified,
       pendingEmail: row.pendingEmail,
       accessProfile: row.accessProfile,
-      attendsGuests: row.attendsGuests,
+      servesClients: row.servesClients,
       status: row.status,
       passwordHash: row.passwordHash,
       pepperVersion: row.pepperVersion,

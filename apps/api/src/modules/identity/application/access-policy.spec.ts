@@ -1,3 +1,4 @@
+import { PROFILE_DEFS } from "../../../shared/kernel/access/permission.types"
 import {
   InvalidPermissionSetError,
   InvalidProfessionalScopeError,
@@ -5,7 +6,6 @@ import {
   PermissionGrantNotAllowedError,
 } from "../domain/errors"
 
-import { PROFILE_DEFS } from "../../../shared/kernel/access/permission.types"
 
 import {
   assertCanGrant,
@@ -14,8 +14,8 @@ import {
   resolveUserAccess,
 } from "./access-policy"
 
-import type { AccessProfile } from "../../../shared/kernel/access/permission.types"
 import type { GrantContext } from "./access-policy"
+import type { AccessProfile } from "../../../shared/kernel/access/permission.types"
 import type { ProfessionalScope } from "../domain/ports/professional-scope.port"
 
 describe("assertValidPermissionSet (closure de requires)", () => {
@@ -104,7 +104,7 @@ describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
     const access = await resolveUserAccess(
       {
         accessProfile: "admin",
-        attendsGuests: false,
+        servesClients: false,
         permissions: ["admin.users.read"],
         areaIds: [],
         serviceIds: [],
@@ -122,7 +122,7 @@ describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
     const access = await resolveUserAccess(
       {
         accessProfile: "admin",
-        attendsGuests: false,
+        servesClients: false,
         permissions: ["admin.users.read"],
         areaIds: ["area-ignorada"],
         serviceIds: ["svc-ignorado"],
@@ -149,7 +149,7 @@ describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
       resolveUserAccess(
         {
           accessProfile: "admin",
-          attendsGuests: false,
+          servesClients: false,
           permissions: ["admin.users.read"],
           areaIds: [],
           serviceIds: [],
@@ -166,7 +166,7 @@ describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
     const access = await resolveUserAccess(
       {
         accessProfile: "professional",
-        attendsGuests: true,
+        servesClients: true,
         permissions: [],
         areaIds: ["area-1"],
         serviceIds: ["svc-1"],
@@ -189,7 +189,7 @@ describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
       resolveUserAccess(
         {
           accessProfile: "admin",
-          attendsGuests: true,
+          servesClients: true,
           permissions: ["admin.users.read"],
           areaIds: [],
           serviceIds: [],
@@ -205,7 +205,7 @@ describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
     const access = await resolveUserAccess(
       {
         accessProfile: "professional",
-        attendsGuests: false,
+        servesClients: false,
         permissions: [],
         areaIds: ["area-1"],
         serviceIds: ["svc-1"],
@@ -226,7 +226,7 @@ describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
     const access = await resolveUserAccess(
       {
         accessProfile: "admin",
-        attendsGuests: true,
+        servesClients: true,
         permissions: ["admin.users.read"],
         areaIds: ["atuacao-1"],
         serviceIds: ["svc-1"],
@@ -247,7 +247,7 @@ describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
     const access = await resolveUserAccess(
       {
         accessProfile: "admin",
-        attendsGuests: false,
+        servesClients: false,
         permissions: ["admin.users.read"],
         areaIds: ["a"],
         serviceIds: ["s"],

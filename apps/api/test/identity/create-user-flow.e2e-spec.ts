@@ -132,7 +132,7 @@ describe("Fluxo de criação de usuário (e2e)", () => {
     await waitFor(() => fakeMailer.sendAccessLink.mock.calls.length >= 1)
 
     const [, link] = fakeMailer.sendAccessLink.mock.calls[0] ?? []
-    const token = new URL(link!).searchParams.get("token")
+    const token = new URL(link).searchParams.get("token")
     expect(token).toBeTruthy()
     // Persiste o token para os its seguintes.
     accessToken = token!
@@ -197,7 +197,7 @@ describe("Fluxo de criação de usuário (e2e)", () => {
         name: "Pedro Profissional",
         email: "pedro@example.com",
         accessProfile: "professional",
-        attendsGuests: true,
+        servesClients: true,
         permissions: [],
         areaIds: [areaId],
         serviceIds: [serviceId],
@@ -215,6 +215,7 @@ describe("Fluxo de criação de usuário (e2e)", () => {
     )
     expect(pedro).toBeDefined()
     expect(pedro.accessProfile).toBe("professional")
+    expect(pedro.servesClients).toBe(true)
     expect(pedro.permissions).toEqual([])
     expect(pedro.areaIds).toEqual([areaId])
     expect(pedro.serviceIds).toEqual([serviceId])
@@ -232,7 +233,7 @@ describe("Fluxo de criação de usuário (e2e)", () => {
         name: "Pro Admin",
         email: "pro.admin@example.com",
         accessProfile: "professional",
-        attendsGuests: true,
+        servesClients: true,
         permissions: ["admin.users.read"],
         areaIds: [areaId],
         serviceIds: [],

@@ -181,9 +181,9 @@ export class InvalidSchedulingAreasError extends DomainError {
 }
 
 /**
- * Tirar do atendimento a hóspede quem ainda tem compromisso marcado. Recusa
+ * Tirar do atendimento a cliente quem ainda tem compromisso marcado. Recusa
  * seca (sem confirmação): a pessoa sai da escala inteira, então deixar passar
- * deixaria hóspede marcado com quem o sistema não reconhece mais como executor.
+ * deixaria cliente marcado com quem o sistema não reconhece mais como executor.
  */
 export class ProfessionalHasCommitmentsError extends DomainError {
   readonly status = 409;
@@ -193,7 +193,7 @@ export class ProfessionalHasCommitmentsError extends DomainError {
   constructor(commitments: readonly ProfessionalCommitmentOffender[]) {
     super(
       'A pessoa ainda tem compromisso marcado',
-      'Remarque os atendimentos e conduções listados antes de tirá-la do atendimento a hóspedes.',
+      'Remarque os atendimentos e conduções listados antes de tirá-la do atendimento a clientes.',
     );
     this.extensions = { commitments };
   }

@@ -79,13 +79,3 @@ app_domain:
   type: str
   help: Subdomínio base da aplicação (front em <app_domain>, api em api.<app_domain>)
   default: "app.{{ root_domain }}"
-
-master_email:
-  type: str
-  help: E-mail do usuário master criado pelo bootstrap
-  default: "admin@{{ root_domain }}"
-
-with_fsd_lint:
-  type: bool
-  help: Manter as regras de fronteira FSD no eslint do front? (não, se o front for livre)
-  default: false

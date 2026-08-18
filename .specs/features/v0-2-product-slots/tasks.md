@@ -38,17 +38,30 @@ Heavy commands go through `shell-runner`. Test counts: record baseline at T1 (`p
 
 ---
 
-## Execution Plan
+## Execution Plan — waves of parallel clusters
+
+Execute is delegated and parallel (`docs/agents/workflow.md`): the orchestrator dispatches **one `spec-worker` per cluster, all clusters of a wave at once**, in the same worktree; each cluster owns disjoint files and commits pathspec-limited. A wave starts only when the previous wave's workers all reported.
+
+| Wave | Cluster | Tasks (in order) | Files owned | Worker tier |
+| --- | --- | --- | --- | --- |
+| 0 | orchestrator | T1 | `.specs/**` | — |
+| 1 | A identity | T2 → T3 → T5 → T6 | `shared/kernel/access/**`, `modules/identity/**`, `src/seeds/**`, `drizzle/migrations/0004_*` + journal, `test/identity/access-catalog.e2e-spec.ts` | opus (migration + policy) |
+| 1 | C notification | T7 → T8 → T9 | `modules/notification/**` (src only), `test/setup/fake-mailer.ts` | sonnet |
+| 1 | D audit | T11 → T12 → T13 | `modules/audit/**`, `test/audit-product-extension.e2e-spec.ts`, `test/setup/app-factory.ts` (adds `extraModules`) | sonnet |
+| 1 | E attachment | T14 → T15 → T16 | `shared/kernel/upload/**`, `modules/attachment/**`, `attachment.config`, `.env.example`, `docs/dev/ambiente-local.md`, `docs/dev/deploy.md.jinja`, `drizzle/migrations/0005_*` + journal (**journal shared with A → E appends its entry after A's; orchestrator serialises the journal edit: A commits 0004 first, E rebases its journal line**) | sonnet |
+| 2 | F e2e mailer | T10 | `test/**` mailer fakes (identity e2e files already renamed by A), `test/notifications-product-extension.e2e-spec.ts`, `test/fixtures/**` | sonnet |
+| 2 | G contract | T17 | `openapi.json`, `packages/api-client/generated/**`, `apps/web/**` | sonnet |
+| 2 | H docs | T4 → T18 | `docs/dev/template.md`, `docs/dev/template-changelog.md`, `docs/back/back-arch.md`, `AGENTS.md.jinja` | sonnet |
+| 3 | I smoke | T19 → T20 | `scripts/smoke/**`, `scripts/template-smoke.mjs`, `package.json` | sonnet |
+| 3→ | orchestrator | Verifier → T21 → T22 | `.specs/**`, GitHub, tag | — |
+
+Only shared file across wave-1 clusters is `drizzle/migrations/meta/_journal.json` (A + E) — resolved by ordering above. Wave 2 waits on wave 1 because T10 edits e2e files A renamed, T17 needs every contract change, T18 documents the final shapes.
 
 ```
-Phase 1 (sweep + baseline):      T1
-Phase 2 (access profiles):       T2 → T3 → T4
-Phase 3 (rename):                T5 → T6
-Phase 4 (e-mail):                T7 → T8 → T9 → T10
-Phase 5 (audit registry):        T11 → T12 → T13
-Phase 6 (upload profiles):       T14 → T15 → T16
-Phase 7 (contract + web):        T17
-Phase 8 (docs, smoke, release):  T18 → T19 → T20 → T21 → T22
+Wave 0: T1
+Wave 1: [A: T2→T3→T5→T6] ‖ [C: T7→T8→T9] ‖ [D: T11→T12→T13] ‖ [E: T14→T15→T16]
+Wave 2: [F: T10] ‖ [G: T17] ‖ [H: T4→T18]
+Wave 3: [I: T19→T20] → Verifier → T21 → T22
 ```
 
 ---
@@ -111,8 +124,8 @@ Phase 8 (docs, smoke, release):  T18 → T19 → T20 → T21 → T22
 **Tests**: unit · **Gate**: quick + `pnpm --filter api typecheck` · **Commit**: `feat(notification): generic e-mail dispatch from template source`
 
 ### T10: E2E — one-method fakes + product extension proof
-**What**: switch 10 e2e files to `fakeMailer()`; `notifications-email.e2e-spec.ts` asserts `sent[]` (to/subject/idempotencyKey); new `test/notifications-product-extension.e2e-spec.ts` with `FakeProductModule` (`declare module` adds `"sample_welcome"`; registers source with `templateDir` = `test/fixtures/sample-templates`, `sample-welcome.hbs`); `createE2eApp` gains `extraModules?: Type[]`.
-**Where**: `apps/api/test/**`, `apps/api/test/setup/app-factory.ts`, `apps/api/test/fixtures/sample-templates/` · **Depends on**: T9 · **Requirement**: MAIL-05
+**What**: switch 10 e2e files to `fakeMailer()`; `notifications-email.e2e-spec.ts` asserts `sent[]` (to/subject/idempotencyKey); new `test/notifications-product-extension.e2e-spec.ts` with `FakeProductModule` (`declare module` adds `"sample_welcome"`; registers source with `templateDir` = `test/fixtures/sample-templates`, `sample-welcome.hbs`) using `createE2eApp({ extraModules })` from T13.
+**Where**: `apps/api/test/**`, `apps/api/test/fixtures/sample-templates/` · **Depends on**: T9, T6, T13 · **Requirement**: MAIL-05
 **Done when**: [ ] product e2e: mailer receives `{to: data.email, subject: "Bem-vindo, Ana", html ⊃ "Ana", idempotencyKey = delivery id}`; [ ] full gate green; e2e count ≥ baseline+1.
 **Tests**: e2e · **Gate**: full · **Commit**: `test(notification): product module registers an e-mail type end to end`
 
@@ -129,8 +142,8 @@ Phase 8 (docs, smoke, release):  T18 → T19 → T20 → T21 → T22
 **Tests**: unit + integration (existing) · **Gate**: full · **Commit**: `refactor(audit): consumers resolve owners and refs through the registry`
 
 ### T13: E2E — product registers audit metadata
-**What**: `test/audit-product-extension.e2e-spec.ts` with `FakeProductModule` (`OnModuleInit` registers `sample.things` owned by `admin.users.audit.read`, ref `thing_id → sample.things.name`); test creates schema/table + `audit.audit_entries` row via raw SQL; master lists it with label; user with the owner key lists; user without → 403.
-**Where**: `apps/api/test/audit-product-extension.e2e-spec.ts` · **Depends on**: T12 · **Requirement**: AUD-01, AUD-02
+**What**: `createE2eApp` gains `extraModules?: Type<unknown>[]` (imported alongside `AppModule`); `test/audit-product-extension.e2e-spec.ts` with `FakeProductModule` (`OnModuleInit` registers `sample.things` owned by `admin.users.audit.read`, ref `thing_id → sample.things.name`); test creates schema/table + `audit.audit_entries` row via raw SQL; master lists it with label; user with the owner key lists; user without → 403.
+**Where**: `apps/api/test/setup/app-factory.ts`, `apps/api/test/audit-product-extension.e2e-spec.ts` · **Depends on**: T12 · **Requirement**: AUD-01, AUD-02
 **Done when**: [ ] 3 assertions above green; [ ] full gate green.
 **Tests**: e2e · **Gate**: full · **Commit**: `test(audit): product module registers owner and ref target end to end`
 
@@ -192,18 +205,7 @@ Phase 8 (docs, smoke, release):  T18 → T19 → T20 → T21 → T22
 
 ## Phase Execution Map
 
-```
-Phase 1: T1
-Phase 2: T2 → T3 → T4
-Phase 3: T5 → T6
-Phase 4: T7 → T8 → T9 → T10
-Phase 5: T11 → T12 → T13
-Phase 6: T14 → T15 → T16
-Phase 7: T17
-Phase 8: T18 → T19 → T20 → T21 → T22
-```
-
-Batches (~7 tasks, whole phases): B1 = P1–P3 (6), B2 = P4–P5 (7), B3 = P6–P8 (9; P8's T21/T22 are orchestrator-only). Phases 2–6 are independent of each other after T1; the orchestrator may run B1's P2/P3 and B2 concurrently in the same worktree since they own disjoint files (identity vs notification/audit) — T6 (rename) and T3 both touch identity: keep P2 before P3.
+See "Execution Plan — waves of parallel clusters" above. Wave 1 = 4 workers in parallel (A/C/D/E), wave 2 = 3 (F/G/H), wave 3 = 1 (I) then Verifier (`spec-verifier`, opus — touches auth/policy + migrations) and the orchestrator-only T21/T22. Worker payload = the cluster's tasks pasted whole + the one-line decisions it needs from STATE.md; workers never read STATE.md, never touch `.specs/`, commit pathspec-limited to their owned files.
 
 ## Task Granularity Check
 
@@ -240,7 +242,7 @@ Batches (~7 tasks, whole phases): B1 = P1–P3 (6), B2 = P4–P5 (7), B3 = P6–
 | T7 | T1 | P1→P4 | ✅ |
 | T8 | T7 | ✅ | ✅ |
 | T9 | T8 | ✅ | ✅ |
-| T10 | T9 | ✅ | ✅ |
+| T10 | T9, T6, T13 | wave 2 after A/C/D | ✅ |
 | T11 | T1 | P1→P5 | ✅ |
 | T12 | T11 | ✅ | ✅ |
 | T13 | T12 | ✅ | ✅ |

@@ -72,16 +72,12 @@ import type { NotificationConfig } from "./notification.config"
       useFactory: (
         cfg: NotificationConfig,
         lf: LoggerFactory,
-        renderer: HandlebarsTemplateRenderer,
       ): LogMailer | ResendMailer => {
         if (cfg.MAIL_TRANSPORT === "resend") {
           if (cfg.RESEND_API_KEY === undefined || cfg.MAIL_FROM === undefined) {
             throw new Error("MAIL_TRANSPORT=resend exige RESEND_API_KEY e MAIL_FROM")
           }
-          return new ResendMailer(
-            { apiKey: cfg.RESEND_API_KEY, from: cfg.MAIL_FROM },
-            renderer,
-          )
+          return new ResendMailer({ apiKey: cfg.RESEND_API_KEY, from: cfg.MAIL_FROM })
         }
         // LogMailer registra o link (token raw) — proibido em produção.
         if (cfg.NODE_ENV === "production") {
@@ -89,11 +85,7 @@ import type { NotificationConfig } from "./notification.config"
         }
         return new LogMailer(lf)
       },
-      inject: [
-        NOTIFICATIONS_CONFIG,
-        LoggerFactory,
-        TEMPLATE_RENDERER,
-      ],
+      inject: [NOTIFICATIONS_CONFIG, LoggerFactory],
     },
   ],
   exports: [NotificationTemplateSourceRegistry],

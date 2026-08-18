@@ -1,161 +1,168 @@
+import { z } from "zod"
+
+import { defineCatalogEntry } from "../../application/catalog/notification-catalog"
+import { NotificationTemplateSourceRegistry } from "../../application/templates/notification-template-registry"
+import { EmailBindingMissingError, EmailRecipientMissingError } from "../../domain/errors"
+
 import { EmailChannel } from "./email.channel"
 
 import type { Mailer } from "../../domain/ports/mailer"
+import type { TemplateRenderer } from "../../domain/ports/template-renderer"
 
-const sendAccessLink = jest.fn()
-const sendPasswordReset = jest.fn()
-const sendEmailVerification = jest.fn()
-const sendLockoutNotice = jest.fn()
-const sendPasswordChanged = jest.fn()
-const sendDeviceNewLogin = jest.fn()
-const sendEmailChangeConfirmation = jest.fn()
-const sendEmailChangeNotice = jest.fn()
-
-const mailer: Mailer = {
-  sendAccessLink,
-  sendPasswordReset,
-  sendEmailVerification,
-  sendLockoutNotice,
-  sendPasswordChanged,
-  sendDeviceNewLogin,
-  sendEmailChangeConfirmation,
-  sendEmailChangeNotice,
-}
+const BASE_EMAIL_CASES: readonly {
+  type: string
+  payload: Record<string, unknown>
+  template: string
+  subject: string
+}[] = [
+  {
+    type: "access_link_sent",
+    payload: {
+      email: "a@b.com",
+      name: "Ana",
+      link: "https://app/x",
+      tokenExpiresAt: "2099-01-01T00:00:00.000Z",
+      locale: "pt-BR",
+    },
+    template: "access-link",
+    subject: "Configure seu acesso à plataforma",
+  },
+  {
+    type: "email_verification",
+    payload: {
+      email: "a@b.com",
+      link: "https://app/v",
+      tokenExpiresAt: "2099-01-01T00:00:00.000Z",
+      locale: "pt-BR",
+    },
+    template: "verify",
+    subject: "Verifique seu e-mail",
+  },
+  {
+    type: "password_reset_requested",
+    payload: {
+      email: "a@b.com",
+      link: "https://app/r",
+      tokenExpiresAt: "2099-01-01T00:00:00.000Z",
+      locale: "pt-BR",
+    },
+    template: "reset",
+    subject: "Redefinição de senha",
+  },
+  {
+    type: "account_lockout",
+    payload: { email: "a@b.com", locale: "pt-BR" },
+    template: "lockout",
+    subject: "Conta bloqueada temporariamente",
+  },
+  {
+    type: "password_changed",
+    payload: { email: "a@b.com", at: "2026-06-10T18:30:00.000Z", locale: "pt-BR" },
+    template: "password-changed",
+    subject: "Sua senha foi alterada",
+  },
+  {
+    type: "device_new_login",
+    payload: {
+      email: "a@b.com",
+      deviceLabel: "Chrome/Linux",
+      ip: null,
+      at: "2026-06-10T18:30:00.000Z",
+      locale: "pt-BR",
+    },
+    template: "device-new-login",
+    subject: "Novo acesso à sua conta",
+  },
+  {
+    type: "email_change_requested",
+    payload: {
+      email: "novo@b.com",
+      link: "https://app/confirm-email",
+      tokenExpiresAt: "2099-01-01T00:00:00.000Z",
+      locale: "pt-BR",
+    },
+    template: "email-change",
+    subject: "Confirme seu novo e-mail",
+  },
+  {
+    type: "email_change_notice",
+    payload: { email: "antigo@b.com", at: "2026-06-16T12:00:00.000Z", locale: "pt-BR" },
+    template: "email-change-notice",
+    subject: "Solicitação de troca de e-mail",
+  },
+]
 
 describe("EmailChannel", () => {
-  beforeEach(() => jest.clearAllMocks())
+  let render: jest.Mock
+  let send: jest.Mock
+  let channel: EmailChannel
 
-  it("despacha access_link_sent pro método certo com idempotencyKey = delivery.id", async () => {
-    const channel = new EmailChannel(mailer)
-    await channel.send({
-      id: "dlv-1",
-      type: "access_link_sent",
-      payload: {
-        email: "a@b.com",
-        name: "Ana",
-        link: "https://app/x",
-        tokenExpiresAt: "2026-06-17T00:00:00.000Z",
-        locale: "pt-BR",
-      },
-    })
-    expect(sendAccessLink).toHaveBeenCalledWith(
-      "a@b.com",
-      "https://app/x",
-      "Ana",
-      "pt-BR",
-      "dlv-1"
-    )
+  beforeEach(() => {
+    render = jest.fn().mockReturnValue("<html>ok</html>")
+    send = jest.fn().mockResolvedValue(undefined)
+    const renderer: TemplateRenderer = { render }
+    const mailer: Mailer = { send }
+    channel = new EmailChannel(new NotificationTemplateSourceRegistry(), renderer, mailer)
   })
 
-  it("account_lockout não exige link", async () => {
-    const channel = new EmailChannel(mailer)
-    await channel.send({
-      id: "dlv-2",
-      type: "account_lockout",
-      payload: { email: "a@b.com", locale: "pt-BR" },
-    })
-    expect(sendLockoutNotice).toHaveBeenCalledWith("a@b.com", "pt-BR", "dlv-2")
-  })
+  it.each(BASE_EMAIL_CASES)(
+    "$type: mesmo template/assunto do v0.1, to = data.email, idempotencyKey = delivery.id",
+    async ({ type, payload, template, subject }) => {
+      await channel.send({ id: "dlv-1", type, payload })
+      expect(render).toHaveBeenCalledWith(template, expect.any(Object))
+      expect(send).toHaveBeenCalledWith({
+        to: payload.email,
+        subject,
+        html: "<html>ok</html>",
+        idempotencyKey: "dlv-1",
+      })
+    },
+  )
 
-  it("despacha email_verification e password_reset_requested com o link", async () => {
-    const channel = new EmailChannel(mailer)
+  it("aplica o `view` do binding antes de renderizar (password_changed formata o instante)", async () => {
     await channel.send({
-      id: "dlv-v",
-      type: "email_verification",
-      payload: { email: "a@b.com", link: "https://app/v", tokenExpiresAt: "2099-01-01T00:00:00.000Z", locale: "pt-BR" },
-    })
-    expect(sendEmailVerification).toHaveBeenCalledWith("a@b.com", "https://app/v", "pt-BR", "dlv-v")
-    await channel.send({
-      id: "dlv-r",
-      type: "password_reset_requested",
-      payload: { email: "a@b.com", link: "https://app/r", tokenExpiresAt: "2099-01-01T00:00:00.000Z", locale: "pt-BR" },
-    })
-    expect(sendPasswordReset).toHaveBeenCalledWith("a@b.com", "https://app/r", "pt-BR", "dlv-r")
-  })
-
-  it("despacha password_changed com instante e idempotencyKey", async () => {
-    const channel = new EmailChannel(mailer)
-    await channel.send({
-      id: "dlv-3",
+      id: "dlv-pc",
       type: "password_changed",
-      payload: { email: "a@b.com", at: "2026-06-10T00:00:00.000Z", locale: "pt-BR" },
+      payload: { email: "a@b.com", at: "2026-06-10T18:30:00.000Z", locale: "pt-BR" },
     })
-    expect(sendPasswordChanged).toHaveBeenCalledWith(
-      "a@b.com",
-      "2026-06-10T00:00:00.000Z",
-      "pt-BR",
-      "dlv-3"
-    )
+    expect(render).toHaveBeenCalledWith("password-changed", { at: "10/06/2026, 15:30" })
   })
 
-  it("despacha device_new_login com label/ip nullable", async () => {
-    const channel = new EmailChannel(mailer)
-    await channel.send({
-      id: "dlv-4",
-      type: "device_new_login",
-      payload: {
-        email: "a@b.com",
-        deviceLabel: "Chrome/Linux",
-        ip: null,
-        at: "2026-06-10T00:00:00.000Z",
-        locale: "pt-BR",
+  it("usa `recipient` do binding quando presente, em vez de data.email", async () => {
+    const registry = new NotificationTemplateSourceRegistry()
+    registry.register({
+      type: "tipo_com_recipient" as never,
+      catalog: defineCatalogEntry({
+        category: "informational",
+        channels: ["email"],
+        dataSchema: z.object({ userId: z.string() }),
+      }),
+      email: {
+        template: "produto",
+        subject: () => "assunto do produto",
+        recipient: (data) => `${data.userId}@produto.internal`,
       },
     })
-    expect(sendDeviceNewLogin).toHaveBeenCalledWith(
-      "a@b.com",
-      "Chrome/Linux",
-      null,
-      "2026-06-10T00:00:00.000Z",
-      "pt-BR",
-      "dlv-4"
+    channel = new EmailChannel(registry, { render }, { send })
+
+    await channel.send({ id: "dlv-r", type: "tipo_com_recipient", payload: { userId: "u1" } })
+
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ to: "u1@produto.internal" }))
+  })
+
+  it("tipo sem binding de e-mail → EmailBindingMissingError (retry/dead-letter no dispatcher)", async () => {
+    await expect(channel.send({ id: "x", type: "device_revoked", payload: {} })).rejects.toThrow(
+      EmailBindingMissingError,
     )
   })
 
-  it("despacha email_change_requested com link de confirmação e idempotencyKey", async () => {
-    const channel = new EmailChannel(mailer)
-    await channel.send({
-      id: "dlv-ecr",
-      type: "email_change_requested",
-      payload: {
-        email: "novo@b.com",
-        link: "https://app/confirm-email",
-        tokenExpiresAt: "2099-01-01T00:00:00.000Z",
-        locale: "pt-BR",
-      },
-    })
-    expect(sendEmailChangeConfirmation).toHaveBeenCalledWith(
-      "novo@b.com",
-      "https://app/confirm-email",
-      "pt-BR",
-      "dlv-ecr"
-    )
-    expect(sendEmailChangeNotice).not.toHaveBeenCalled()
-  })
-
-  it("despacha email_change_notice com instante e idempotencyKey, sem chamar outros mailers", async () => {
-    const channel = new EmailChannel(mailer)
-    await channel.send({
-      id: "dlv-ecn",
-      type: "email_change_notice",
-      payload: {
-        email: "antigo@b.com",
-        at: "2026-06-16T12:00:00.000Z",
-        locale: "en",
-      },
-    })
-    expect(sendEmailChangeNotice).toHaveBeenCalledWith(
-      "antigo@b.com",
-      "2026-06-16T12:00:00.000Z",
-      "en",
-      "dlv-ecn"
-    )
-    expect(sendEmailChangeConfirmation).not.toHaveBeenCalled()
-  })
-
-  it("tipo sem template de e-mail → throw (vira failed/dead_letter no dispatcher)", async () => {
-    const channel = new EmailChannel(mailer)
+  it("recipient ausente e data.email não é string → EmailRecipientMissingError", async () => {
     await expect(
-      channel.send({ id: "x", type: "device_revoked", payload: {} })
-    ).rejects.toThrow(/sem envio de e-mail/)
+      channel.send({
+        id: "x",
+        type: "access_link_sent",
+        payload: { name: "Ana", link: "https://app/x" },
+      }),
+    ).rejects.toThrow(EmailRecipientMissingError)
   })
 })

@@ -1,27 +1,26 @@
 import { Inject, Injectable } from "@nestjs/common"
 
-import { NotificationTemplateSourceRegistry } from "../../application/templates/notification-template-registry"
 import { EmailBindingMissingError, EmailRecipientMissingError } from "../../domain/errors"
 import { MAILER } from "../../domain/ports/mailer"
+import { NOTIFICATION_TEMPLATE_SOURCES } from "../../domain/ports/notification-template-source.port"
 import { TEMPLATE_RENDERER } from "../../domain/ports/template-renderer"
 
-import type { NotificationType } from "../../api/events/notification-requested.event"
 import type { ChannelPort, ChannelSendInput } from "../../domain/ports/channel.port"
 import type { Mailer } from "../../domain/ports/mailer"
+import type { NotificationTemplateSources } from "../../domain/ports/notification-template-source.port"
 import type { TemplateRenderer } from "../../domain/ports/template-renderer"
 
 @Injectable()
 export class EmailChannel implements ChannelPort {
   constructor(
-    private readonly templateSources: NotificationTemplateSourceRegistry,
+    @Inject(NOTIFICATION_TEMPLATE_SOURCES)
+    private readonly templateSources: NotificationTemplateSources,
     @Inject(TEMPLATE_RENDERER) private readonly renderer: TemplateRenderer,
     @Inject(MAILER) private readonly mailer: Mailer,
   ) {}
 
   async send(input: ChannelSendInput): Promise<void> {
-    // input.type é string no ChannelPort (canal agnóstico ao domínio), mas
-    // dentro do notification é sempre um NotificationType.
-    const type = input.type as NotificationType
+    const { type } = input
     const source = this.templateSources.require(type)
     if (!source.email) {
       throw new EmailBindingMissingError(type)

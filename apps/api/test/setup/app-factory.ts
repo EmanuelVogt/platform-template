@@ -7,7 +7,7 @@ import { RequestContext } from "../../src/shared/kernel/context/request-context"
 import { createRequestContextMiddleware } from "../../src/shared/kernel/context/request-context.middleware"
 
 import type { RateLimiter } from "../../src/modules/identity/domain/ports/rate-limiter"
-import type { INestApplication } from "@nestjs/common"
+import type { INestApplication, Type } from "@nestjs/common"
 import type { TestingModuleBuilder } from "@nestjs/testing"
 
 /** Rate-limiter que libera tudo — para e2e que não exercitam o limite. */
@@ -19,12 +19,17 @@ export const allowAllRateLimiter: RateLimiter = {
  * Sobe o AppModule como app e2e com o mesmo bootstrap do main (versionamento
  * URI, security, middleware de RequestContext). `configure` recebe o builder
  * antes do compile para aplicar overrides (RATE_LIMITER, MAILER, OBJECT_STORAGE).
- * Centraliza o bootstrap que estava duplicado em cada e2e.
+ * `extraModules` importa módulos adicionais ao lado do AppModule — usado pelos
+ * e2e de extensão por produto (FakeProductModule). Centraliza o bootstrap que
+ * estava duplicado em cada e2e.
  */
 export async function createE2eApp(
   configure?: (builder: TestingModuleBuilder) => TestingModuleBuilder,
+  extraModules?: Type<unknown>[],
 ): Promise<INestApplication> {
-  const base = Test.createTestingModule({ imports: [AppModule] })
+  const base = Test.createTestingModule({
+    imports: [AppModule, ...(extraModules ?? [])],
+  })
   const builder = configure ? configure(base) : base
   const moduleRef = await builder.compile()
   const app = moduleRef.createNestApplication()

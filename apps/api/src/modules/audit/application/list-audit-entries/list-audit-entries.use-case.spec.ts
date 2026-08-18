@@ -1,5 +1,5 @@
 import { ForbiddenError } from "../../../../shared/kernel/errors/forbidden.error"
-import { allowedAuditTables } from "../../domain/table-owners"
+import { AuditRegistry } from "../services/audit-registry"
 
 import { ListAuditEntriesUseCase } from "./list-audit-entries.use-case"
 
@@ -72,7 +72,8 @@ function makeUseCase(
       repo,
       facade,
       reader,
-      masterCtx as never
+      masterCtx as never,
+      new AuditRegistry()
     ),
     findNamesByIds,
     list,
@@ -210,7 +211,8 @@ describe("ListAuditEntriesUseCase — escopo por permissão (ADR 0049)", () => {
       repo,
       users as never,
       refs,
-      ctx as never
+      ctx as never,
+      new AuditRegistry()
     )
     return { useCase, repo }
   }
@@ -266,7 +268,9 @@ describe("ListAuditEntriesUseCase — escopo por permissão (ADR 0049)", () => {
     })
     await useCase.execute(BASE)
     expect(repo.list).toHaveBeenCalledWith(
-      expect.objectContaining({ tables: allowedAuditTables(owned) })
+      expect.objectContaining({
+        tables: new AuditRegistry().allowedTables(owned),
+      })
     )
   })
 
@@ -303,7 +307,8 @@ describe("ListAuditEntriesUseCase — trilha completa (ADR 0049, revisão 2026-0
       repo,
       { findNamesByIds: jest.fn().mockResolvedValue(new Map()) } as never,
       { findLabels: jest.fn().mockResolvedValue(new Map()) },
-      ctx as never
+      ctx as never,
+      new AuditRegistry()
     )
     return { useCase, repo }
   }

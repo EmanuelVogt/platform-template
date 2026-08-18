@@ -7,7 +7,6 @@ import { ReadOnly } from "../../../../shared/kernel/transactional/transactional.
 import { UseCase } from "../../../../shared/kernel/use-case/use-case.decorator"
 import { FULL_AUDIT_PERMISSION } from "../../../identity/api/facades/permission-catalog.facade"
 import { UserDirectoryFacade } from "../../../identity/api/facades/user-directory.facade"
-import { tablesForAggregate } from "../../domain/aggregate-registry"
 import {
   AUDIT_REPOSITORY,
   type AuditEntryReadRow,
@@ -18,14 +17,13 @@ import {
   type RefLabelReader,
   type RefTarget,
 } from "../../domain/ports/ref-label.reader"
-import { allowedAuditTables, auditOwnerOf } from "../../domain/table-owners"
+import { AuditRegistry } from "../services/audit-registry"
 
 import {
   toAuditEntryView,
   type AuditEntryView,
   type RefResolver,
 } from "./audit-entry.view"
-import { refTargetFor } from "./ref-columns"
 
 import type { ListAuditEntriesQuery } from "./types"
 import type { PaginatedResult } from "../../../../shared/kernel/listing/paginated"
@@ -52,7 +50,8 @@ export class ListAuditEntriesUseCase
     @Inject(AUDIT_REPOSITORY) private readonly repo: AuditRepository,
     private readonly users: UserDirectoryFacade,
     @Inject(REF_LABEL_READER) private readonly refs: RefLabelReader,
-    private readonly ctx: RequestContext
+    private readonly ctx: RequestContext,
+    private readonly registry: AuditRegistry
   ) {}
 
   @ReadOnly()
@@ -69,16 +68,16 @@ export class ListAuditEntriesUseCase
       access.isMaster || access.permissions.has(FULL_AUDIT_PERMISSION)
     let tables: string[] | undefined
     if (table !== undefined) {
-      const owner = auditOwnerOf(table)
+      const owner = this.registry.ownerOf(table)
       if (
         owner === undefined ||
         (!readsEverything && !access.permissions.has(owner))
       ) {
         throw new ForbiddenError()
       }
-      tables = tablesForAggregate(table)
+      tables = this.registry.tablesForAggregate(table)
     } else if (!readsEverything) {
-      tables = allowedAuditTables(access.permissions)
+      tables = this.registry.allowedTables(access.permissions)
       if (tables.length === 0) {
         throw new ForbiddenError()
       }
@@ -98,7 +97,7 @@ export class ListAuditEntriesUseCase
       const oldRec = asRecord(r.rowOld)
       const newRec = asRecord(r.rowNew)
       for (const column of changedColumnsOf(r)) {
-        const target = refTargetFor(column)
+        const target = this.registry.refTargetFor(column)
         if (target === undefined) continue
         const key = `${target.schema}.${target.table}`
         const bucket = buckets.get(key) ?? { target, ids: new Set<string>() }
@@ -119,7 +118,7 @@ export class ListAuditEntriesUseCase
     )
     const resolve: RefResolver = (_tableName, column, value) => {
       if (typeof value !== "string") return null
-      const target = refTargetFor(column)
+      const target = this.registry.refTargetFor(column)
       if (target === undefined) return null
       return resolved.get(`${target.schema}.${target.table}:${value}`) ?? null
     }

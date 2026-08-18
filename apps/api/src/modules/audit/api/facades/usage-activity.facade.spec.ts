@@ -1,3 +1,6 @@
+import { ActivityAreaResolver } from "../../application/services/activity-area-resolver"
+import { AuditRegistry } from "../../application/services/audit-registry"
+
 import { UsageActivityFacade } from "./usage-activity.facade"
 
 import type {
@@ -11,7 +14,10 @@ function facadeReading(rows: TableActivityRow[]): UsageActivityFacade {
   const reader: ActivityStatsReader = {
     countByTableAndBucket: () => Promise.resolve(rows),
   }
-  return new UsageActivityFacade(reader)
+  return new UsageActivityFacade(
+    reader,
+    new ActivityAreaResolver(new AuditRegistry())
+  )
 }
 
 const window = {

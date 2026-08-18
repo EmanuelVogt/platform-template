@@ -21,7 +21,6 @@ _exclude:
   - .claude/settings.local.json
   - apps/api/.env
   - apps/web/.env.local
-  - .copier-answers.yml
   - .claude/skills
 
 _skip_if_exists:

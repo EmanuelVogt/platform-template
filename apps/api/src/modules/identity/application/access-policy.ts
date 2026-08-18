@@ -4,6 +4,7 @@ import {
   InvalidSchedulingAreasError,
   PermissionGrantNotAllowedError,
 } from "../domain/errors"
+import { requiresPermissionFloor } from "../../../shared/kernel/access/permission.types"
 import { moduleOf, requiresOf } from "../domain/permissions/permission-catalog"
 
 import type {
@@ -35,7 +36,7 @@ export function assertProfileFloor(
   profile: AccessProfile,
   permissions: readonly PermissionKey[],
 ): void {
-  if (profile === "master" || profile === "professional") return
+  if (!requiresPermissionFloor(profile)) return
   if (permissions.some((key) => moduleOf(key) === profile)) return
   throw new InvalidPermissionSetError(
     `O perfil de acesso exige ao menos uma permissão do módulo "${profile}".`,

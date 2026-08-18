@@ -21,8 +21,15 @@ const moduleDefSchema = z.object({
   features: z.array(featureDefSchema),
 })
 
+const accessProfileDefSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  assignable: z.boolean(),
+})
+
 export const accessCatalogResponseSchema = z.object({
   modules: z.array(moduleDefSchema),
+  profiles: z.array(accessProfileDefSchema),
 })
 
 export class AccessCatalogResponseDto extends createZodDto(

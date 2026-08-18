@@ -5,6 +5,8 @@ import {
   PermissionGrantNotAllowedError,
 } from "../domain/errors"
 
+import { PROFILE_DEFS } from "../../../shared/kernel/access/permission.types"
+
 import {
   assertCanGrant,
   assertProfileFloor,
@@ -12,6 +14,7 @@ import {
   resolveUserAccess,
 } from "./access-policy"
 
+import type { AccessProfile } from "../../../shared/kernel/access/permission.types"
 import type { GrantContext } from "./access-policy"
 import type { ProfessionalScope } from "../domain/ports/professional-scope.port"
 
@@ -58,6 +61,31 @@ describe("assertProfileFloor (piso do perfil)", () => {
 
   it("professional é isento (o piso vem do slot de produto, não do catálogo)", () => {
     expect(() => { assertProfileFloor("professional", []); }).not.toThrow()
+  })
+
+  describe("o piso sai da def registrada, não de chave literal", () => {
+    const exempt = PROFILE_DEFS.filter((def) => !def.permissionFloor)
+    const enforced = PROFILE_DEFS.filter((def) => def.permissionFloor)
+
+    it("perfil com permissionFloor false aceita set vazio", () => {
+      expect(exempt.map((def) => def.key)).toEqual(["master", "professional"])
+      for (const def of exempt) {
+        expect(() => {
+          assertProfileFloor(def.key as AccessProfile, [])
+        }).not.toThrow()
+      }
+    })
+
+    it("perfil com permissionFloor true exige chave do módulo homônimo", () => {
+      expect(enforced.map((def) => def.key)).toEqual(["admin"])
+      for (const def of enforced) {
+        expect(() => {
+          assertProfileFloor(def.key as AccessProfile, [])
+        }).toThrow(
+          `O perfil de acesso exige ao menos uma permissão do módulo "${def.key}".`,
+        )
+      }
+    })
   })
 })
 

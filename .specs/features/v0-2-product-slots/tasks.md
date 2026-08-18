@@ -8,7 +8,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 ---
 
-**Design**: `.specs/features/v0-2-product-slots/design.md` · **Status**: Draft
+**Design**: `.specs/features/v0-2-product-slots/design.md` · **Status**: Executing — wave 1 done (2026-08-18)
 Repo: `~/Projects/platform-template`, worktree `.worktrees/v0-2-product-slots` (crosses api + contract + migrations). Spec artifacts stay on `main`.
 
 ## Test Coverage Matrix
@@ -69,6 +69,7 @@ Wave 3: [I: T19→T20] → Verifier → T21 → T22
 ## Task Breakdown
 
 ### T1: Coverage sweep artifact + test baseline
+**Status**: ✅ Done — `84cc2c2` (main) — baseline unit 974 / int 337 / e2e 115 / web 65
 **What**: run the vocabulary `rg -i` (spec SWP AC1) over `apps/api/src apps/web/src docs .claude .agents AGENTS.md.jinja README.md.jinja`; write `.specs/features/v0-2-product-slots/coverage-sweep.md` with one row per file: path · hit words · verdict (`generic ok` / `remove` / `open slot`) · action (v0.2 task id, or "follow-up issue"). Record unit test count baseline in the file header.
 **Where**: `.specs/features/v0-2-product-slots/coverage-sweep.md` (main checkout) · **Depends on**: none · **Requirement**: SWP-01
 **Tools**: shell-runner (rg → file), no MCP.
@@ -76,12 +77,14 @@ Wave 3: [I: T19→T20] → Verifier → T21 → T22
 **Tests**: none · **Gate**: none (artifact) · **Commit**: `docs(specs): coverage sweep for v0.2 product slots`
 
 ### T2: Access profile types + `defineAccessProfiles` + slot file
+**Status**: ✅ Done — `059b6c7`
 **What**: create `shared/kernel/access/access-profile.types.ts` (`AccessProfileDef`, `BASE_ACCESS_PROFILES`), `define-access-profiles.ts` (per design §1, duplicate → throw), `product-access-profiles.ts` slot; derive `ACCESS_PROFILES`/`ASSIGNABLE_ACCESS_PROFILES`/types in `permission.types.ts` keeping export names.
 **Where**: `apps/api/src/shared/kernel/access/` · **Depends on**: T1 · **Reuses**: `define-permission-catalog.ts` · **Requirement**: PROF-01, PROF-04
 **Done when**: [ ] `define-access-profiles.spec.ts`: base tuples equal today's, fake def `{key:"sample",assignable:true,permissionFloor:false}` appears in both tuples, duplicate throws, `requiresPermissionFloor` per def; [ ] `pnpm --filter api test` green, count ≥ baseline+4.
 **Tests**: unit · **Gate**: quick · **Commit**: `feat(kernel): access profile registry with product slot`
 
 ### T3: Identity consumes the profile registry + access-catalog exposes profiles
+**Status**: ✅ Done — `3244d2e`
 **What**: `user.table.ts` pgEnum from `ACCESS_PROFILES`; `access-policy.assertProfileFloor` via `requiresPermissionFloor`; `access-catalog.contract.ts` + controller add `profiles: [{key,label,assignable}]`; int-spec `drizzle-user.repository.profile-extension.int-spec.ts`: `ALTER TYPE identity.access_profile ADD VALUE IF NOT EXISTS 'sample'` (own connection, outside tx), insert via repository with `accessProfile: "sample" as AccessProfile`, read back equal.
 **Where**: `apps/api/src/modules/identity/{infrastructure/tables/user.table.ts,application/access-policy.ts,api/contracts/access-catalog.contract.ts,api/controllers/access-catalog/get-access-catalog.controller.ts,infrastructure/repositories/}` · **Depends on**: T2 · **Requirement**: PROF-02, PROF-03, PROF-04
 **Done when**: [ ] `access-policy.spec.ts` covers floor true/false via defs; [ ] int-spec above green; [ ] e2e `test/identity/access-catalog.e2e-spec.ts` asserts 3 base profiles with labels `Master|Administrador|Profissional` and `assignable` flags; [ ] full gate green.
@@ -94,30 +97,35 @@ Wave 3: [I: T19→T20] → Verifier → T21 → T22
 **Tests**: none · **Gate**: build (docs only → prettier) · **Commit**: `docs(template): slots table — access profiles, permission catalogs`
 
 ### T5: Migration 0004 rename column
+**Status**: ✅ Done — `0ba7607` (journal idx 4, when 1797062480194)
 **What**: `apps/api/drizzle/migrations/0004_identity_serves_clients.sql` (`ALTER TABLE "identity"."users" RENAME COLUMN "attends_guests" TO "serves_clients";`) + journal entry idx 4, `when` = previous + 10_000_000.
 **Where**: `apps/api/drizzle/migrations/` · **Depends on**: T1 · **Requirement**: REN-02
 **Done when**: [ ] `pnpm --filter api db:check:journal` green; [ ] `pnpm --filter api test:int` boots migrations green (before T6 the drizzle column still says `attends_guests` → run T5+T6 gates together: this task's gate is journal only).
 **Tests**: none · **Gate**: `pnpm --filter api db:check:journal` · **Commit**: `feat(identity): migration 0004 rename attends_guests to serves_clients`
 
 ### T6: Rename `attendsGuests` → `servesClients` across api
+**Status**: ✅ Done — `700d443` + `706cee9` (orchestrator: `test/setup/seed-user.ts` rename, outside A ownership)
 **What**: rename prop/column/contract/use-case/facade/seed/spec occurrences (≈39 files); reword `user.table.ts` comment (no "hóspede"); keep semantics/defaults.
 **Where**: `apps/api/src/modules/identity/**`, `apps/api/src/seeds/*` · **Depends on**: T5 · **Requirement**: REN-01
 **Done when**: [ ] `rg -c "attendsGuests|attends_guests|hóspede|hospede" apps/api/src` = 0; [ ] full gate green with test count unchanged; [ ] `test/identity/create-user-flow.e2e-spec.ts` round-trips `servesClients: true`.
 **Tests**: existing unit + int + e2e renamed · **Gate**: full · **Commit**: `refactor(identity): rename attendsGuests to servesClients`
 
 ### T7: `Mailer.send` transport port + Resend/Log adapters
+**Status**: ✅ Done — `ac515d5`
 **What**: `EmailMessage` + one-method `Mailer`; `ResendMailer.send` (no renderer, keeps idempotency + `MailDeliveryError`); `LogMailer.send` logs `to, subject, idempotencyKey, links[]`; MAILER factory drops renderer inject; shared `test/setup/fake-mailer.ts` (`fakeMailer(): Mailer & { sent: EmailMessage[] }`).
 **Where**: `notification/domain/ports/mailer.ts`, `infrastructure/mailer/{resend-mailer,log-mailer}.ts`, `notification.module.ts`, `apps/api/test/setup/fake-mailer.ts` · **Depends on**: T1 · **Requirement**: MAIL-02
 **Done when**: [ ] `resend-mailer.spec.ts`: sends `{from,to,subject,html}` + idempotencyKey option, error → `MailDeliveryError`; [ ] `log-mailer.spec.ts`: log fields incl. extracted hrefs (2 links case, 0 links case); [ ] typecheck of api may be red until T9 → this task's gate is unit only for the two specs (`pnpm --filter api test -- mailer`).
 **Tests**: unit · **Gate**: quick (scoped) · **Commit**: `refactor(notification): mailer is transport-only`
 
 ### T8: Template source shape `{type,catalog,email?}` + base sources via registry + renderer resolve
+**Status**: ✅ Done — `4837b35`
 **What**: port types per design §2; registry seeded from `application/templates/base-template-sources.ts` (8 e-mail + 2 system-only); handler resolves catalog via registry only; renderer drops `BODIES`, resolves via `findByTemplate` with default dir.
 **Where**: `notification/domain/ports/notification-template-source.port.ts`, `application/templates/{notification-template-registry,base-template-sources}.ts`, `application/event-handlers/external/notification-requested.handler.ts`, `infrastructure/mailer/handlebars-template-renderer.ts` · **Depends on**: T7 · **Requirement**: MAIL-03
 **Done when**: [ ] `notification-template-registry.spec.ts`: 10 base types present, e-mail types have `email`, system-only don't, duplicate type throws, `findByTemplate`; [ ] `handlebars-template-renderer.spec.ts`: base template via default dir, product template via `templateDir`, unknown throws; [ ] handler spec: product type resolved through registry, unknown type throws.
 **Tests**: unit · **Gate**: quick · **Commit**: `feat(notification): base e-mail types registered as template sources`
 
 ### T9: Generic `EmailChannel` + delete per-type payloads
+**Status**: ✅ Done — `9d1666c` — e2e mailer fakes in 10 files broken until T10 (expected)
 **What**: `EmailChannel.send` per design §2 (binding → recipient → subject → render → `mailer.send`); errors `EmailBindingMissingError`, `EmailRecipientMissingError` in `domain/errors.ts`; delete `domain/notification-payloads.ts`.
 **Where**: `notification/infrastructure/channels/email.channel.ts`, `notification/domain/errors.ts` · **Depends on**: T8 · **Requirement**: MAIL-01, MAIL-04
 **Done when**: [ ] `email.channel.spec.ts`: each of the 8 base types yields the v0.1 subject + template name (table-driven), `recipient` override, `view` applied, missing binding throws, non-string recipient throws, `idempotencyKey = input.id`; [ ] `rg -c "case \"" email.channel.ts` = 0; [ ] api typecheck green.
@@ -130,36 +138,42 @@ Wave 3: [I: T19→T20] → Verifier → T21 → T22
 **Tests**: e2e · **Gate**: full · **Commit**: `test(notification): product module registers an e-mail type end to end`
 
 ### T11: `AuditRegistry` service with base registrations
+**Status**: ✅ Done — `60a77bc`
 **What**: `audit/application/services/audit-registry.ts` per design §3; `audit/domain/base-audit-registrations.ts` (data of today's 4 constants); `audit.module.ts` provides + exports it.
 **Where**: `apps/api/src/modules/audit/` · **Depends on**: T1 · **Requirement**: AUD-01, AUD-02, AUD-03
 **Done when**: [ ] `audit-registry.spec.ts`: base parity for `ownerOf`/`allowedTables`/`tablesForAggregate`/`technicalTables`/`refTargetFor` (values copied from today's specs), product entries (`sample.things` + `thing_id`), duplicate table and duplicate column throw, AUDITED consistency (every AUDITED table has an owner).
 **Tests**: unit · **Gate**: quick · **Commit**: `feat(audit): registry for table owners, aggregates and ref targets`
 
 ### T12: Audit consumers read the registry
+**Status**: ✅ Done — `b4e202f`
 **What**: `list-audit-entries.use-case.ts` injects registry; `activity-area.ts` → `ActivityAreaResolver` service consumed by `usage-activity.facade` + `drizzle-activity-stats.reader`; delete `ref-columns.ts`, `table-owners.ts`, `aggregate-registry.ts` and move their specs' cases into T11's spec.
 **Where**: `audit/application/**`, `audit/api/facades/usage-activity.facade.ts`, `audit/infrastructure/repositories/drizzle-activity-stats.reader.ts` · **Depends on**: T11 · **Requirement**: AUD-03
 **Done when**: [ ] `list-audit-entries.use-case.spec.ts` + `usage-activity.facade.spec.ts` green with registry doubles; [ ] `module-boundaries.spec.ts` green; [ ] full gate green (int specs of activity stats).
 **Tests**: unit + integration (existing) · **Gate**: full · **Commit**: `refactor(audit): consumers resolve owners and refs through the registry`
 
 ### T13: E2E — product registers audit metadata
+**Status**: ✅ Done — `0972321` — e2e was red only via seed-user (fixed 706cee9)
 **What**: `createE2eApp` gains `extraModules?: Type<unknown>[]` (imported alongside `AppModule`); `test/audit-product-extension.e2e-spec.ts` with `FakeProductModule` (`OnModuleInit` registers `sample.things` owned by `admin.users.audit.read`, ref `thing_id → sample.things.name`); test creates schema/table + `audit.audit_entries` row via raw SQL; master lists it with label; user with the owner key lists; user without → 403.
 **Where**: `apps/api/test/setup/app-factory.ts`, `apps/api/test/audit-product-extension.e2e-spec.ts` · **Depends on**: T12 · **Requirement**: AUD-01, AUD-02
 **Done when**: [ ] 3 assertions above green; [ ] full gate green.
 **Tests**: e2e · **Gate**: full · **Commit**: `test(audit): product module registers owner and ref target end to end`
 
 ### T14: Upload profile kernel types + slot
+**Status**: ✅ Done — `5073397`
 **What**: `shared/kernel/upload/upload-profile.types.ts` (`UploadProfileDef`), `product-upload-profiles.ts` slot.
 **Where**: `apps/api/src/shared/kernel/upload/` · **Depends on**: T1 · **Requirement**: UPL-02
 **Done when**: [ ] files exist with doc comment mirroring `product-permission-catalogs.ts`; [ ] `pnpm --filter api typecheck` green.
 **Tests**: none (types) · **Gate**: build (typecheck) · **Commit**: `feat(kernel): upload profile slot`
 
 ### T15: Generic base upload catalog + derived contract enum + env rename
+**Status**: ✅ Done — `30fd7f7` — deviations: `document` limits taken from former report-artifact (any/26_214_400/1/restricted); added `buildRouteUploadProfileNames(productDefs?)`; no env docs needed edits (no old vars mentioned)
 **What**: `upload-profiles.ts` per design §5 (`BASE_UPLOAD_PROFILE_NAMES`, `UPLOAD_PROFILE_NAMES`, `ROUTE_UPLOAD_PROFILE_NAMES`, `buildUploadProfiles(config, productDefs = PRODUCT_UPLOAD_PROFILES)`); contract `profile: z.enum(ROUTE_UPLOAD_PROFILE_NAMES)`; `attachment.config.ts` env renames; `.env.example`, `docs/dev/ambiente-local.md`, `docs/dev/deploy.md.jinja` updated.
 **Where**: `attachment/domain/upload-profiles.ts`, `attachment/api/contracts/attachment.contract.ts`, `attachment/attachment.config.ts`, env/docs · **Depends on**: T14 · **Requirement**: UPL-01, UPL-02, UPL-03
 **Done when**: [ ] `upload-profiles.spec.ts`: catalog keys exactly the 5 base, limits/visibility per design, fake product def merged and `ROUTE_UPLOAD_PROFILE_NAMES` includes it iff `uploadRoute`, `isUploadProfileName`; [ ] `attachment.config.spec` rejects old env names? (no — unknown env ignored) → asserts new names parsed and `ATTACHMENT_REPORT_MAX_BYTES` absent from schema; [ ] `rg -c "credit-receipt|accommodation-type-image|report-artifact|feedback-attachment" apps/api/src` = 0 (except 0005 migration + changelog); [ ] int-spec `upload-attachment.use-case.int-spec.ts` with injected catalog containing `sample-doc` (any, 10 bytes, 1 file, restricted): 11-byte upload → `PayloadTooLargeError`, 10-byte ok with `visibility: restricted`.
 **Tests**: unit + integration · **Gate**: full · **Commit**: `feat(attachment): generic upload profiles with product slot`
 
 ### T16: Migration 0005 profile data rename
+**Status**: ✅ Done — `291d7d3` (journal idx 5)
 **What**: `0005_attachment_generic_upload_profiles.sql` (`UPDATE "attachment"."attachments" SET "profile"='multi' WHERE "profile"='feedback-attachment';`) + journal idx 5.
 **Where**: `apps/api/drizzle/migrations/` · **Depends on**: T15 · **Requirement**: UPL-04
 **Done when**: [ ] `db:check:journal` green; [ ] int-spec `drizzle-attachment.repository.int-spec.ts` case: row inserted as `feedback-attachment` before running the 0005 SQL reads `multi` after (execute the migration file's SQL in the test).

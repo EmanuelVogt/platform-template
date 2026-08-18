@@ -11,21 +11,12 @@ import { emailTheme } from "./email-theme"
 import type { NotificationTemplateSources } from "../../domain/ports/notification-template-source.port"
 import type { TemplateRenderer } from "../../domain/ports/template-renderer"
 
-const BODIES = [
-  "access-link",
-  "reset",
-  "verify",
-  "lockout",
-  "password-changed",
-  "device-new-login",
-  "email-change",
-  "email-change-notice",
-] as const
+const DEFAULT_TEMPLATE_DIR = join(__dirname, "templates")
 
-/** Compila os .hbs no boot e aplica o layout compartilhado a cada render. */
+/** Compila os .hbs sob demanda (cache por template) e aplica o layout compartilhado a cada render. */
 @Injectable()
 export class HandlebarsTemplateRenderer implements TemplateRenderer, OnModuleInit {
-  private readonly bodies = new Map<string, HandlebarsTemplateDelegate>()
+  private readonly compiled = new Map<string, HandlebarsTemplateDelegate>()
   private layout!: HandlebarsTemplateDelegate
 
   constructor(
@@ -34,28 +25,21 @@ export class HandlebarsTemplateRenderer implements TemplateRenderer, OnModuleIni
   ) {}
 
   onModuleInit(): void {
-    const dir = join(__dirname, "templates")
     Handlebars.registerPartial(
       "button",
-      readFileSync(join(dir, "partials", "button.hbs"), "utf8"),
+      readFileSync(join(DEFAULT_TEMPLATE_DIR, "partials", "button.hbs"), "utf8"),
     )
-    this.layout = Handlebars.compile(readFileSync(join(dir, "layout.hbs"), "utf8"))
-    for (const name of BODIES) {
-      this.bodies.set(name, Handlebars.compile(readFileSync(join(dir, `${name}.hbs`), "utf8")))
-    }
+    this.layout = Handlebars.compile(readFileSync(join(DEFAULT_TEMPLATE_DIR, "layout.hbs"), "utf8"))
   }
 
-  // Os .hbs do produto compilam sob demanda: o módulo dono só se registra no
-  // `onModuleInit` dele, que roda depois do `onModuleInit` deste renderer.
   private resolve(template: string): HandlebarsTemplateDelegate | undefined {
-    const compiled = this.bodies.get(template)
+    const compiled = this.compiled.get(template)
     if (compiled) return compiled
-    const source = this.sources.findByTemplate(template)
-    if (!source) return undefined
-    const body = Handlebars.compile(
-      readFileSync(join(source.templateDir, `${template}.hbs`), "utf8"),
-    )
-    this.bodies.set(template, body)
+    const binding = this.sources.findByTemplate(template)
+    if (!binding) return undefined
+    const dir = binding.templateDir ?? DEFAULT_TEMPLATE_DIR
+    const body = Handlebars.compile(readFileSync(join(dir, `${template}.hbs`), "utf8"))
+    this.compiled.set(template, body)
     return body
   }
 

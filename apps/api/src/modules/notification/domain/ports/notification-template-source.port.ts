@@ -1,13 +1,15 @@
 export const NOTIFICATION_TEMPLATE_SOURCES = Symbol("NOTIFICATION_TEMPLATE_SOURCES")
 
-/** O que o renderer e o mailer precisam saber de um template contribuído. */
-export interface NotificationTemplateBinding {
+/** O que o `EmailChannel` e o renderer precisam saber pra despachar um tipo por e-mail. */
+export interface EmailTemplateBinding {
   readonly template: string
-  readonly templateDir: string
-  readonly subject: (data: Record<string, unknown>) => string
+  readonly templateDir?: string
+  subject(data: Record<string, unknown>): string
+  recipient?(data: Record<string, unknown>): string
+  view?(data: Record<string, unknown>): Record<string, unknown>
 }
 
 export interface NotificationTemplateSources {
-  require(type: string): NotificationTemplateBinding
-  findByTemplate(template: string): NotificationTemplateBinding | undefined
+  require(type: string): { email?: EmailTemplateBinding }
+  findByTemplate(template: string): EmailTemplateBinding | undefined
 }

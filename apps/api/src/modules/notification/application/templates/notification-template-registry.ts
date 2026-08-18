@@ -1,8 +1,10 @@
 import { Injectable } from "@nestjs/common"
 
+import { BASE_TEMPLATE_SOURCES } from "./base-template-sources"
+
 import type { NotificationType } from "../../api/events/notification-requested.event"
 import type {
-  NotificationTemplateBinding,
+  EmailTemplateBinding,
   NotificationTemplateSources,
 } from "../../domain/ports/notification-template-source.port"
 import type { CatalogEntry } from "../catalog/notification-catalog"
@@ -13,10 +15,11 @@ import type { CatalogEntry } from "../catalog/notification-catalog"
  * catálogo do próprio tipo (KPB-07). Reexportado pela facade para os outros
  * módulos; dentro do notification, importa-se daqui.
  */
-export interface NotificationTemplateSource extends NotificationTemplateBinding {
+export interface NotificationTemplateSource {
   readonly type: NotificationType
   /** Mesmos campos que o catálogo do notification guarda por tipo. */
   readonly catalog: CatalogEntry
+  readonly email?: EmailTemplateBinding
 }
 
 export class DuplicateNotificationTemplateSourceError extends Error {
@@ -38,10 +41,18 @@ export class NotificationTemplateSourceNotRegisteredError extends Error {
 /**
  * Registro explícito em vez de multi-provider: Nest não tem `multi: true`, e o
  * módulo dono se registra no boot (`OnModuleInit`), como o `ReportRendererRegistry`.
+ * Semeado no construtor com os tipos do fluxo de conta (v0.1) — o mesmo registry
+ * que os produtos usam pra contribuir os próprios tipos.
  */
 @Injectable()
 export class NotificationTemplateSourceRegistry implements NotificationTemplateSources {
   private readonly byType = new Map<NotificationType, NotificationTemplateSource>()
+
+  constructor() {
+    for (const source of BASE_TEMPLATE_SOURCES) {
+      this.register(source)
+    }
+  }
 
   register(source: NotificationTemplateSource): void {
     if (this.byType.has(source.type)) {
@@ -62,9 +73,9 @@ export class NotificationTemplateSourceRegistry implements NotificationTemplateS
     return this.byType.get(type)
   }
 
-  findByTemplate(template: string): NotificationTemplateSource | undefined {
+  findByTemplate(template: string): EmailTemplateBinding | undefined {
     for (const source of this.byType.values()) {
-      if (source.template === template) return source
+      if (source.email?.template === template) return source.email
     }
     return undefined
   }

@@ -29,7 +29,6 @@ import {
   REALTIME_PUBLISHER,
   type RealtimePublisherPort,
 } from "../../../domain/ports/realtime-publisher.port"
-import { type CatalogEntry, notificationCatalog } from "../../catalog/notification-catalog"
 import { NotificationTemplateSourceRegistry } from "../../templates/notification-template-registry"
 
 import type { EventEnvelope } from "../../../../../shared/kernel/events/domain-event.base"
@@ -74,9 +73,7 @@ export class NotificationRequestedHandler {
     const { recipientId, type, locale } = envelope.payload
     // type vem do payload deserializado do outbox (boundary externo): o tipo
     // promete NotificationType, mas em runtime pode ser um tipo fora do catálogo.
-    const entry =
-      (notificationCatalog as Record<string, CatalogEntry | undefined>)[type] ??
-      this.templateSources.find(type)?.catalog
+    const entry = this.templateSources.find(type)?.catalog
     if (!entry) {
       // throw → retry/dead-letter do outbox sinaliza catálogo desatualizado.
       throw new Error(`tipo de notificação fora do catálogo: ${type}`)

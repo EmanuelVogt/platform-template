@@ -1,3 +1,7 @@
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
+
+import { ulid } from "ulid"
 
 import {
   createTestDb,
@@ -11,6 +15,11 @@ import { Attachment } from "../../domain/attachment.entity"
 import { DrizzleAttachmentRepository } from "./drizzle-attachment.repository"
 
 import type { Pool } from "pg"
+
+const MIGRATION_0005_PATH = join(
+  __dirname,
+  "../../../../../drizzle/migrations/0005_attachment_generic_upload_profiles.sql",
+)
 
 describe("DrizzleAttachmentRepository", () => {
   let pool: Pool
@@ -76,7 +85,7 @@ describe("DrizzleAttachmentRepository", () => {
       contentType: "application/pdf",
       sizeBytes: 10,
       originalFilename: null,
-      profile: "feedback-attachment",
+      profile: "multi",
       visibility: "restricted",
       ownerUserId: "user-1",
     })
@@ -84,7 +93,7 @@ describe("DrizzleAttachmentRepository", () => {
       contentType: "application/pdf",
       sizeBytes: 10,
       originalFilename: null,
-      profile: "feedback-attachment",
+      profile: "multi",
       visibility: "restricted",
       ownerUserId: "user-1",
     })
@@ -99,5 +108,26 @@ describe("DrizzleAttachmentRepository", () => {
     )
 
     expect(stale.map((a) => a.props.id)).toEqual([old.props.id])
+  })
+
+  it("migração 0005 renomeia linhas de profile feedback-attachment para multi", async () => {
+    const id = ulid()
+    const now = new Date()
+    await pool.query(
+      `INSERT INTO attachment.attachments
+         (id, storage_key, content_type, size_bytes, original_filename, profile, owner_user_id, status, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, 'feedback-attachment', $6, 'ready', $7, $7)`,
+      [id, `attachments/${id}`, "application/pdf", 10, null, "user-1", now],
+    )
+    await pool.query(
+      `INSERT INTO attachment.attachment_acls (attachment_id, visibility, created_at, updated_at)
+       VALUES ($1, 'restricted', $2, $2)`,
+      [id, now],
+    )
+
+    await pool.query(readFileSync(MIGRATION_0005_PATH, "utf-8"))
+
+    const found = await repo.findById(id)
+    expect(found?.props.profile).toBe("multi")
   })
 })

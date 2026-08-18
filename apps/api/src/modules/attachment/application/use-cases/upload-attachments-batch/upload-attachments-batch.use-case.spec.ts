@@ -15,8 +15,8 @@ import type { IncomingFile } from "../../../domain/incoming-file"
 
 const profiles = buildUploadProfiles(
   parseAttachmentConfig({
-    ATTACHMENT_FEEDBACK_MAX_FILE_BYTES: "100",
-    ATTACHMENT_FEEDBACK_MAX_TOTAL_BYTES: "100",
+    ATTACHMENT_MULTI_MAX_FILE_BYTES: "100",
+    ATTACHMENT_MULTI_MAX_TOTAL_BYTES: "100",
   }),
 )
 
@@ -77,7 +77,7 @@ describe("UploadAttachmentsBatchUseCase", () => {
     const { useCase, storage, inserted } = makeUseCase()
 
     const out = await useCase.execute({
-      profile: "feedback-attachment",
+      profile: "multi",
       ownerUserId: "user-1",
       files: iterate(file("a.pdf", 10), file("b.pdf", 20)),
     })
@@ -94,7 +94,7 @@ describe("UploadAttachmentsBatchUseCase", () => {
     const { useCase, inserted } = makeUseCase()
 
     await useCase.execute({
-      profile: "feedback-attachment",
+      profile: "multi",
       ownerUserId: "user-1",
       files: iterate(file("a.pdf", 37)),
     })
@@ -107,7 +107,7 @@ describe("UploadAttachmentsBatchUseCase", () => {
 
     await expect(
       useCase.execute({
-        profile: "feedback-attachment",
+        profile: "multi",
         ownerUserId: "user-1",
         files: iterate(file("a.pdf", 60), file("b.pdf", 60)),
       }),
@@ -119,7 +119,7 @@ describe("UploadAttachmentsBatchUseCase", () => {
 
     await expect(
       useCase.execute({
-        profile: "feedback-attachment",
+        profile: "multi",
         ownerUserId: "user-1",
         files: iterate(file("a.pdf", 60), file("b.pdf", 60)),
       }),
@@ -134,7 +134,7 @@ describe("UploadAttachmentsBatchUseCase", () => {
 
     await expect(
       useCase.execute({
-        profile: "feedback-attachment",
+        profile: "multi",
         ownerUserId: "user-1",
         files: iterate(...many),
       }),
@@ -146,7 +146,7 @@ describe("UploadAttachmentsBatchUseCase", () => {
 
     await expect(
       useCase.execute({
-        profile: "feedback-attachment",
+        profile: "multi",
         ownerUserId: "user-1",
         files: iterate(file("a.pdf", 10), file("b.pdf", 200)),
       }),
@@ -159,7 +159,7 @@ describe("UploadAttachmentsBatchUseCase", () => {
 
     await expect(
       useCase.execute({
-        profile: "feedback-attachment",
+        profile: "multi",
         ownerUserId: "user-1",
         files: iterate(file("a.pdf", 10), file("b.pdf", 200)),
       }),
@@ -176,7 +176,7 @@ describe("UploadAttachmentsBatchUseCase", () => {
 
     await expect(
       useCase.execute({
-        profile: "feedback-attachment",
+        profile: "multi",
         ownerUserId: "user-1",
         files: iterate(file("a.pdf", 10)),
       }),
@@ -191,7 +191,7 @@ describe("UploadAttachmentsBatchUseCase", () => {
 
     await expect(
       useCase.execute({
-        profile: "feedback-attachment",
+        profile: "multi",
         ownerUserId: "user-1",
         files: iterate(file("a.pdf", 10), file("b.pdf", 200)),
       }),
@@ -203,7 +203,7 @@ describe("UploadAttachmentsBatchUseCase", () => {
 
     await expect(
       useCase.execute({
-        profile: "feedback-attachment",
+        profile: "multi",
         ownerUserId: "user-1",
         files: iterate(brokenFile("a.pdf", new Error("Unexpected end of form"))),
       }),
@@ -218,7 +218,7 @@ describe("UploadAttachmentsBatchUseCase", () => {
 
     await expect(
       useCase.execute({
-        profile: "feedback-attachment",
+        profile: "multi",
         ownerUserId: "user-1",
         files: iterate(brokenFile("a.pdf", interrupted)),
       }),
@@ -230,7 +230,7 @@ describe("UploadAttachmentsBatchUseCase", () => {
 
     await expect(
       useCase.execute({
-        profile: "feedback-attachment",
+        profile: "multi",
         ownerUserId: "user-1",
         files: iterate(),
       }),

@@ -16,7 +16,7 @@ function pending(overrides: Partial<{ sizeBytes: number; ownerUserId: string }> 
     contentType: "application/pdf",
     sizeBytes: overrides.sizeBytes ?? 100,
     originalFilename: "log.txt",
-    profile: "feedback-attachment",
+    profile: "multi",
     visibility: "restricted",
     ownerUserId: overrides.ownerUserId ?? "user-1",
   })
@@ -53,7 +53,7 @@ describe("ConfirmUploadsUseCase", () => {
 
     await useCase.execute({
       ids: [attachment.props.id],
-      profile: "feedback-attachment",
+      profile: "multi",
       ownerUserId: "user-1",
     })
 
@@ -69,7 +69,7 @@ describe("ConfirmUploadsUseCase", () => {
     await expect(
       useCase.execute({
         ids: [attachment.props.id],
-        profile: "feedback-attachment",
+        profile: "multi",
         ownerUserId: "user-1",
       }),
     ).rejects.toBeInstanceOf(UploadNotConfirmableError)
@@ -81,7 +81,7 @@ describe("ConfirmUploadsUseCase", () => {
     await expect(
       useCase.execute({
         ids: ["01JMISSING"],
-        profile: "feedback-attachment",
+        profile: "multi",
         ownerUserId: "user-1",
       }),
     ).rejects.toBeInstanceOf(AttachmentNotFoundError)
@@ -94,7 +94,7 @@ describe("ConfirmUploadsUseCase", () => {
     await expect(
       useCase.execute({
         ids: [attachment.props.id],
-        profile: "feedback-attachment",
+        profile: "multi",
         ownerUserId: "user-1",
       }),
     ).rejects.toBeInstanceOf(UploadNotConfirmableError)
@@ -107,7 +107,7 @@ describe("ConfirmUploadsUseCase", () => {
     await expect(
       useCase.execute({
         ids: [attachment.props.id],
-        profile: "feedback-attachment",
+        profile: "multi",
         ownerUserId: "user-1",
       }),
     ).rejects.toBeInstanceOf(UploadQuotaExceededError)
@@ -121,7 +121,7 @@ describe("ConfirmUploadsUseCase", () => {
     await expect(
       useCase.execute({
         ids: [a.props.id, b.props.id],
-        profile: "feedback-attachment",
+        profile: "multi",
         ownerUserId: "user-1",
       }),
     ).rejects.toBeInstanceOf(UploadQuotaExceededError)

@@ -35,9 +35,8 @@ function makeDeps() {
   const profiles = buildUploadProfiles({
     ATTACHMENT_MAX_UPLOAD_BYTES: 5_000_000,
     ATTACHMENT_ACCESS_LOG_RETENTION_DAYS: 180,
-    ATTACHMENT_FEEDBACK_MAX_FILE_BYTES: 100_000_000,
-    ATTACHMENT_FEEDBACK_MAX_TOTAL_BYTES: 1_000_000_000,
-    ATTACHMENT_REPORT_MAX_BYTES: 26_214_400,
+    ATTACHMENT_MULTI_MAX_FILE_BYTES: 100_000_000,
+    ATTACHMENT_MULTI_MAX_TOTAL_BYTES: 1_000_000_000,
   })
   const uc = new UploadAttachmentUseCase(storage, repo, log, tx as never, ctx as never, profiles)
   return { uc, storage, repo, log }
@@ -79,7 +78,7 @@ describe("UploadAttachmentUseCase", () => {
   it("aceita bytes não-imagem quando o profile aceita qualquer tipo", async () => {
     const { uc, storage, repo } = makeDeps()
     await expect(
-      uc.execute({ bytes: pdf, declaredContentType: "application/pdf", originalFilename: "agenda.pdf", profile: "report-artifact", ownerUserId: "u-1" }),
+      uc.execute({ bytes: pdf, declaredContentType: "application/pdf", originalFilename: "agenda.pdf", profile: "document", ownerUserId: "u-1" }),
     ).resolves.toBeDefined()
     expect(storage.put).toHaveBeenCalledTimes(1)
     expect(repo.insert).toHaveBeenCalledTimes(1)
@@ -87,7 +86,7 @@ describe("UploadAttachmentUseCase", () => {
 
   it("preserva o content-type declarado quando o profile aceita qualquer tipo", async () => {
     const { uc, storage } = makeDeps()
-    await uc.execute({ bytes: pdf, declaredContentType: "application/pdf", originalFilename: "agenda.pdf", profile: "report-artifact", ownerUserId: "u-1" })
+    await uc.execute({ bytes: pdf, declaredContentType: "application/pdf", originalFilename: "agenda.pdf", profile: "document", ownerUserId: "u-1" })
     expect(storage.put).toHaveBeenCalledWith(expect.any(String), pdf, "application/pdf")
   })
 

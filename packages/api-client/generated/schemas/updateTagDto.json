@@ -1,0 +1,1 @@
+{"type":"object","properties":{"name":{"type":"string","minLength":1,"maxLength":60},"color":{"type":"string","pattern":"^#[0-9a-f]{6}$","nullable":true},"isActive":{"default":true,"type":"boolean"}},"required":["name"],"x-readme-ref-name":"UpdateTagDto"}

@@ -1,0 +1,15 @@
+{
+  "extends": "@workspace/typescript-config/react-library.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": ".",
+    "moduleResolution": "Bundler",
+    "module": "ESNext",
+    "jsx": "react-jsx",
+    "declaration": true,
+    "skipLibCheck": true,
+    "noEmit": false
+  },
+  "include": ["src", "generated"],
+  "exclude": ["dist", "node_modules", "**/*.spec.ts"]
+}

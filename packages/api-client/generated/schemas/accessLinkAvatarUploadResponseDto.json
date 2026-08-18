@@ -1,0 +1,1 @@
+{"type":"object","properties":{"attachmentId":{"type":"string"}},"required":["attachmentId"],"x-readme-ref-name":"AccessLinkAvatarUploadResponseDto"}

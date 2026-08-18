@@ -1,0 +1,74 @@
+# Ambiente de dev local — infra (Postgres + Redis) + api opcional.
+# Loop primário segue sendo `pnpm dev` no host; o service `api` é conveniência de
+# "sobe tudo já migrado".
+# Credenciais batem com apps/api/.env (devuser/devpassword/devdb, redis senha "redis").
+# Subir infra:      docker compose up -d postgres redis
+# Subir tudo:       docker compose up -d --build
+# Logs:   docker compose logs -f
+# Parar:  docker compose down        (preserva os volumes/dados)
+# Zerar:  docker compose down -v     (apaga os dados)
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: platform_postgres_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: devuser
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: devdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devuser -d devdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: platform_redis_dev
+    restart: unless-stopped
+    # Senha "redis" para casar com REDIS_URL=redis://:redis@localhost:6379 do .env.
+    command: ["redis-server", "--requirepass", "redis"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redis", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # API em container (opcional). Não sobe por default junto com `up -d` sem build;
+  # use `docker compose up -d --build` (ou `up -d api`). Hot-reload via bind-mount;
+  # node_modules em volume anônimo pra não herdar a ABI de módulo nativo do host.
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile.dev
+    container_name: platform_api_dev
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - apps/api/.env
+    environment:
+      # Dentro da rede do compose o host é o nome do service, não localhost.
+      DATABASE_URL: postgres://devuser:devpassword@postgres:5432/devdb
+      REDIS_URL: redis://:redis@redis:6379
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/apps/api/node_modules
+
+volumes:
+  postgres_data:
+  redis_data:

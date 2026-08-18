@@ -1,0 +1,85 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "never"
+  },
+  "eslint.useFlatConfig": true,
+  "eslint.workingDirectories": [
+    { "pattern": "apps/*" },
+    { "pattern": "packages/*" }
+  ],
+  "eslint.format.enable": false,
+  "eslint.run": "onType",
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "typescript.preferences.importModuleSpecifier": "non-relative",
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "tailwindCSS.experimental.classRegex": [
+    ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+    ["cn\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+  ],
+  "tailwindCSS.experimental.configFile": "packages/ui/src/styles/globals.css",
+  "tailwindCSS.includeLanguages": {
+    "typescript": "javascript",
+    "typescriptreact": "javascript"
+  },
+  "search.exclude": {
+    "**/.turbo": true,
+    "**/dist": true,
+    "**/node_modules": true,
+    "**/pnpm-lock.yaml": true,
+    "**/coverage": true
+  },
+  "files.exclude": {
+    "**/.turbo": true,
+    "**/.DS_Store": true
+  },
+  "files.watcherExclude": {
+    "**/.turbo/**": true,
+    "**/dist/**": true,
+    "**/node_modules/**": true
+  },
+  "explorer.compactFolders": false,
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.expand": false,
+  "explorer.fileNesting.patterns": {
+    "package.json": "pnpm-lock.yaml, .npmrc, pnpm-workspace.yaml, turbo.json, .nvmrc",
+    "tsconfig.json": "tsconfig.*.json",
+    "*.ts": "${capture}.test.ts, ${capture}.spec.ts, ${capture}.int-spec.ts, ${capture}.e2e-spec.ts, ${capture}.d.ts",
+    ".eslintrc.*": ".eslintignore, .prettierrc*, .prettierignore, .editorconfig",
+    "vite.config.*": "vitest.config.*, vitest.setup.*",
+    "*.env": ".env.*",
+    "readme*": "license, licence, changelog*, contributing*, code_of_conduct*"
+  },
+  "typescript.tsserver.maxTsServerMemory": 6144,
+  "typescript.workspaceSymbols.scope": "currentProject",
+  "git.openRepositoryInParentFolders": "never",
+  "search.followSymlinks": false
+}

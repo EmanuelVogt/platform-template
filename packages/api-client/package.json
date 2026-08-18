@@ -1,0 +1,60 @@
+{
+  "name": "@platform/api-client",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "main": "./dist/src/index.js",
+  "module": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./client": {
+      "development": "./src/client.ts",
+      "types": "./dist/src/client.d.ts",
+      "import": "./dist/src/client.js"
+    },
+    "./hooks/*": {
+      "development": "./generated/hooks/*.ts",
+      "types": "./dist/generated/hooks/*.d.ts",
+      "import": "./dist/generated/hooks/*.js"
+    },
+    "./zod/*": {
+      "development": "./generated/zod/*.ts",
+      "types": "./dist/generated/zod/*.d.ts",
+      "import": "./dist/generated/zod/*.js"
+    },
+    "./models/*": {
+      "development": "./generated/models/*.ts",
+      "types": "./dist/generated/models/*.d.ts",
+      "import": "./dist/generated/models/*.js"
+    }
+  },
+  "scripts": {
+    "clean": "rm -rf dist generated/.kubb",
+    "generate": "kubb generate",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.100.14",
+    "axios": "^1.7.0"
+  },
+  "devDependencies": {
+    "@kubb/cli": "^3.0.0",
+    "@kubb/core": "^3.0.0",
+    "@kubb/plugin-oas": "^3.0.0",
+    "@kubb/plugin-react-query": "^3.0.0",
+    "@kubb/plugin-ts": "^3.0.0",
+    "@kubb/plugin-zod": "^3.0.0",
+    "@workspace/typescript-config": "workspace:*",
+    "typescript": "~6",
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "react": "^19.2.6"
+  }
+}

@@ -1,0 +1,19 @@
+node_modules
+**/node_modules
+**/dist
+**/generated
+**/coverage
+.turbo
+**/.turbo
+.git
+.gitignore
+.vscode
+.agents
+.claude
+docs
+*.log
+**/*.tsbuildinfo
+# Segredos: nunca cozinhar .env na imagem (env vem do Dokploy em runtime/build-arg)
+**/.env
+**/.env.*
+!**/.env.example

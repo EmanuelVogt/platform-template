@@ -1,0 +1,79 @@
+# {{ project_name }}
+
+pnpm + Turbo monorepo: NestJS API (modular monolith, kernel + base-set modules) + headless
+React/Vite web (auth + transport only; UI kit is the product's choice), HTTP contract via
+Zod → OpenAPI → generated Kubb client. Generated from `platform-template` — upstream
+changes arrive via `copier update` (see [`docs/dev/template.md`](docs/dev/template.md)).
+
+**This file routes; it does not argue.** Every rule below is one line plus a link to
+where it is decided. Detail belongs in the handbook or the ADR — never here.
+
+## Read before you touch
+
+| Situation | Read |
+| --- | --- |
+| **Any code, no exceptions** | [`docs/code-quality.md`](docs/code-quality.md) |
+| `apps/web` — slice, entity, form, query, router | [`docs/front/front-arch.md`](docs/front/front-arch.md) |
+| `apps/api` — module, use case, port, outbox, transaction, ALS, tracing, cross-module, Kubb | [`docs/back/back-arch.md`](docs/back/back-arch.md) |
+| Tests — unit, integration, e2e, testcontainers | [`docs/test/testing.md`](docs/test/testing.md) |
+| Local environment — Docker, env, seed | [`docs/dev/ambiente-local.md`](docs/dev/ambiente-local.md) |
+| Deploy to dev/prod — Dockerfile, entrypoint, boot migrations, Dokploy | [`docs/dev/deploy.md`](docs/dev/deploy.md) |
+| Structural decision, or an exception to a rule | [`docs/adr/README.md`](docs/adr/README.md) |
+| Branch, worktree, commit scope, spec, gates | [`docs/agents/workflow.md`](docs/agents/workflow.md) |
+| Shell output looks wrong; skills; hooks | [`docs/agents/harness.md`](docs/agents/harness.md) |
+| Writing a reply to the user | [`docs/agents/communication.md`](docs/agents/communication.md) |
+| AWS, Dokploy, Cloudflare, Resend, env databases | [`docs/agents/infra.md`](docs/agents/infra.md) |
+| GitHub issues | [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md) |
+| Template origin, upstream updates (`copier update`), what is platform vs product | [`docs/dev/template.md`](docs/dev/template.md) |
+
+Situation outside the table: start at the area handbook; one-off decisions live in the
+ADRs.
+
+## Commands (from the repo root)
+
+```
+pnpm dev                    turbo dev — brings everything up
+pnpm check                  lint + typecheck — run before asking for review
+pnpm build | typecheck | lint:fix | format | clean
+pnpm test | test:int | test:e2e
+pnpm contract               Zod → openapi.json → Kubb client
+pnpm contract:consumers     which screens consume an operationId/route
+pnpm contract:diff          readable pt-BR summary of an openapi.json change
+pnpm skills:sync            re-link .claude/skills → .agents/skills
+```
+
+## Tripwires
+
+Not a summary of the handbooks — the short list of rules that get broken by an agent who
+never opened one. The reasoning is at the link.
+
+- **Language** — identifiers English; comments, docstrings and user-facing errors pt-BR. Stack terms (`stream`, `cache`, `webhook`, `payload`, `outbox`) stay English. → [`code-quality.md`](docs/code-quality.md)
+- **Comments** — default is zero; only the 4 listed exceptions. → [`code-quality.md`](docs/code-quality.md)
+- **No `console.*`** in `src/` (it's a lint error); back uses `LoggerFactory`. → [`back-arch.md`](docs/back/back-arch.md)
+- **`any` forbidden** — `unknown` + narrowing. → [`code-quality.md`](docs/code-quality.md)
+- **`throw` is the only error path** — never `Result<T>`/`Either`. → [`code-quality.md`](docs/code-quality.md)
+- **User-facing errors leak nothing** — no stack, SQL or path; back is RFC 7807 with `correlationId`. → [`code-quality.md`](docs/code-quality.md)
+- **Never a second connection inside a tx** — module never injects `DRIZZLE`/`PG_POOL`; root only via `outsideTransaction()`. → [`back-arch.md`](docs/back/back-arch.md)
+- **Entities are immutable** — a transition returns a new instance; `Props` fields `readonly` + `Object.freeze(props)`. → [`back-arch.md`](docs/back/back-arch.md) Regra de Ouro 29
+- **One scope per change** — `feat` / `fix` / `refactor` never mix; surgical edit, not rewrite. → [`code-quality.md`](docs/code-quality.md), [`workflow.md`](docs/agents/workflow.md)
+- **Zod is the contract truth** — changed it → `pnpm contract` and commit `openapi.json`. Never edit `generated/`. → [`back-arch.md`](docs/back/back-arch.md)
+- **The front always consumes Kubb output** — extend the generated schema, never retype a contract rule by hand. → [`front-arch.md`](docs/front/front-arch.md)
+- **A contract change is verified on the front, not in the api** — `turbo typecheck` and exercise the flow. Vite dev does not typecheck. → [`back-arch.md`](docs/back/back-arch.md)
+- **Contract enums have exactly one descriptor**, on the owning entity, sourced from `models/*`. → [`front-arch.md`](docs/front/front-arch.md) Regra de Ouro 23
+- **Selects show a label, never an id** — fallback is pt-BR text, never the identifier. → [`front-arch.md`](docs/front/front-arch.md) Regra de Ouro 25
+- **Transport headers are never operation parameters** — they belong to the api-client interceptor. → [`front-arch.md`](docs/front/front-arch.md)
+- **No barrels in the front** — deep import from the file that defines the symbol. This overrides FSD's "public API via `index`". → [`front-arch.md`](docs/front/front-arch.md)
+- **Kernel never imports product** — `shared/` never imports `modules/`; base-set modules stay product-free; extension is a slot or a registry interface, never an import. → [`docs/back/back-arch.md`](docs/back/back-arch.md)
+- **Never suppress lint** — no `eslint-disable` in any form, no file-wide rule disabling. A conflict with a mandatory framework pattern is escalated to the user. → [`code-quality.md`](docs/code-quality.md)
+
+## Two standing rules
+
+**Think and work in English; answer the user in pt-BR, explaining from the business
+side.** pt-BR is for user-facing replies only — thinking, subagent prompts and internal
+notes stay in English. →
+[`docs/agents/communication.md`](docs/agents/communication.md)
+
+**Disk is the source of truth for what exists.** The handbooks describe the target
+architecture, and this file keeps no inventory — static inventories rot. Before
+referencing a module, file or package, check disk (`ls apps/api/src/modules`,
+`ls packages`, the tree in `apps/web/src`).

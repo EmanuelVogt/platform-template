@@ -1,0 +1,11 @@
+{
+  "name": "@workspace/typescript-config",
+  "version": "0.0.0",
+  "private": true,
+  "files": [
+    "base.json",
+    "react-vite.json",
+    "react-library.json",
+    "nest.json"
+  ]
+}

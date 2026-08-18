@@ -1,0 +1,92 @@
+_min_copier_version: "9.4.0"
+_answers_file: .copier-answers.yml
+_subdirectory: "."
+
+_exclude:
+  - copier.yml
+  - CLAUDE.md
+  - TEMPLATE.md
+  - "~*"
+  - "*.py[co]"
+  - __pycache__
+  - .git
+  - .DS_Store
+  - node_modules
+  - .turbo
+  - dist
+  - coverage
+  - "*.tsbuildinfo"
+  - .worktrees
+  - .specs
+  - .claude/settings.local.json
+  - apps/api/.env
+  - apps/web/.env.local
+  - .copier-answers.yml
+  - .claude/skills
+
+_skip_if_exists:
+  - README.md
+  - docs/adr/*.md
+  - .specs/
+
+_tasks:
+  - command: git init -q
+    when: "{{ _copier_operation == 'copy' and not _copier_conf.pretend }}"
+  - command: ln -sfn AGENTS.md CLAUDE.md
+    when: "{{ not _copier_conf.pretend }}"
+  - command: pnpm install
+    when: "{{ not _copier_conf.pretend }}"
+  - command: pnpm skills:sync
+    when: "{{ not _copier_conf.pretend }}"
+
+_message_after_copy: |
+  Projeto {{ project_name }} gerado a partir do platform-template.
+
+  Próximos passos:
+    1. cp apps/api/.env.example apps/api/.env  (preencha segredos)
+    2. docker compose up -d                     (Postgres + Redis)
+    3. pnpm --filter api db:migrate:run && pnpm --filter api db:bootstrap
+    4. pnpm dev
+  Atualizar a plataforma depois: `copier update` na raiz deste repositório.
+
+# ---------------------------------------------------------------- perguntas
+
+project_name:
+  type: str
+  help: Nome do produto (aparece em títulos, AGENTS.md, e-mails)
+  validator: "{% if not project_name %}obrigatório{% endif %}"
+
+project_slug:
+  type: str
+  help: Slug kebab-case (nome do pacote raiz, containers, aliases de infra)
+  default: "{{ project_name | lower | replace(' ', '-') | replace('_', '-') }}"
+  validator: "{% if not project_slug | regex_search('^[a-z][a-z0-9-]*$') %}use kebab-case{% endif %}"
+
+github_org:
+  type: str
+  help: Organização/usuário GitHub dono do repositório do produto
+
+github_repo:
+  type: str
+  help: Nome do repositório do produto no GitHub
+  default: "{{ project_slug }}"
+
+root_domain:
+  type: str
+  help: Domínio raiz (zona DNS), ex. exemplo.com.br
+  default: "example.com"
+
+app_domain:
+  type: str
+  help: Subdomínio base da aplicação (front em <app_domain>, api em api.<app_domain>)
+  default: "app.{{ root_domain }}"
+
+master_email:
+  type: str
+  help: E-mail do usuário master criado pelo bootstrap
+  default: "admin@{{ root_domain }}"
+
+with_fsd_lint:
+  type: bool
+  help: Manter as regras de fronteira FSD no eslint do front? (não, se o front for livre)
+  default: false

@@ -1,0 +1,1 @@
+{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"color":{"type":"string","nullable":true}},"required":["id","name","color"]},"x-readme-ref-name":"LinkableTagsResponseDto"}

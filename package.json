@@ -1,0 +1,37 @@
+{
+  "name": "platform-template",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "lint:fix": "turbo lint:fix",
+    "format": "turbo format",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "contract": "pnpm --filter api contract && pnpm --filter @platform/api-client generate",
+    "contract:consumers": "node scripts/contract-consumers.mjs",
+    "contract:diff": "node scripts/contract-diff.mjs",
+    "tokens:report": "node scripts/token-report.mjs",
+    "typecheck": "turbo typecheck",
+    "prepare": "lefthook install || true",
+    "test": "turbo test",
+    "test:int": "turbo test:int",
+    "test:e2e": "turbo test:e2e",
+    "check": "turbo lint typecheck",
+    "skills:sync": "node scripts/sync-agent-skills.mjs",
+    "clean": "turbo clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.3",
+    "lefthook": "^2.1.9",
+    "prettier": "^3.8.3",
+    "prettier-plugin-tailwindcss": "^0.8.0",
+    "turbo": "^2.10.2",
+    "typescript": "~6"
+  },
+  "packageManager": "pnpm@10.33.4",
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "extends": "@workspace/typescript-config/nest.json",
+  "compilerOptions": {
+    "rootDir": "./",
+    "outDir": "./dist",
+    "types": ["node", "jest", "multer"]
+  },
+  "ts-node": {
+    "require": ["tsconfig-paths/register"]
+  },
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

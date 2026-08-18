@@ -1,0 +1,165 @@
+# Deploy
+
+Dois ambientes de vida longa, cada um numa VM própria (EC2, `us-east-2`), orquestrados
+por [Dokploy](https://dokploy.com) sobre Docker Swarm. Tráfego web entra pela Cloudflare;
+TLS na origem é emitido pelo Traefik que o Dokploy gerencia.
+
+Ambiente local não usa nada disso — ver [`ambiente-local.md`](ambiente-local.md).
+
+## Topologia
+
+| | Homologação | Produção |
+| --- | --- | --- |
+| Front | `dev.{{ app_domain }}` | `{{ app_domain }}` |
+| API | `dev.api.{{ app_domain }}` | `api.{{ app_domain }}` |
+| Painel Dokploy | `dev.deploy.{{ app_domain }}` | `deploy.{{ app_domain }}` |
+
+Cada VM roda o próprio Dokploy, o próprio Postgres, o próprio Redis e o próprio túnel
+para o MySQL legado. **Não há recurso compartilhado entre os ambientes** — nem banco,
+nem painel, nem GitHub App.
+
+O MySQL legado não vive em nenhuma das VMs: um container `legacy-tunnel` (compose
+`raw` no Dokploy) mantém um túnel SSH até o host do legado e o publica na rede
+`dokploy-network` sob esse nome. É por isso que `MYSQL_LEGACY_DATABASE` aponta para
+`legacy-tunnel:3306` e não para um IP.
+
+## O que é buildado
+
+Duas imagens, buildadas na própria VM a partir do repositório.
+
+**`apps/api/Dockerfile`** — multi-stage sobre `node:22-slim`: `turbo prune` isola o
+subgrafo do `api`, compila, instala só dependências de produção e copia o `dist` para
+o runner. Expõe a porta **3000**, entra por `tini` → `docker-entrypoint.sh` e roda
+`node dist/main`.
+
+**`apps/web/Dockerfile`** — compila o Vite e serve o estático em
+`nginx-unprivileged`, porta **8080**, com healthcheck em `/healthz`.
+
+> **`VITE_API_URL` é build arg, não variável de runtime.** O valor é assado no bundle
+> durante o build (`ARG` → `ENV` para o Vite enxergar e para o BuildKit invalidar o
+> cache quando a URL muda). Trocar a URL da API exige **rebuild do front** — mudar a
+> variável e reiniciar o container não tem efeito nenhum.
+
+> **Os builds do `web` e do `api` de dev precisam do token do registry privado do
+> Bryntum.** `@bryntum/scheduler` é licenciado; sem credencial o `pnpm install` do
+> Dockerfile falha. Vale para `apps/web/Dockerfile` e `apps/api/Dockerfile.dev` —
+> este instala o workspace inteiro, então arrasta as deps do `web`. O
+> `apps/api/Dockerfile` de **prod** está livre: o `turbo prune` corta o `web` fora.
+> O token entra como secret do BuildKit
+> (`--secret id=bryntum_npm_token,env=BRYNTUM_NPM_TOKEN`) e, para runner que não
+> suporta secret, como build arg `BRYNTUM_NPM_TOKEN`. Nos dois casos o Dockerfile
+> apaga o `~/.npmrc` no mesmo `RUN`, então o token não fica em layer. No CI o mesmo
+> valor vem do secret `BRYNTUM_NPM_TOKEN` do repositório. Como gerar o token: ver
+> [`ambiente-local.md`](./ambiente-local.md#registry-privado-do-bryntum).
+
+## O que roda no boot da API
+
+`docker-entrypoint.sh` executa três passos condicionais antes de subir o app:
+
+| Passo | Condição | Default |
+| --- | --- | --- |
+| Migrations (`node dist/db/migrate`) | `RUN_MIGRATIONS != false` | **liga** |
+| Bootstrap do superusuário (`node dist/seeds/bootstrap-master`) | `MASTER_EMAIL` **e** `MASTER_PASSWORD` preenchidos | condicional |
+| Backfill do legado (`node dist/legacy-import/run`) | `RUN_BACKFILL == true` | **desliga** |
+
+As migrations são fail-fast: schema errado aborta o boot. `RUN_MIGRATIONS=false` só faz
+sentido quando um job dedicado migra e as réplicas apenas servem.
+
+O bootstrap é idempotente (`onConflictDoNothing` por e-mail), seguro a cada boot e por
+réplica. Sem os secrets vira no-op — o seed de dev nunca roda aqui (guard de `NODE_ENV`).
+
+O backfill é auto-guardado (ledger `_sync.states` + advisory lock), então re-execução é
+no-op. Ainda assim o **padrão em ambiente de vida longa é deixá-lo desligado** e disparar
+como job pontual de deploy:
+
+```bash
+docker run --rm <imagem-da-api> node dist/legacy-import/run
+```
+
+Ligar `RUN_BACKFILL=true` num ambiente com base grande faz a API ficar indisponível
+durante toda a importação a cada restart — a carga inicial de produção levou ~19 min.
+
+## Variáveis por ambiente
+
+O que muda entre homologação e produção, e nunca deve ser copiado de um para o outro:
+
+| Variável | Observação |
+| --- | --- |
+| `DATABASE_URL`, `REDIS_URL` | apontam para os serviços do próprio ambiente (nome do service no Swarm, não IP) |
+| `WEB_ORIGIN` | origem exata do front; o CORS espelha só ela |
+| `VITE_API_URL` (front) | build arg — ver aviso acima |
+| `PASSWORD_PEPPER`, `CSRF_SECRET` | **gerar novos por ambiente**; nunca reaproveitar da homologação |
+| `MASTER_EMAIL`, `MASTER_PASSWORD` | credencial do superusuário inicial |
+| `MYSQL_LEGACY_DATABASE` | conexão via `legacy-tunnel` |
+| `DATABASE_POOL_MAX` | teto de conexões do pool de aplicação; saturado → `PoolSaturatedError`, **503** com `Retry-After` (ADR 0089) |
+| `DATABASE_POOL_MAX_WAITING` | teto da fila de espera por conexão; acima disso a aquisição é recusada na hora (mesmo 503), em vez de enfileirar |
+| `DATABASE_IDLE_IN_TX_TIMEOUT_MS` | teto de transação aberta e ociosa; acima disso o Postgres encerra a sessão |
+
+O restante (parâmetros de sessão, Argon2, lockout, cookie, timeouts) é configuração pura
+e pode ser idêntico nos dois. A validação é fail-fast por módulo: falta ou formato errado
+derruba o boot com erro explícito.
+
+## Fluxo de deploy
+
+1. Push na `main` no `{{ github_org }}/{{ github_repo }}`.
+2. O GitHub App instalado em cada ambiente dispara o webhook do Dokploy daquela VM.
+3. O Dokploy faz `git fetch`, builda a imagem na VM e atualiza o service no Swarm.
+4. O Traefik reconfigura a rota; o certificado da origem já existe (Let's Encrypt).
+
+Auto-deploy no push está ligado nos dois ambientes, apontando para a **mesma branch**
+(`main`). Cada VM tem o próprio GitHub App — conectar um não conecta o outro.
+
+O gate de qualidade roda **antes** disso: lefthook no pré-push (typecheck + unit) e CI
+no PR/push (`.github/workflows/ci.yml`). O build do Dokploy não roda testes.
+
+## Armadilhas conhecidas
+
+**Nunca deployar ambiente de vida longa com `Dockerfile.dev`.** O
+`docker-entrypoint.dev.sh` aplica migrations e backfill, mas **não** executa o
+`bootstrap-master` — o ambiente sobe com zero usuários e ninguém consegue autenticar.
+Além disso roda `pnpm dev` (ts-node em watch) em vez do build compilado. O `.dev` existe
+para desenvolvimento local, não para homologação nem produção.
+
+**Migrations podem ser puladas em silêncio num banco de vida longa.** O migrator do
+Drizzle só executa entradas cujo timestamp seja maior que o da última aplicada. Se uma
+migration entrar na `main` com timestamp anterior ao que o ambiente já aplicou — o que
+acontece quando branches paralelas criam migrations com o mesmo número e são mescladas
+fora de ordem — ela é ignorada em todo boot, para sempre, e redeploy não corrige.
+
+Antes de assumir que um ambiente está atualizado, compare com o journal:
+
+```sql
+SELECT count(*) FROM drizzle.__drizzle_migrations;
+```
+
+O total deve bater com o número de entradas em
+`apps/api/drizzle/migrations/meta/_journal.json`. Divergiu, o banco tem drift — e
+banco de homologação com drift **não serve de origem para copiar dados** para produção.
+
+**Build consome a VM.** O build acontece na própria máquina que serve o ambiente; um
+build pesado concorre com a aplicação em execução. Os dois ambientes rodam com swap
+configurado e limpeza diária do cache do Docker (cron às 04:00) justamente por isso.
+
+## Operação
+
+Acesso às VMs é por SSH com chave, entrando pelo EC2 Instance Connect Endpoint — não há
+liberação por IP, e sem sessão SSO ativa não há SSH. A porta do Postgres é fechada nos
+dois ambientes. O caminho para chegar no banco depende do ambiente e está detalhado em
+[`../agents/infra.md`](../agents/infra.md): na homologação o túnel `ssh -L` alcança, na
+produção não — o Postgres só existe na rede overlay do Swarm.
+
+Comandos úteis na VM:
+
+```bash
+docker service ls                          # estado dos services do Swarm
+docker service logs --tail 50 <service>    # logs de um service
+docker system df                           # uso de disco do Docker
+```
+
+Migrations, bootstrap e backfill também podem ser disparados manualmente a partir da
+imagem já buildada, sem redeploy:
+
+```bash
+docker run --rm <imagem-da-api> node dist/db/migrate
+docker run --rm <imagem-da-api> node dist/seeds/bootstrap-master
+```

@@ -1,0 +1,1 @@
+{"type":"object","properties":{"newEmail":{"type":"string"}},"required":["newEmail"],"x-readme-ref-name":"EmailChangeInfoDto"}

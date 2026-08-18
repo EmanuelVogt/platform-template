@@ -1,0 +1,17 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+ignoredBuiltDependencies:
+  - '@nestjs/core'
+  - '@scarf/scarf'
+  - cpu-features
+  - es5-ext
+  - esbuild
+  - lefthook
+  - msw
+  - protobufjs
+  - ssh2
+  - unrs-resolver
+onlyBuiltDependencies:
+  - argon2

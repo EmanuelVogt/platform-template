@@ -1,0 +1,24 @@
+# {{ project_name }}
+
+Monorepo pnpm + Turbo: API NestJS (monólito modular) e front React/Vite headless, gerado a
+partir do `platform-template` (versão em `.copier-answers.yml`).
+
+## Começar
+
+```
+cp apps/api/.env.example apps/api/.env
+docker compose up -d
+pnpm install
+pnpm --filter api db:migrate:run
+pnpm --filter api db:bootstrap
+pnpm dev
+```
+
+Front em `http://localhost:5173`, API em `http://localhost:3000` (Scalar em `/docs`).
+
+## Mapa
+
+- `AGENTS.md` — regras de leitura obrigatória e tripwires (também é o `CLAUDE.md`).
+- `docs/dev/template.md` — o que é plataforma, o que é produto, como atualizar.
+- `docs/back/back-arch.md`, `docs/front/front-arch.md`, `docs/test/testing.md` — handbooks.
+- `docs/dev/deploy.md`, `docs/agents/infra.md` — deploy e infra.

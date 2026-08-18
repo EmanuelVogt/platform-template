@@ -1,0 +1,64 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# testes
+coverage
+
+# env files (can opt-in for committing if needed)
+.env*
+!.env.example
+
+# turbo
+.turbo
+
+# lockfiles de outros gerenciadores (pnpm é o oficial — ver packageManager no package.json)
+package-lock.json
+yarn.lock
+
+# store local do pnpm — o store oficial é o global (pnpm store path); este só
+# aparece quando o global fica inacessível (container, sandbox, outro volume)
+.pnpm-store/
+
+# storybook
+storybook-static
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# typescript
+*.tsbuildinfo
+
+# legacy import (dados locais, não versionados)
+
+# git worktrees locais
+.worktrees/
+
+# design-sync (claude.ai/design) — build artifacts, staged scripts, verification state
+.design-sync/sb-reference/
+.design-sync/learnings/
+.design-sync/.cache/
+.design-sync/node_modules
+.ds-sync/
+ds-bundle/

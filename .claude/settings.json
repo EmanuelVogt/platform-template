@@ -1,0 +1,119 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "node \"$CLAUDE_PROJECT_DIR/.claude/statusline.mjs\""
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/branch-only-in-worktree.mjs\"",
+            "statusMessage": "Checking branch × worktree"
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/no-huge-reads.mjs\"",
+            "statusMessage": "Checking read size"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/edit-reminders.mjs\"",
+            "statusMessage": "Recalling repo rules"
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/specs-in-english.mjs\"",
+            "statusMessage": "Checking spec artifact language"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|Grep|Glob|Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/delegate-to-subagent.mjs\"",
+            "statusMessage": "Checking whether this goes to a subagent"
+          }
+        ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/subagent-model-required.mjs\"",
+            "statusMessage": "Checking the subagent tier"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/reinject-tripwires.mjs\"",
+            "statusMessage": "Reinforcing tripwires in a long session"
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-context-checkpoint.mjs\"",
+            "statusMessage": "Measuring the session context"
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/delegate-to-subagent.mjs\" reset",
+            "statusMessage": "Resetting the turn's navigation quota"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/comment-policy.mjs\"",
+            "statusMessage": "Checking added comments"
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/contract-enum.mjs\"",
+            "statusMessage": "Checking contract enum"
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/contract-consumers.mjs\"",
+            "statusMessage": "Mapping contract consumers"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/kill-orphan-dev-servers.mjs\" 2>/dev/null || true",
+            "statusMessage": "Terminating orphan dev servers"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,1 @@
+{"type":"object","properties":{"count":{"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991}},"required":["count"],"x-readme-ref-name":"UnseenCountResponseDto"}

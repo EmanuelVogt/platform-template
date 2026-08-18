@@ -1,0 +1,40 @@
+{
+  "name": "@workspace/eslint-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./base": "./base.js",
+    "./react": "./react.js",
+    "./nest": "./nest.js",
+    "./fsd": "./fsd.js"
+  },
+  "files": [
+    "base.js",
+    "react.js",
+    "nest.js",
+    "fsd.js",
+    "rules"
+  ],
+  "scripts": {
+    "test": "node --test rules/*.test.js"
+  },
+  "dependencies": {
+    "@eslint/js": "^10",
+    "eslint-config-prettier": "^10",
+    "eslint-import-resolver-typescript": "^4",
+    "eslint-plugin-boundaries": "^7.0.2",
+    "eslint-plugin-import-x": "^4",
+    "eslint-plugin-jsx-a11y": "^6",
+    "eslint-plugin-react": "^7",
+    "eslint-plugin-react-hooks": "^7",
+    "eslint-plugin-react-refresh": "^0.5",
+    "eslint-plugin-unused-imports": "^4",
+    "globals": "^17",
+    "typescript-eslint": "^8"
+  },
+  "peerDependencies": {
+    "eslint": "^10",
+    "typescript": "^6"
+  }
+}

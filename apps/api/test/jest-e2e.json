@@ -1,0 +1,23 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "..",
+  "roots": ["<rootDir>/test", "<rootDir>/src"],
+  "testRegex": ".*\\.e2e-spec\\.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "@swc/jest"
+  },
+  "transformIgnorePatterns": [
+    "/node_modules/(?!(?:\\.pnpm/[^/]+/node_modules/)?(?:puppeteer|puppeteer-core|@puppeteer)/)"
+  ],
+  "moduleNameMapper": {
+    "^@scalar/nestjs-api-reference$": "<rootDir>/test/setup/scalar-stub.ts"
+  },
+  "testEnvironment": "node",
+  "globalSetup": "<rootDir>/test/setup/global-setup.ts",
+  "globalTeardown": "<rootDir>/test/setup/global-teardown.ts",
+  "setupFiles": ["<rootDir>/test/setup/e2e-env.ts"],
+  "setupFilesAfterEnv": ["<rootDir>/test/setup/e2e-after-env.ts"],
+  "testTimeout": 120000,
+  "maxWorkers": 1,
+  "workerIdleMemoryLimit": "1.5GB"
+}

@@ -1,0 +1,18 @@
+{
+  "paths": {
+    "/v1/audit": {
+      "get": {
+        "operationId": "listAuditEntries",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ListAuditEntriesResponseDto" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

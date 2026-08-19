@@ -21,6 +21,8 @@
     "check": "turbo lint typecheck",
     "skills:sync": "node scripts/sync-agent-skills.mjs",
     "template:smoke": "node scripts/template-smoke.mjs",
+    "platform": "node scripts/platform/cli.mjs",
+    "test:scripts": "node --test scripts/platform/__tests__/*.test.mjs",
     "clean": "turbo clean && rm -rf node_modules"
   },
   "devDependencies": {
@@ -28,8 +30,10 @@
     "lefthook": "^2.1.9",
     "prettier": "^3.8.3",
     "prettier-plugin-tailwindcss": "^0.8.0",
+    "semver": "^7.8.1",
     "turbo": "^2.10.2",
-    "typescript": "~6"
+    "typescript": "~6",
+    "yaml": "^2.9.0"
   },
   "packageManager": "pnpm@10.33.4",
   "engines": {

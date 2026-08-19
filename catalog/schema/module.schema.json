@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform-template.dev/catalog/schema/module.schema.json",
+  "title": "module.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "version", "kernelRange"],
+  "properties": {
+    "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "variant": { "type": "string" },
+    "version": { "type": "string", "description": "semver exato" },
+    "description": { "type": "string" },
+    "kernelRange": { "type": "string", "description": "semver range" },
+    "dependsOn": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "range"],
+        "properties": {
+          "name": { "type": "string" },
+          "range": { "type": "string" }
+        }
+      }
+    },
+    "apiModule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["export", "path"],
+      "properties": {
+        "export": { "type": "string" },
+        "path": { "type": "string" }
+      }
+    },
+    "schemaExports": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "customMigrations": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "env": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "example", "required"],
+        "properties": {
+          "name": { "type": "string" },
+          "example": { "type": "string" },
+          "required": { "type": "boolean" },
+          "doc": { "type": "string" }
+        }
+      }
+    },
+    "web": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "defaultRoot": { "type": "string" },
+        "react": { "type": "boolean" }
+      }
+    },
+    "absorbs": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

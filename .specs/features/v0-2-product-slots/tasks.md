@@ -233,6 +233,7 @@ Wave 3: [I: T19→T20] (T24 fix between T19 and T20) → Verifier → T21 → T2
 **Tests**: e2e + unit · **Gate**: full · **Commit**: two, above
 
 ### T21: Final sweep + issue comment + follow-up issues
+**Status**: ✅ Done — issues #2–#8 (identity professional v0.3, back-arch, front-arch, issue-tracker taxonomy, test fixtures, cosmetic leftovers, download trail/stream before 404), comment https://github.com/EmanuelVogt/platform-template/issues/1#issuecomment-5336905460; sweep 227 files (was 240), 21 resolved
 **What**: re-run T1's sweep on the finished branch; update `coverage-sweep.md` (v0.2 rows → commit hashes); create one GitHub issue per remaining `remove`/`open slot` cluster (identity professional slice → v0.3; docs product references; others) via `gh issue create` (creating-issues skill), link in rows; post the table as a comment on issue #1 (`gh issue comment 1 -F`).
 **Where**: `.specs/features/v0-2-product-slots/coverage-sweep.md`, GitHub · **Depends on**: T20 · **Requirement**: SWP-01, SWP-02
 **Done when**: [ ] comment visible on #1; [ ] every non-`generic ok` row has an issue link or commit hash.

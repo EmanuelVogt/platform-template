@@ -24,7 +24,7 @@ describe("useCan — sem sessão", () => {
 })
 
 describe("useCan — com sessão", () => {
-  it("delega ao can quando há user", async () => {
+  it("delega ao can quando há user", () => {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     qc.setQueryData(sessionKeys.current(), {
       user: { permissions: ["admin.users.read"], accessProfile: "admin" },

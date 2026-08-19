@@ -7,7 +7,6 @@ import {
   loginRoute,
   rootRoute,
 } from "./shell"
-import { requireAccess, requireAnon, resolveRootRedirect } from "./guards"
 
 const { sessionFetch } = vi.hoisted(() => ({ sessionFetch: vi.fn() }))
 

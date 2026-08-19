@@ -1,5 +1,4 @@
 import { QueryClient } from "@tanstack/react-query"
-import { createMemoryHistory } from "@tanstack/react-router"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useAuthStore } from "@/shared/store/auth.store"
@@ -163,7 +162,7 @@ describe("createAppRouter", () => {
   it("serializa arrays de string como CSV na query", () => {
     const client = makeClient()
     const appRouter = createAppRouter({ queryClient: client })
-    expect(appRouter.options.stringifySearch?.({ layers: ["a", "b"] })).toBe(
+    expect(appRouter.options.stringifySearch({ layers: ["a", "b"] })).toBe(
       "?layers=a%2Cb",
     )
   })
@@ -171,7 +170,7 @@ describe("createAppRouter", () => {
   it("serializa arrays mistos como JSON", () => {
     const client = makeClient()
     const appRouter = createAppRouter({ queryClient: client })
-    expect(appRouter.options.stringifySearch?.({ layers: ["a", 1] })).toBe(
+    expect(appRouter.options.stringifySearch({ layers: ["a", 1] })).toBe(
       '?layers=%5B%22a%22%2C1%5D',
     )
   })
@@ -179,6 +178,6 @@ describe("createAppRouter", () => {
   it("serializa valores não-array como JSON", () => {
     const client = makeClient()
     const appRouter = createAppRouter({ queryClient: client })
-    expect(appRouter.options.stringifySearch?.({ n: 1 })).toBe("?n=1")
+    expect(appRouter.options.stringifySearch({ n: 1 })).toBe("?n=1")
   })
 })

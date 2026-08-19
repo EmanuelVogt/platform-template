@@ -1,6 +1,12 @@
 import { render, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
+import { queryClient } from "@/app/query-client"
+
+import { AppProviders } from "./app-providers"
+
+import type * as ReactRouterModule from "@tanstack/react-router"
+
 const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }))
 
 vi.mock("@/app/router/router", () => ({
@@ -8,7 +14,7 @@ vi.mock("@/app/router/router", () => ({
 }))
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@tanstack/react-router")>()
+  const actual = await importOriginal<typeof ReactRouterModule>()
   return {
     ...actual,
     RouterProvider: () => null,
@@ -18,9 +24,6 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 vi.mock("@/entities/session/api/session.queries", () => ({
   useSession: () => ({ data: undefined }),
 }))
-
-import { queryClient } from "@/app/query-client"
-import { AppProviders } from "./app-providers"
 
 describe("AppProviders AuthBootstrap", () => {
   it("limpa cache e navega para login em logout cross-tab", async () => {

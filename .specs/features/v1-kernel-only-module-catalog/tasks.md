@@ -383,6 +383,39 @@ Wave 6:  [C21: T28]
 
 ---
 
+## Execution Log
+
+Worktree `.worktrees/v1-kernel-only-module-catalog`, branch `feat/v1-kernel-only-module-catalog` (from `main` @ `3fd0f95`).
+
+### Wave 1 — DONE (all 6 clusters)
+
+| Cluster | Task | Commit | Result |
+| --- | --- | --- | --- |
+| C1 | T1 | `abe1a6f` | access-policy port + `@RequirePermission`/`@Public`/`@Authenticated` writing `ACCESS_REQUIREMENT` |
+| C1 | T2 | `add1343` | fail-closed `AccessGuard` registered as `APP_GUARD` in `SharedKernelModule` — 41 tests / 4 suites |
+| C2 | T3 | `0f67fcd` | `Actor` + `setActor`/`getActor` (one-shot) + `setExtension`/`getExtension`; job-context `actorId` + `tenantId` |
+| C2 | T4 | `d175ae3` | idempotency scope key from `actor.id`; 0 `userId` tokens left under `shared/kernel/idempotency` — 32 tests / 4 suites |
+| C3 | T5 | `04032f2` | `scripts/platform` skeleton, `catalog/schema/module.schema.json`, root `platform` + `test:scripts`, devDeps `semver`/`yaml` |
+| C3 | T10 | `d9a650e` | `catalog-source.mjs` + `plan.mjs` + mini fixture catalog (`alpha`, `beta`, `gamma/variant-x`) |
+| C3 | T11 | `261d522` | `apply.mjs` (copy, env, registries, lock w/ sha256, rollback) — 30 tests |
+| C4 | T6 | `aa2edfa` | `lib/advisories.mjs` + `.claude/hooks/pending-advisories.mjs` + settings registration — 46 tests total |
+| C5 | T7 | `09a377e` | `docs/catalog/README-contract.md`, `docs/catalog/catalog.md`, `catalog/README.md` |
+| C6 | T16 | `118c3e5` | `platform-modules.ts` + `platform-schema.ts`; `app.module.ts` spreads `...PLATFORM_MODULES` |
+| C6 | T30 | `b2adf66` | `expectContractSubset` parity helper — 4 tests |
+
+**Carry-forward notes (must reach the tasks named below):**
+
+1. **T8/T9** — T3 kept a wider deprecated surface than design § 2.2 states: `userId`, `sessionId`, `deviceId`, `access`, `RequestAccess`, `setAccess`, `setUserSession`, `getUserSession` all remain in `request-context.ts` (JSDoc `@deprecated`), and `actor`/`extensions` are **optional** store fields. Reason: ~20 unowned files read `store.userId`/`store.access` directly, including kernel `shared/kernel/transactional/transaction-manager.ts:154`, `context/request-context.middleware.ts` and `context/event-context.ts`. T8/T9 delete the deprecated fields and flip `actor`/`extensions` to required.
+2. **T8/T9** — spec-precision gap: the actor rebuilt in `buildJobContextStore` uses `kind: "job"` (design only says `actor?.id` is copied). Change to `"user"` only if the identity policy needs it.
+3. **T22** — `db/schema.ts` did NOT get `export * from "./platform-schema"` (design § 5.3): `db/schema-completeness.spec.ts` runs a regex dangling-import check over every `from "…"` in `schema.ts` against on-disk `*.table.ts` files, so the line fails unconditionally until that spec is made kernel-only aware. T22 owns the spec — it must land the re-export line and the spec update together.
+4. **T22** — T1 could not delete `shared/kernel/access/permission.types.ts` (registry still load-bearing: `declare module` augmentation in identity `permission-catalog.ts` + 4 importers). Kernel `PermissionKey = string` lives in `access-policy.port.ts`; `decorators.ts` imports it from there. Legacy metadata keys are still written so identity's `PermissionsGuard` keeps working. T22 removes both.
+5. **T4 is a no-op on SQL** — `idempotency_keys` has no `user_id` column; the actor lives inside the composite `scope` text column. T22's baseline rewrite is unaffected on this point.
+6. **T15** — `writeRegistry`/`rollback` in `apply.mjs` take registry `entries` (`{name, apiModule, schemaExports}`) as an explicit parameter; the lock shape in design § 7 does not carry `apiModule`/`schemaExports`, so the command layer must supply them from the manifests it holds.
+7. **Tooling** — `test:scripts` is `node --test scripts/platform/__tests__/*.test.mjs` (glob, not bare dir: Node 24 fails to resolve a directory test path). `turbo.json` untouched — root tasks are not turbo-orchestrated, so Final runs `test:scripts` explicitly. `lib/manifest.mjs` validates by hand against `module.schema.json` (no JSON-Schema dependency added).
+8. **Standing condition** — `AccessGuard` is globally registered and fail-closed with no `ACCESS_POLICY` provider bound until T8. Every non-`@Public` route answers 403 `access-policy-missing` in the meantime; e2e/integration red in that window is expected, not a regression.
+
+---
+
 ## Tools per task
 
 - MCP: none required. Workers nest `repo-scout` (haiku/sonnet) and `shell-runner` (haiku).

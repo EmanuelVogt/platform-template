@@ -117,7 +117,8 @@
     "testPathIgnorePatterns": [
       "/node_modules/",
       "\\.int-spec\\.ts$",
-      "\\.e2e-spec\\.ts$"
+      "\\.e2e-spec\\.ts$",
+      "if-else\\.sample\\.uncovered\\.spec\\.ts$"
     ],
     "passWithNoTests": true,
     "maxWorkers": 4,

@@ -1,0 +1,7 @@
+{
+  "name": "delta",
+  "version": "1.0.0",
+  "kernelRange": ">=1.0.0 <2.0.0",
+  "apiModule": { "export": "DeltaModule", "path": "modules/delta/delta.module" },
+  "customMigrations": ["01_delta_events_append_only.sql"]
+}

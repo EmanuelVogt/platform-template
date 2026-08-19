@@ -1,0 +1,123 @@
+import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { test } from "node:test";
+import { readManifest } from "../lib/manifest.mjs";
+import { EXIT_CODES } from "../lib/exit-codes.mjs";
+import { MigrationFailureError, generateForModule } from "../lib/migrations.mjs";
+
+const FIXTURES_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures/catalog");
+const alphaManifest = readManifest(path.join(FIXTURES_ROOT, "alpha", "module.json"));
+const deltaManifest = readManifest(path.join(FIXTURES_ROOT, "delta", "module.json"));
+
+function makeChild(journalEntryCount = 2) {
+  const child = mkdtempSync(path.join(tmpdir(), "migrations-child-"));
+  const migrationsDir = path.join(child, "apps/api/drizzle/migrations");
+  mkdirSync(path.join(migrationsDir, "meta"), { recursive: true });
+  const entries = Array.from({ length: journalEntryCount }, (_, idx) => ({ idx, tag: `${idx}_kernel` }));
+  writeFileSync(path.join(migrationsDir, "meta/_journal.json"), JSON.stringify({ entries }), "utf8");
+  return child;
+}
+
+function makeStubRun(results = []) {
+  const calls = [];
+  const queue = [...results];
+  const run = (command, args, options) => {
+    calls.push({ command, args, options });
+    return queue.shift() ?? { status: 0, stdout: "", stderr: "" };
+  };
+  return { run, calls };
+}
+
+test("generateForModule roda check, generate --name <module>_baseline e db:check:journal nessa ordem", () => {
+  const child = makeChild(2);
+  const { run, calls } = makeStubRun();
+
+  const generated = generateForModule(child, alphaManifest, { catalogEntryRoot: path.join(FIXTURES_ROOT, "alpha"), run });
+
+  assert.deepEqual(
+    calls.map((call) => [call.command, call.args]),
+    [
+      ["pnpm", ["--filter", "api", "exec", "drizzle-kit", "check"]],
+      ["pnpm", ["--filter", "api", "exec", "drizzle-kit", "generate", "--name", "alpha_baseline"]],
+      ["pnpm", ["--filter", "api", "run", "db:check:journal"]],
+    ],
+  );
+  assert.ok(calls.every((call) => call.options.cwd === child));
+  assert.deepEqual(generated, ["0002_alpha_baseline.sql"]);
+});
+
+test("generateForModule aborta com exit 9 quando drizzle-kit check acusa drift, sem chamar generate", () => {
+  const child = makeChild(2);
+  const { run, calls } = makeStubRun([{ status: 1, stdout: "drift detectado\n", stderr: "" }]);
+
+  assert.throws(
+    () => generateForModule(child, alphaManifest, { catalogEntryRoot: path.join(FIXTURES_ROOT, "alpha"), run }),
+    (err) => {
+      assert.ok(err instanceof MigrationFailureError);
+      assert.equal(err.exitCode, EXIT_CODES.MIGRATION_FAILURE);
+      assert.equal(err.exitCode, 9);
+      assert.match(err.output, /drift detectado/);
+      return true;
+    },
+  );
+  assert.equal(calls.length, 1);
+});
+
+test("generateForModule aborta com exit 9 quando db:check:journal falha após gerar", () => {
+  const child = makeChild(2);
+  const { run, calls } = makeStubRun([
+    { status: 0, stdout: "", stderr: "" },
+    { status: 0, stdout: "", stderr: "" },
+    { status: 1, stdout: "", stderr: "journal inconsistente\n" },
+  ]);
+
+  assert.throws(
+    () => generateForModule(child, alphaManifest, { catalogEntryRoot: path.join(FIXTURES_ROOT, "alpha"), run }),
+    (err) => {
+      assert.ok(err instanceof MigrationFailureError);
+      assert.equal(err.exitCode, 9);
+      assert.match(err.output, /journal inconsistente/);
+      return true;
+    },
+  );
+  assert.equal(calls.length, 3);
+});
+
+test("generateForModule gera uma migração --custom por entrada de customMigrations e grava o SQL enviado no arquivo gerado", () => {
+  const child = makeChild(3);
+  const { run, calls } = makeStubRun();
+  const catalogEntryRoot = path.join(FIXTURES_ROOT, "delta");
+
+  const generated = generateForModule(child, deltaManifest, { catalogEntryRoot, run });
+
+  assert.deepEqual(
+    calls.map((call) => [call.command, call.args]),
+    [
+      ["pnpm", ["--filter", "api", "exec", "drizzle-kit", "check"]],
+      ["pnpm", ["--filter", "api", "exec", "drizzle-kit", "generate", "--name", "delta_baseline"]],
+      [
+        "pnpm",
+        ["--filter", "api", "exec", "drizzle-kit", "generate", "--custom", "--name", "delta_delta_events_append_only"],
+      ],
+      ["pnpm", ["--filter", "api", "run", "db:check:journal"]],
+    ],
+  );
+  assert.deepEqual(generated, [
+    "0003_delta_baseline.sql",
+    "0004_delta_delta_events_append_only.sql",
+  ]);
+
+  const shippedSql = readFileSync(
+    path.join(catalogEntryRoot, "migrations/custom/01_delta_events_append_only.sql"),
+    "utf8",
+  );
+  const generatedFile = path.join(
+    child,
+    "apps/api/drizzle/migrations",
+    "0004_delta_delta_events_append_only.sql",
+  );
+  assert.equal(readFileSync(generatedFile, "utf8"), shippedSql);
+});

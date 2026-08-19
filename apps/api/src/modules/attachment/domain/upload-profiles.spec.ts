@@ -1,3 +1,4 @@
+import { PRODUCT_UPLOAD_PROFILES } from "../../../shared/kernel/upload/product-upload-profiles"
 import { parseAttachmentConfig } from "../attachment.config"
 
 import {
@@ -14,6 +15,7 @@ import type { UploadProfile } from "./upload-profiles"
 import type { UploadProfileDef } from "../../../shared/kernel/upload/upload-profile.types"
 
 const config = parseAttachmentConfig({})
+const productUploadProfiles = PRODUCT_UPLOAD_PROFILES as readonly UploadProfileDef[]
 
 describe("BASE_UPLOAD_PROFILE_NAMES", () => {
   it("é exatamente avatar, access-link-avatar, document, image, multi", () => {
@@ -109,13 +111,10 @@ describe("buildUploadProfiles", () => {
 })
 
 describe("UPLOAD_PROFILE_NAMES / ROUTE_UPLOAD_PROFILE_NAMES", () => {
-  it("UPLOAD_PROFILE_NAMES contém exatamente os 5 nomes base (sem produto no template)", () => {
+  it("UPLOAD_PROFILE_NAMES contém os nomes base seguidos das chaves do slot de produto", () => {
     expect(UPLOAD_PROFILE_NAMES).toEqual([
-      "avatar",
-      "access-link-avatar",
-      "document",
-      "image",
-      "multi",
+      ...BASE_UPLOAD_PROFILE_NAMES,
+      ...productUploadProfiles.map((def) => def.key),
     ])
   })
 
@@ -139,8 +138,15 @@ describe("UPLOAD_PROFILE_NAMES / ROUTE_UPLOAD_PROFILE_NAMES", () => {
     ])
   })
 
-  it("ROUTE_UPLOAD_PROFILE_NAMES contém só document, image e multi (avatar e access-link-avatar não sobem pela rota genérica)", () => {
-    expect(ROUTE_UPLOAD_PROFILE_NAMES).toEqual(["document", "image", "multi"])
+  it("ROUTE_UPLOAD_PROFILE_NAMES contém document, image, multi seguidos das chaves roteáveis do slot de produto (avatar e access-link-avatar nunca sobem pela rota genérica)", () => {
+    expect(ROUTE_UPLOAD_PROFILE_NAMES).toEqual([
+      "document",
+      "image",
+      "multi",
+      ...productUploadProfiles.filter((def) => def.uploadRoute).map(
+        (def) => def.key,
+      ),
+    ])
   })
 
   it("buildRouteUploadProfileNames inclui a chave de produto só quando uploadRoute é true", () => {

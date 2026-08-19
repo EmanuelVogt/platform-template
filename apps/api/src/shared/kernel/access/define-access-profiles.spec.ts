@@ -1,7 +1,6 @@
 import { BASE_ACCESS_PROFILES } from "./access-profile.types"
 import { defineAccessProfiles } from "./define-access-profiles"
 import {
-  ACCESS_PROFILES,
   ASSIGNABLE_ACCESS_PROFILES,
   requiresPermissionFloor,
 } from "./permission.types"
@@ -25,12 +24,14 @@ const SAMPLE_INTERNAL_PROFILE = {
 
 describe("defineAccessProfiles", () => {
   describe("base-set sem produto", () => {
+    const baseRegistry = defineAccessProfiles(BASE_ACCESS_PROFILES)
+
     it("ACCESS_PROFILES lista os três perfis do base-set na ordem declarada", () => {
-      expect(ACCESS_PROFILES).toEqual(["master", "admin", "professional"])
+      expect(baseRegistry.ACCESS_PROFILES).toEqual(["master", "admin", "professional"])
     })
 
     it("ASSIGNABLE_ACCESS_PROFILES exclui o perfil não atribuível", () => {
-      expect(ASSIGNABLE_ACCESS_PROFILES).toEqual(["admin", "professional"])
+      expect(baseRegistry.ASSIGNABLE_ACCESS_PROFILES).toEqual(["admin", "professional"])
     })
 
     it("o tipo atribuível exclui master em tempo de compilação", () => {

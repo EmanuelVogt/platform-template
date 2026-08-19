@@ -1,4 +1,4 @@
-import { PROFILE_DEFS } from "../../../shared/kernel/access/permission.types"
+import { BASE_ACCESS_PROFILES } from "../../../shared/kernel/access/access-profile.types"
 import {
   InvalidPermissionSetError,
   InvalidProfessionalScopeError,
@@ -15,7 +15,6 @@ import {
 } from "./access-policy"
 
 import type { GrantContext } from "./access-policy"
-import type { AccessProfile } from "../../../shared/kernel/access/permission.types"
 import type { ProfessionalScope } from "../domain/ports/professional-scope.port"
 
 describe("assertValidPermissionSet (closure de requires)", () => {
@@ -64,14 +63,14 @@ describe("assertProfileFloor (piso do perfil)", () => {
   })
 
   describe("o piso sai da def registrada, não de chave literal", () => {
-    const exempt = PROFILE_DEFS.filter((def) => !def.permissionFloor)
-    const enforced = PROFILE_DEFS.filter((def) => def.permissionFloor)
+    const exempt = BASE_ACCESS_PROFILES.filter((def) => !def.permissionFloor)
+    const enforced = BASE_ACCESS_PROFILES.filter((def) => def.permissionFloor)
 
     it("perfil com permissionFloor false aceita set vazio", () => {
       expect(exempt.map((def) => def.key)).toEqual(["master", "professional"])
       for (const def of exempt) {
         expect(() => {
-          assertProfileFloor(def.key as AccessProfile, [])
+          assertProfileFloor(def.key, [])
         }).not.toThrow()
       }
     })
@@ -80,7 +79,7 @@ describe("assertProfileFloor (piso do perfil)", () => {
       expect(enforced.map((def) => def.key)).toEqual(["admin"])
       for (const def of enforced) {
         expect(() => {
-          assertProfileFloor(def.key as AccessProfile, [])
+          assertProfileFloor(def.key, [])
         }).toThrow(
           `O perfil de acesso exige ao menos uma permissão do módulo "${def.key}".`,
         )

@@ -20,7 +20,7 @@
     "modules/identity/infrastructure/tables/verification-token.table",
     "modules/identity/infrastructure/tables/auth-event.table"
   ],
-  "customMigrations": ["01_auth_events_append_only.sql"],
+  "customMigrations": ["01_auth_events_append_only.sql", "02_audit_attach.sql"],
   "env": [
     {
       "name": "WEB_ORIGIN",

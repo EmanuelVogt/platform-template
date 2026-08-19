@@ -99,12 +99,25 @@ Tipos de `identity.auth_events.type`: `login_success`, `login_failed`, `logout`,
 `access_link_resent`, `access_link_cancelled`, `device_revoked`, `sessions_revoked_all`,
 `rate_limited_burst`, `user_deleted`, `user_restored`, `user_purged`.
 
-Migração manual (`migrations/custom/`, aplicada depois das tabelas):
+Migrações manuais (`migrations/custom/`, aplicadas nesta ordem, depois das tabelas):
 
 - `01_auth_events_append_only.sql` — `REVOKE UPDATE, TRUNCATE` + trigger
   `auth_events_append_only` que bloqueia `UPDATE` sempre e `DELETE` a menos que a transação
   ligue o GUC `app.auth_events_purge=on` (o job de retenção liga; SQLi precisaria do
   `set_config` na mesma transação).
+- `02_audit_attach.sql` — anexa 14 tabelas do identity à trilha da entrada `audit`
+  (`users` com `password_hash` redigido, `devices`, `sessions`, `verification_tokens`,
+  `permission_templates` + `permission_template_permissions`, `user_permissions` e as seis
+  tabelas do recorte `professional`). Cada módulo anexa as suas tabelas: a entrada `audit`
+  entrega o schema, a tabela e o helper `audit.attach`, nunca a lista de quem é auditado.
+  `identity.auth_events` fica de fora de propósito — já tem trilha própria (01).
+
+  A entrada `audit` é **opcional**: o passo 02 é um bloco `DO` guardado por
+  `to_regprocedure('audit.attach(text,text,text[],text[])') IS NULL`, então um child
+  kernel-only + identity migra sem erro e sem anexar nada. É dependência de **ordem**, não de
+  instalação — por isso `audit` não entra em `dependsOn`. Quem instalar `audit` depois do
+  identity precisa reexecutar este passo; `audit.attach` é idempotente (recria o trigger
+  `audit_row`), então reaplicar é seguro.
 
 ## Decisões
 
@@ -184,7 +197,18 @@ operações de tags `Auth`, `Session`, `Device`, `Admin` e `Access` e grave em
 | --- | --- | --- |
 | `attachment` | `^1.0.0` | `AttachmentFacade` no upload de avatar (próprio e de link de acesso) |
 
-`IdentityModule` importa `AttachmentModule` direto; instalar com `--with-deps` resolve a ordem.
+A aresta é **dura**, não degradável: `identity.module.ts` faz `imports: [AttachmentModule]` e três
+casos de uso injetam `AttachmentFacade` como dependência obrigatória de construtor, sem
+`@Optional()` — `upload-avatar`, `upload-access-link-avatar` e `set-password`. Sem a entrada
+`attachment` o `IdentityModule` não resolve no boot. Instalar com `--with-deps`.
+
+A entrada `attachment` declara `dependsOn: identity` (usa `UserDirectoryFacade`), o que fecha um
+**ciclo** entre as duas entradas. O ciclo é real no código de hoje e a resolução é de design
+(quebrar por porta/evento, ou fundir as duas numa instalação conjunta), não desta entrada.
+
+A entrada `audit` **não** é dependência: `migrations/custom/02_audit_attach.sql` é guardado e não
+faz nada quando `audit.attach` não existe (§ Dados).
+
 A entrada `notification` **não** é dependência: identity só publica `notification.requested` no
 outbox; sem a entrada instalada o evento fica sem consumidor.
 

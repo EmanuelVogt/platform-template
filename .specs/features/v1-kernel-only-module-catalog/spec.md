@@ -79,10 +79,10 @@ Entries therefore declare `dependsOn` in their manifest (CAT-03) and `module add
 
 | Location | Concept | Resolution (to confirm) |
 | --- | --- | --- |
-| `apps/web/src/shared/config/route-access.ts` (`PermissionKey`, `ROUTE_ACCESS`, kinds `public\|self\|permission`) | route → permission map | kernel keeps the `RouteAccess` kind type + an empty registry the child's identity slice fills |
+| `apps/web/src/shared/config/route-access.ts` (`PermissionKey`, `ROUTE_ACCESS`, kinds `public\|self\|permission`) | route → permission map | kernel keeps the `RouteAccess` kind type; the identity entry's `web/core` ships its fragment as data + `resolveAccess` |
 | `apps/web/src/entities/session/**` (`CurrentUser` from `CurrentUserResponseDto`, `can()/useCan()` with `accessProfile === "master"`) | session shape from identity contract | moves to the identity entry's web part |
-| `apps/web/src/app/router/guards.ts` (`requireAccess`, `requireAnon`, `resolveRootRedirect`) | guards over session | kernel keeps a guard *port* (`beforeLoad` hook registry); identity's web part registers the implementation |
-| `apps/web/src/features/login/**` | login form/hook | identity entry's web part |
+| `apps/web/src/app/router/guards.ts` (`requireAccess`, `requireAnon`, `resolveRootRedirect`) | guards over session | leaves the template; the identity entry ships `resolveAccess` (pure) + a README recipe for TanStack `beforeLoad` / Next middleware (GA-3 raw web) |
+| `apps/web/src/features/login/**` | login form/hook | identity entry: `web/react` hook + README recipe for the form (no component shipped) |
 | `apps/web/src/main.tsx` → `@platform/api-client` | generated client | stays; client is generated from the child's own `openapi.json` (CTR-*) |
 
 ---
@@ -93,13 +93,13 @@ Gray areas are discussed one at a time (context.md). Rows marked **pending** are
 
 | Assumption / decision | Chosen default | Rationale | Confirmed? |
 | --- | --- | --- | --- |
-| GA-1 Catalog location | `catalog/` folder in this repo, excluded from copier | one versioning stream, CI runs entries against the kernel they target; trade-off in Design | **pending** |
-| GA-2 Entry granularity | one entry per module; variants are sub-entries (`identity/single-tenant`); bundles are not entries — `dependsOn` composes them | bundles duplicate code; deps give the same one-command install | **pending** |
-| GA-3 Web side of an entry | entry ships `web/` (FSD slices + routes file) copied to `apps/web/src/**`; generated client is *not* shipped — regenerated from the child's openapi | generated code is derived; shipping it would drift | **pending** |
-| GA-4 Contract pipeline for child-owned routes | unchanged mechanism: child's `export-openapi.ts` walks the child's `AppModule`; the catalog entry only adds `*.contract.ts` files; no template regen of module routes | the pipeline already derives from the composition root | **pending** |
-| GA-5 `tag` kernel or catalog | catalog entry `tag` | it owns tables, routes, a contract → module-shaped; kernel ships no tables beyond `_kernel.*` | **pending** |
-| GA-6 Baseline migration 0000 | new kernel-only `0000_kernel_baseline.sql` (+ `0001_kernel_outbox_notify`); module tables ship in each entry as `0000_<module>_baseline.sql` renumbered on `add`; existing children are never rewritten | keeps "applied migrations are immutable" for children, clean start for new ones | **pending** |
-| GA-7 Template smoke composition | two smoke children: `kernel-only` and `kernel + module add identity` (identity pulls attachment through `dependsOn`) | proves both the empty kernel and the install path; audit/notification/tag covered by catalog CI, not smoke | **pending** |
+| GA-1 Catalog location | `catalog/` folder in this repo, excluded from copier | one versioning stream, CI runs entries against the kernel they target; trade-off in context.md | y |
+| GA-2 Entry granularity | one entry per module; variants are sub-entries (`identity/single-tenant`); bundles are not entries — `dependsOn` composes them | bundles duplicate code; deps give the same one-command install | y |
+| GA-3 Web side of an entry | **raw web**: `web/core/` pure TS (types, `can`, `resolveAccess`, `ROUTE_ACCESS` data; deps only `zod` + `@platform/api-client`) + optional `web/react/` (react-query `queryOptions`/hooks only); no components, pages, router code — those are README recipes; generated client not shipped, `module add` runs `pnpm contract` | children run Vite or Next.js; only framework-neutral code can be copied | y |
+| GA-4 Contract pipeline for child-owned routes | unchanged mechanism: child's `export-openapi.ts` walks the child's `AppModule`; entry only adds `*.contract.ts`; template ships kernel-only `openapi.json`; entry carries `parity/contract.snapshot.json` compared by operationId | the pipeline already derives from the composition root | y |
+| GA-5 `tag` kernel or catalog | catalog entry `tag` | it owns tables, routes, a contract → module-shaped; kernel ships no tables beyond `_kernel.*` | y |
+| GA-6 Baseline migration 0000 | new kernel-only `0000_kernel_baseline.sql` (+ `0001_kernel_outbox_notify`); entries ship `0000_<module>_baseline.sql` (squash) renumbered on `add`; existing children never rewritten (`module adopt`); supersedes AD-005 | keeps "applied migrations are immutable" for children, clean start for new ones | y |
+| GA-7 Template smoke composition | **one profile, `kernel-only`** (existing script, `fake-product` fixture retired); the `module add` path is proven by catalog CI per entry | keep the smoke simple; CAT-02 already exercises install | y |
 | `shared/kernel/audit` audit-trail infra | moves to `audit` entry | no kernel consumer known; re-check against #92 | n |
 | Identity decorators (`@RequirePermission`) | stay in kernel as generic access-requirement metadata | a guard-less kernel still needs a place for route metadata the child's guard reads | n |
 | Lock file name/shape | `.platform-modules.lock` (JSON): `{ catalogRef, modules: { "<name>": { variant, version, addedAt, files[] } } }` | `components.json` analogue; `files[]` lets `port-module-update` diff the right set | n |
@@ -109,7 +109,7 @@ Gray areas are discussed one at a time (context.md). Rows marked **pending** are
 | Version of a catalog entry | semver in the entry's `module.json` + CHANGELOG heading; catalog tag `catalog/<name>@x.y.z` when in-repo | `affects` ranges in advisories need a module version, not a template version | n |
 | `module add` runs from the child | `pnpm platform module add <name> [--variant v] [--catalog-ref <git ref\|path>]` — a script shipped by the template under `scripts/platform/` | child has pnpm; no global CLI to install | n |
 
-**Open questions:** GA-1..GA-7 — resolved in context.md before Design.
+**Open questions:** none — GA-1..GA-7 resolved in context.md (2026-08-19).
 
 ---
 
@@ -142,7 +142,7 @@ Gray areas are discussed one at a time (context.md). Rows marked **pending** are
 1. WHEN a route is decorated with the kernel's access-requirement decorator and no access policy is registered THEN the request SHALL be rejected with RFC 7807 `403` (`type` = `access-policy-missing`) — fail closed.
 2. WHEN a module registers an `AccessPolicy` implementation (kernel DI token) THEN the kernel guard SHALL delegate `can(actor, requirement)` to it and return 403 on `false`, 200 path on `true`.
 3. WHEN `RequestContext.actor` is read outside a request THEN it SHALL be `null`; WHEN set by a module guard THEN it SHALL expose `{ id, kind, tenantId? }` and the outbox/idempotency/audit hooks SHALL record `actorId` without importing any module.
-4. WHEN the web router boots with no guard registered THEN every route in the `RouteAccess` registry with kind ≠ `public` SHALL redirect to the kernel's configured `fallbackPath` (fail closed); WHEN identity's web part registers its guard THEN the existing `requireAccess/requireAnon` behaviour SHALL be reproduced by the identity entry's tests.
+4. WHEN the identity entry's `web/core` `resolveAccess(user, routeAccess)` is called THEN it SHALL return `"anon"` for a null user on a non-public route, `"forbidden"` for a user lacking the permission, `"allow"` otherwise — pure function, tested in the entry, reproducing v0.2 `requireAccess/requireAnon` decisions; the template web kernel ships no guard.
 5. WHEN `module-boundaries.spec.ts` runs THEN RULE A (`shared/**` never imports `modules/**`) SHALL still hold and RULE B (base-set) SHALL be gone.
 
 **Independent Test**: kernel unit tests for the guard with a stub policy + the boundaries spec.
@@ -224,14 +224,14 @@ Gray areas are discussed one at a time (context.md). Rows marked **pending** are
 
 ---
 
-### P2: Template smoke covers both paths
+### P2: Template smoke stays kernel-only
 
-**User Story**: As a platform owner, I want `pnpm template:smoke` to prove a kernel-only child and a child with identity added.
+**User Story**: As a platform owner, I want `pnpm template:smoke` to stay one simple profile that proves the kernel-only child.
 
 **Acceptance Criteria**:
 
-1. WHEN `template:smoke` runs THEN it SHALL render `kernel-only` and `kernel+identity` children and pass `pnpm check && pnpm test` in both, failing on the first red.
-2. WHEN the `kernel+identity` child boots THEN login → session → a permission-guarded route SHALL work end-to-end (parity subset).
+1. WHEN `template:smoke` runs THEN it SHALL render one `kernel-only` child and pass `pnpm check && pnpm test`, `db:migrate` on an empty database yielding only `_kernel`, `GET /health` 200, and RULE C zero hits; the `fake-product` fixture is removed.
+2. WHEN the `module add` install path needs proof THEN it SHALL be the catalog CI matrix (CAT-02), not a second smoke profile.
 
 ---
 
@@ -297,6 +297,7 @@ Gray areas are discussed one at a time (context.md). Rows marked **pending** are
 | TLG-05 | P1 add — `kernelRange` check (AC5) | Design | Pending |
 | TLG-06 | P1 add — `--dry-run`, `--force`, `--rollback`, `adopt` (AC6 + edge cases) | Design | Pending |
 | TLG-07 | P2 `port-module-update` skill (AC1–3) | Design | Pending |
+| TLG-08 | P1 add — `module.json.env[]` appended to `.env.example`/`.env` without overwriting (context.md § Env) | Design | Pending |
 | ADV-01 | P1 advisories — file format + validation test (AC1) | Design | Pending |
 | ADV-02 | P1 advisories — pending computation hook (AC2 + edge cases) | Design | Pending |
 | ADV-03 | P1 advisories — APPLIED ledger rule (AC3) | Design | Pending |
@@ -306,15 +307,15 @@ Gray areas are discussed one at a time (context.md). Rows marked **pending** are
 | MIG-02 | renumbering + journal monotonicity (TLG-01 edge case) | Design | Pending |
 | WEB-01 | web part of an entry: shipped files + registrations (GA-3) | Design | Pending |
 | CTR-01 | contract pipeline with child-owned routes (GA-4) | Design | Pending |
-| SMK-01 | P2 smoke — two children (AC1–2) | Design | Pending |
+| SMK-01 | P2 smoke — single `kernel-only` profile, fixture retired (AC1–2) | Design | Pending |
 
-**Coverage:** 33 total, 0 mapped to tasks, 33 unmapped ⚠️ (Tasks phase pending).
+**Coverage:** 34 total, 0 mapped to tasks, 34 unmapped ⚠️ (Tasks phase pending).
 
 ---
 
 ## Success Criteria
 
-- [ ] `pnpm template:smoke` green for both profiles on the v1.0.0 tag.
+- [ ] `pnpm template:smoke` (kernel-only) green on the v1.0.0 tag.
 - [ ] Catalog CI matrix green for the five entries.
 - [ ] Rituaali (post-#92) can `module adopt` its four modules and the advisories hook reports zero pending on day one.
 - [ ] A fresh agent, given only the kernel handbooks + one entry's README/ADRs/code, builds a new catalog-shaped module that passes the README lint and the boundaries spec (manual acceptance, once).

@@ -4,6 +4,17 @@
     "command": "node \"$CLAUDE_PROJECT_DIR/.claude/statusline.mjs\""
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/pending-advisories.mjs\"",
+            "statusMessage": "Checking pending advisories"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash",
@@ -78,6 +89,11 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/delegate-to-subagent.mjs\" reset",
             "statusMessage": "Resetting the turn's navigation quota"
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/pending-advisories.mjs\"",
+            "statusMessage": "Checking pending advisories"
           }
         ]
       }

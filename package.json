@@ -20,6 +20,7 @@
     "test:e2e": "turbo test:e2e",
     "check": "turbo lint typecheck",
     "skills:sync": "node scripts/sync-agent-skills.mjs",
+    "template:smoke": "node scripts/template-smoke.mjs",
     "clean": "turbo clean && rm -rf node_modules"
   },
   "devDependencies": {

@@ -1,0 +1,322 @@
+# `identity/single-tenant`
+
+Autenticação e autorização de tenant único. Sessão em cookie `HttpOnly`, dispositivos
+confiáveis, fluxos de senha/e-mail por token, perfis de acesso em enum do banco e catálogo de
+permissões. É a entrada que liga a porta `ACCESS_POLICY` do kernel — sem ela o `AccessGuard`
+responde 403 `access-policy-missing` em toda rota não pública.
+
+Instalação: `pnpm platform module add identity --variant single-tenant --with-deps`.
+
+## Contrato
+
+Prefixo global `/v1`. `Acesso` é a `AccessRequirement` que o `AccessGuard` do kernel lê;
+`authenticated` sem metadata explícita vem do default fail-closed do kernel (`@SelfService()`).
+
+| Método | Path | operationId | Acesso | Eventos | Facades |
+| --- | --- | --- | --- | --- | --- |
+| POST | `/v1/auth/login` | `login` | public | `notification.requested` | — |
+| POST | `/v1/auth/forgot-password` | `forgotPassword` | public | `notification.requested` | — |
+| POST | `/v1/auth/reset-password` | `resetPassword` | public | `notification.requested` | — |
+| POST | `/v1/auth/set-password` | `setPassword` | public | `notification.requested` | — |
+| POST | `/v1/auth/verify-email` | `verifyEmail` | public | — | — |
+| GET | `/v1/auth/access-link` | `validateAccessLink` | public | — | — |
+| POST | `/v1/auth/access-link/cancel` | `cancelAccessLink` | public | — | — |
+| POST | `/v1/auth/access-link/avatar` | `uploadAccessLinkAvatar` | public | — | `AttachmentFacade` |
+| GET | `/v1/auth/email-change` | `validateEmailChange` | public | — | — |
+| POST | `/v1/auth/confirm-email-change` | `confirmEmailChange` | public | — | — |
+| GET | `/v1/auth/session` | `getSession` | authenticated | — | — |
+| POST | `/v1/auth/logout` | `logout` | authenticated | — | — |
+| POST | `/v1/auth/change-password` | `changePassword` | authenticated | `notification.requested` | — |
+| POST | `/v1/auth/resend-verification` | `resendVerification` | authenticated | `notification.requested` | — |
+| GET | `/v1/auth/access-history` | `accessHistory` | authenticated | — | — |
+| PATCH | `/v1/auth/profile` | `updateMyProfile` | authenticated | — | — |
+| POST | `/v1/auth/avatar` | `uploadAvatar` | authenticated | — | `AttachmentFacade` |
+| POST | `/v1/auth/change-email` | `requestEmailChange` | authenticated | `notification.requested` | — |
+| GET | `/v1/auth/devices` | `listDevices` | authenticated | — | — |
+| DELETE | `/v1/auth/devices` | `revokeOtherDevices` | authenticated | — | — |
+| DELETE | `/v1/auth/devices/{id}` | `revokeDevice` | authenticated | `notification.requested` | — |
+| GET | `/v1/access-catalog` | `getAccessCatalog` | authenticated | — | — |
+| GET | `/v1/admin/users` | `listUsers` | permission `admin.users.read` | — | — |
+| POST | `/v1/admin/users` | `createUser` | permission `admin.users.create` | `notification.requested` | — |
+| PUT | `/v1/admin/users/{id}` | `updateUser` | permission `admin.users.update` | — | — |
+| DELETE | `/v1/admin/users/{id}` | `deleteUser` | permission `admin.users.delete` | — | — |
+| POST | `/v1/admin/users/restore` | `restoreUsers` | permission `admin.users.trash.restore` | — | — |
+| POST | `/v1/admin/users/purge` | `purgeUsers` | permission `admin.users.trash.purge` | — | `AuditTrailRepository` |
+| POST | `/v1/admin/users/{id}/resend-access-link` | `resendAccessLink` | permission `admin.users.access_link.resend` | `notification.requested` | — |
+| GET | `/v1/admin/permission-templates` | `listPermissionTemplates` | permission `admin.permission_templates.read` | — | — |
+| POST | `/v1/admin/permission-templates` | `createPermissionTemplate` | permission `admin.permission_templates.create` | — | — |
+| GET | `/v1/admin/permission-templates/{id}` | `getPermissionTemplate` | permission `admin.permission_templates.read` | — | — |
+| PUT | `/v1/admin/permission-templates/{id}` | `updatePermissionTemplate` | permission `admin.permission_templates.update` | — | — |
+| DELETE | `/v1/admin/permission-templates/{id}` | `deletePermissionTemplate` | permission `admin.permission_templates.delete` | — | — |
+
+Facades **exportadas** para outras entradas: `UserDirectoryFacade` (nome/e-mail/avatar por id),
+`UsageAccessFacade` (checagem de uso antes de apagar) e `ProfessionalDirectoryFacade` (usuários
+que atendem cliente). `IdentityModule` é `global: true` e exporta o token `ACCESS_POLICY`.
+
+Todo evento sai pelo outbox do kernel (`notification.requested`, consumido pela entrada
+`notification`); a trilha própria da entrada é a tabela `identity.auth_events` (§ Dados).
+
+## Portas do kernel consumidas
+
+| Porta / adapter do kernel | Uso na entrada |
+| --- | --- |
+| `access/access-policy.port` (`ACCESS_POLICY`, `AccessRequirement`) | `IdentityAccessPolicy` implementa e o módulo liga o token |
+| `access/decorators` (`@Public`, `@SelfService`, `@RequirePermission`, `@MachineToMachine`) | metadata de acesso das 34 rotas |
+| `context/request-context` (`setActor`, `setExtension`) | `AuthMiddleware` publica `Actor` + `IDENTITY_SESSION` / `IDENTITY_ACCESS` |
+| `clock/clock`, `clock/bucket-sql` | TTLs de sessão/token e janelas de rate limit |
+| `outbox/outbox.publisher` | `notification.requested` na mesma transação do caso de uso |
+| `transactional/*`, `use-case/*`, `idempotency/idempotent.decorator` | transação, decorators de caso de uso e idempotência |
+| `listing/*` (`apply-listing`, `listing-query.schema`, `paginated`) | paginação de `listUsers`, `accessHistory`, `listPermissionTemplates` |
+| `errors/forbidden.error`, `logging/logger.factory`, `tracing/traced.decorator`, `scheduling/maintenance-job.decorator` | erros RFC 7807, log, tracing e jobs de manutenção |
+| `infra/database/drizzle.provider`, `infra/redis/redis.provider` | repositórios Drizzle e rate limiter em Redis |
+
+Acoplamentos que **não** são porta do kernel e precisam de atenção ao instalar: a entrada ainda
+importa `shared/kernel/access/{permission.types,define-permission-catalog,product-permission-catalogs,access-profile.types}`
+(catálogo de perfis/permissões) e `shared/kernel/audit/audit-trail.repository` (em
+`purge-users`). Os dois moram no kernel v0.2 e a v1 os move — o primeiro para esta entrada, o
+segundo para a entrada `audit`. Enquanto a mudança não chega, um child kernel-only precisa das
+duas peças presentes.
+
+## Dados
+
+Schema `identity`. As tabelas são código TS (`api/infrastructure/tables/**`) e o `drizzle-kit`
+do child gera o SQL de criação — a entrada nunca entrega `CREATE TABLE` numerado.
+
+| Tabela | Papel |
+| --- | --- |
+| `identity.users` | conta, perfil de acesso, status, contadores de bloqueio, avatar |
+| `identity.user_permissions` | permissões concedidas por usuário |
+| `identity.permission_templates` / `identity.permission_template_permissions` | modelos de permissão reutilizáveis |
+| `identity.sessions` | sessões ativas (idle/absolute TTL, remember-me) |
+| `identity.devices` | dispositivos conhecidos por usuário |
+| `identity.verification_tokens` | tokens de reset, verificação, primeiro acesso e troca de e-mail |
+| `identity.auth_events` | trilha append-only de autenticação |
+| `identity.user_professional_areas`, `identity.user_professional_services`, `identity.user_scheduling_areas`, `identity.user_professional_schedule_configs` (+ slots e blocks), `identity.professional_default_hours` | recorte do perfil `professional` (AD-002) |
+
+Tipos de `identity.auth_events.type`: `login_success`, `login_failed`, `logout`,
+`password_changed`, `password_set`, `password_reset_requested`, `password_reset_completed`,
+`email_verified`, `email_change_requested`, `email_changed`, `access_link_sent`,
+`access_link_resent`, `access_link_cancelled`, `device_revoked`, `sessions_revoked_all`,
+`rate_limited_burst`, `user_deleted`, `user_restored`, `user_purged`.
+
+Migração manual (`migrations/custom/`, aplicada depois das tabelas):
+
+- `01_auth_events_append_only.sql` — `REVOKE UPDATE, TRUNCATE` + trigger
+  `auth_events_append_only` que bloqueia `UPDATE` sempre e `DELETE` a menos que a transação
+  ligue o GUC `app.auth_events_purge=on` (o job de retenção liga; SQLi precisaria do
+  `set_config` na mesma transação).
+
+## Decisões
+
+Sucessoras locais das decisões que viviam no `STATE.md` do template (AD-014 as moveu para cá).
+
+### AD-002 (local) — o perfil `professional` fica dentro da entrada
+
+**Contexto**: `professional` é um perfil de acesso com dados próprios (áreas de atuação,
+serviços, escala, horários padrão) que a v0.2 mantinha no módulo identity.
+**Decisão**: o recorte inteiro (`user_professional_*`, `professional_default_hours`,
+`ProfessionalDirectoryFacade`, `ProfessionalAssignmentFacade` e o slot
+`professional-assignment.module.ts`) fica nesta entrada, não vira entrada separada.
+**Consequência**: um child que não tem profissionais herda tabelas vazias; removê-las é uma
+edição na cópia dele, sem impacto no catálogo. Uma variante futura sem `professional` é uma
+entrada nova (`identity/single-tenant-lite`), não um flag.
+
+### AD-003 (local) — `servesClients` não deriva do perfil
+
+**Contexto**: "quem atende cliente" e "qual o perfil de acesso" foram tratados como a mesma
+coisa até recepção e agendista também passarem a atender.
+**Decisão**: `identity.users.serves_clients` é coluna própria, `boolean not null default false`,
+independente de `access_profile`.
+**Consequência**: seletores, mapas e escala filtram por `servesClients`; nenhuma regra pode
+inferir atendimento a partir do perfil. Coberto por `parity/profiles.parity.spec.ts`.
+
+### AD-004 (local) — perfis de acesso são enum do banco
+
+**Contexto**: o perfil precisa ser válido no banco, não só no TypeScript.
+**Decisão**: `identity.access_profile` é `pgEnum` (`master`, `admin`, `professional`); acrescentar
+um perfil exige migração `ALTER TYPE ... ADD VALUE` no child.
+**Consequência**: `master` é curinga — não carrega permissões explícitas e `can()` o libera
+sempre, no back (`IdentityAccessPolicy`) e no front (`web/core/permissions.ts`). Coberto por
+`parity/profiles.parity.spec.ts` e `web/core/permissions.test.ts`.
+
+### AD-017 (local) — autorização por middleware + policy, não por guard próprio
+
+**Contexto**: a v0.2 tinha `AuthGuard` + `PermissionsGuard` dentro do identity.
+**Decisão**: `AuthMiddleware` resolve a sessão e publica `Actor` + extensões na ALS do kernel,
+sem nunca rejeitar; quem rejeita é o `AccessGuard` do kernel delegando a `IdentityAccessPolicy`.
+**Consequência**: a policy lança `401` quando não há ator (o `AccessGuard` só sabe transformar
+`false` em `403`, e a v0.2 respondia 401 para sessão ausente). Ausência da extensão
+`IDENTITY_ACCESS` nega — fail closed. Coberto por `parity/access-policy.parity.spec.ts`.
+
+## Paridade
+
+`parity/*.parity.spec.ts` roda como suíte unitária do child depois do `module add` (os arquivos
+vão para `apps/api/src/modules/identity/__parity__/`):
+
+```
+pnpm --filter api test -- src/modules/identity/__parity__
+```
+
+O que cada suíte garante:
+
+- `contract.parity.spec.ts` — o `openapi.json` do child ainda contém as 34 operações de
+  `contract.snapshot.json`, por `operationId`, com os mesmos campos obrigatórios de
+  request/response. Operação extra no child é permitida; sumiço ou mudança de campo obrigatório
+  reprova.
+- `route-access.parity.spec.ts` — a exigência de acesso de cada uma das 34 rotas (public /
+  authenticated / permission `<chave>`), reconstruída da metadata Nest. Rota nova sem linha na
+  tabela reprova, e só as rotas `@SelfService()` podem depender do default do kernel.
+- `access-policy.parity.spec.ts` — `IdentityAccessPolicy`: público sem ator, 401 em rota
+  autenticada sem ator, curinga do `master`, OR de `anyPermission`, fail-closed sem extensão.
+- `csrf.parity.spec.ts` — `CsrfGuard`: métodos seguros passam, Origin/Referer conferidos contra
+  `WEB_ORIGIN`, double-submit exigido em rota autenticada com `SameSite=none` e dispensado em
+  rota pública ou máquina-a-máquina.
+- `profiles.parity.spec.ts` — enum `identity.access_profile` com os três perfis e `serves_clients`
+  independente.
+
+Regerar o snapshot depois de mudar rota da entrada: extraia do `openapi.json` do template as
+operações de tags `Auth`, `Session`, `Device`, `Admin` e `Access` e grave em
+`parity/contract.snapshot.json` — e abra um advisory (`kind: breaking`) descrevendo a mudança.
+
+## Dependências
+
+| Entrada | Range | Por quê |
+| --- | --- | --- |
+| `attachment` | `^1.0.0` | `AttachmentFacade` no upload de avatar (próprio e de link de acesso) |
+
+`IdentityModule` importa `AttachmentModule` direto; instalar com `--with-deps` resolve a ordem.
+A entrada `notification` **não** é dependência: identity só publica `notification.requested` no
+outbox; sem a entrada instalada o evento fica sem consumidor.
+
+Variáveis de ambiente (campo `env` do `module.json`, anexadas ao `.env.example` pelo
+`module add`). Obrigatórias: `WEB_ORIGIN`, `PASSWORD_PEPPER` (≥32 caracteres) e
+`BREACH_CHECK_MODE` (`fail_open` | `fail_closed`, sem default de propósito). `CSRF_SECRET` passa
+a ser obrigatória quando `COOKIE_SAMESITE=none`. As demais (cookie, TTLs de sessão e token,
+cooldowns, parâmetros do argon2, política de senha, retenção da trilha) têm default e estão
+documentadas uma a uma no `module.json`.
+
+## Parte web
+
+`defaultRoot` = `apps/web/src/entities/identity`. A entrada entrega **código sem framework de
+rota e sem componente**; tela, roteador e store são receitas abaixo.
+
+`web/core` (TS puro; só `zod` e `@platform/api-client`):
+
+- `session.types.ts` — `CurrentUser`, derivado do DTO gerado (`CurrentUserResponseDto["user"]`).
+- `permissions.ts` — `PermissionKey` e `can(user, key)`; `master` é curinga (AD-004).
+- `route-access.ts` — `RouteAccess` (`public` | `authenticated` | `permission`) e
+  `IDENTITY_ROUTE_ACCESS`, o fragmento do mapa rota → acesso que a entrada contribui
+  (`/` e `/entrar` públicos, `/inicio` autenticado).
+- `resolve-access.ts` — `resolveAccess(user, access)` → `"allow" | "anon" | "forbidden"`. Função
+  pura, testada em `*.test.ts`, que substitui os guards `requireAccess`/`requireAnon` da v0.2.
+- `session.fixture.ts` — `makeCurrentUser()` para os testes do child.
+
+`web/react` (soma `@tanstack/react-query`):
+
+- `session.queries.ts` — `sessionKeys`, `sessionQueryOptions` (fonte única do `user`:
+  `retry: false`, `staleTime: Infinity`), `useSession`, `useLogin` (injeta o usuário no cache no
+  sucesso) e `useLogout` (limpa o cache).
+- `use-can.ts` — `useCan()`, versão reativa do `can`.
+
+### Receita: guard de rota no TanStack Router
+
+`beforeLoad` da rota chama `resolveAccess` com a sessão do cache e traduz a decisão em
+`redirect`. Substitui `app/router/guards.ts` da v0.2:
+
+```ts
+import { redirect } from "@tanstack/react-router"
+
+import { resolveAccess } from "@/entities/identity/core/resolve-access"
+import { sessionQueryOptions } from "@/entities/identity/react/session.queries"
+import { ROUTES } from "@/shared/config/routes"
+
+import type { RouteAccess } from "@/entities/identity/core/route-access"
+import type { QueryClient } from "@tanstack/react-query"
+
+async function currentUser(queryClient: QueryClient) {
+  try {
+    const { user } = await queryClient.ensureQueryData(sessionQueryOptions)
+    return user
+  } catch {
+    return null
+  }
+}
+
+export async function requireAccess(
+  queryClient: QueryClient,
+  access: RouteAccess,
+  intendedPath: string,
+): Promise<void> {
+  const decision = resolveAccess(await currentUser(queryClient), access)
+  if (decision === "anon") {
+    useAuthStore.getState().setRedirectIntent(intendedPath)
+    throw redirect({ to: ROUTES.LOGIN })
+  }
+  if (decision === "forbidden") {
+    throw redirect({ to: ROUTES.INICIO })
+  }
+}
+```
+
+O `access` da rota vem do `staticData` do match ou de `IDENTITY_ROUTE_ACCESS[path]`. Mande o
+`forbidden` para uma rota `authenticated` (nunca para uma rota por permissão), senão o redirect
+entra em laço. Para a tela de login, a v0.2 usava `requireAnon`: com sessão no cache, redirecione
+para o destino logado em vez de renderizar o formulário.
+
+### Receita: Next.js (`middleware.ts` + layout)
+
+O `middleware` roda no edge, sem o cache do React Query: ele só decide o que dá para decidir
+pelo cookie de sessão — presença do cookie contra `IDENTITY_ROUTE_ACCESS[pathname]`. A checagem
+de permissão fica no layout do segmento, que já tem a sessão:
+
+```ts
+import { NextResponse } from "next/server"
+
+import { IDENTITY_ROUTE_ACCESS } from "@/entities/identity/core/route-access"
+
+import type { NextRequest } from "next/server"
+
+export function middleware(request: NextRequest) {
+  const access = IDENTITY_ROUTE_ACCESS[request.nextUrl.pathname] ?? { kind: "authenticated" }
+  const hasSession = request.cookies.has(process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME!)
+  if (access.kind !== "public" && !hasSession) {
+    return NextResponse.redirect(new URL("/entrar", request.url))
+  }
+  return NextResponse.next()
+}
+```
+
+No layout autenticado, busque `GET /v1/auth/session` no servidor e aplique
+`resolveAccess(user, access)` — `forbidden` vira `notFound()` ou um redirect; `anon` vira
+redirect para o login. Nunca confie só no middleware: cookie presente não é sessão válida.
+
+### Receita: formulário de login
+
+A entrada não entrega componente. O formulário do child usa `useLogin` e valida com `zod` sobre
+o schema gerado (`loginDtoSchema`). Esqueleto da v0.2, sem design system:
+
+```tsx
+const { register, handleSubmit } = useForm<LoginInput>({
+  resolver: zodResolver(loginSchema),
+  defaultValues: { email: "", password: "", rememberMe: true },
+})
+const login = useLogin()
+
+const onSubmit = handleSubmit((data) => {
+  login.mutate({ data }, { onSuccess: () => navigate({ to: resolveAuthedTarget() }) })
+})
+```
+
+Três pontos que costumam ser esquecidos ao reescrever a tela:
+
+- **CSRF é transporte, não formulário.** O interceptor do `@platform/api-client` reflete o cookie
+  CSRF no header `X-CSRF-Token` em todo método mutante; o formulário não faz nada.
+- **Destino pós-login.** O guard guarda a intenção antes de redirecionar para o login; consuma e
+  limpe essa intenção no `onSuccess`, senão o próximo login repete o destino antigo.
+- **Logout entre abas.** `useLogout` limpa o cache da aba atual; avisar as outras (BroadcastChannel)
+  é do child — a entrada não embute store.
+
+## Follow-ups absorvidos
+
+Nenhum ainda. Os follow-ups do sweep v0.2 que esta entrada absorve são anotados aqui e no campo
+`absorbs` do `module.json` na consolidação do catálogo; até lá o campo fica vazio de propósito.

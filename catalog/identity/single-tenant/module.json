@@ -1,0 +1,208 @@
+{
+  "name": "identity",
+  "variant": "single-tenant",
+  "version": "1.0.0",
+  "description": "Autenticação e autorização de tenant único: login por cookie de sessão, dispositivos, tokens de e-mail/senha, perfis de acesso e catálogo de permissões. Liga a porta ACCESS_POLICY do kernel.",
+  "kernelRange": ">=1.0.0 <2.0.0",
+  "dependsOn": [{ "name": "attachment", "range": "^1.0.0" }],
+  "apiModule": { "export": "IdentityModule", "path": "modules/identity/identity.module" },
+  "schemaExports": [
+    "modules/identity/infrastructure/tables/user.table",
+    "modules/identity/infrastructure/tables/user-permission.table",
+    "modules/identity/infrastructure/tables/user-professional-area.table",
+    "modules/identity/infrastructure/tables/user-professional-service.table",
+    "modules/identity/infrastructure/tables/user-scheduling-area.table",
+    "modules/identity/infrastructure/tables/user-professional-schedule-config.table",
+    "modules/identity/infrastructure/tables/professional-default-hours.table",
+    "modules/identity/infrastructure/tables/permission-template.table",
+    "modules/identity/infrastructure/tables/devices.table",
+    "modules/identity/infrastructure/tables/session.table",
+    "modules/identity/infrastructure/tables/verification-token.table",
+    "modules/identity/infrastructure/tables/auth-event.table"
+  ],
+  "customMigrations": ["01_auth_events_append_only.sql"],
+  "env": [
+    {
+      "name": "WEB_ORIGIN",
+      "example": "http://localhost:5173",
+      "required": true,
+      "doc": "Origin do front. Base da checagem de CSRF e dos links de e-mail."
+    },
+    {
+      "name": "PASSWORD_PEPPER",
+      "example": "troque-por-32-caracteres-aleatorios-ou-mais",
+      "required": true,
+      "doc": "Segredo somado à senha antes do argon2. Mínimo 32 caracteres; rotacionar exige pepperVersion."
+    },
+    {
+      "name": "BREACH_CHECK_MODE",
+      "example": "fail_open",
+      "required": true,
+      "doc": "fail_open | fail_closed — o que fazer quando a consulta de vazamento falha. Sem default de propósito."
+    },
+    {
+      "name": "CSRF_SECRET",
+      "example": "troque-por-32-caracteres-aleatorios-ou-mais",
+      "required": false,
+      "doc": "HMAC do double-submit. Obrigatório quando COOKIE_SAMESITE=none."
+    },
+    {
+      "name": "COOKIE_NAME",
+      "example": "__Host-app_session",
+      "required": false,
+      "doc": "Nome do cookie de sessão. Prefixo __Host-/__Secure- exige COOKIE_SECURE=true."
+    },
+    {
+      "name": "COOKIE_SECURE",
+      "example": "true",
+      "required": false,
+      "doc": "Marca o cookie como Secure. Só use false em dev sobre HTTP."
+    },
+    {
+      "name": "COOKIE_SAMESITE",
+      "example": "lax",
+      "required": false,
+      "doc": "lax | none | strict. none liga o double-submit de CSRF."
+    },
+    {
+      "name": "DEVICE_COOKIE_NAME",
+      "example": "__Host-app_device",
+      "required": false,
+      "doc": "Cookie que identifica o dispositivo confiável."
+    },
+    {
+      "name": "DEVICE_COOKIE_TTL_SECONDS",
+      "example": "34560000",
+      "required": false,
+      "doc": "Validade do cookie de dispositivo (400d = teto do Chrome)."
+    },
+    {
+      "name": "SESSION_IDLE_TTL_SECONDS",
+      "example": "604800",
+      "required": false,
+      "doc": "Inatividade que expira a sessão."
+    },
+    {
+      "name": "SESSION_ABSOLUTE_TTL_SECONDS",
+      "example": "2592000",
+      "required": false,
+      "doc": "Teto absoluto da sessão, independente de atividade."
+    },
+    {
+      "name": "SESSION_TOUCH_INTERVAL_SECONDS",
+      "example": "60",
+      "required": false,
+      "doc": "Intervalo mínimo entre renovações de last-seen. Deve ser menor que SESSION_IDLE_TTL_SECONDS."
+    },
+    {
+      "name": "SESSION_REMEMBER_IDLE_TTL_SECONDS",
+      "example": "2592000",
+      "required": false,
+      "doc": "Inatividade tolerada quando o login marcou \"manter conectado\"."
+    },
+    {
+      "name": "SESSION_MAX_PER_USER",
+      "example": "20",
+      "required": false,
+      "doc": "Sessões simultâneas por usuário; a mais antiga cai."
+    },
+    {
+      "name": "RESET_TOKEN_TTL_SECONDS",
+      "example": "3600",
+      "required": false,
+      "doc": "Validade do token de redefinição de senha."
+    },
+    {
+      "name": "VERIFY_TOKEN_TTL_SECONDS",
+      "example": "86400",
+      "required": false,
+      "doc": "Validade do token de verificação de e-mail."
+    },
+    {
+      "name": "ACCESS_LINK_TOKEN_TTL_SECONDS",
+      "example": "604800",
+      "required": false,
+      "doc": "Validade do link de primeiro acesso enviado pelo admin."
+    },
+    {
+      "name": "EMAIL_CHANGE_TOKEN_TTL_SECONDS",
+      "example": "3600",
+      "required": false,
+      "doc": "Validade do token de troca de e-mail; expirado, volta ao e-mail antigo."
+    },
+    {
+      "name": "RESET_COOLDOWN_SECONDS",
+      "example": "60",
+      "required": false,
+      "doc": "Intervalo mínimo entre pedidos de redefinição por conta."
+    },
+    {
+      "name": "VERIFICATION_COOLDOWN_SECONDS",
+      "example": "60",
+      "required": false,
+      "doc": "Intervalo mínimo entre reenvios de verificação por conta."
+    },
+    {
+      "name": "EMAIL_CHANGE_COOLDOWN_SECONDS",
+      "example": "60",
+      "required": false,
+      "doc": "Intervalo mínimo entre pedidos de troca de e-mail por conta."
+    },
+    {
+      "name": "ARGON_MEMORY_KIB",
+      "example": "65536",
+      "required": false,
+      "doc": "Memória do argon2id em KiB. Piso OWASP 19456."
+    },
+    {
+      "name": "ARGON_TIME_COST",
+      "example": "3",
+      "required": false,
+      "doc": "Iterações do argon2id. Piso 2."
+    },
+    {
+      "name": "ARGON_PARALLELISM",
+      "example": "1",
+      "required": false,
+      "doc": "Paralelismo do argon2id."
+    },
+    {
+      "name": "ARGON_HASH_LENGTH",
+      "example": "32",
+      "required": false,
+      "doc": "Tamanho do hash em bytes. Piso 32."
+    },
+    {
+      "name": "ARGON_SALT_LENGTH",
+      "example": "16",
+      "required": false,
+      "doc": "Tamanho do salt em bytes. Piso 16."
+    },
+    {
+      "name": "PASSWORD_MIN_ZXCVBN_SCORE",
+      "example": "3",
+      "required": false,
+      "doc": "Nota mínima do zxcvbn (0–4) para aceitar a senha."
+    },
+    {
+      "name": "BREACH_CHECK_ENABLED",
+      "example": "false",
+      "required": false,
+      "doc": "Liga o adapter real de consulta de vazamento (HIBP)."
+    },
+    {
+      "name": "REQUIRE_EMAIL_VERIFICATION",
+      "example": "false",
+      "required": false,
+      "doc": "Exige e-mail verificado para autenticar."
+    },
+    {
+      "name": "SECURITY_AUDIT_RETENTION_DAYS",
+      "example": "180",
+      "required": false,
+      "doc": "Retenção de identity.auth_events; o job de purge liga o GUC app.auth_events_purge."
+    }
+  ],
+  "web": { "defaultRoot": "apps/web/src/entities/identity", "react": true },
+  "absorbs": []
+}

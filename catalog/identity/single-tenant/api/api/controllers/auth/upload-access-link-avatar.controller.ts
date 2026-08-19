@@ -1,0 +1,73 @@
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  UploadedFile,
+  UseInterceptors,
+} from "@nestjs/common"
+import { FileInterceptor } from "@nestjs/platform-express"
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiCreatedResponse,
+  ApiOperation,
+  ApiTags,
+} from "@nestjs/swagger"
+
+import { Public } from "../../../../../shared/kernel/access/decorators"
+import { UploadAccessLinkAvatarUseCase } from "../../../application/use-cases/upload-access-link-avatar/upload-access-link-avatar.use-case"
+import { AvatarFileRequiredError, InvalidAccessLinkError } from "../../../domain/errors"
+import { AccessLinkAvatarUploadResponseDto } from "../../contracts/identity.contract"
+import { RateLimit } from "../../guards/rate-limit.guard"
+
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+
+@ApiTags("Auth")
+@Controller("auth")
+export class UploadAccessLinkAvatarController {
+  constructor(private readonly upload: UploadAccessLinkAvatarUseCase) {}
+
+  // token no body/form-field (não query — evita vazamento por log/referrer).
+  @ApiOperation({ operationId: "uploadAccessLinkAvatar" })
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        file: { type: "string", format: "binary" },
+        token: { type: "string" },
+      },
+      required: ["file", "token"],
+    },
+  })
+  @ApiCreatedResponse({ type: AccessLinkAvatarUploadResponseDto })
+  @Public()
+  @Post("access-link/avatar")
+  @RateLimit({ limit: 5, windowSeconds: 60 })
+  @HttpCode(HttpStatus.CREATED)
+  // Teto no multer: rota pré-auth não pode bufferizar body sem limite (DoS de
+  // memória). Espelha o default de ATTACHMENT_MAX_UPLOAD_BYTES; o use case
+  // revalida contra o config e segue como gate autoritativo.
+  @UseInterceptors(
+    FileInterceptor("file", { limits: { fileSize: MAX_UPLOAD_BYTES } }),
+  )
+  async handle(
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Body("token") token: string | undefined,
+  ): Promise<{ attachmentId: string }> {
+    if (file === undefined) {
+      throw new AvatarFileRequiredError()
+    }
+    if (token === undefined || token.length === 0) {
+      throw new InvalidAccessLinkError()
+    }
+    return this.upload.execute({
+      token,
+      bytes: file.buffer,
+      declaredContentType: file.mimetype,
+      originalFilename: file.originalname,
+    })
+  }
+}

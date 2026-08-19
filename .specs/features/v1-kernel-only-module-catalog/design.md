@@ -138,7 +138,7 @@ catalog/
   "name": "identity", "variant": "single-tenant", "version": "1.0.0",
   "description": "…",
   "kernelRange": ">=1.0.0 <2.0.0",
-  "dependsOn": [{ "name": "attachment", "range": "^1.0.0" }],
+  "dependsOn": [],
   "apiModule": { "export": "IdentityModule", "path": "modules/identity/identity.module" },
   "schemaExports": ["modules/identity/infrastructure/tables/users.table", "…"],
   "customMigrations": ["01_auth_events_append_only.sql"],
@@ -154,6 +154,10 @@ Convention over config: `api/**` → `apps/api/src/modules/<name>/**`; `web/core
 **CHANGELOG**: keep-a-changelog; every version heading that ships code also lists the advisory ids it carries.
 
 **Entry versioning**: `module.json.version`; git tag `catalog/<name>[-<variant>]@x.y.z` on the template repo when a version is cut (AD-016).
+
+**Entry-to-entry coupling (AD-021, added during Execute).** Every entry must install alone into a kernel-only child. `dependsOn` is a **DAG** — `resolveDeps` topo-sorts it and rejects cycles (exit 5, naming the chain). Where one entry needs another's behaviour, the **consumer declares a port and the provider binds it**, the same shape as the kernel's `ACCESS_POLICY`: resolution is `@Optional()`, a missing provider degrades that one feature with an RFC 7807 problem, and module construction never fails. Bundles / joint install are not an option (AD-013 forbids bundles), and tolerating cycles in `resolveDeps` is not either — it would defeat install ordering and push the breakage into the child.
+
+Discovered in wave 3: `identity` imported `AttachmentModule` unconditionally and injected `AttachmentFacade` in `upload-avatar`, `upload-access-link-avatar` and `set-password`, while `attachment` injects identity's `UserDirectoryFacade` — a real `identity ↔ attachment` cycle inherited from v0.2, invisible while everything shipped together. Resolved by inverting the identity side to a file-storage port (T17c). The illustrative `dependsOn` above is `[]` for exactly this reason.
 
 ---
 

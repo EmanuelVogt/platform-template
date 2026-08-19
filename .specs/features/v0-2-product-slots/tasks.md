@@ -198,7 +198,7 @@ Wave 3: [I: T19→T20] → Verifier → T21 → T22
 **Tests**: none · **Gate**: build · **Commit**: `docs(template): v0.2.0 slots table and child migration note`
 
 ### T23: Wave-2 gate fixes — api lint + attachment-download 500
-**Status**: ⏳ Open
+**Status**: ✅ Done — `00d23e0` (controller treated unknown/renamed profile as force-download instead of throwing) `68ae46f` `4d848f4` (UploadProfileName derived from tuple `[...BASE, ...ProductKey[]]`, no never-union; sonnet first attempt dropped the product key → redone by opus) `a61a24f` — lint 0, unit 1000, int 342, e2e 122/122; actual paths were `modules/audit/**` (no `audit-registration` module)
 **What**: (a) `pnpm --filter api lint` = 13 errors, all in `apps/api/src/modules/attachment/attachment.config.ts` (import order L4/L5/L17; `never` overridden in union L12; unnecessary assertion L105) and `apps/api/src/modules/audit-registration/audit-registration.{resolver,types}.ts` (import order; void expression in arrow shorthand L50/128/133/142/152; template literal with `unknown` L143) — fix without `eslint-disable`; (b) e2e `test/attachment/attachment-download.e2e-spec.ts:231` "força download e nosniff em anexo de perfil de tipo livre" gets 500 instead of 200 — reproduces alone (`pnpm --filter api test:e2e -- attachment-download`, log `/tmp/claude-1000/w2-attach.log`); pre-existing since wave 1 E (T15 `document` profile: accept `any`, forced download + nosniff), root cause in `apps/api/src/modules/attachment/**` — do NOT weaken the test.
 **Where**: files above · **Depends on**: T10, T17 · **Requirement**: REL-01 (gates green)
 **Done when**: [ ] `pnpm --filter api lint` exit 0; [ ] `pnpm --filter api test:e2e` 122/122; [ ] unit ≥ 999, int ≥ 342, `module-boundaries.spec.ts` green with NO new allowlist entry.

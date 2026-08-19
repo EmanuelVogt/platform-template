@@ -1,16 +1,15 @@
-import { readdirSync, readFileSync } from "node:fs"
+import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { join, relative, resolve, sep } from "node:path"
 
 const SRC_DIR = resolve(__dirname, "..")
 const SCHEMA_FILE = join(__dirname, "schema.ts")
+const PLATFORM_SCHEMA_FILE = join(__dirname, "platform-schema.ts")
 
-// Exceção consciente: tabela fora do agregado do drizzle-kit de propósito.
-// - audit-entry: audit.entries é criada e mantida pela migration manual 0054
-//   (trigger genérica, append-only); fica fora do agregado para o generate não
-//   tentar emiti-la — o runtime só lê.
-const ALLOWLIST = new Set([
-  "modules/audit/infrastructure/tables/audit-entry.table.ts",
-])
+// Reexport gerado pelo `pnpm platform module`: é por ele que as tabelas das
+// entradas instaladas chegam ao agregador, então não aponta para um *.table.ts.
+const GENERATED_REEXPORT = "./platform-schema"
+
+const ALLOWLIST = new Set<string>([])
 
 function toPosix(path: string): string {
   return path.split(sep).join("/")
@@ -22,11 +21,17 @@ function tableFiles(): string[] {
     .filter((entry) => entry.endsWith(".table.ts"))
 }
 
+function specifiersIn(file: string): string[] {
+  if (!existsSync(file)) return []
+  const source = readFileSync(file, "utf8")
+  return [...source.matchAll(/from "(.+)"/g)].map((match) => match[1] ?? "")
+}
+
 function aggregatedFiles(): string[] {
-  const source = readFileSync(SCHEMA_FILE, "utf8")
-  const specifiers = [...source.matchAll(/from "(.+)"/g)].map(
-    (match) => match[1] ?? ""
-  )
+  const specifiers = [
+    ...specifiersIn(SCHEMA_FILE),
+    ...specifiersIn(PLATFORM_SCHEMA_FILE),
+  ].filter((specifier) => specifier !== GENERATED_REEXPORT)
   return [
     ...new Set(
       specifiers.map((specifier) =>
@@ -43,6 +48,10 @@ describe("schema-completeness — todo *.table.ts entra no agregador do drizzle"
   it("varredura encontra tabelas e o agregador exporta algo (sanidade)", () => {
     expect(onDisk.length).toBeGreaterThan(0)
     expect(aggregated.length).toBeGreaterThan(0)
+  })
+
+  it("schema.ts reexporta o registry gerado das entradas instaladas", () => {
+    expect(specifiersIn(SCHEMA_FILE)).toContain(GENERATED_REEXPORT)
   })
 
   it("nenhuma tabela do disco fora do agregador e da allowlist", () => {

@@ -3,17 +3,15 @@ import {
   Outlet,
   createRootRouteWithContext,
   createRoute,
+  redirect,
 } from "@tanstack/react-router"
 
 import { ErrorPage } from "@/pages/error/ui/error-page"
 import { HomePage } from "@/pages/home/ui/home-page"
-import { LoginPage } from "@/pages/login/ui/login-page"
 import { NotFoundPage } from "@/pages/not-found/ui/not-found-page"
-import { ROUTE_ACCESS } from "@/shared/config/route-access"
 import { ROUTES } from "@/shared/config/routes"
 
-import { AuthenticatedLayout } from "./authenticated-layout"
-import { requireAccess, requireAnon, resolveRootRedirect } from "./guards"
+import { AppLayout } from "./app-layout"
 
 import type { QueryClient } from "@tanstack/react-query"
 
@@ -40,37 +38,31 @@ function RootDocument() {
   )
 }
 
+// A raiz não tem tela própria: sempre redireciona. O módulo de identidade troca
+// este beforeLoad por um que manda anon para o login.
 export const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: ROUTES.HOME,
-  staticData: { access: ROUTE_ACCESS[ROUTES.HOME] },
-  beforeLoad: ({ context }) => resolveRootRedirect(context.queryClient),
+  staticData: { access: { kind: "public" } },
+  beforeLoad: () => {
+    throw redirect({ to: ROUTES.INICIO })
+  },
 })
 
-export const loginRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: ROUTES.LOGIN,
-  staticData: { access: ROUTE_ACCESS[ROUTES.LOGIN] },
-  beforeLoad: ({ context }) => requireAnon(context.queryClient),
-  head: () => ({ meta: [{ title: pageTitle("Entrar") }] }),
-  component: LoginPage,
-})
-
-// layout pathless autenticado — guard único: sessão + staticData.access da
-// rota alvo (pathless declara self, nunca é alvo final)
-export const authenticatedLayoutRoute = createRoute({
+// Layout pathless da área logada. O template sobe sem guard — quem exige sessão
+// é o módulo de identidade, que instala o beforeLoad e lê o `staticData.access`
+// da rota folha.
+export const appLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "authenticated",
-  staticData: { access: { kind: "self" } },
-  beforeLoad: ({ context, location, matches }) =>
-    requireAccess(context.queryClient, location.pathname, matches),
-  component: AuthenticatedLayout,
+  staticData: { access: { kind: "authenticated" } },
+  component: AppLayout,
 })
 
 export const inicioRoute = createRoute({
-  getParentRoute: () => authenticatedLayoutRoute,
+  getParentRoute: () => appLayoutRoute,
   path: ROUTES.INICIO,
-  staticData: { access: ROUTE_ACCESS[ROUTES.INICIO] },
+  staticData: { access: { kind: "authenticated" } },
   head: () => ({ meta: [{ title: pageTitle("Início") }] }),
   component: HomePage,
 })

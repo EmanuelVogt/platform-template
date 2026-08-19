@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-router"
 import { describe, expect, it } from "vitest"
 
-import type { RouteAccess } from "@/shared/config/route-access"
+import type { RouteAccess } from "@/shared/config/route-access.types"
 
 /**
  * Prova de runtime do mecanismo do guard único (requireAccess): o `matches`
@@ -26,7 +26,7 @@ describe("staticData.access no matches do beforeLoad do layout", () => {
     const layoutRoute = createRoute({
       getParentRoute: () => rootRoute,
       id: "authenticated",
-      staticData: { access: { kind: "self" } },
+      staticData: { access: { kind: "authenticated" } },
       beforeLoad: ({ matches }) => {
         const target = matches[matches.length - 1]
         seen = (target?.staticData as { access?: RouteAccess } | undefined)
@@ -38,7 +38,7 @@ describe("staticData.access no matches do beforeLoad do layout", () => {
       getParentRoute: () => layoutRoute,
       path: "/administracao/usuarios",
       staticData: {
-        access: { kind: "permission", permission: "admin.users.read" },
+        access: { kind: "permission", key: "admin.users.read" },
       },
       component: () => null,
     })
@@ -51,6 +51,6 @@ describe("staticData.access no matches do beforeLoad do layout", () => {
     })
     await router.load()
 
-    expect(seen).toEqual({ kind: "permission", permission: "admin.users.read" })
+    expect(seen).toEqual({ kind: "permission", key: "admin.users.read" })
   })
 })

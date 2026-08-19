@@ -1,4 +1,4 @@
-import { requiresPermissionFloor } from "../../../shared/kernel/access/permission.types"
+import { requiresPermissionFloor } from "../domain/access/permission.types"
 import {
   InvalidPermissionSetError,
   InvalidProfessionalScopeError,
@@ -11,7 +11,7 @@ import type { IdentityAccess } from "./identity-context"
 import type {
   AccessProfile,
   AssignableAccessProfile,
-} from "../../../shared/kernel/access/permission.types"
+} from "../domain/access/permission.types"
 import type { PermissionKey } from "../domain/permissions/permission-catalog"
 import type { ProfessionalScope } from "../domain/ports/professional-scope.port"
 

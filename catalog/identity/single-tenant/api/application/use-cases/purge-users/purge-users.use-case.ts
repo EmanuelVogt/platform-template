@@ -1,6 +1,12 @@
 import { Inject } from "@nestjs/common"
 
-import { AuditTrailRepository } from "../../../../../shared/kernel/audit/audit-trail.repository"
+// SPEC_DEVIATION: AD-021 exige que o acoplamento entre entradas passe por port
+// `@Optional()`, não por import direto — aqui identity depende do arquivo da
+// entrada audit e não compila sozinha.
+// Reason: a nota 17 da T22 manda relocar o repositório para dentro da entrada
+// audit e repontar o import; inverter para port é mudança de desenho própria,
+// fora do escopo desta task.
+import { AuditTrailRepository } from "../../../../../../audit/api/infrastructure/trail/audit-trail.repository"
 import { RequestContext } from "../../../../../shared/kernel/context/request-context"
 import { Traced } from "../../../../../shared/kernel/tracing/traced.decorator"
 import { Transactional } from "../../../../../shared/kernel/transactional/transactional.decorator"

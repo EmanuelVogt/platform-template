@@ -1,4 +1,4 @@
-import { BASE_ACCESS_PROFILES } from "../../../shared/kernel/access/access-profile.types"
+import { BASE_ACCESS_PROFILES } from "../domain/access/access-profile.types"
 import {
   InvalidPermissionSetError,
   InvalidProfessionalScopeError,

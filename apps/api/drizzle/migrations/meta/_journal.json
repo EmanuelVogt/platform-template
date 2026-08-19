@@ -5,43 +5,15 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1787062300194,
-      "tag": "0000_platform_baseline",
+      "when": 1807072480194,
+      "tag": "0000_kernel_baseline",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "7",
-      "when": 1787062360194,
+      "when": 1817072480194,
       "tag": "0001_kernel_outbox_notify",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1787062420194,
-      "tag": "0002_auth_events_append_only",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1787062480194,
-      "tag": "0003_audit_trail",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1797062480194,
-      "tag": "0004_identity_serves_clients",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1797072480194,
-      "tag": "0005_attachment_generic_upload_profiles",
       "breakpoints": true
     }
   ]

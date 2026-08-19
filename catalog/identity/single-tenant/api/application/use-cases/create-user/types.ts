@@ -1,4 +1,4 @@
-import type { AssignableAccessProfile } from "../../../../../shared/kernel/access/permission.types"
+import type { AssignableAccessProfile } from "../../../domain/access/permission.types"
 import type { PermissionKey } from "../../../domain/permissions/permission-catalog"
 
 export type CreateUserInput = {

@@ -2,7 +2,7 @@ import { PERMISSION_KEYS } from "../permission-catalog"
 
 import { ADMIN_CATALOG } from "./admin.catalog"
 
-import type { PermissionDef } from "../../../../../shared/kernel/access/permission.types"
+import type { PermissionDef } from "../../access/permission.types"
 
 function findPermission(key: string): PermissionDef | undefined {
   for (const feature of ADMIN_CATALOG.features) {

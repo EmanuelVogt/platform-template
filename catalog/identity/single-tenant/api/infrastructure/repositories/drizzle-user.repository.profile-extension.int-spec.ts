@@ -11,7 +11,7 @@ import { User } from "../../domain/entities/user.entity"
 
 import { DrizzleUserRepository } from "./drizzle-user.repository"
 
-import type { AccessProfile } from "../../../../shared/kernel/access/permission.types"
+import type { AccessProfile } from "../../domain/access/permission.types"
 import type { Pool } from "pg"
 
 // Perfil que só o produto registra: aqui ele entra pelo mesmo caminho que a

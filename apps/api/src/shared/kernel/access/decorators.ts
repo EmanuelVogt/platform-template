@@ -8,7 +8,7 @@ export const ACCESS_REQUIREMENT = "access:requirement"
 const requirement = (value: AccessRequirement) =>
   SetMetadata(ACCESS_REQUIREMENT, value)
 
-/** Chave de metadata: rota pública (opt-out do AuthGuard e do PermissionsGuard). */
+/** Chave de metadata: rota pública (opt-out dos guards de autenticação). */
 export const IS_PUBLIC_KEY = "access:isPublic"
 
 /** Marca a rota como pública — sem sessão e sem permissão. */
@@ -57,7 +57,7 @@ export const SelfService = () => SetMetadata(IS_SELF_SERVICE_KEY, true)
 /** Chave de metadata: permissões exigidas pela rota (AND). */
 export const REQUIRE_PERMISSION_KEY = "access:requirePermission"
 
-/** Exige a chave. Lida pelo AccessGuard do kernel e pelo PermissionsGuard. */
+/** Exige a chave. Lida pelo AccessGuard do kernel. */
 export const RequirePermission = (key: PermissionKey) =>
   applyDecorators(
     SetMetadata(REQUIRE_PERMISSION_KEY, [key]),

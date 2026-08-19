@@ -4,14 +4,11 @@ import { useEffect, type ReactNode } from "react"
 
 import { queryClient } from "@/app/query-client"
 import { router } from "@/app/router/router"
-import { useSession } from "@/entities/session/api/session.queries"
 import { ROUTES } from "@/shared/config/routes"
 import { useAuthStore } from "@/shared/store/auth.store"
 
-/** Mantém o observer de sessão montado (cache quente para o app) e escuta
- *  logout de outras abas: limpa o cache e manda esta aba para o login. */
-function AuthBootstrap({ children }: { children: ReactNode }) {
-  useSession()
+/** Escuta logout de outras abas: limpa o cache e manda esta aba para o login. */
+function CrossTabLogout({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = useAuthStore.getState().subscribeCrossTabLogout(() => {
       queryClient.clear()
@@ -25,9 +22,9 @@ function AuthBootstrap({ children }: { children: ReactNode }) {
 export function AppProviders() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthBootstrap>
+      <CrossTabLogout>
         <RouterProvider router={router} />
-      </AuthBootstrap>
+      </CrossTabLogout>
     </QueryClientProvider>
   )
 }

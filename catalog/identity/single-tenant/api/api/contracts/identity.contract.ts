@@ -4,7 +4,7 @@ import { z } from "zod"
 import {
   ACCESS_PROFILES,
   ASSIGNABLE_ACCESS_PROFILES,
-} from "../../../../shared/kernel/access/permission.types"
+} from "../../domain/access/permission.types"
 import {
   baseListingQuerySchema,
   zBoolQuery,

@@ -6,7 +6,7 @@ import {
 } from "../../domain/base-audit-registrations"
 import { DuplicateAuditRegistrationError } from "../../domain/errors"
 
-import type { PermissionKey } from "../../../../shared/kernel/access/permission.types"
+import type { PermissionKey } from "../../../../shared/kernel/access/access-policy.port"
 import type {
   AuditedTableRegistration,
   RefTargetRegistration,

@@ -1,4 +1,4 @@
-import type { PermissionKey } from "../../../shared/kernel/access/permission.types"
+import type { PermissionKey } from "../../../shared/kernel/access/access-policy.port"
 
 export type AuditedTableRegistration = {
   schema: string

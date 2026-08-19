@@ -4,8 +4,8 @@ import {
   REQUIRE_PERMISSION_KEY,
   RequirePermission,
 } from "../../../../shared/kernel/access/decorators"
-import { definePermissionCatalog } from "../../../../shared/kernel/access/define-permission-catalog"
-import { PRODUCT_PERMISSION_CATALOGS } from "../../../../shared/kernel/access/product-permission-catalogs"
+import { definePermissionCatalog } from "../access/define-permission-catalog"
+import { PRODUCT_PERMISSION_CATALOGS } from "../access/product-permission-catalogs"
 
 import { ADMIN_CATALOG } from "./catalog/admin.catalog"
 import {

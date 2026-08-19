@@ -1,4 +1,4 @@
-import type { ModuleDef } from "../../../../../shared/kernel/access/permission.types"
+import type { ModuleDef } from "../../access/permission.types"
 
 export const ADMIN_CATALOG = {
   key: "admin",

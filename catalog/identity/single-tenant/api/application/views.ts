@@ -1,4 +1,4 @@
-import type { AccessProfile } from "../../../shared/kernel/access/permission.types"
+import type { AccessProfile } from "../domain/access/permission.types"
 import type { AuthEvent, AuthEventType } from "../domain/entities/auth-event.entity"
 import type { User, UserStatus } from "../domain/entities/user.entity"
 import type { PermissionKey } from "../domain/permissions/permission-catalog"

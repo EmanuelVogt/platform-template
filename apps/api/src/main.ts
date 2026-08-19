@@ -6,8 +6,6 @@ import cookieParser from "cookie-parser"
 import helmet from "helmet"
 
 import { AppModule } from "./app.module"
-import { setupDocsAuth } from "./docs/docs-auth"
-import { buildOpenApiDocument } from "./openapi/openapi-config"
 import { env } from "./shared/config/env"
 import { RequestContext } from "./shared/kernel/context/request-context"
 import { createRequestContextMiddleware } from "./shared/kernel/context/request-context.middleware"
@@ -51,11 +49,6 @@ async function bootstrap(): Promise<void> {
   // Popula o RequestContext (ALS) antes de qualquer handler.
   app.use(createRequestContextMiddleware(app.get(RequestContext)))
 
-  const document = buildOpenApiDocument(app)
-  // Gate de login + UI do Scalar na frente do /docs. Precisa do ALS
-  // (RequestContext) já aplicado — o LoginUseCase depende dele.
-  setupDocsAuth(app, document)
-
   // O flush dos spans OTel no shutdown roda via TracingModule
   // (onApplicationShutdown), disparado pelo enableShutdownHooks em SIGTERM/SIGINT.
   const port = env().PORT
@@ -63,7 +56,6 @@ async function bootstrap(): Promise<void> {
 
   const logger = app.get(LoggerFactory).forModule("bootstrap")
   logger.info(`Servidor no ar em http://localhost:${port}`)
-  logger.info(`Docs disponíveis em http://localhost:${port}/docs`)
 }
 
 // Só boota quando executado direto (node dist/main); importar para reuso

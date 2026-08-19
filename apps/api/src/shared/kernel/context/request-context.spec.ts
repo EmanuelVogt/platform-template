@@ -18,10 +18,6 @@ function makeStore(
     origin: "http",
     actor: null,
     extensions: new Map(),
-    userId: null,
-    sessionId: null,
-    deviceId: null,
-    access: null,
     locale: "pt-BR",
     ip: null,
     userAgent: null,
@@ -95,7 +91,7 @@ describe("RequestContext", () => {
 
   it("getExtension devolve undefined para símbolo nunca gravado", () => {
     const ctx = new RequestContext()
-    const key = Symbol("identity.permissions")
+    const key = Symbol("modulo.permissions")
     expect(ctx.run(makeStore(), () => ctx.getExtension(key))).toBeUndefined()
   })
 
@@ -105,8 +101,8 @@ describe("RequestContext", () => {
 
   it("setExtension guarda o valor opaco sob o símbolo do módulo dono", () => {
     const ctx = new RequestContext()
-    const key = Symbol("identity.permissions")
-    const other = Symbol("audit.batch")
+    const key = Symbol("modulo.permissions")
+    const other = Symbol("outro-modulo.batch")
     const read = ctx.run(makeStore(), () => {
       ctx.setExtension(key, new Set(["user.read"]))
       return {
@@ -120,7 +116,7 @@ describe("RequestContext", () => {
 
   it("extensões ficam isoladas entre requests concorrentes", async () => {
     const ctx = new RequestContext()
-    const key = Symbol("identity.permissions")
+    const key = Symbol("modulo.permissions")
     const writeThenRead = async (value: string): Promise<string | undefined> => {
       ctx.setExtension(key, value)
       await Promise.resolve()

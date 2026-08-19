@@ -3,20 +3,9 @@ import { join, sep } from "node:path"
 
 const MODULES_DIR = join(__dirname, "..", "modules")
 
-// Exceções conscientes: use cases que legitimamente não abrem tx própria.
-// - upload-access-link-avatar: delega a persistência ao AttachmentFacade (tx dele).
-// - notification list-notifications: leitura pura sem @ReadOnly
-//   (aceito por ora; retrofit de @ReadOnly seria refactor de escopo próprio).
-// - get-attachment-for-download: busca o objeto no storage (IO externo) antes de
-//   devolver o stream — IO externo nunca dentro de @Transactional (Regra de Ouro
-//   17 do back-arch). Tx aqui ainda somava um segundo efeito: a trilha de acesso
-//   commita na conexão raiz, então cada download segurava uma conexão e pedia
-//   outra ao mesmo pool — DATABASE_POOL_MAX downloads simultâneos travavam o pool.
-const ALLOWLIST = new Set([
-  "identity/application/use-cases/upload-access-link-avatar/upload-access-link-avatar.use-case.ts",
-  "notification/application/use-cases/list-notifications/list-notifications.use-case.ts",
-  "attachment/application/use-cases/get-attachment-for-download/get-attachment-for-download.use-case.ts",
-])
+// Exceções conscientes: use cases que legitimamente não abrem tx própria. Cada
+// entrada do catálogo carrega as suas na própria cópia deste guard.
+const ALLOWLIST = new Set<string>([])
 
 
 // Não aceita `.run(` genérico de propósito: `ctx.run(`/`als.run(` não provam
@@ -42,8 +31,8 @@ function hasTxMarker(relPath: string): boolean {
 describe("transactional-coverage — todo use case declara participação em tx", () => {
   const files = useCaseFiles()
 
-  it("varredura encontra use cases (sanidade do glob)", () => {
-    expect(files.length).toBeGreaterThan(0)
+  it("o template sobe sem módulo — a varredura fica vazia por design (KRN-01)", () => {
+    expect(files).toEqual([])
   })
 
   it("nenhum use case fora da allowlist sem @Transactional/@ReadOnly/txm.run", () => {

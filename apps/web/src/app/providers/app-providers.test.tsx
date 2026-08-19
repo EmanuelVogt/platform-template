@@ -17,10 +17,6 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   }
 })
 
-vi.mock("@/entities/session/api/session.queries", () => ({
-  useSession: () => ({ data: undefined }),
-}))
-
 describe("AppProviders", () => {
   it("monta query client e router", () => {
     render(<AppProviders />)

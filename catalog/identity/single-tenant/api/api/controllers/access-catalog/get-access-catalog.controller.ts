@@ -2,7 +2,7 @@ import { Controller, Get } from "@nestjs/common"
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger"
 
 import { SelfService } from "../../../../../shared/kernel/access/decorators"
-import { PROFILE_DEFS } from "../../../../../shared/kernel/access/permission.types"
+import { PROFILE_DEFS } from "../../../domain/access/permission.types"
 import { MODULES } from "../../../domain/permissions/permission-catalog"
 import { AccessCatalogResponseDto } from "../../contracts/access-catalog.contract"
 

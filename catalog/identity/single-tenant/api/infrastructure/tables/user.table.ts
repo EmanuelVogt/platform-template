@@ -8,7 +8,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core"
 
-import { ACCESS_PROFILES } from "../../../../shared/kernel/access/permission.types"
+import { ACCESS_PROFILES } from "../../domain/access/permission.types"
 
 import { identitySchema } from "./identity.schema"
 

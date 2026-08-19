@@ -1,12 +1,14 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs"
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
 import { dirname, resolve, sep } from "node:path"
 
 const MODULES_DIR = __dirname
-const KERNEL_PREFIX = resolve(MODULES_DIR, "..", "shared", "kernel") + sep
+const SRC_DIR = resolve(MODULES_DIR, "..")
+const SHARED_DIR = resolve(SRC_DIR, "shared")
+const KERNEL_PREFIX = resolve(SRC_DIR, "shared", "kernel") + sep
+const WEB_SRC_DIR = resolve(SRC_DIR, "..", "..", "web", "src")
 
 const ROOT_CONNECTION = resolve(
-  MODULES_DIR,
-  "..",
+  SRC_DIR,
   "shared",
   "infra",
   "database",
@@ -18,35 +20,12 @@ const EXECUTOR_TYPE = "DrizzleExecutor"
 
 const LAYERS = new Set(["api", "application", "domain", "infrastructure"])
 
-// Travessias cross-module autorizadas, par a par, com o motivo:
-// - registry de renderers (ADR 0067): scheduling registra o renderer no report
-//   e implementa o port dele — inversão deliberada; 3º renderer promove o port
-//   ao kernel.
-// - contrato HTTP compartilhado: 3 controllers reusam o contract de access-log
-//   do attachment e o reservation reusa um schema do scheduling. Endereço
-//   definitivo (kernel × dono) ainda sem decisão — a trava congela o estoque.
+// Travessias cross-module autorizadas, par a par, com o motivo. Entrar nesta
+// lista é decisão de design, nunca conserto de teste vermelho.
 const CROSS_MODULE_ALLOWLIST = new Set<string>([])
 
-// Exceções same-module, com o motivo:
-// - upload-attachments.controller → multipart-files: o parser consome o
-//   Request cru na borda HTTP; o tipo que chega ao use case (IncomingFile)
-//   mora no domain — port aqui seria cerimônia sem isolar nada.
-// - sse.controller → sse-connection-registry: o controller liga a conexão
-//   HTTP viva ao registry em memória do próprio módulo, sem use case no meio;
-//   um port de domínio exigiria tipos de rxjs/Nest no domain (viola a Regra 4).
-// - upload-profiles → attachment.config: só o TIPO da config atravessa — o
-//   catálogo de perfis deriva dos limites da env e a função segue pura.
-const SAME_MODULE_ALLOWLIST = new Set([
-  "attachment/api/controllers/upload-attachments.controller.ts -> attachment/infrastructure/http/multipart-files.ts",
-  "notification/api/controllers/stream/sse.controller.ts -> notification/infrastructure/realtime/sse-connection-registry.ts",
-  "attachment/domain/upload-profiles.ts -> attachment/attachment.config.ts",
-  // Decisão B4(b) do T8: as duas tabelas de profissional continuam no schema pg
-  // `identity` e são expostas a modules/professional por esta facade — reexportar
-  // a tabela é impossível sem atravessar api → infrastructure.
-  "identity/api/facades/professional-tables.facade.ts -> identity/infrastructure/tables/professional-default-hours.table.ts",
-  // Mesma decisão B4(b): a segunda tabela de profissional sai pela mesma facade.
-  "identity/api/facades/professional-tables.facade.ts -> identity/infrastructure/tables/user-professional-schedule-config.table.ts",
-])
+// Exceções same-module, com o motivo.
+const SAME_MODULE_ALLOWLIST = new Set<string>([])
 
 type Edge = {
   importer: string
@@ -60,8 +39,8 @@ function toPosix(path: string): string {
 }
 
 // Pastas testing/ na árvore de produção guardam dublê/harness consumido só
-// por spec (fakes do scheduling, fixtures do engine) — regra de camada governa
-// código de runtime, não suporte de teste.
+// por spec (fakes, fixtures) — regra de camada governa código de runtime, não
+// suporte de teste.
 function isProductionFile(entry: string): boolean {
   return (
     entry.endsWith(".ts") &&
@@ -244,37 +223,71 @@ function violationOf(edge: Edge): string | null {
 }
 
 describe("module-boundaries — import entre camadas e módulos segue a tabela do handbook", () => {
-  const edges = collectEdges()
-
-  it("varredura encontra imports (sanidade)", () => {
-    expect(edges.length).toBeGreaterThan(100)
+  it("o template sobe sem módulo — a varredura fica vazia por design (KRN-01)", () => {
+    expect(productionFiles()).toEqual([])
   })
 
   it("nenhuma travessia proibida fora das allowlists", () => {
-    const offenders = edges
+    const offenders = collectEdges()
       .map(violationOf)
       .filter((v): v is string => v !== null)
     expect([...new Set(offenders)].sort()).toEqual([])
   })
 
+  it("reprova application → infrastructure do próprio módulo", () => {
+    expect(
+      violationOf({
+        importer: "agenda/application/x.use-case.ts",
+        target: toPosix(
+          resolve(MODULES_DIR, "agenda/infrastructure/repositories/y.repository.ts")
+        ),
+        importerModule: "agenda",
+        importerLayer: "application",
+      })
+    ).toBe(
+      "application → infrastructure: agenda/application/x.use-case.ts -> agenda/infrastructure/repositories/y.repository.ts"
+    )
+  })
+
+  it("reprova domain importando fora de domain/kernel", () => {
+    expect(
+      violationOf({
+        importer: "agenda/domain/x.entity.ts",
+        target: toPosix(resolve(MODULES_DIR, "agenda/application/y.use-case.ts")),
+        importerModule: "agenda",
+        importerLayer: "domain",
+      })
+    ).toBe(
+      "domain importa fora de domain/kernel: agenda/domain/x.entity.ts -> agenda/application/y.use-case.ts"
+    )
+  })
+
+  it("aceita domain importando kernel", () => {
+    expect(
+      violationOf({
+        importer: "agenda/domain/x.entity.ts",
+        target: toPosix(resolve(KERNEL_PREFIX, "entity.ts")),
+        importerModule: "agenda",
+        importerLayer: "domain",
+      })
+    ).toBeNull()
+  })
+
   it("api/events/ é superfície pública como api/facades/; application/events/ não é (KPB-05)", () => {
     const legal: Edge = {
-      importer: "identity/application/use-cases/x.use-case.ts",
+      importer: "agenda/application/use-cases/x.use-case.ts",
       target: toPosix(
-        resolve(MODULES_DIR, "notification/api/events/notification-requested.event.ts")
+        resolve(MODULES_DIR, "billing/api/events/invoice-issued.event.ts")
       ),
-      importerModule: "identity",
+      importerModule: "agenda",
       importerLayer: "application",
     }
     const illegal: Edge = {
-      importer: "identity/application/use-cases/x.use-case.ts",
+      importer: "agenda/application/use-cases/x.use-case.ts",
       target: toPosix(
-        resolve(
-          MODULES_DIR,
-          "notification/application/events/notification-requested.event.ts"
-        )
+        resolve(MODULES_DIR, "billing/application/events/invoice-issued.event.ts")
       ),
-      importerModule: "identity",
+      importerModule: "agenda",
       importerLayer: "application",
     }
     expect(violationOf(legal)).toBeNull()
@@ -283,7 +296,7 @@ describe("module-boundaries — import entre camadas e módulos segue a tabela d
 
   it("allowlist cross-module sem entrada morta", () => {
     const pairs = new Set(
-      edges
+      collectEdges()
         .filter((e) => e.target.startsWith(toPosix(MODULES_DIR) + "/"))
         .map(
           (e) =>
@@ -341,16 +354,6 @@ describe("module-boundaries — nenhum módulo enxerga a conexão raiz do banco"
 
   it("o caminho relativo do fixture resolve no drizzle.provider real", () => {
     expect(resolveTarget(FAKE_ABS, RELATIVE)).toBe(ROOT_CONNECTION)
-  })
-
-  it("a varredura de produção visita quem importa a conexão raiz (sanidade)", () => {
-    const importers = productionFiles().filter((rel) => {
-      const abs = resolve(MODULES_DIR, rel)
-      return importStatementsIn(readFileSync(abs, "utf8")).some((statement) =>
-        pointsToRootConnection(abs, statement.specifier)
-      )
-    })
-    expect(importers.length).toBeGreaterThan(10)
   })
 
   it("nenhum arquivo de produção em src/modules importa a conexão raiz", () => {
@@ -424,7 +427,6 @@ describe("module-boundaries — nenhum módulo enxerga a conexão raiz do banco"
 // RULE A (design C-GUARD-API): o kernel não conhece produto — nenhum arquivo de
 // produção em shared/** importa modules/**. `import type` conta como import: o
 // tipo de produto some na compilação, mas a dependência de design fica.
-const SHARED_DIR = resolve(MODULES_DIR, "..", "shared")
 const MODULES_SPECIFIER = /(?:^|\/)src\/modules\//
 
 function sharedOffenses(
@@ -453,64 +455,19 @@ function sharedOffenses(
   return offenses
 }
 
-// RULE B (design C-GUARD-API): o base set é o kernel de produto — enxerga
-// shared/**, o próprio módulo e apenas a superfície pública (api/facades/ |
-// api/events/) de outro módulo do base set. Import para módulo fora do base set
-// é violação em qualquer camada, inclusive .module.ts. Entrar nesta lista é
-// decisão de design, nunca conserto de teste vermelho.
-const BASE_SET_MODULES = new Set([
-  "identity",
-  "audit",
-  "attachment",
-  "tag",
-  "notification",
-])
-
-// SPEC_DEVIATION: o design C-GUARD-API lista só api/facades/ | api/events/ como
-// superfície pública; aqui o .module.ts raiz de OUTRO módulo do base set também
-// passa.
-// Reason: `imports: [IdentityModule]` é a fiação DI do Nest, não pode ser
-// reendereçada, já é travessia legal na tabela cross-module deste arquivo e não
-// vaza produto — as 3 arestas reais (attachment/audit → identity, identity →
-// attachment) ficam dentro do base set. Módulo fora do base set continua
-// proibido, .module.ts inclusive.
-const BASE_SET_WIRING = /^[^/]+\/[^/]+\.module\.ts$/
-
-function isPublicSurface(targetRel: string): boolean {
-  return targetRel.includes("/api/facades/") || targetRel.includes("/api/events/")
-}
-
-function baseSetViolationOf(edge: Edge): string | null {
-  if (!BASE_SET_MODULES.has(edge.importerModule)) return null
-  const modulesPrefix = toPosix(MODULES_DIR) + "/"
-  if (!edge.target.startsWith(modulesPrefix)) return null
-
-  const targetRel = edge.target.slice(modulesPrefix.length)
-  const targetModule = targetRel.split("/")[0] ?? ""
-  if (targetModule === edge.importerModule) return null
-  if (
-    BASE_SET_MODULES.has(targetModule) &&
-    (isPublicSurface(targetRel) || BASE_SET_WIRING.test(targetRel))
-  )
-    return null
-
-  const reason = BASE_SET_MODULES.has(targetModule)
-    ? "base set fora da superfície pública"
-    : "base set importa módulo de produto"
-  return `${reason}: ${edge.importer} -> ${targetRel}`
-}
-
 describe("module-boundaries — RULE A: shared/** nunca importa modules/**", () => {
   const FAKE_REL = "infra/fake-kernel-consumer.ts"
   const FAKE_ABS = resolve(SHARED_DIR, FAKE_REL)
-  const RELATIVE = "../../modules/identity/identity.module"
+  // Único alvo real sob modules/ num template kernel-only — serve de prova de
+  // que o resolvedor de caminho relativo do guard ainda encontra a pasta.
+  const RELATIVE = "../../modules/module-boundaries.spec"
 
   const offensesOf = (source: string): string[] =>
     sharedOffenses(FAKE_REL, FAKE_ABS, source)
 
   it("o caminho relativo do fixture resolve num arquivo real de modules", () => {
     expect(resolveTarget(FAKE_ABS, RELATIVE)).toBe(
-      resolve(MODULES_DIR, "identity/identity.module.ts")
+      resolve(MODULES_DIR, "module-boundaries.spec.ts")
     )
   })
 
@@ -527,24 +484,24 @@ describe("module-boundaries — RULE A: shared/** nunca importa modules/**", () 
   })
 
   it("reprova import de valor nomeando file → target", () => {
-    expect(offensesOf(`import { IdentityModule } from "${RELATIVE}"`)).toEqual([
-      `shared importa modules: ${FAKE_REL} -> identity/identity.module.ts`,
+    expect(offensesOf(`import { anything } from "${RELATIVE}"`)).toEqual([
+      `shared importa modules: ${FAKE_REL} -> module-boundaries.spec.ts`,
     ])
   })
 
   it("reprova import type — o tipo de produto também é dependência", () => {
     expect(
-      offensesOf(`import type { IdentityModule } from "${RELATIVE}"`)
+      offensesOf(`import type { Anything } from "${RELATIVE}"`)
     ).toEqual([
-      `shared importa modules: ${FAKE_REL} -> identity/identity.module.ts`,
+      `shared importa modules: ${FAKE_REL} -> module-boundaries.spec.ts`,
     ])
   })
 
   it("reprova specifier não-relativo para src/modules", () => {
     expect(
-      offensesOf(`import { X } from "src/modules/audit/api/facades/y.facade"`)
+      offensesOf(`import { X } from "src/modules/agenda/api/facades/y.facade"`)
     ).toEqual([
-      `shared importa modules: ${FAKE_REL} -> src/modules/audit/api/facades/y.facade`,
+      `shared importa modules: ${FAKE_REL} -> src/modules/agenda/api/facades/y.facade`,
     ])
   })
 
@@ -557,84 +514,161 @@ describe("module-boundaries — RULE A: shared/** nunca importa modules/**", () 
   })
 })
 
-describe("module-boundaries — RULE B: base set não enxerga produto", () => {
-  const edgeTo = (target: string): Edge => ({
-    importer: "identity/application/use-cases/x.use-case.ts",
-    target: toPosix(resolve(MODULES_DIR, target)),
-    importerModule: "identity",
-    importerLayer: "application",
+// RULE C (design § 2.4): o vocabulário do kernel não conhece módulo. Nenhum
+// token de identity/attachment/audit/notification/tag sobrevive na casca do
+// template — nem em código, nem em comentário, nem em string. Cada token some
+// junto com a entrada que o define; reencontrá-lo aqui significa que a entrada
+// vazou de volta pro kernel.
+const FORBIDDEN_TOKENS: readonly { label: string; pattern: RegExp }[] = [
+  { label: "identity", pattern: /identity/ },
+  { label: "IdentityModule", pattern: /IdentityModule/ },
+  { label: "accessProfile", pattern: /accessProfile/ },
+  { label: "access_profile", pattern: /access_profile/ },
+  { label: "AccessProfile", pattern: /AccessProfile/ },
+  { label: "PermissionsGuard", pattern: /PermissionsGuard/ },
+  { label: "permissionCatalog", pattern: /permissionCatalog/ },
+  { label: "uploadProfile", pattern: /uploadProfile/ },
+  { label: "UploadProfile", pattern: /UploadProfile/ },
+  { label: "auditTrail", pattern: /auditTrail/ },
+  { label: "audit_trail", pattern: /audit_trail/ },
+  { label: "AuditRegistry", pattern: /AuditRegistry/ },
+  { label: "NotificationModule", pattern: /NotificationModule/ },
+  { label: "notification_", pattern: /notification_/ },
+  { label: "TagModule", pattern: /TagModule/ },
+  { label: "tag. (prefixo de schema)", pattern: /"?\btag"?\.[a-z_]/ },
+]
+
+const KERNEL_SURFACE: readonly string[] = [
+  SHARED_DIR,
+  resolve(SRC_DIR, "app.module.ts"),
+  resolve(SRC_DIR, "db", "schema.ts"),
+  resolve(WEB_SRC_DIR, "app"),
+  resolve(WEB_SRC_DIR, "shared"),
+]
+
+// Fixture de teste é o único lugar onde um nome de módulo pode aparecer: ela
+// existe justamente para simular a entrada que não está instalada.
+const TOKEN_ALLOWLIST = /(?:^|\/)shared\/test\/.*\.fixture\.ts$/
+
+function isScannedFile(path: string): boolean {
+  return (
+    (path.endsWith(".ts") || path.endsWith(".tsx")) &&
+    !TOKEN_ALLOWLIST.test(toPosix(path))
+  )
+}
+
+function kernelSurfaceFiles(): string[] {
+  const files: string[] = []
+  for (const root of KERNEL_SURFACE) {
+    if (!existsSync(root)) continue
+    if (statSync(root).isFile()) {
+      files.push(root)
+      continue
+    }
+    for (const entry of readdirSync(root, {
+      recursive: true,
+      encoding: "utf8",
+    })) {
+      const abs = resolve(root, entry)
+      if (isScannedFile(abs) && statSync(abs).isFile()) files.push(abs)
+    }
+  }
+  return files
+}
+
+function tokenOffensesIn(rel: string, source: string): string[] {
+  const offenses: string[] = []
+  const lines = source.split("\n")
+  for (const [index, line] of lines.entries()) {
+    for (const token of FORBIDDEN_TOKENS) {
+      if (token.pattern.test(line)) {
+        offenses.push(`${rel}:${index + 1} — ${token.label}`)
+      }
+    }
+  }
+  return offenses
+}
+
+describe("module-boundaries — RULE C: o vocabulário do kernel não conhece módulo", () => {
+  it("a varredura enxerga a casca do template, api e web (sanidade)", () => {
+    const files = kernelSurfaceFiles().map(toPosix)
+    expect(files.length).toBeGreaterThan(50)
+    expect(files.some((file) => file.includes("/apps/web/src/app/"))).toBe(true)
+    expect(files.some((file) => file.includes("/apps/api/src/shared/"))).toBe(
+      true
+    )
+    expect(files).toContain(toPosix(resolve(SRC_DIR, "app.module.ts")))
+    expect(files).toContain(toPosix(resolve(SRC_DIR, "db", "schema.ts")))
   })
 
-  it("os módulos do base set existem no disco (sanidade)", () => {
-    const onDisk = new Set(productionFiles().map((rel) => rel.split("/")[0]))
-    expect([...BASE_SET_MODULES].filter((m) => !onDisk.has(m))).toEqual([])
+  it("nenhum token de módulo sobrevive na casca do template", () => {
+    const offenders = kernelSurfaceFiles().flatMap((abs) =>
+      tokenOffensesIn(
+        toPosix(abs).slice(toPosix(resolve(SRC_DIR, "..", "..", "..")).length + 1),
+        readFileSync(abs, "utf8")
+      )
+    )
+    expect(offenders.sort()).toEqual([])
   })
 
-  it("nenhum módulo do base set importa fora do base set", () => {
-    const offenders = collectEdges()
-      .map(baseSetViolationOf)
-      .filter((v): v is string => v !== null)
-    expect([...new Set(offenders)].sort()).toEqual([])
-  })
-
-  it("reprova módulo de produto em qualquer camada, inclusive facade e .module", () => {
-    const offenders = [
-      "scheduling/api/facades/guest-agenda.facade.ts",
-      "professional/professional.module.ts",
-      "service/domain/service.entity.ts",
-    ].map((target) => baseSetViolationOf(edgeTo(target)))
-    expect(offenders).toEqual([
-      "base set importa módulo de produto: identity/application/use-cases/x.use-case.ts -> scheduling/api/facades/guest-agenda.facade.ts",
-      "base set importa módulo de produto: identity/application/use-cases/x.use-case.ts -> professional/professional.module.ts",
-      "base set importa módulo de produto: identity/application/use-cases/x.use-case.ts -> service/domain/service.entity.ts",
+  it("reprova cada token da lista, com arquivo e linha", () => {
+    const source = [
+      `import { IdentityModule } from "x"`,
+      `const a = user.accessProfile`,
+      `-- coluna access_profile`,
+      `type T = AccessProfile`,
+      `@UseGuards(PermissionsGuard)`,
+      `const c = permissionCatalog`,
+      `const u = uploadProfile`,
+      `type U = UploadProfile`,
+      `const t = auditTrail`,
+      `select * from audit_trail`,
+      `new AuditRegistry()`,
+      `imports: [NotificationModule]`,
+      `insert into notification_deliveries`,
+      `imports: [TagModule]`,
+      `select * from tag.tags`,
+      `import "./identity.config"`,
+    ].join("\n")
+    expect(tokenOffensesIn("fake.ts", source)).toEqual([
+      "fake.ts:1 — IdentityModule",
+      "fake.ts:2 — accessProfile",
+      "fake.ts:3 — access_profile",
+      "fake.ts:4 — AccessProfile",
+      "fake.ts:5 — PermissionsGuard",
+      "fake.ts:6 — permissionCatalog",
+      "fake.ts:7 — uploadProfile",
+      "fake.ts:8 — UploadProfile",
+      "fake.ts:9 — auditTrail",
+      "fake.ts:10 — audit_trail",
+      "fake.ts:11 — AuditRegistry",
+      "fake.ts:12 — NotificationModule",
+      "fake.ts:13 — notification_",
+      "fake.ts:14 — TagModule",
+      "fake.ts:15 — tag. (prefixo de schema)",
+      "fake.ts:16 — identity",
     ])
   })
 
-  it("reprova outro módulo do base set fora da superfície pública", () => {
-    expect(
-      baseSetViolationOf(edgeTo("audit/application/record-activity.use-case.ts"))
-    ).toBe(
-      "base set fora da superfície pública: identity/application/use-cases/x.use-case.ts -> audit/application/record-activity.use-case.ts"
+  it("é case-sensitive: `Identity` sozinho não casa com o token minúsculo", () => {
+    expect(tokenOffensesIn("fake.ts", `const Identity = 1`)).toEqual([])
+    expect(tokenOffensesIn("fake.ts", `const identity = 1`)).toEqual([
+      "fake.ts:1 — identity",
+    ])
+  })
+
+  it("não reprova palavra vizinha que só contém o token como prefixo alheio", () => {
+    expect(tokenOffensesIn("fake.ts", `const tags = ["a"]`)).toEqual([])
+    expect(tokenOffensesIn("fake.ts", `const notification = 1`)).toEqual([])
+  })
+
+  it("libera fixture de teste sob shared/test, não o resto", () => {
+    expect(isScannedFile("/x/apps/api/src/shared/test/user.fixture.ts")).toBe(
+      false
     )
-  })
-
-  it("aceita a fiação DI entre módulos do base set, não a de produto", () => {
-    expect(
-      baseSetViolationOf(edgeTo("attachment/attachment.module.ts"))
-    ).toBeNull()
-    expect(
-      baseSetViolationOf(edgeTo("attachment/api/attachment-extra.module.ts"))
-    ).not.toBeNull()
-  })
-
-  it("aceita superfície pública do base set, internals e shared", () => {
-    expect(
-      baseSetViolationOf(edgeTo("notification/api/events/requested.event.ts"))
-    ).toBeNull()
-    expect(
-      baseSetViolationOf(edgeTo("audit/api/facades/audit-trail.facade.ts"))
-    ).toBeNull()
-    expect(
-      baseSetViolationOf(edgeTo("identity/infrastructure/tables/users.table.ts"))
-    ).toBeNull()
-    expect(
-      baseSetViolationOf({
-        importer: "identity/application/use-cases/x.use-case.ts",
-        target: toPosix(resolve(SHARED_DIR, "kernel/entity.ts")),
-        importerModule: "identity",
-        importerLayer: "application",
-      })
-    ).toBeNull()
-  })
-
-  it("não julga módulo fora do base set", () => {
-    expect(
-      baseSetViolationOf({
-        importer: "scheduling/application/x.use-case.ts",
-        target: toPosix(resolve(MODULES_DIR, "service/domain/service.entity.ts")),
-        importerModule: "scheduling",
-        importerLayer: "application",
-      })
-    ).toBeNull()
+    expect(isScannedFile("/x/apps/api/src/shared/test/render.ts")).toBe(true)
+    expect(isScannedFile("/x/apps/api/src/shared/kernel/a.fixture.ts")).toBe(
+      true
+    )
   })
 })

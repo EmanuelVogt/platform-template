@@ -7,7 +7,6 @@ import {
   testDatabaseUrl,
 } from "../../../../test/setup/test-db"
 import { makeTestLogger } from "../../../../test/setup/test-logger"
-import { DeliveryDispatcher } from "../../../modules/notification/infrastructure/delivery/delivery.dispatcher"
 import { parseEnv } from "../../config/env"
 import { DedicatedClientFactory } from "../../infra/database/dedicated-client.factory"
 import { TransactionManager } from "../transactional/transaction-manager"
@@ -24,8 +23,6 @@ import type {
   MaintenanceJobName,
   MaintenanceJobSpec,
 } from "./maintenance-schedule"
-import type { ChannelPort } from "../../../modules/notification/domain/ports/channel.port"
-import type { NotificationConfig } from "../../../modules/notification/notification.config"
 import type { Env } from "../../config/env"
 import type {
   DrizzleDb,
@@ -121,18 +118,6 @@ const mutableSchedule = MAINTENANCE_SCHEDULE as unknown as Record<
   MaintenanceJobSpec
 >
 
-/**
- * É a transação ambiente do envelope que faz "gravar na raiz" custar uma segunda
- * conexão. Sem ela, um pool de 1 não distingue corpo correto de corpo defeituoso
- * — foi por isso que os casos de purga perderam poder de discriminação quando o
- * envelope deixou de abrir transação por padrão. Devolve o spec original.
- */
-function forceAtomic(name: MaintenanceJobName): MaintenanceJobSpec {
-  const original = MAINTENANCE_SCHEDULE[name]
-  mutableSchedule[name] = { ...original, atomic: true }
-  return original
-}
-
 describe("MaintenanceRuntime (integração)", () => {
   let pool: Pool
   let db: DrizzleDb
@@ -211,11 +196,11 @@ describe("MaintenanceRuntime (integração)", () => {
     const bInside = deferred()
     const release = deferred()
 
-    const pA = runtime.run("email-change.revert", async () => {
+    const pA = runtime.run("outbox.purge", async () => {
       aInside.resolve()
       await release.promise
     })
-    const pB = runtime.run("auth-events.purge", async () => {
+    const pB = runtime.run("idempotency.purge", async () => {
       bInside.resolve()
       await release.promise
     })
@@ -237,8 +222,8 @@ describe("MaintenanceRuntime (integração)", () => {
     release.resolve()
     await Promise.all([pA, pB])
 
-    expect(outcomeOf(runtime, "email-change.revert")).toBe("completed")
-    expect(outcomeOf(runtime, "auth-events.purge")).toBe("completed")
+    expect(outcomeOf(runtime, "outbox.purge")).toBe("completed")
+    expect(outcomeOf(runtime, "idempotency.purge")).toBe("completed")
     await waitUntil(
       () => clients.liveCount() === 0,
       "clients dedicados dos dois jobs encerrarem"
@@ -247,12 +232,12 @@ describe("MaintenanceRuntime (integração)", () => {
 
   it("corpo que lança: failed, com lock solto e client dedicado encerrado", async () => {
     await expect(
-      runtime.run("audit.purge", async () => {
+      runtime.run("outbox.purge", async () => {
         throw new Error("estouro no corpo")
       })
     ).resolves.toBeUndefined()
 
-    const last = runtime.lastRuns().find((r) => r.name === "audit.purge")
+    const last = runtime.lastRuns().find((r) => r.name === "outbox.purge")
     expect(last?.outcome).toBe("failed")
     expect(last?.error).toBe("estouro no corpo")
     expect(await advisoryHolders(db, 6)).toEqual([])
@@ -281,12 +266,12 @@ describe("MaintenanceRuntime (integração)", () => {
 
     try {
       let holdersDuring: LockHolder[] = []
-      await runtime.run("attachment-pending.purge", async () => {
+      await runtime.run("idempotency.purge", async () => {
         holdersDuring = await advisoryHolders(db, 8)
         throw new Error("estouro antes do unlock")
       })
 
-      expect(outcomeOf(runtime, "attachment-pending.purge")).toBe("failed")
+      expect(outcomeOf(runtime, "idempotency.purge")).toBe("failed")
       expect(holdersDuring).toHaveLength(1)
       expect(holdersAtEnd).toEqual([])
     } finally {
@@ -302,7 +287,7 @@ describe("MaintenanceRuntime (integração)", () => {
 
         let bodyRan = false
         const started = await runtime.tryStartDetached(
-          "audit.purge",
+          "outbox.purge",
           async () => {
             bodyRan = true
           }
@@ -310,7 +295,7 @@ describe("MaintenanceRuntime (integração)", () => {
 
         expect(started).toBe(false)
         expect(bodyRan).toBe(false)
-        expect(outcomeOf(runtime, "audit.purge")).toBe("skipped")
+        expect(outcomeOf(runtime, "outbox.purge")).toBe("skipped")
         await waitUntil(
           () => clients.liveCount() === 1,
           "só o holder do teste seguir vivo"
@@ -325,7 +310,7 @@ describe("MaintenanceRuntime (integração)", () => {
       const inside = deferred()
       const release = deferred()
 
-      const started = await runtime.tryStartDetached("attachment-access-log.purge", async () => {
+      const started = await runtime.tryStartDetached("outbox.purge", async () => {
         inside.resolve()
         await release.promise
       })
@@ -333,14 +318,14 @@ describe("MaintenanceRuntime (integração)", () => {
       expect(started).toBe(true)
       await inside.promise
       // Corpo ainda rodando depois de tryStartDetached ter devolvido.
-      expect(outcomeOf(runtime, "attachment-access-log.purge")).toBeUndefined()
+      expect(outcomeOf(runtime, "outbox.purge")).toBeUndefined()
       expect(clients.liveCount()).toBe(1)
       const holders = await advisoryHolders(db, 7)
       expect(holders[0]?.applicationName).toBe("api:job:attachment-access-log.purge")
 
       release.resolve()
       await waitUntil(
-        () => outcomeOf(runtime, "attachment-access-log.purge") === "completed",
+        () => outcomeOf(runtime, "outbox.purge") === "completed",
         "job destacado completar"
       )
       await waitUntil(
@@ -362,7 +347,7 @@ describe("MaintenanceRuntime (integração)", () => {
 
     it("roda o corpo fora de tx envolvente: write persiste apesar de throw posterior", async () => {
       await expect(
-        runtime.run("email-change.revert", async () => {
+        runtime.run("outbox.purge", async () => {
           // O corpo escreve autocommit direto no pool (sem tx envolvente do runtime).
           await pool.query('INSERT INTO "_lr_probe" (v) VALUES (1)')
           throw new Error("estouro depois do write do corpo")
@@ -373,7 +358,7 @@ describe("MaintenanceRuntime (integração)", () => {
       // Sem tx envolvente: o insert do corpo NÃO sofre rollback.
       expect(rows).toHaveLength(1)
       expect(
-        runtime.lastRuns().find((r) => r.name === "email-change.revert")
+        runtime.lastRuns().find((r) => r.name === "outbox.purge")
           ?.outcome
       ).toBe("failed")
     })
@@ -384,13 +369,13 @@ describe("MaintenanceRuntime (integração)", () => {
         expect(await tryAdvisorySessionLock(holder, 4)).toBe(true)
 
         let bodyRan = false
-        await runtime.run("email-change.revert", async () => {
+        await runtime.run("outbox.purge", async () => {
           bodyRan = true
         })
 
         expect(bodyRan).toBe(false)
         expect(
-          runtime.lastRuns().find((r) => r.name === "email-change.revert")
+          runtime.lastRuns().find((r) => r.name === "outbox.purge")
             ?.outcome
         ).toBe("skipped")
       } finally {
@@ -401,10 +386,10 @@ describe("MaintenanceRuntime (integração)", () => {
 
     it("solta o lock no fim: um 2º run consegue rodar o corpo", async () => {
       let count = 0
-      await runtime.run("email-change.revert", async () => {
+      await runtime.run("outbox.purge", async () => {
         count += 1
       })
-      await runtime.run("email-change.revert", async () => {
+      await runtime.run("outbox.purge", async () => {
         count += 1
       })
       expect(count).toBe(2) // lock foi solto entre os dois runs
@@ -538,12 +523,12 @@ describe("job.skipped não toca o pool de aplicação (integração)", () => {
       expect(before).toEqual({ total: 1, idle: 0, waiting: 0 })
 
       let bodyRan = false
-      await runtime.run("attachment-access-log.purge", async () => {
+      await runtime.run("outbox.purge", async () => {
         bodyRan = true
       })
 
       expect(bodyRan).toBe(false)
-      expect(outcomeOf(runtime, "attachment-access-log.purge")).toBe("skipped")
+      expect(outcomeOf(runtime, "outbox.purge")).toBe("skipped")
       expect(poolSnapshot(starved)).toEqual(before)
     } finally {
       await advisorySessionUnlock(holder, 7)
@@ -565,14 +550,14 @@ describe("job.skipped não toca o pool de aplicação (integração)", () => {
     const before = poolSnapshot(starved)
 
     let bodyRan = false
-    await cego.run("attachment-pending.purge", async () => {
+    await cego.run("idempotency.purge", async () => {
       bodyRan = true
     })
 
     expect(bodyRan).toBe(false)
     const last = cego
       .lastRuns()
-      .find((r) => r.name === "attachment-pending.purge")
+      .find((r) => r.name === "idempotency.purge")
     expect(last?.outcome).toBe("skipped")
     expect(last?.error).toEqual(expect.stringMatching(/\S/))
     expect(foraDoAr.liveCount()).toBe(0)
@@ -580,103 +565,3 @@ describe("job.skipped não toca o pool de aplicação (integração)", () => {
   })
 })
 
-// Pool próprio com max: 1 — reproduz o apagão de 2026-08-15: o lock do envelope
-// vive num client dedicado, fora do pool, então a única conexão do pool sobra
-// inteira para a transação do envelope, e o corpo tem de caber nela.
-describe("delivery.purge sob pool max: 1 (integração)", () => {
-  let pool1: Pool
-  let db1: DrizzleDb
-  let txm1: TransactionManager
-  let clients1: DedicatedClientFactory
-  let runtime1: MaintenanceRuntime
-  let dispatcher: DeliveryDispatcher
-  let originalSpec: MaintenanceJobSpec
-
-  const channel: ChannelPort = {
-    async send() {
-      throw new Error("purgeTerminal não deveria enviar")
-    },
-  }
-  const config = { DELIVERY_MAX_ATTEMPTS: 2, MAIL_TRANSPORT: "log" } as NotificationConfig
-
-  beforeAll(() => {
-    pool1 = new Pool({
-      connectionString: testDatabaseUrl(),
-      max: 1,
-      connectionTimeoutMillis: 2000,
-    })
-    db1 = createTestDb(pool1)
-    const test = makeTestLogger()
-    txm1 = new TransactionManager(db1, test.loggerFactory)
-    clients1 = makeClientFactory()
-    runtime1 = new MaintenanceRuntime(
-      txm1,
-      test.ctx,
-      test.loggerFactory,
-      clients1
-    )
-    dispatcher = new DeliveryDispatcher(channel, config, txm1, test.loggerFactory)
-    originalSpec = forceAtomic("delivery.purge")
-  })
-
-  afterAll(async () => {
-    mutableSchedule["delivery.purge"] = originalSpec
-    await clients1.onApplicationShutdown()
-    await pool1.end()
-  })
-
-  beforeEach(async () => {
-    await pool1.query("TRUNCATE TABLE notification.notification_deliveries")
-  })
-
-  function insertDelivery(id: string, status: string, createdAt: Date): Promise<unknown> {
-    return pool1.query(
-      `insert into notification.notification_deliveries
-         (id, recipient_id, type, channel, payload, status, created_at)
-       values ($1, 'u1', 'password_reset_requested', 'email', '{}', $2, $3)`,
-      [id, status, createdAt]
-    )
-  }
-
-  async function remainingIds(): Promise<string[]> {
-    const { rows } = await pool1.query(
-      "select id from notification.notification_deliveries order by id"
-    )
-    return (rows as { id: string }[]).map((r) => r.id)
-  }
-
-  it("completa dentro da transação do envelope e apaga só sent/dead_letter além dos 30d", async () => {
-    const old = new Date(Date.now() - 31 * 86_400_000)
-    await insertDelivery("d-old-sent", "sent", old)
-    await insertDelivery("d-old-dead", "dead_letter", old)
-    await insertDelivery("d-old-pending", "pending", old)
-    await insertDelivery("d-new-sent", "sent", new Date())
-
-    let inTransaction = false
-    await runtime1.run("delivery.purge", async () => {
-      inTransaction = txm1.isInTransaction()
-      await dispatcher.purgeTerminal()
-    })
-
-    expect(inTransaction).toBe(true)
-    expect(await remainingIds()).toEqual(["d-new-sent", "d-old-pending"])
-    expect(outcomeOf(runtime1, "delivery.purge")).toBe("completed")
-  })
-
-  // Discriminador do caso: só um DELETE emitido NA conexão da transação sofre o
-  // rollback. Um corpo que fosse à raiz gravaria numa segunda conexão e as
-  // linhas sumiriam apesar do estouro — além de esbarrar na guarda do pool.
-  it("o DELETE sai na conexão da transação: rollback do envelope o desfaz", async () => {
-    const old = new Date(Date.now() - 31 * 86_400_000)
-    await insertDelivery("d-old-sent", "sent", old)
-    await insertDelivery("d-old-dead", "dead_letter", old)
-
-    await runtime1.run("delivery.purge", async () => {
-      await dispatcher.purgeTerminal()
-      throw new Error("estouro depois da purga")
-    })
-
-    expect(await remainingIds()).toEqual(["d-old-dead", "d-old-sent"])
-    expect(outcomeOf(runtime1, "delivery.purge")).toBe("failed")
-  })
-})

@@ -1,13 +1,6 @@
 import { type ArgumentsHost, HttpException, HttpStatus } from "@nestjs/common"
 import pino from "pino"
 
-import {
-  InvalidCredentialsError,
-  InvalidResetTokenError,
-  RateLimitedError,
-  SessionNotFoundError,
-  WeakPasswordError,
-} from "../../../modules/identity/domain/errors"
 import { RequestContext } from "../context/request-context"
 import { LoggerFactory } from "../logging/logger.factory"
 
@@ -69,6 +62,32 @@ describe("ProblemDetailsFilter — 429", () => {
   })
 })
 
+class FakeRateLimitedError extends DomainError {
+  readonly status = 429
+  readonly type = "https://errors.example.com/rate-limited"
+  override readonly retryAfterSeconds: number
+  constructor(retryAfterSeconds: number) {
+    super("Muitas tentativas")
+    this.retryAfterSeconds = retryAfterSeconds
+  }
+}
+
+class FakeNotFoundError extends DomainError {
+  readonly status = 404
+  readonly type = "https://errors.example.com/not-found"
+  constructor() {
+    super("Recurso não encontrado")
+  }
+}
+
+class FakeUnprocessableError extends DomainError {
+  readonly status = 422
+  readonly type = "https://errors.example.com/unprocessable"
+  constructor() {
+    super("Entrada inválida")
+  }
+}
+
 class FakeInternalError extends DomainError {
   readonly status = 500
   readonly type = "x"
@@ -106,10 +125,8 @@ function makeStore(correlationId: string): RequestContextStore {
     spanId: null,
     tenantId: null,
     origin: "http",
-    userId: null,
-    sessionId: null,
-    deviceId: null,
-    access: null,
+    actor: null,
+    extensions: new Map(),
     locale: "pt-BR",
     ip: null,
     userAgent: null,
@@ -118,8 +135,8 @@ function makeStore(correlationId: string): RequestContextStore {
 }
 
 describe("ProblemDetailsFilter — Retry-After por origem", () => {
-  it("RateLimitedError de domínio → Retry-After do retryAfterSeconds", () => {
-    const r = run(new RateLimitedError(30))
+  it("DomainError 429 → Retry-After do retryAfterSeconds", () => {
+    const r = run(new FakeRateLimitedError(30))
     expect(r.status).toBe(429)
     expect(r.headers["Retry-After"]).toBe("30")
   })
@@ -243,12 +260,11 @@ describe("ProblemDetailsFilter — extensões RFC 7807", () => {
 
 describe("ProblemDetailsFilter — mapeamento por classe DomainError", () => {
   const cases = [
-    { name: "InvalidCredentialsError", err: new InvalidCredentialsError(), status: 401 },
-    { name: "WeakPasswordError", err: new WeakPasswordError("fraca"), status: 422 },
-    { name: "InvalidResetTokenError", err: new InvalidResetTokenError(), status: 400 },
-    { name: "SessionNotFoundError", err: new SessionNotFoundError(), status: 404 },
+    { name: "FakeUnprocessableError", err: new FakeUnprocessableError(), status: 422 },
+    { name: "FakeNotFoundError", err: new FakeNotFoundError(), status: 404 },
+    { name: "PoolSaturatedError", err: new PoolSaturatedError(), status: 503 },
     { name: "ForbiddenError", err: new ForbiddenError(), status: 403 },
-    { name: "RateLimitedError", err: new RateLimitedError(30), status: 429 },
+    { name: "FakeRateLimitedError", err: new FakeRateLimitedError(30), status: 429 },
   ]
 
   it.each(cases)("$name → status $status, type e title presentes", ({ err, status }) => {

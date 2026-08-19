@@ -1,16 +1,16 @@
-import { definePermissionCatalog } from "../../../../shared/kernel/access/define-permission-catalog"
-import { PRODUCT_PERMISSION_CATALOGS } from "../../../../shared/kernel/access/product-permission-catalogs"
+import { definePermissionCatalog } from "../access/define-permission-catalog"
+import { PRODUCT_PERMISSION_CATALOGS } from "../access/product-permission-catalogs"
 
 import { ADMIN_CATALOG } from "./catalog/admin.catalog"
 
-import type { PermissionKey } from "../../../../shared/kernel/access/permission.types"
+import type { PermissionKey } from "../access/permission.types"
 
 export const MODULES = [ADMIN_CATALOG, ...PRODUCT_PERMISSION_CATALOGS] as const
 
 type CatalogPermissionKey =
   (typeof MODULES)[number]["features"][number]["permissions"][number]["key"]
 
-declare module "../../../../shared/kernel/access/permission.types" {
+declare module "../access/permission.types" {
   interface PermissionKeyRegistry {
     readonly identity: CatalogPermissionKey
   }

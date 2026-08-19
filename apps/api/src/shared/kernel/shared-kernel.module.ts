@@ -16,10 +16,9 @@ import { TransactionalModule } from "./transactional/transactional.module"
 /**
  * Agregador do kernel, importado SÓ pelo AppModule. Cada sub-módulo é @Global,
  * então módulo de negócio não importa nada disto — os providers chegam pelo
- * container. AuditTrail, Health, Coexistence e Database não entram aqui: sobem
- * por fora, direto no AppModule (o Coexistence de propósito — o guard dele
- * precisa registrar depois dos quatro do identity; o Database porque o
- * `forRoot` recebe o schema do app, que o kernel não conhece).
+ * container. Health, Storage e Database não entram aqui: sobem por fora, direto
+ * no AppModule (o Database porque o `forRoot` recebe o schema do app, que o
+ * kernel não conhece).
  */
 @Global()
 @Module({

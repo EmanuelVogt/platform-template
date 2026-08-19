@@ -1,4 +1,4 @@
-import type { AccessProfile } from "../../../../shared/kernel/access/permission.types"
+import type { AccessProfile } from "../access/permission.types"
 
 export type UsageBucketUnit = "day" | "week"
 

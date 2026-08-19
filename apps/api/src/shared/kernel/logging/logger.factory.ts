@@ -53,9 +53,9 @@ export class AppLogger {
       tenantId: c?.tenantId,
       userId: c?.actor?.id ?? null,
       // SPEC_DEVIATION: sessionId removido do log.
-      // Reason: o campo não existe mais no store após a remoção da
-      // superfície transicional (T9a); o kernel não pode importar a
-      // extension de sessão do módulo identity para recompô-lo.
+      // Reason: o campo saiu do store junto com a superfície transicional
+      // (AD-017); o kernel não enxerga a extension de sessão do módulo que a
+      // grava, então não há fonte kernel-safe para recompô-lo.
       ...extra,
     }
   }

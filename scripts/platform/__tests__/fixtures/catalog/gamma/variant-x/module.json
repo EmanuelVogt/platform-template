@@ -1,0 +1,7 @@
+{
+  "name": "gamma",
+  "variant": "variant-x",
+  "version": "1.0.0",
+  "kernelRange": ">=1.0.0 <2.0.0",
+  "apiModule": { "export": "GammaModule", "path": "modules/gamma/gamma.module" }
+}

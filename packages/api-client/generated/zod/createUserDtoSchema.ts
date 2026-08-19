@@ -11,7 +11,7 @@ export const createUserDtoSchema = z.object({
     "name": z.string().min(1),
 "email": z.string(),
 "accessProfile": z.enum(["admin", "professional"]),
-"attendsGuests": z.boolean().default(false),
+"servesClients": z.boolean().default(false),
 "permissions": z.array(z.enum(["admin.users.read", "admin.users.create", "admin.users.update", "admin.users.delete", "admin.users.trash.read", "admin.users.trash.restore", "admin.users.trash.purge", "admin.users.access_link.resend", "admin.users.audit.read", "admin.permission_templates.read", "admin.permission_templates.create", "admin.permission_templates.update", "admin.permission_templates.delete", "admin.permission_templates.audit.read", "admin.tags.read", "admin.tags.create", "admin.tags.update", "admin.tags.delete", "admin.tags.trash.read", "admin.tags.trash.restore", "admin.tags.trash.purge", "admin.tags.audit.read", "admin.audit.read", "admin.usage.read"])).max(24),
 "areaIds": z.array(z.string().min(1)).max(100).optional(),
 "serviceIds": z.array(z.string().min(1)).max(2000).optional(),

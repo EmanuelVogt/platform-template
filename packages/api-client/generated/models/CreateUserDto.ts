@@ -58,7 +58,7 @@ export type CreateUserDto = {
      * @default false
      * @type boolean | undefined
     */
-    attendsGuests?: boolean;
+    servesClients?: boolean;
     /**
      * @type array
     */

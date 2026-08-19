@@ -106,4 +106,21 @@ export type AccessCatalogResponseDto = {
             }[];
         }[];
     }[];
+    /**
+     * @type array
+    */
+    profiles: {
+        /**
+         * @type string
+        */
+        key: string;
+        /**
+         * @type string
+        */
+        label: string;
+        /**
+         * @type boolean
+        */
+        assignable: boolean;
+    }[];
 };

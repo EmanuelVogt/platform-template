@@ -20,5 +20,10 @@ export const accessCatalogResponseDtoSchema = z.object({
 "requires": z.array(z.enum(["admin.users.read", "admin.users.create", "admin.users.update", "admin.users.delete", "admin.users.trash.read", "admin.users.trash.restore", "admin.users.trash.purge", "admin.users.access_link.resend", "admin.users.audit.read", "admin.permission_templates.read", "admin.permission_templates.create", "admin.permission_templates.update", "admin.permission_templates.delete", "admin.permission_templates.audit.read", "admin.tags.read", "admin.tags.create", "admin.tags.update", "admin.tags.delete", "admin.tags.trash.read", "admin.tags.trash.restore", "admin.tags.trash.purge", "admin.tags.audit.read", "admin.audit.read", "admin.usage.read"]))
     }))
     }))
+    })),
+"profiles": z.array(z.object({
+    "key": z.string(),
+"label": z.string(),
+"assignable": z.boolean()
     }))
     }) as unknown as ToZod<AccessCatalogResponseDto>

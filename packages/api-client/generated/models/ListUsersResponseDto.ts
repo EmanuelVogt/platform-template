@@ -76,7 +76,7 @@ export type ListUsersResponseDto = {
         /**
          * @type boolean
         */
-        attendsGuests: boolean;
+        servesClients: boolean;
         /**
          * @type array
         */

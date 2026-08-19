@@ -9,7 +9,7 @@ import { uploadAttachmentsResponseDtoSchema } from "./uploadAttachmentsResponseD
 import { z } from "zod/v4";
 
 export const uploadAttachmentsQueryParamsSchema = z.object({
-    "profile": z.enum(["feedback-attachment"])
+    "profile": z.enum(["document", "image", "multi"])
     }) as unknown as ToZod<UploadAttachmentsQueryParams>
 
 export const uploadAttachments201Schema = uploadAttachmentsResponseDtoSchema as unknown as ToZod<UploadAttachments201>

@@ -1,12 +1,25 @@
-import { SetMetadata } from "@nestjs/common"
+import { applyDecorators, SetMetadata } from "@nestjs/common"
 
-import type { PermissionKey } from "./permission.types"
+import type { AccessRequirement, PermissionKey } from "./access-policy.port"
+
+/** Chave de metadata lida pelo AccessGuard do kernel. Ausência = fail closed. */
+export const ACCESS_REQUIREMENT = "access:requirement"
+
+const requirement = (value: AccessRequirement) =>
+  SetMetadata(ACCESS_REQUIREMENT, value)
 
 /** Chave de metadata: rota pública (opt-out do AuthGuard e do PermissionsGuard). */
 export const IS_PUBLIC_KEY = "access:isPublic"
 
 /** Marca a rota como pública — sem sessão e sem permissão. */
-export const Public = () => SetMetadata(IS_PUBLIC_KEY, true)
+export const Public = () =>
+  applyDecorators(
+    SetMetadata(IS_PUBLIC_KEY, true),
+    requirement({ kind: "public" })
+  )
+
+/** Exige apenas ator autenticado, sem permissão. */
+export const Authenticated = () => requirement({ kind: "authenticated" })
 
 /** Chave de metadata: rota máquina-a-máquina (opt-out do CsrfGuard). */
 export const IS_MACHINE_TO_MACHINE_KEY = "access:isMachineToMachine"
@@ -40,10 +53,12 @@ export const SelfService = () => SetMetadata(IS_SELF_SERVICE_KEY, true)
 /** Chave de metadata: permissões exigidas pela rota (AND). */
 export const REQUIRE_PERMISSION_KEY = "access:requirePermission"
 
-/** Exige TODAS as chaves listadas (AND). Lida pelo PermissionsGuard. */
-export const RequirePermission = (
-  ...keys: [PermissionKey, ...PermissionKey[]]
-) => SetMetadata(REQUIRE_PERMISSION_KEY, keys)
+/** Exige a chave. Lida pelo AccessGuard do kernel e pelo PermissionsGuard. */
+export const RequirePermission = (key: PermissionKey) =>
+  applyDecorators(
+    SetMetadata(REQUIRE_PERMISSION_KEY, [key]),
+    requirement({ kind: "permission", key })
+  )
 
 /** Chave de metadata: permissões alternativas da rota (OR — basta uma). */
 export const REQUIRE_ANY_PERMISSION_KEY = "access:requireAnyPermission"

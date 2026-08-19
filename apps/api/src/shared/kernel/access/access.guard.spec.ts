@@ -1,0 +1,155 @@
+import "reflect-metadata"
+
+import type { ExecutionContext } from "@nestjs/common"
+import { Reflector } from "@nestjs/core"
+
+import { ForbiddenError } from "../errors/forbidden.error"
+
+import type { AccessPolicy, AccessRequirement } from "./access-policy.port"
+import { AccessPolicyMissingError } from "./access.errors"
+import { AccessGuard } from "./access.guard"
+import { Authenticated, Public, RequirePermission } from "./decorators"
+
+jest.mock("../context/request-context", () => ({
+  getActor: jest.fn(),
+}))
+
+const { getActor } = jest.requireMock<{
+  getActor: jest.Mock
+}>("../context/request-context")
+
+class Routes {
+  @Public()
+  publicRoute(): void {
+    return
+  }
+
+  @Authenticated()
+  authenticatedRoute(): void {
+    return
+  }
+
+  @RequirePermission("admin.users.read")
+  permissionRoute(): void {
+    return
+  }
+
+  undecoratedRoute(): void {
+    return
+  }
+}
+
+function contextFor(route: keyof Routes): ExecutionContext {
+  return {
+    getHandler: () => Routes.prototype[route],
+    getClass: () => Routes,
+  } as unknown as ExecutionContext
+}
+
+function policyReturning(
+  result: boolean | Promise<boolean>
+): AccessPolicy & { can: jest.Mock } {
+  return { can: jest.fn().mockReturnValue(result) }
+}
+
+function guardWithout(): AccessGuard {
+  return new AccessGuard(new Reflector())
+}
+
+function guardWith(policy: AccessPolicy): AccessGuard {
+  return new AccessGuard(new Reflector(), policy)
+}
+
+describe("AccessGuard", () => {
+  beforeEach(() => {
+    getActor.mockReset()
+    getActor.mockReturnValue(null)
+  })
+
+  describe("sem provider de ACCESS_POLICY", () => {
+    it("libera a rota pública", async () => {
+      await expect(
+        guardWithout().canActivate(contextFor("publicRoute"))
+      ).resolves.toBe(true)
+    })
+
+    it("nega a rota de permissão com 403 access-policy-missing", async () => {
+      const promise = guardWithout().canActivate(contextFor("permissionRoute"))
+
+      await expect(promise).rejects.toBeInstanceOf(AccessPolicyMissingError)
+      await promise.catch((error: AccessPolicyMissingError) => {
+        expect(error.status).toBe(403)
+        expect(error.type).toBe(
+          "https://errors.example.com/access-policy-missing"
+        )
+      })
+    })
+
+    it("nega a rota autenticada — ausência de política não libera", async () => {
+      await expect(
+        guardWithout().canActivate(contextFor("authenticatedRoute"))
+      ).rejects.toBeInstanceOf(AccessPolicyMissingError)
+    })
+  })
+
+  describe("com provider de ACCESS_POLICY", () => {
+    it("libera a rota pública sem consultar a política", async () => {
+      const policy = policyReturning(false)
+
+      await expect(
+        guardWith(policy).canActivate(contextFor("publicRoute"))
+      ).resolves.toBe(true)
+      expect(policy.can).not.toHaveBeenCalled()
+    })
+
+    it("libera quando a política responde true", async () => {
+      await expect(
+        guardWith(policyReturning(true)).canActivate(
+          contextFor("permissionRoute")
+        )
+      ).resolves.toBe(true)
+    })
+
+    it("nega com 403 quando a política responde false", async () => {
+      const promise = guardWith(policyReturning(false)).canActivate(
+        contextFor("permissionRoute")
+      )
+
+      await expect(promise).rejects.toBeInstanceOf(ForbiddenError)
+      await promise.catch((error: ForbiddenError) => {
+        expect(error.status).toBe(403)
+      })
+    })
+
+    it("aguarda a política assíncrona antes de negar", async () => {
+      await expect(
+        guardWith(policyReturning(Promise.resolve(false))).canActivate(
+          contextFor("permissionRoute")
+        )
+      ).rejects.toBeInstanceOf(ForbiddenError)
+    })
+
+    it("passa o ator do contexto e o requisito da rota para a política", async () => {
+      const actor = { id: "user-1", kind: "user" }
+      getActor.mockReturnValue(actor)
+      const policy = policyReturning(true)
+
+      await guardWith(policy).canActivate(contextFor("permissionRoute"))
+
+      expect(policy.can).toHaveBeenCalledWith(actor, {
+        kind: "permission",
+        key: "admin.users.read",
+      } satisfies AccessRequirement)
+    })
+
+    it("handler sem decorator exige ator autenticado (fail closed)", async () => {
+      const policy = policyReturning(true)
+
+      await guardWith(policy).canActivate(contextFor("undecoratedRoute"))
+
+      expect(policy.can).toHaveBeenCalledWith(null, {
+        kind: "authenticated",
+      } satisfies AccessRequirement)
+    })
+  })
+})

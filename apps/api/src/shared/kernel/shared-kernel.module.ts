@@ -1,7 +1,9 @@
 import { Global, Module } from "@nestjs/common"
+import { APP_GUARD } from "@nestjs/core"
 
 import { RedisModule } from "../infra/redis/redis.module"
 
+import { AccessGuard } from "./access/access.guard"
 import { ClockModule } from "./clock/clock.module"
 import { ContextModule } from "./context/context.module"
 import { IdempotencyModule } from "./idempotency/idempotency.module"
@@ -32,6 +34,7 @@ import { TransactionalModule } from "./transactional/transactional.module"
     TracingModule,
     ClockModule,
   ],
+  providers: [{ provide: APP_GUARD, useClass: AccessGuard }],
   exports: [
     RedisModule,
     ContextModule,

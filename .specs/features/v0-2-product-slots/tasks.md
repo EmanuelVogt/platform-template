@@ -63,7 +63,7 @@ Wave 0: T1
 Wave 1: [A: T2→T3→T5→T6] ‖ [C: T7→T8→T9] ‖ [D: T11→T12→T13] ‖ [E: T14→T15→T16]
 Wave 2: [F: T10] ‖ [G: T17] ‖ [H: T4→T18]
 Wave 2.5: [J: T23]  (gate debt found by wave 2)
-Wave 3: [I: T19→T20] → Verifier → T21 → T22
+Wave 3: [I: T19→T20] (T24 fix between T19 and T20) → Verifier → T21 → T22
 ```
 
 ---
@@ -205,10 +205,18 @@ Wave 3: [I: T19→T20] → Verifier → T21 → T22
 **Tests**: existing · **Gate**: full · **Commit**: two commits — `fix(attachment): download of free-type profile returns the file` (+ `style(api): lint fixes in attachment config and audit registration` — or `fix(...)` if a lint error is a real bug)
 
 ### T19: Template smoke — fake product overlay
+**Status**: ✅ Done — `af7253f` `7dc95a7` (import depth fix); copier needs `--vcs-ref HEAD` (defaults to latest tag)
 **What**: `scripts/smoke/fake-product/` overlay: `apps/api/src/modules/sample/sample.module.ts` (+ template source, audit registrations, `declare module` augmentations, permission catalog `SAMPLE_CATALOG`), `sample-welcome.hbs`, `1000_sample_init.sql` (`CREATE SCHEMA sample; CREATE TABLE sample.things…; ALTER TYPE identity.access_profile ADD VALUE IF NOT EXISTS 'receptionist';`), `slot-appends.json` (lines to append to the 3 slot files + `app.module.ts` import + `db/schema.ts` export + journal entry), `sample.spec.ts` asserting the derived sets contain the sample entries.
 **Where**: `scripts/smoke/fake-product/**` · **Depends on**: T18 · **Requirement**: SMK-01
 **Done when**: [ ] overlay files lint-clean when copied into a child (verified by T20).
 **Tests**: none here (verified by T20) · **Gate**: build · **Commit**: `chore(smoke): fake product overlay for template smoke`
+
+### T24: Base-set assertions extension-agnostic (found by T20 smoke)
+**Status**: ⏳ In progress (worker K)
+**What**: 8 platform unit assertions equal DERIVED sets to base literals, so they fail in a child with product entries: `shared/kernel/access/define-access-profiles.spec.ts:29,33`, `identity/application/access-policy.spec.ts:71`, `identity/domain/permissions/permission-catalog.spec.ts:136`, `attachment/domain/upload-profiles.spec.ts:113,143`. Keep exact equality on BASE constants (spec), derive expected DERIVED sets from `BASE + PRODUCT_*` slot constants.
+**Where**: those 4 spec files · **Depends on**: T19 · **Requirement**: SMK-01
+**Done when**: [ ] unit ≥ 1000 / 0 failed; [ ] no assertion depends on empty slots; [ ] nothing deleted/skipped.
+**Tests**: unit · **Gate**: quick · **Commit**: `test(api): base-set assertions derive from slot constants`
 
 ### T20: Template smoke runner
 **What**: `scripts/template-smoke.mjs`: requires `copier`; `copier copy --defaults --data project_name=Demo --data github_org=acme . <tmp>`; applies overlay (copy files, append slot lines, add journal entry with `when` = max+10_000_000); runs `pnpm check && pnpm --filter api test` in the child; exit code propagates; root `package.json` script `template:smoke`.

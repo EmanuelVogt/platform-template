@@ -8,7 +8,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 ---
 
-**Design**: `.specs/features/v0-2-product-slots/design.md` · **Status**: Executing — wave 2 done (2026-08-18)
+**Design**: `.specs/features/v0-2-product-slots/design.md` · **Status**: Executing — wave 3 done, Verifier next (2026-08-18)
 Repo: `~/Projects/platform-template`, worktree `.worktrees/v0-2-product-slots` (crosses api + contract + migrations). Spec artifacts stay on `main`.
 
 ## Test Coverage Matrix
@@ -205,7 +205,7 @@ Wave 3: [I: T19→T20] (T24 fix between T19 and T20) → Verifier → T21 → T2
 **Tests**: existing · **Gate**: full · **Commit**: two commits — `fix(attachment): download of free-type profile returns the file` (+ `style(api): lint fixes in attachment config and audit registration` — or `fix(...)` if a lint error is a real bug)
 
 ### T19: Template smoke — fake product overlay
-**Status**: ✅ Done — `af7253f` `7dc95a7` (import depth fix); copier needs `--vcs-ref HEAD` (defaults to latest tag)
+**Status**: ✅ Done — `af7253f` `7dc95a7` `295c3ed` `b8edcff` + `e1840fa` fix(audit): `AuditRegistry` re-exported via `audit/api/facades/audit-registry.facade.ts` (cross-module rule; AD-009 "exported by AuditModule" satisfied through the facade); SPEC_DEVIATION: `SAMPLE_CATALOG` declared inline in the kernel slot file (kernel never imports `modules/`); copier needs `--trust --vcs-ref HEAD`
 **What**: `scripts/smoke/fake-product/` overlay: `apps/api/src/modules/sample/sample.module.ts` (+ template source, audit registrations, `declare module` augmentations, permission catalog `SAMPLE_CATALOG`), `sample-welcome.hbs`, `1000_sample_init.sql` (`CREATE SCHEMA sample; CREATE TABLE sample.things…; ALTER TYPE identity.access_profile ADD VALUE IF NOT EXISTS 'receptionist';`), `slot-appends.json` (lines to append to the 3 slot files + `app.module.ts` import + `db/schema.ts` export + journal entry), `sample.spec.ts` asserting the derived sets contain the sample entries.
 **Where**: `scripts/smoke/fake-product/**` · **Depends on**: T18 · **Requirement**: SMK-01
 **Done when**: [ ] overlay files lint-clean when copied into a child (verified by T20).
@@ -219,6 +219,7 @@ Wave 3: [I: T19→T20] (T24 fix between T19 and T20) → Verifier → T21 → T2
 **Tests**: unit · **Gate**: quick · **Commit**: `test(api): base-set assertions derive from slot constants`
 
 ### T20: Template smoke runner
+**Status**: ✅ Done — `3e1b22d` — smoke exit 0 (child unit 1004 = 1000 + 4 sample.spec), negative check exit 2, ~50s/run; docs follow-up commit in worktree: template.md rows → facade paths + inline catalog
 **What**: `scripts/template-smoke.mjs`: requires `copier`; `copier copy --defaults --data project_name=Demo --data github_org=acme . <tmp>`; applies overlay (copy files, append slot lines, add journal entry with `when` = max+10_000_000); runs `pnpm check && pnpm --filter api test` in the child; exit code propagates; root `package.json` script `template:smoke`.
 **Where**: `scripts/template-smoke.mjs`, `package.json` · **Depends on**: T19 · **Requirement**: SMK-01
 **Done when**: [ ] `pnpm template:smoke` exits 0 locally (shell-runner, ≥ 5 min); [ ] failure of any child gate exits ≠ 0 (verify by breaking one slot line once, then restore).

@@ -5,6 +5,9 @@ import { ManifestValidationError, validateManifest } from "./manifest.mjs";
 
 const WEB_CORE_ALLOWED = ["zod", "@platform/api-client"];
 const WEB_REACT_ALLOWED = [...WEB_CORE_ALLOWED, "@tanstack/react-query"];
+const WEB_CORE_TEST_EXTRA = ["vitest"];
+const WEB_REACT_TEST_EXTRA = [...WEB_CORE_TEST_EXTRA, "@testing-library/react"];
+const TEST_FILE_RE = /\.test\.tsx?$/;
 const IMPORT_RE = /import\s+(?:[\s\S]*?\s+from\s+)?["']([^"']+)["']/g;
 const HEADING_RE = /^## .+$/gm;
 const CONTRACT_FENCE_RE = /```\n([\s\S]*?)```/;
@@ -52,10 +55,13 @@ export function lintChangelogVersion(changelogMarkdown, version) {
 }
 
 // Allow-list de AD-018: web/core é TS puro, web/react soma react-query — nunca router/UI.
+// *.test.ts(x) soma vitest (e, em web/react, @testing-library/react para renderHook); o resto da lista continua proibido.
 export function lintWebImports(files) {
   const errors = [];
   for (const { path: filePath, content, layer } of files) {
-    const allowed = layer === "react" ? WEB_REACT_ALLOWED : WEB_CORE_ALLOWED;
+    const isReact = layer === "react";
+    const base = isReact ? WEB_REACT_ALLOWED : WEB_CORE_ALLOWED;
+    const allowed = TEST_FILE_RE.test(filePath) ? [...base, ...(isReact ? WEB_REACT_TEST_EXTRA : WEB_CORE_TEST_EXTRA)] : base;
     for (const specifier of importsFrom(content)) {
       if (!isAllowedSpecifier(specifier, allowed)) {
         errors.push(`${filePath}: import não permitido em web/${layer}: ${specifier}`);

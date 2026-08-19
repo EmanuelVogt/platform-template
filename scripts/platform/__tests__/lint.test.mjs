@@ -132,6 +132,67 @@ test("lintWebImports permite @tanstack/react-query em web/react mas não em web/
   assert.match(errors[0], /@tanstack\/react-query/);
 });
 
+test("lintWebImports permite vitest em web/core/*.test.ts", () => {
+  const files = [
+    {
+      path: "catalog/identity/single-tenant/web/core/session.test.ts",
+      layer: "core",
+      content: `import { describe, it, expect } from "vitest";\n`,
+    },
+  ];
+  assert.deepEqual(lintWebImports(files), []);
+});
+
+test("lintWebImports continua barrando vitest em web/core fora de *.test.ts", () => {
+  const files = [
+    {
+      path: "catalog/identity/single-tenant/web/core/session.ts",
+      layer: "core",
+      content: `import { describe } from "vitest";\n`,
+    },
+  ];
+  const errors = lintWebImports(files);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /vitest/);
+});
+
+test("lintWebImports continua barrando @tanstack/react-router mesmo em *.test.ts", () => {
+  const files = [
+    {
+      path: "catalog/identity/single-tenant/web/core/router.test.ts",
+      layer: "core",
+      content: `import { createRouter } from "@tanstack/react-router";\n`,
+    },
+  ];
+  const errors = lintWebImports(files);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /@tanstack\/react-router/);
+});
+
+test("lintWebImports permite @testing-library/react em web/react/*.test.tsx (renderHook)", () => {
+  const files = [
+    {
+      path: "catalog/identity/single-tenant/web/react/use-session.test.tsx",
+      layer: "react",
+      content: `import { renderHook } from "@testing-library/react";\nimport { describe, it, expect } from "vitest";\n`,
+    },
+  ];
+  assert.deepEqual(lintWebImports(files), []);
+});
+
+test("lintWebImports barra @testing-library/react em web/core/*.test.ts", () => {
+  const files = [
+    {
+      path: "catalog/identity/single-tenant/web/core/session.test.ts",
+      layer: "core",
+      content: `import { renderHook } from "@testing-library/react";\n`,
+    },
+  ];
+  const errors = lintWebImports(files);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /@testing-library\/react/);
+});
+
 test("lintManifest passa para um module.json válido", () => {
   const manifest = {
     name: "alpha",

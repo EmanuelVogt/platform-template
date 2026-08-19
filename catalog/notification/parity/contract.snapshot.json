@@ -1,0 +1,22 @@
+{
+  "paths": {
+    "/v1/notifications": {
+      "get": { "operationId": "listNotifications", "responses": { "200": {} } }
+    },
+    "/v1/notifications/unseen-count": {
+      "get": { "operationId": "unseenCount", "responses": { "200": {} } }
+    },
+    "/v1/notifications/seen": {
+      "post": { "operationId": "markAllSeen", "responses": { "204": {} } }
+    },
+    "/v1/notifications/read-all": {
+      "post": { "operationId": "markAllRead", "responses": { "204": {} } }
+    },
+    "/v1/notifications/{id}/read": {
+      "post": { "operationId": "markRead", "responses": { "204": {} } }
+    },
+    "/v1/notifications/{id}/archive": {
+      "post": { "operationId": "archiveNotification", "responses": { "204": {} } }
+    }
+  }
+}

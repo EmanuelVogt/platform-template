@@ -274,42 +274,42 @@ Gray areas are discussed one at a time (context.md). Rows marked **pending** are
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| KRN-01 | P1 kernel-only child boots (AC1–4) | Design | Pending |
-| KRN-02 | P1 kernel-only child — forbidden vocabulary RULE C (AC5) | Design | Pending |
-| KRN-03 | P1 ports — access policy port + fail-closed guard (AC1–2) | Design | Pending |
-| KRN-04 | P1 ports — actor in request/job context, actorId in idempotency/outbox (AC3) | Design | Pending |
-| KRN-05 | P1 ports — web RouteAccess registry + guard port (AC4) | Design | Pending |
-| KRN-06 | P1 ports — boundaries spec RULE A kept, RULE B removed (AC5) | Design | Pending |
-| KRN-07 | P3 tenant seam | Design | Pending |
-| CAT-01 | P1 entries — five entries with manifest + mandatory files (AC1) | Design | Pending |
-| CAT-02 | P1 entries — catalog CI per entry (AC2) | Design | Pending |
-| CAT-03 | P1 entries — `dependsOn` manifest + cross-entry deps from inventory | Design | Pending |
-| CAT-04 | P1 entries — identity parity with v0.2 (AC4) | Design | Pending |
-| CAT-05 | P1 entries — catalog location / copier exclusion (GA-1) | Design | Pending |
-| HBK-01 | P1 entries — README contract doc + lint (AC3, P2 handbooks AC4) | Design | Pending |
-| HBK-02 | P2 handbooks — back/front/testing updated (AC1) | Design | Pending |
-| HBK-03 | P2 handbooks — `docs/dev/template.md` catalog table (AC2) | Design | Pending |
-| HBK-04 | P2 handbooks — changelog v1.0.0 migration note (AC3) | Design | Pending |
-| TLG-01 | P1 add — copy + renumber + registrations + lock (AC1) | Design | Pending |
-| TLG-02 | P1 add — `dependsOn` enforcement / `--with-deps` (AC2) | Design | Pending |
-| TLG-03 | P1 add — refuse reinstall (AC3) | Design | Pending |
-| TLG-04 | P1 add — run tests + parity after copy (AC4) | Design | Pending |
-| TLG-05 | P1 add — `kernelRange` check (AC5) | Design | Pending |
-| TLG-06 | P1 add — `--dry-run`, `--force`, `--rollback`, `adopt` (AC6 + edge cases) | Design | Pending |
-| TLG-07 | P2 `port-module-update` skill (AC1–3) | Design | Pending |
-| TLG-08 | P1 add — `module.json.env[]` appended to `.env.example`/`.env` without overwriting (context.md § Env) | Design | Pending |
-| ADV-01 | P1 advisories — file format + validation test (AC1) | Design | Pending |
-| ADV-02 | P1 advisories — pending computation hook (AC2 + edge cases) | Design | Pending |
-| ADV-03 | P1 advisories — APPLIED ledger rule (AC3) | Design | Pending |
-| ADV-04 | P1 advisories — "no fix without advisory" lint (AC4) | Design | Pending |
-| ADV-05 | P1 advisories — executable `detect` (AC5) | Design | Pending |
-| MIG-01 | baseline policy: kernel-only 0000, entries ship their own baseline (GA-6) | Design | Pending |
-| MIG-02 | renumbering + journal monotonicity (TLG-01 edge case) | Design | Pending |
-| WEB-01 | web part of an entry: shipped files + registrations (GA-3) | Design | Pending |
-| CTR-01 | contract pipeline with child-owned routes (GA-4) | Design | Pending |
-| SMK-01 | P2 smoke — single `kernel-only` profile, fixture retired (AC1–2) | Design | Pending |
+| KRN-01 | P1 kernel-only child boots (AC1–4) | Tasks | In Tasks |
+| KRN-02 | P1 kernel-only child — forbidden vocabulary RULE C (AC5) | Tasks | In Tasks |
+| KRN-03 | P1 ports — access policy port + fail-closed guard (AC1–2) | Tasks | In Tasks |
+| KRN-04 | P1 ports — actor in request/job context, actorId in idempotency/outbox (AC3) | Tasks | In Tasks |
+| KRN-05 | P1 ports — web RouteAccess registry + guard port (AC4) | Tasks | In Tasks |
+| KRN-06 | P1 ports — boundaries spec RULE A kept, RULE B removed (AC5) | Tasks | In Tasks |
+| KRN-07 | P3 tenant seam | Tasks | In Tasks |
+| CAT-01 | P1 entries — five entries with manifest + mandatory files (AC1) | Tasks | In Tasks |
+| CAT-02 | P1 entries — catalog CI per entry (AC2) | Tasks | In Tasks |
+| CAT-03 | P1 entries — `dependsOn` manifest + cross-entry deps from inventory | Tasks | In Tasks |
+| CAT-04 | P1 entries — identity parity with v0.2 (AC4) | Tasks | In Tasks |
+| CAT-05 | P1 entries — catalog location / copier exclusion (GA-1) | Tasks | In Tasks |
+| HBK-01 | P1 entries — README contract doc + lint (AC3, P2 handbooks AC4) | Tasks | In Tasks |
+| HBK-02 | P2 handbooks — back/front/testing updated (AC1) | Tasks | In Tasks |
+| HBK-03 | P2 handbooks — `docs/dev/template.md` catalog table (AC2) | Tasks | In Tasks |
+| HBK-04 | P2 handbooks — changelog v1.0.0 migration note (AC3) | Tasks | In Tasks |
+| TLG-01 | P1 add — copy + renumber + registrations + lock (AC1) | Tasks | In Tasks |
+| TLG-02 | P1 add — `dependsOn` enforcement / `--with-deps` (AC2) | Tasks | In Tasks |
+| TLG-03 | P1 add — refuse reinstall (AC3) | Tasks | In Tasks |
+| TLG-04 | P1 add — run tests + parity after copy (AC4) | Tasks | In Tasks |
+| TLG-05 | P1 add — `kernelRange` check (AC5) | Tasks | In Tasks |
+| TLG-06 | P1 add — `--dry-run`, `--force`, `--rollback`, `adopt` (AC6 + edge cases) | Tasks | In Tasks |
+| TLG-07 | P2 `port-module-update` skill (AC1–3) | Tasks | In Tasks |
+| TLG-08 | P1 add — `module.json.env[]` appended to `.env.example`/`.env` without overwriting (context.md § Env) | Tasks | In Tasks |
+| ADV-01 | P1 advisories — file format + validation test (AC1) | Tasks | In Tasks |
+| ADV-02 | P1 advisories — pending computation hook (AC2 + edge cases) | Tasks | In Tasks |
+| ADV-03 | P1 advisories — APPLIED ledger rule (AC3) | Tasks | In Tasks |
+| ADV-04 | P1 advisories — "no fix without advisory" lint (AC4) | Tasks | In Tasks |
+| ADV-05 | P1 advisories — executable `detect` (AC5) | Tasks | In Tasks |
+| MIG-01 | baseline policy: kernel-only 0000, entries ship their own baseline (GA-6) | Tasks | In Tasks |
+| MIG-02 | renumbering + journal monotonicity (TLG-01 edge case) | Tasks | In Tasks |
+| WEB-01 | web part of an entry: shipped files + registrations (GA-3) | Tasks | In Tasks |
+| CTR-01 | contract pipeline with child-owned routes (GA-4) | Tasks | In Tasks |
+| SMK-01 | P2 smoke — single `kernel-only` profile, fixture retired (AC1–2) | Tasks | In Tasks |
 
-**Coverage:** 34 total, 0 mapped to tasks, 34 unmapped ⚠️ (Tasks phase pending).
+**Coverage:** 34 total, 34 mapped to tasks (tasks.md § Requirement Coverage), 0 unmapped.
 
 ---
 

@@ -1,0 +1,1 @@
+ALTER TABLE "identity"."users" RENAME COLUMN "attends_guests" TO "serves_clients";

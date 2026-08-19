@@ -10,31 +10,34 @@ describe("LogMailer", () => {
 
   beforeEach(() => info.mockClear())
 
-  it("loga cada tipo de envio com os campos do destino", async () => {
+  it("loga to, subject, idempotencyKey e os links extraídos do html", async () => {
     const mailer = new LogMailer(loggerFactory)
-    await mailer.sendAccessLink("a@b.com", "https://x/t", "Ana", "pt-BR", "d1")
-    await mailer.sendPasswordReset("a@b.com", "https://x/r", "pt-BR", "d2")
-    await mailer.sendEmailVerification("a@b.com", "https://x/v", "pt-BR", "d3")
-    await mailer.sendLockoutNotice("a@b.com", "pt-BR", "d4")
-    await mailer.sendPasswordChanged("a@b.com", "2026-06-10T00:00:00.000Z", "pt-BR", "d5")
-    await mailer.sendDeviceNewLogin(
-      "a@b.com",
-      "Chrome/Linux",
-      null,
-      "2026-06-10T00:00:00.000Z",
-      "pt-BR",
-      "d6",
-    )
-    expect(info).toHaveBeenCalledTimes(6)
-    expect(info).toHaveBeenNthCalledWith(
-      5,
-      expect.any(String),
-      expect.objectContaining({ to: "a@b.com", at: "2026-06-10T00:00:00.000Z", idempotencyKey: "d5" }),
-    )
-    expect(info).toHaveBeenNthCalledWith(
-      6,
-      expect.any(String),
-      expect.objectContaining({ deviceLabel: "Chrome/Linux", ip: null }),
-    )
+    await mailer.send({
+      to: "a@b.com",
+      subject: "Configure seu acesso à plataforma",
+      html: '<a href="https://x.test/1">um</a><a href="https://x.test/2">dois</a>',
+      idempotencyKey: "d1",
+    })
+    expect(info).toHaveBeenCalledWith("e-mail (dev)", {
+      to: "a@b.com",
+      subject: "Configure seu acesso à plataforma",
+      idempotencyKey: "d1",
+      links: ["https://x.test/1", "https://x.test/2"],
+    })
+  })
+
+  it("html sem links → links vazio", async () => {
+    const mailer = new LogMailer(loggerFactory)
+    await mailer.send({
+      to: "a@b.com",
+      subject: "Conta bloqueada temporariamente",
+      html: "<p>sem links aqui</p>",
+    })
+    expect(info).toHaveBeenCalledWith("e-mail (dev)", {
+      to: "a@b.com",
+      subject: "Conta bloqueada temporariamente",
+      idempotencyKey: undefined,
+      links: [],
+    })
   })
 })

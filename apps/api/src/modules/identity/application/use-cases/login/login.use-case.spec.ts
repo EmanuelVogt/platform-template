@@ -21,7 +21,7 @@ function makeUser(over: { props?: Partial<UserProps> } = {}): User {
     emailVerified: true,
     pendingEmail: null,
     accessProfile: "admin",
-    attendsGuests: false,
+    servesClients: false,
     failedLoginAttempts: 0,
     lockedUntil: null,
     lastResetRequestedAt: null,

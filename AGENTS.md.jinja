@@ -65,6 +65,7 @@ never opened one. The reasoning is at the link.
 - **No barrels in the front** — deep import from the file that defines the symbol. This overrides FSD's "public API via `index`". → [`front-arch.md`](docs/front/front-arch.md)
 - **Kernel never imports product** — `shared/` never imports `modules/`; base-set modules stay product-free; extension is a slot or a registry interface, never an import. → [`docs/back/back-arch.md`](docs/back/back-arch.md)
 - **Never suppress lint** — no `eslint-disable` in any form, no file-wide rule disabling. A conflict with a mandatory framework pattern is escalated to the user. → [`code-quality.md`](docs/code-quality.md)
+- **Version truth is the git tag + the changelog** — `package.json` is never bumped on release; breaking changes and child migration steps live in [`template-changelog.md`](docs/dev/template-changelog.md).
 
 ## Two standing rules
 

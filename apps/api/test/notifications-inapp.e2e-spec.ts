@@ -5,12 +5,13 @@ import request from "supertest"
 import { AppModule } from "../src/app.module"
 import { applySecurity } from "../src/main"
 import { RATE_LIMITER } from "../src/modules/identity/domain/ports/rate-limiter"
-import { MAILER, type Mailer } from "../src/modules/notification/domain/ports/mailer"
+import { MAILER } from "../src/modules/notification/domain/ports/mailer"
 import { DeliveryDispatcher } from "../src/modules/notification/infrastructure/delivery/delivery.dispatcher"
 import { RequestContext } from "../src/shared/kernel/context/request-context"
 import { createRequestContextMiddleware } from "../src/shared/kernel/context/request-context.middleware"
 import { OutboxDispatcher } from "../src/shared/kernel/outbox/outbox.dispatcher"
 
+import { fakeMailer } from "./setup/fake-mailer"
 import { seedUser } from "./setup/seed-user"
 import { createTestPool, truncateIdentity, truncateKernel } from "./setup/test-db"
 
@@ -23,22 +24,17 @@ const allowAll = {
   consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
 }
 
-function makeFakeMailer(): jest.Mocked<Mailer> {
-  return {
-    sendAccessLink: jest.fn().mockResolvedValue(undefined),
-    sendPasswordReset: jest.fn().mockResolvedValue(undefined),
-    sendEmailVerification: jest.fn().mockResolvedValue(undefined),
-    sendLockoutNotice: jest.fn().mockResolvedValue(undefined),
-    sendPasswordChanged: jest.fn().mockResolvedValue(undefined),
-    sendDeviceNewLogin: jest.fn().mockResolvedValue(undefined),
-    sendEmailChangeConfirmation: jest.fn().mockResolvedValue(undefined),
-    sendEmailChangeNotice: jest.fn().mockResolvedValue(undefined),
-  }
+/** Extrai o href renderizado no botão de ação do e-mail (link com token). */
+function linkFromHtml(html: string): string {
+  const match = /href="([^"]+)"/.exec(html)
+  if (!match) throw new Error("link não encontrado no e-mail")
+  return match[1]!
 }
 
 describe("produtores in-app (e2e)", () => {
   let app: INestApplication
   let pool: Pool
+  let mailer: ReturnType<typeof fakeMailer>
 
   // 2-hop assíncrono (outbox → handler → delivery): força os ciclos em loop até
   // a condição valer — o poll manual pode virar no-op se o de background já roda.
@@ -82,11 +78,12 @@ describe("produtores in-app (e2e)", () => {
       "truncate table notification.notifications, notification.notification_deliveries",
     )
 
+    mailer = fakeMailer()
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(RATE_LIMITER)
       .useValue(allowAll)
       .overrideProvider(MAILER)
-      .useValue(makeFakeMailer())
+      .useValue(mailer)
       .compile()
     app = moduleRef.createNestApplication()
     app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
@@ -171,12 +168,9 @@ describe("produtores in-app (e2e)", () => {
       .expect(201)
 
     // Token do access link sai pelo fake mailer (nunca em claro no banco).
-    const fakeMailer = app.get<jest.Mocked<Mailer>>(MAILER)
     const link = await pollUntil(async () => {
-      const call = fakeMailer.sendAccessLink.mock.calls.find(
-        ([to]) => to === "inapp-bia@example.com",
-      )
-      return call?.[1]
+      const message = mailer.sent.find((m) => m.to === "inapp-bia@example.com")
+      return message ? linkFromHtml(message.html) : undefined
     })
     const token = new URL(link).searchParams.get("token")
     expect(token).toBeTruthy()

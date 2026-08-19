@@ -1,9 +1,10 @@
 import request from "supertest"
 
 import { RATE_LIMITER } from "../../src/modules/identity/domain/ports/rate-limiter"
-import { MAILER, type Mailer } from "../../src/modules/notification/domain/ports/mailer"
+import { MAILER } from "../../src/modules/notification/domain/ports/mailer"
 import { OutboxDispatcher } from "../../src/shared/kernel/outbox/outbox.dispatcher"
 import { allowAllRateLimiter, createE2eApp } from "../setup/app-factory"
+import { fakeMailer } from "../setup/fake-mailer"
 import { seedUser } from "../setup/seed-user"
 import {
   createTestPool,
@@ -12,22 +13,17 @@ import {
   truncateKernel,
 } from "../setup/test-db"
 
+import type { EmailMessage } from "../../src/modules/notification/domain/ports/mailer"
 import type { INestApplication } from "@nestjs/common"
 
 const ORIGIN = "http://localhost:5173"
 const SUITE = "ve"
 
-function makeFakeMailer(): jest.Mocked<Mailer> {
-  return {
-    sendAccessLink: jest.fn().mockResolvedValue(undefined),
-    sendPasswordReset: jest.fn().mockResolvedValue(undefined),
-    sendEmailVerification: jest.fn().mockResolvedValue(undefined),
-    sendLockoutNotice: jest.fn().mockResolvedValue(undefined),
-    sendPasswordChanged: jest.fn().mockResolvedValue(undefined),
-    sendDeviceNewLogin: jest.fn().mockResolvedValue(undefined),
-    sendEmailChangeConfirmation: jest.fn().mockResolvedValue(undefined),
-    sendEmailChangeNotice: jest.fn().mockResolvedValue(undefined),
-  }
+/** Extrai o href renderizado no botão de ação do e-mail (link com token). */
+function linkFromHtml(html: string): string {
+  const match = /href="([^"]+)"/.exec(html)
+  if (!match) throw new Error("link não encontrado no e-mail")
+  return match[1]!
 }
 
 async function waitFor(predicate: () => boolean, timeoutMs = 4000): Promise<void> {
@@ -43,7 +39,7 @@ async function waitFor(predicate: () => boolean, timeoutMs = 4000): Promise<void
 describe("Verificação de e-mail (e2e)", () => {
   let app: INestApplication
   let dispatcher: OutboxDispatcher
-  let fakeMailer: jest.Mocked<Mailer>
+  let mailer: ReturnType<typeof fakeMailer>
 
   beforeAll(async () => {
     const pool = createTestPool()
@@ -51,13 +47,13 @@ describe("Verificação de e-mail (e2e)", () => {
     await truncateKernel(pool)
     await pool.end()
 
-    fakeMailer = makeFakeMailer()
+    mailer = fakeMailer()
     app = await createE2eApp((b) =>
       b
         .overrideProvider(RATE_LIMITER)
         .useValue(allowAllRateLimiter)
         .overrideProvider(MAILER)
-        .useValue(fakeMailer),
+        .useValue(mailer),
     )
     dispatcher = app.get(OutboxDispatcher)
   })
@@ -73,7 +69,6 @@ describe("Verificação de e-mail (e2e)", () => {
   async function setupUnverifiedUser(
     email: string,
     password: string,
-    callIndex: number,
   ): Promise<{ sessionCookie: string[]; token: string }> {
     const pool = createTestPool()
     await seedUser(app, pool, {
@@ -98,11 +93,13 @@ describe("Verificação de e-mail (e2e)", () => {
       .expect(202)
 
     await dispatcher.poll()
-    await waitFor(() => fakeMailer.sendEmailVerification.mock.calls.length > callIndex)
+    // Casa por destinatário + assunto: o login pode disparar um e-mail de
+    // device_new_login antes do de verificação, deslocando o índice.
+    const sentVerification = (): EmailMessage | undefined =>
+      mailer.sent.find((message) => message.to === email && message.subject === "Verifique seu e-mail")
+    await waitFor(() => sentVerification() !== undefined)
 
-    // sendEmailVerification(to, link, locale, idempotencyKey?)
-    const [, link] = fakeMailer.sendEmailVerification.mock.calls[callIndex] ?? []
-    const token = new URL(link!).searchParams.get("token")
+    const token = new URL(linkFromHtml(sentVerification()!.html)).searchParams.get("token")
     expect(token).toBeTruthy()
     return { sessionCookie, token: token! }
   }
@@ -110,7 +107,7 @@ describe("Verificação de e-mail (e2e)", () => {
   it("token válido → 204 + email_verified=true no banco", async () => {
     const email = seedEmail(SUITE, "happy")
     const password = "Senha-Verify-Forte-2026!"
-    const { token } = await setupUnverifiedUser(email, password, 0)
+    const { token } = await setupUnverifiedUser(email, password)
 
     await request(app.getHttpServer())
       .post("/v1/auth/verify-email")
@@ -130,7 +127,7 @@ describe("Verificação de e-mail (e2e)", () => {
   it("token já consumido na segunda chamada → 400 RFC 7807", async () => {
     const email = seedEmail(SUITE, "reuse")
     const password = "Senha-Reuse-Forte-2026!"
-    const { token } = await setupUnverifiedUser(email, password, 1)
+    const { token } = await setupUnverifiedUser(email, password)
 
     await request(app.getHttpServer())
       .post("/v1/auth/verify-email")

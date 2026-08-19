@@ -3,9 +3,10 @@ import http from "node:http"
 import request from "supertest"
 
 import { RATE_LIMITER } from "../src/modules/identity/domain/ports/rate-limiter"
-import { MAILER, type Mailer } from "../src/modules/notification/domain/ports/mailer"
+import { MAILER } from "../src/modules/notification/domain/ports/mailer"
 
 import { allowAllRateLimiter, createE2eApp } from "./setup/app-factory"
+import { fakeMailer } from "./setup/fake-mailer"
 import { seedUser } from "./setup/seed-user"
 import { createTestPool, seedEmail, truncateIdentity, truncateKernel } from "./setup/test-db"
 
@@ -15,19 +16,6 @@ import type { Pool } from "pg"
 const ORIGIN = "http://localhost:5173"
 const PASSWORD = "Senha-Sse-Forte-2026!"
 const SUITE = "sse"
-
-function makeFakeMailer(): jest.Mocked<Mailer> {
-  return {
-    sendAccessLink: jest.fn().mockResolvedValue(undefined),
-    sendPasswordReset: jest.fn().mockResolvedValue(undefined),
-    sendEmailVerification: jest.fn().mockResolvedValue(undefined),
-    sendLockoutNotice: jest.fn().mockResolvedValue(undefined),
-    sendPasswordChanged: jest.fn().mockResolvedValue(undefined),
-    sendDeviceNewLogin: jest.fn().mockResolvedValue(undefined),
-    sendEmailChangeConfirmation: jest.fn().mockResolvedValue(undefined),
-    sendEmailChangeNotice: jest.fn().mockResolvedValue(undefined),
-  }
-}
 
 /**
  * Faz a request GET e destrói o socket assim que os headers chegam.
@@ -95,7 +83,7 @@ describe("SSE handshake /v1/notifications/stream (e2e)", () => {
         .overrideProvider(RATE_LIMITER)
         .useValue(allowAllRateLimiter)
         .overrideProvider(MAILER)
-        .useValue(makeFakeMailer()),
+        .useValue(fakeMailer()),
     )
     // listen(0) abre numa porta efêmera — necessário para o http nativo conseguir
     // endereçar o servidor fora do ciclo do supertest.

@@ -54,7 +54,7 @@ export type UpdateUserDto = {
      * @default false
      * @type boolean | undefined
     */
-    attendsGuests?: boolean;
+    servesClients?: boolean;
     /**
      * @type array
     */

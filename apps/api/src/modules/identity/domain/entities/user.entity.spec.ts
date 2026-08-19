@@ -31,18 +31,18 @@ describe('User.create', () => {
     expect(user.props.email).toBe('ana@example.com');
   });
 
-  it('nasce fora do atendimento a hóspede, e entra quando pedido', () => {
+  it('nasce fora do atendimento a cliente, e entra quando pedido', () => {
     expect(
       User.create({ name: 'Ana', email: 'a@b.com', accessProfile: 'professional' }).props
-        .attendsGuests,
+        .servesClients,
     ).toBe(false);
     expect(
       User.create({
         name: 'Bia',
         email: 'b@b.com',
         accessProfile: 'professional',
-        attendsGuests: true,
-      }).props.attendsGuests,
+        servesClients: true,
+      }).props.servesClients,
     ).toBe(true);
   });
 
@@ -290,7 +290,7 @@ describe('User.updateProfile', () => {
     const user = User.create({ name: 'Ana', email: 'ana@x.test', accessProfile: 'admin' });
     const now = new Date('2026-06-12T12:00:00Z');
     const updated = user.updateProfile(
-      { name: ' Bia ', accessProfile: 'professional', attendsGuests: false },
+      { name: ' Bia ', accessProfile: 'professional', servesClients: false },
       now,
     );
     expect(updated).not.toBe(user);
@@ -300,29 +300,29 @@ describe('User.updateProfile', () => {
     expect(user.props.accessProfile).toBe('admin');
   });
 
-  it('liga o atendimento a hóspede sem mexer no perfil', () => {
+  it('liga o atendimento a cliente sem mexer no perfil', () => {
     const user = User.create({ name: 'Ana', email: 'ana@x.test', accessProfile: 'professional' });
     const updated = user.updateProfile(
-      { name: 'Ana', accessProfile: 'professional', attendsGuests: true },
+      { name: 'Ana', accessProfile: 'professional', servesClients: true },
       new Date('2026-06-12T12:00:00Z'),
     );
-    expect(updated.props.attendsGuests).toBe(true);
+    expect(updated.props.servesClients).toBe(true);
     expect(updated.props.accessProfile).toBe('professional');
   });
 
-  it('desliga o atendimento a hóspede preservando a instância anterior', () => {
+  it('desliga o atendimento a cliente preservando a instância anterior', () => {
     const user = User.create({
       name: 'Ana',
       email: 'ana@x.test',
       accessProfile: 'professional',
-      attendsGuests: true,
+      servesClients: true,
     });
     const updated = user.updateProfile(
-      { name: 'Ana', accessProfile: 'professional', attendsGuests: false },
+      { name: 'Ana', accessProfile: 'professional', servesClients: false },
       new Date('2026-06-12T12:00:00Z'),
     );
-    expect(updated.props.attendsGuests).toBe(false);
-    expect(user.props.attendsGuests).toBe(true);
+    expect(updated.props.servesClients).toBe(false);
+    expect(user.props.servesClients).toBe(true);
   });
 });
 

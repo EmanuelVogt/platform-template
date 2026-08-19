@@ -15,6 +15,6 @@ export type { NotificationTemplateSource } from "../../application/templates/not
 
 export { NOTIFICATION_TEMPLATE_SOURCES } from "../../domain/ports/notification-template-source.port"
 export type {
-  NotificationTemplateBinding,
+  EmailTemplateBinding,
   NotificationTemplateSources,
 } from "../../domain/ports/notification-template-source.port"

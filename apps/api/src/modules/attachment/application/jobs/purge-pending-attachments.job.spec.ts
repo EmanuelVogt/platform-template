@@ -7,7 +7,7 @@ function stale() {
     contentType: "application/pdf",
     sizeBytes: 10,
     originalFilename: null,
-    profile: "feedback-attachment",
+    profile: "multi",
     visibility: "restricted",
     ownerUserId: "user-1",
   })

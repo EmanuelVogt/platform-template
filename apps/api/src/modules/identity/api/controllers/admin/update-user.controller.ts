@@ -33,7 +33,7 @@ export class UpdateUserController {
       userId: params.id,
       name: dto.name,
       accessProfile: dto.accessProfile,
-      attendsGuests: dto.attendsGuests,
+      servesClients: dto.servesClients,
       permissions: dto.permissions,
       areaIds: dto.areaIds,
       serviceIds: dto.serviceIds,

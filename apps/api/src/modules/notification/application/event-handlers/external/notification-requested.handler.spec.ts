@@ -96,14 +96,16 @@ describe("NotificationRequestedHandler", () => {
     const templateSources = new NotificationTemplateSourceRegistry()
     templateSources.register({
       type: "tipo_do_produto" as never,
-      template: "produto",
-      templateDir: "/tmp/produto",
-      subject: () => "assunto do produto",
       catalog: defineCatalogEntry({
         category: "informational",
         channels: ["email"],
         dataSchema: z.object({ email: z.email() }),
       }),
+      email: {
+        template: "produto",
+        templateDir: "/tmp/produto",
+        subject: () => "assunto do produto",
+      },
     })
     const t = makeDeps({ templateSources })
 

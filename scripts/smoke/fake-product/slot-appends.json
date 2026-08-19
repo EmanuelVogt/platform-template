@@ -1,0 +1,32 @@
+[
+  {
+    "file": "apps/api/src/shared/kernel/access/product-access-profiles.ts",
+    "find": "export const PRODUCT_ACCESS_PROFILES = [] as const satisfies readonly AccessProfileDef[]",
+    "replace": "export const PRODUCT_ACCESS_PROFILES = [\n  {\n    key: \"receptionist\",\n    label: \"Recepcionista\",\n    assignable: true,\n    permissionFloor: false,\n  },\n] as const satisfies readonly AccessProfileDef[]"
+  },
+  {
+    "file": "apps/api/src/shared/kernel/access/product-permission-catalogs.ts",
+    "find": "export const PRODUCT_PERMISSION_CATALOGS = [] as const satisfies readonly ModuleDef[]",
+    "replace": "export const SAMPLE_CATALOG = {\n  key: \"sample\",\n  label: \"Amostra\",\n  features: [\n    {\n      key: \"things\",\n      label: \"Coisas\",\n      permissions: [\n        {\n          key: \"sample.things.audit.read\",\n          label: \"Ver logs de coisas\",\n          requires: [],\n        },\n      ],\n    },\n  ],\n} as const satisfies ModuleDef\n\nexport const PRODUCT_PERMISSION_CATALOGS = [SAMPLE_CATALOG] as const satisfies readonly ModuleDef[]\n\ntype SampleCatalogPermissionKey =\n  (typeof SAMPLE_CATALOG)[\"features\"][number][\"permissions\"][number][\"key\"]\n\ndeclare module \"./permission.types\" {\n  interface PermissionKeyRegistry {\n    readonly sample: SampleCatalogPermissionKey\n  }\n}"
+  },
+  {
+    "file": "apps/api/src/shared/kernel/upload/product-upload-profiles.ts",
+    "find": "export const PRODUCT_UPLOAD_PROFILES = [] as const satisfies readonly UploadProfileDef[]",
+    "replace": "export const PRODUCT_UPLOAD_PROFILES = [\n  {\n    key: \"sample-doc\",\n    accept: \"any\",\n    maxBytes: 5_242_880,\n    maxTotalBytes: 5_242_880,\n    maxFiles: 1,\n    visibility: \"restricted\",\n    uploadRoute: true,\n  },\n] as const satisfies readonly UploadProfileDef[]"
+  },
+  {
+    "file": "apps/api/src/app.module.ts",
+    "find": "import { NotificationModule } from \"./modules/notification/notification.module\"",
+    "replace": "import { NotificationModule } from \"./modules/notification/notification.module\"\nimport { SampleModule } from \"./modules/sample/sample.module\""
+  },
+  {
+    "file": "apps/api/src/app.module.ts",
+    "find": "    AuditModule,\n  ],",
+    "replace": "    AuditModule,\n    SampleModule,\n  ],"
+  },
+  {
+    "file": "apps/api/src/db/schema.ts",
+    "find": "export * from \"../modules/tag/infrastructure/tables/tag.table\"",
+    "replace": "export * from \"../modules/tag/infrastructure/tables/tag.table\"\nexport * from \"../modules/sample/infrastructure/tables/thing.table\""
+  }
+]

@@ -1,9 +1,24 @@
-/** Perfil de acesso é enum do banco (`identity.access_profile`): acrescentar
- *  valor exige migration, então a lista não deriva do catálogo. */
-export const ACCESS_PROFILES = ["master", "admin", "professional"] as const
-export type AccessProfile = (typeof ACCESS_PROFILES)[number]
+import { BASE_ACCESS_PROFILES } from "./access-profile.types"
+import { defineAccessProfiles } from "./define-access-profiles"
+import { PRODUCT_ACCESS_PROFILES } from "./product-access-profiles"
 
-export const ASSIGNABLE_ACCESS_PROFILES = ["admin", "professional"] as const
+/** Perfil de acesso é enum do banco (`identity.access_profile`): o que o
+ *  produto acrescenta ao slot só persiste depois da migration `ADD VALUE`. */
+const accessProfiles = defineAccessProfiles([
+  ...BASE_ACCESS_PROFILES,
+  ...PRODUCT_ACCESS_PROFILES,
+] as const)
+
+export const {
+  ACCESS_PROFILES,
+  ASSIGNABLE_ACCESS_PROFILES,
+  PROFILE_DEFS,
+  isAccessProfile,
+  profileOf,
+  requiresPermissionFloor,
+} = accessProfiles
+
+export type AccessProfile = (typeof ACCESS_PROFILES)[number]
 export type AssignableAccessProfile = (typeof ASSIGNABLE_ACCESS_PROFILES)[number]
 
 export type PermissionDef = {

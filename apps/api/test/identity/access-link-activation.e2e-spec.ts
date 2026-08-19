@@ -7,11 +7,12 @@ import request from "supertest"
 import { AppModule } from "../../src/app.module"
 import { applySecurity } from "../../src/main"
 import { RATE_LIMITER } from "../../src/modules/identity/domain/ports/rate-limiter"
-import { MAILER, type Mailer } from "../../src/modules/notification/domain/ports/mailer"
+import { MAILER } from "../../src/modules/notification/domain/ports/mailer"
 import { OBJECT_STORAGE } from "../../src/shared/infra/storage/object-storage.port"
 import { RequestContext } from "../../src/shared/kernel/context/request-context"
 import { createRequestContextMiddleware } from "../../src/shared/kernel/context/request-context.middleware"
 import { OutboxDispatcher } from "../../src/shared/kernel/outbox/outbox.dispatcher"
+import { fakeMailer } from "../setup/fake-mailer"
 import { seedUser } from "../setup/seed-user"
 import {
   createTestPool,
@@ -20,6 +21,7 @@ import {
   truncateKernel,
 } from "../setup/test-db"
 
+import type { EmailMessage } from "../../src/modules/notification/domain/ports/mailer"
 import type { ObjectStoragePort } from "../../src/shared/infra/storage/object-storage.port"
 
 const ORIGIN = "http://localhost:5173"
@@ -34,17 +36,11 @@ const PNG_1PX = Buffer.from(
   "base64",
 )
 
-function makeFakeMailer(): jest.Mocked<Mailer> {
-  return {
-    sendAccessLink: jest.fn().mockResolvedValue(undefined),
-    sendPasswordReset: jest.fn().mockResolvedValue(undefined),
-    sendEmailVerification: jest.fn().mockResolvedValue(undefined),
-    sendLockoutNotice: jest.fn().mockResolvedValue(undefined),
-    sendPasswordChanged: jest.fn().mockResolvedValue(undefined),
-    sendDeviceNewLogin: jest.fn().mockResolvedValue(undefined),
-    sendEmailChangeConfirmation: jest.fn().mockResolvedValue(undefined),
-    sendEmailChangeNotice: jest.fn().mockResolvedValue(undefined),
-  }
+/** Extrai o href renderizado no botão de ação do e-mail (link com token). */
+function linkFromHtml(html: string): string {
+  const match = /href="([^"]+)"/.exec(html)
+  if (!match) throw new Error("link não encontrado no e-mail")
+  return match[1]!
 }
 
 /** Storage em memória: substitui o adapter R2 nos testes (sem IO externo). */
@@ -98,7 +94,7 @@ async function waitFor(
 describe("Ativação via access-link (e2e)", () => {
   let app: INestApplication
   let dispatcher: OutboxDispatcher
-  let fakeMailer: jest.Mocked<Mailer>
+  let mailer: ReturnType<typeof fakeMailer>
 
   beforeAll(async () => {
     const pool = createTestPool()
@@ -107,14 +103,14 @@ describe("Ativação via access-link (e2e)", () => {
     await truncateAttachment(pool)
     await pool.end()
 
-    fakeMailer = makeFakeMailer()
+    mailer = fakeMailer()
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     })
       .overrideProvider(RATE_LIMITER)
       .useValue(allowAll)
       .overrideProvider(MAILER)
-      .useValue(fakeMailer)
+      .useValue(mailer)
       .overrideProvider(OBJECT_STORAGE)
       .useValue(makeInMemoryStorage())
       .compile()
@@ -181,12 +177,11 @@ describe("Ativação via access-link (e2e)", () => {
     await dispatcher.poll()
     // Casa pelo destinatário, não por índice: um envio alheio no mesmo run
     // deslocaria a posição e o teste leria o token de outro convidado.
-    const sentTo = (): unknown[] | undefined =>
-      fakeMailer.sendAccessLink.mock.calls.find((call) => call[0] === email)
+    const sentTo = (): EmailMessage | undefined =>
+      mailer.sent.find((message) => message.to === email)
     await waitFor(() => sentTo() !== undefined)
 
-    const [, link] = sentTo() ?? []
-    const token = new URL(link as string).searchParams.get("token")
+    const token = new URL(linkFromHtml(sentTo()!.html)).searchParams.get("token")
     expect(token).toBeTruthy()
     return token!
   }

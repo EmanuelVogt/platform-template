@@ -4,10 +4,13 @@ import {
   REQUIRE_PERMISSION_KEY,
   RequirePermission,
 } from "../../../../shared/kernel/access/decorators"
+import { definePermissionCatalog } from "../../../../shared/kernel/access/define-permission-catalog"
 import { PRODUCT_PERMISSION_CATALOGS } from "../../../../shared/kernel/access/product-permission-catalogs"
 
+import { ADMIN_CATALOG } from "./catalog/admin.catalog"
 import {
   AUDIT_PERMISSION_KEYS,
+  FULL_AUDIT_PERMISSION,
   MODULES,
   PERMISSION_KEYS,
   featureOf,
@@ -132,8 +135,13 @@ describe("admin.usage.read — chave do painel de uso", () => {
 })
 
 describe("AUDIT_PERMISSION_KEYS — chaves 'Ver logs' derivadas do catálogo", () => {
-  it("são 3, todas terminam em .audit.read e pertencem a PERMISSION_KEYS", () => {
-    expect(AUDIT_PERMISSION_KEYS).toHaveLength(3)
+  it("o base-set (só admin) tem 3 chaves de auditoria; o slot de produto só acrescenta", () => {
+    const baseCatalog = definePermissionCatalog([ADMIN_CATALOG])
+    const baseAuditKeys = baseCatalog.PERMISSION_KEYS.filter(
+      (key) => key.endsWith(".audit.read") && key !== FULL_AUDIT_PERMISSION,
+    )
+    expect(baseAuditKeys).toHaveLength(3)
+    expect(AUDIT_PERMISSION_KEYS).toEqual(expect.arrayContaining(baseAuditKeys))
     for (const key of AUDIT_PERMISSION_KEYS) {
       expect(key.endsWith(".audit.read")).toBe(true)
       expect(PERMISSION_KEYS).toContain(key)

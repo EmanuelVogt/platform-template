@@ -6,7 +6,9 @@
 import type { UploadAttachmentsResponseDto } from "./UploadAttachmentsResponseDto.js";
 
 export const uploadAttachmentsQueryParamsProfileEnum = {
-    "feedback-attachment": "feedback-attachment"
+    "document": "document",
+    "image": "image",
+    "multi": "multi"
 } as const;
 
 export type UploadAttachmentsQueryParamsProfileEnum = (typeof uploadAttachmentsQueryParamsProfileEnum)[keyof typeof uploadAttachmentsQueryParamsProfileEnum];

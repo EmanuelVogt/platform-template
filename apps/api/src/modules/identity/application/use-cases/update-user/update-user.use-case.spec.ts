@@ -12,7 +12,7 @@ const BASE_INPUT = {
   userId: "u-target",
   name: "Novo Nome",
   accessProfile: "admin" as const,
-  attendsGuests: false,
+  servesClients: false,
   permissions: ["admin.users.read" as const],
   areaIds: [] as string[],
   serviceIds: [] as string[],
@@ -30,7 +30,7 @@ function makeUser(over: Partial<UserProps> = {}): User {
     emailVerified: true,
     pendingEmail: null,
     accessProfile: "admin",
-    attendsGuests: false,
+    servesClients: false,
     failedLoginAttempts: 0,
     lockedUntil: null,
     lastResetRequestedAt: null,
@@ -236,11 +236,11 @@ describe("UpdateUserUseCase", () => {
     expect(users.replaceSchedulingAreas).toHaveBeenCalledWith("u-target", [])
   })
 
-  describe("tirar do atendimento a hóspede", () => {
+  describe("tirar do atendimento a cliente", () => {
     function attendingUser() {
       return {
         findByIdWithPermissions: jest.fn().mockResolvedValue({
-          user: makeUser({ attendsGuests: true }),
+          user: makeUser({ servesClients: true }),
           permissions: [],
         }),
         update: jest.fn().mockResolvedValue(undefined),
@@ -267,7 +267,7 @@ describe("UpdateUserUseCase", () => {
         commitments: { listFuture: jest.fn().mockResolvedValue([COMMITMENT]) },
       })
       await expect(
-        uc.execute({ ...BASE_INPUT, attendsGuests: false })
+        uc.execute({ ...BASE_INPUT, servesClients: false })
       ).rejects.toThrow(ProfessionalHasCommitmentsError)
       expect(users.update).not.toHaveBeenCalled()
       expect(users.replaceProfessionalAreas).not.toHaveBeenCalled()
@@ -279,7 +279,7 @@ describe("UpdateUserUseCase", () => {
         commitments: { listFuture: jest.fn().mockResolvedValue([COMMITMENT]) },
       })
       try {
-        await uc.execute({ ...BASE_INPUT, attendsGuests: false })
+        await uc.execute({ ...BASE_INPUT, servesClients: false })
         throw new Error("deveria ter recusado")
       } catch (error) {
         expect(error).toBeInstanceOf(ProfessionalHasCommitmentsError)
@@ -294,19 +294,19 @@ describe("UpdateUserUseCase", () => {
       const { uc } = makeDeps({ users })
       await uc.execute({
         ...BASE_INPUT,
-        attendsGuests: false,
+        servesClients: false,
         areaIds: ["area-1"],
       })
       expect(users.update).toHaveBeenCalledTimes(1)
       expect(
-        (users.update.mock.calls[0][0] as User).props.attendsGuests
+        (users.update.mock.calls[0][0] as User).props.servesClients
       ).toBe(false)
       expect(users.replaceProfessionalAreas).toHaveBeenCalledWith("u-target", [])
     })
 
     it("quem já não atendia não consulta a agenda", async () => {
       const { uc, commitments } = makeDeps()
-      await uc.execute({ ...BASE_INPUT, attendsGuests: false })
+      await uc.execute({ ...BASE_INPUT, servesClients: false })
       expect(commitments.listFuture).not.toHaveBeenCalled()
     })
 
@@ -317,7 +317,7 @@ describe("UpdateUserUseCase", () => {
       })
       await uc.execute({
         ...BASE_INPUT,
-        attendsGuests: true,
+        servesClients: true,
         areaIds: ["area-1"],
       })
       expect(commitments.listFuture).not.toHaveBeenCalled()

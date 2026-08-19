@@ -122,30 +122,30 @@ export interface UserRepository {
   findStaleEmailChanges(now: Date): Promise<User[]>;
   /** Hard delete em lote. FKs com ON DELETE CASCADE levam sessions/devices/tokens. */
   hardDeleteByIds(ids: string[]): Promise<void>;
-  /** true se o id atende hóspede, está vivo e ativo (gate de atribuição
+  /** true se o id atende cliente, está vivo e ativo (gate de atribuição
    *  cross-module). O perfil de acesso não entra no critério — ADR 0082. */
   existsActiveProfessional(userId: string): Promise<boolean>;
-  /** true se o id atende hóspede e está vivo, qualquer status — config de horário pelo admin não espera ativação. */
+  /** true se o id atende cliente e está vivo, qualquer status — config de horário pelo admin não espera ativação. */
   existsProfessional(userId: string): Promise<boolean>;
-  /** Busca paginada de quem atende hóspede, vivo e ativo; `q` casa nome ou email (seletor de atribuição). */
+  /** Busca paginada de quem atende cliente, vivo e ativo; `q` casa nome ou email (seletor de atribuição). */
   searchAssignableProfessionals(
     input: SearchAssignableProfessionalsInput,
   ): Promise<PaginatedResult<AssignableProfessionalRow>>;
-  /** Lookup por id, só quem atende hóspede, vivo e ativo — valida atribuição e resolve a view cross-module. */
+  /** Lookup por id, só quem atende cliente, vivo e ativo — valida atribuição e resolve a view cross-module. */
   findProfessionalsByIds(
     ids: string[],
   ): Promise<Map<string, AssignableProfessionalRow>>;
-  /** Todos que atendem hóspede, vivos e ativos, ordenados por nome (mapa de agenda). */
+  /** Todos que atendem cliente, vivos e ativos, ordenados por nome (mapa de agenda). */
   listActiveProfessionals(): Promise<AssignableProfessionalRow[]>;
   /**
-   * Quem atende hóspede, vivo e ativo, com a área em "Áreas de atuação",
+   * Quem atende cliente, vivo e ativo, com a área em "Áreas de atuação",
    * ordenado por nome (filtro do mapa de agenda por área).
    */
   listActiveProfessionalsByArea(
     areaId: string,
   ): Promise<AssignableProfessionalRow[]>;
   /**
-   * Ids de quem atende hóspede, vivo e ativo, com o serviço em "Serviços de
+   * Ids de quem atende cliente, vivo e ativo, com o serviço em "Serviços de
    * atuação", agrupados por serviceId (leitura cross-module do motor de agendamento).
    */
   findActiveProfessionalIdsByServices(

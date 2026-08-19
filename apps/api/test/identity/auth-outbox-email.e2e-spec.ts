@@ -5,11 +5,12 @@ import request from "supertest"
 import { AppModule } from "../../src/app.module"
 import { applySecurity } from "../../src/main"
 import { RATE_LIMITER } from "../../src/modules/identity/domain/ports/rate-limiter"
-import { MAILER, type Mailer } from "../../src/modules/notification/domain/ports/mailer"
+import { MAILER } from "../../src/modules/notification/domain/ports/mailer"
 import { DeliveryDispatcher } from "../../src/modules/notification/infrastructure/delivery/delivery.dispatcher"
 import { RequestContext } from "../../src/shared/kernel/context/request-context"
 import { createRequestContextMiddleware } from "../../src/shared/kernel/context/request-context.middleware"
 import { OutboxDispatcher } from "../../src/shared/kernel/outbox/outbox.dispatcher"
+import { fakeMailer } from "../setup/fake-mailer"
 import { seedUser } from "../setup/seed-user"
 import { createTestPool, truncateIdentity, truncateKernel } from "../setup/test-db"
 
@@ -19,18 +20,11 @@ const allowAll = {
   consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
 }
 
-/** Fake em memória do port de e-mail — conta os envios (entrega ao transporte). */
-function makeFakeMailer(): jest.Mocked<Mailer> {
-  return {
-    sendAccessLink: jest.fn().mockResolvedValue(undefined),
-    sendPasswordReset: jest.fn().mockResolvedValue(undefined),
-    sendEmailVerification: jest.fn().mockResolvedValue(undefined),
-    sendLockoutNotice: jest.fn().mockResolvedValue(undefined),
-    sendPasswordChanged: jest.fn().mockResolvedValue(undefined),
-    sendDeviceNewLogin: jest.fn().mockResolvedValue(undefined),
-    sendEmailChangeConfirmation: jest.fn().mockResolvedValue(undefined),
-    sendEmailChangeNotice: jest.fn().mockResolvedValue(undefined),
-  }
+/** Extrai o href renderizado no botão de ação do e-mail (link com token). */
+function linkFromHtml(html: string): string {
+  const match = /href="([^"]+)"/.exec(html)
+  if (!match) throw new Error("link não encontrado no e-mail")
+  return match[1]!
 }
 
 async function waitFor(
@@ -49,7 +43,7 @@ async function waitFor(
 describe("Outbox → dispatcher → handler → mailer (e2e)", () => {
   let app: INestApplication
   let dispatcher: OutboxDispatcher
-  let fakeMailer: jest.Mocked<Mailer>
+  let mailer: ReturnType<typeof fakeMailer>
 
   beforeAll(async () => {
     const pool = createTestPool()
@@ -60,14 +54,14 @@ describe("Outbox → dispatcher → handler → mailer (e2e)", () => {
     )
     await pool.end()
 
-    fakeMailer = makeFakeMailer()
+    mailer = fakeMailer()
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     })
       .overrideProvider(RATE_LIMITER)
       .useValue(allowAll)
       .overrideProvider(MAILER)
-      .useValue(fakeMailer)
+      .useValue(mailer)
       .compile()
     app = moduleRef.createNestApplication()
     app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
@@ -112,12 +106,12 @@ describe("Outbox → dispatcher → handler → mailer (e2e)", () => {
     // delivery); o DeliveryDispatcher envia via mailer.
     await dispatcher.poll()
     await app.get(DeliveryDispatcher).poll()
-    await waitFor(() => fakeMailer.sendPasswordReset.mock.calls.length >= 1)
+    await waitFor(() => mailer.sent.some((message) => message.to === email))
 
-    expect(fakeMailer.sendPasswordReset.mock.calls).toHaveLength(1)
-    const [to, link] = fakeMailer.sendPasswordReset.mock.calls[0] ?? []
-    expect(to).toBe(email)
-    expect(link).toContain("/redefinir-senha?token=")
+    const sentToEmail = mailer.sent.filter((message) => message.to === email)
+    expect(sentToEmail).toHaveLength(1)
+    expect(sentToEmail[0]?.subject).toBe("Redefinição de senha")
+    expect(linkFromHtml(sentToEmail[0]!.html)).toContain("/redefinir-senha?token=")
 
     // A linha foi marcada published_at após a entrega.
     const published = await pool.query<{ published_at: Date | null }>(
@@ -136,7 +130,7 @@ describe("Outbox → dispatcher → handler → mailer (e2e)", () => {
     await dispatcher.poll()
     await app.get(DeliveryDispatcher).poll()
     await new Promise((resolve) => setTimeout(resolve, 100))
-    expect(fakeMailer.sendPasswordReset.mock.calls).toHaveLength(1)
+    expect(mailer.sent.filter((message) => message.to === email)).toHaveLength(1)
 
     await pool.end()
   })

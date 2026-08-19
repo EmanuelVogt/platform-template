@@ -29,6 +29,20 @@
       "when": 1787062480194,
       "tag": "0003_audit_trail",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1797062480194,
+      "tag": "0004_identity_serves_clients",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1797072480194,
+      "tag": "0005_attachment_generic_upload_profiles",
+      "breakpoints": true
     }
   ]
 }

@@ -1,9 +1,11 @@
+import { BASE_ACCESS_PROFILES } from "../../../shared/kernel/access/access-profile.types"
 import {
   InvalidPermissionSetError,
   InvalidProfessionalScopeError,
   InvalidSchedulingAreasError,
   PermissionGrantNotAllowedError,
 } from "../domain/errors"
+
 
 import {
   assertCanGrant,
@@ -59,6 +61,31 @@ describe("assertProfileFloor (piso do perfil)", () => {
   it("professional é isento (o piso vem do slot de produto, não do catálogo)", () => {
     expect(() => { assertProfileFloor("professional", []); }).not.toThrow()
   })
+
+  describe("o piso sai da def registrada, não de chave literal", () => {
+    const exempt = BASE_ACCESS_PROFILES.filter((def) => !def.permissionFloor)
+    const enforced = BASE_ACCESS_PROFILES.filter((def) => def.permissionFloor)
+
+    it("perfil com permissionFloor false aceita set vazio", () => {
+      expect(exempt.map((def) => def.key)).toEqual(["master", "professional"])
+      for (const def of exempt) {
+        expect(() => {
+          assertProfileFloor(def.key, [])
+        }).not.toThrow()
+      }
+    })
+
+    it("perfil com permissionFloor true exige chave do módulo homônimo", () => {
+      expect(enforced.map((def) => def.key)).toEqual(["admin"])
+      for (const def of enforced) {
+        expect(() => {
+          assertProfileFloor(def.key, [])
+        }).toThrow(
+          `O perfil de acesso exige ao menos uma permissão do módulo "${def.key}".`,
+        )
+      }
+    })
+  })
 })
 
 function makeScope(): ProfessionalScope & { assertValid: jest.Mock } {
@@ -76,7 +103,7 @@ describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
     const access = await resolveUserAccess(
       {
         accessProfile: "admin",
-        attendsGuests: false,
+        servesClients: false,
         permissions: ["admin.users.read"],
         areaIds: [],
         serviceIds: [],
@@ -94,7 +121,7 @@ describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
     const access = await resolveUserAccess(
       {
         accessProfile: "admin",
-        attendsGuests: false,
+        servesClients: false,
         permissions: ["admin.users.read"],
         areaIds: ["area-ignorada"],
         serviceIds: ["svc-ignorado"],
@@ -121,7 +148,7 @@ describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
       resolveUserAccess(
         {
           accessProfile: "admin",
-          attendsGuests: false,
+          servesClients: false,
           permissions: ["admin.users.read"],
           areaIds: [],
           serviceIds: [],
@@ -138,7 +165,7 @@ describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
     const access = await resolveUserAccess(
       {
         accessProfile: "professional",
-        attendsGuests: true,
+        servesClients: true,
         permissions: [],
         areaIds: ["area-1"],
         serviceIds: ["svc-1"],
@@ -161,7 +188,7 @@ describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
       resolveUserAccess(
         {
           accessProfile: "admin",
-          attendsGuests: true,
+          servesClients: true,
           permissions: ["admin.users.read"],
           areaIds: [],
           serviceIds: [],
@@ -177,7 +204,7 @@ describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
     const access = await resolveUserAccess(
       {
         accessProfile: "professional",
-        attendsGuests: false,
+        servesClients: false,
         permissions: [],
         areaIds: ["area-1"],
         serviceIds: ["svc-1"],
@@ -198,7 +225,7 @@ describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
     const access = await resolveUserAccess(
       {
         accessProfile: "admin",
-        attendsGuests: true,
+        servesClients: true,
         permissions: ["admin.users.read"],
         areaIds: ["atuacao-1"],
         serviceIds: ["svc-1"],
@@ -219,7 +246,7 @@ describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
     const access = await resolveUserAccess(
       {
         accessProfile: "admin",
-        attendsGuests: false,
+        servesClients: false,
         permissions: ["admin.users.read"],
         areaIds: ["a"],
         serviceIds: ["s"],

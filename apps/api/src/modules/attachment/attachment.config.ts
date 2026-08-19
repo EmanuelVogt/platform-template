@@ -7,25 +7,19 @@ export const attachmentConfigSchema = z.object({
     .int()
     .positive()
     .default(180),
-  // 500 MB: teto do lote inteiro do relato. Como o arquivo sobe em fluxo pela
-  // API, um anexo sozinho pode ocupar o lote todo — por isso os dois valores
-  // são iguais.
-  ATTACHMENT_FEEDBACK_MAX_FILE_BYTES: z.coerce
+  // 500 MB: teto do lote inteiro do perfil multi. Como o arquivo sobe em
+  // fluxo pela API, um anexo sozinho pode ocupar o lote todo — por isso os
+  // dois valores são iguais.
+  ATTACHMENT_MULTI_MAX_FILE_BYTES: z.coerce
     .number()
     .int()
     .positive()
     .default(524288000),
-  ATTACHMENT_FEEDBACK_MAX_TOTAL_BYTES: z.coerce
+  ATTACHMENT_MULTI_MAX_TOTAL_BYTES: z.coerce
     .number()
     .int()
     .positive()
     .default(524288000),
-  // 25 MB: folgado para um lote grande de páginas de grade.
-  ATTACHMENT_REPORT_MAX_BYTES: z.coerce
-    .number()
-    .int()
-    .positive()
-    .default(26214400),
 })
 
 export type AttachmentConfig = z.infer<typeof attachmentConfigSchema>

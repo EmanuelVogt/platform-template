@@ -43,7 +43,9 @@
             "schema": {
               "type": "string",
               "enum": [
-                "feedback-attachment"
+                "document",
+                "image",
+                "multi"
               ]
             }
           }
@@ -2347,7 +2349,7 @@
                     "professional"
                   ]
                 },
-                "attendsGuests": {
+                "servesClients": {
                   "type": "boolean"
                 },
                 "permissions": {
@@ -2433,7 +2435,7 @@
                 "email",
                 "emailVerified",
                 "accessProfile",
-                "attendsGuests",
+                "servesClients",
                 "permissions",
                 "areaIds",
                 "serviceIds",
@@ -2501,7 +2503,7 @@
               "professional"
             ]
           },
-          "attendsGuests": {
+          "servesClients": {
             "default": false,
             "type": "boolean"
           },
@@ -2587,7 +2589,7 @@
               "professional"
             ]
           },
-          "attendsGuests": {
+          "servesClients": {
             "default": false,
             "type": "boolean"
           },
@@ -3014,10 +3016,33 @@
                 "features"
               ]
             }
+          },
+          "profiles": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "assignable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "key",
+                "label",
+                "assignable"
+              ]
+            }
           }
         },
         "required": [
-          "modules"
+          "modules",
+          "profiles"
         ]
       },
       "ListNotificationsResponseDto": {

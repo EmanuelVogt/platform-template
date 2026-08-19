@@ -5,6 +5,8 @@ import { IdentityModule } from "../identity/identity.module"
 import { AuditController } from "./api/controllers/audit.controller"
 import { UsageActivityFacade } from "./api/facades/usage-activity.facade"
 import { ListAuditEntriesUseCase } from "./application/list-audit-entries/list-audit-entries.use-case"
+import { ActivityAreaResolver } from "./application/services/activity-area-resolver"
+import { AuditRegistry } from "./application/services/audit-registry"
 import { ACTIVITY_STATS_READER } from "./domain/ports/activity-stats.reader"
 import { AUDIT_REPOSITORY } from "./domain/ports/audit.repository"
 import { REF_LABEL_READER } from "./domain/ports/ref-label.reader"
@@ -27,7 +29,9 @@ import { DrizzleRefLabelReader } from "./infrastructure/repositories/drizzle-ref
     { provide: ACTIVITY_STATS_READER, useClass: DrizzleActivityStatsReader },
     ListAuditEntriesUseCase,
     UsageActivityFacade,
+    AuditRegistry,
+    ActivityAreaResolver,
   ],
-  exports: [UsageActivityFacade],
+  exports: [UsageActivityFacade, AuditRegistry],
 })
 export class AuditModule {}

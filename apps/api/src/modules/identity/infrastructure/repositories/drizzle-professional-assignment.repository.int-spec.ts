@@ -43,7 +43,7 @@ describe("DrizzleProfessionalAssignmentRepository (int)", () => {
     const id = ulid()
     await pool.query(
       `INSERT INTO identity.users
-         (id, name, email, access_profile, attends_guests, status, deleted_at, created_at, updated_at)
+         (id, name, email, access_profile, serves_clients, status, deleted_at, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, now(), now())`,
       [
         id,

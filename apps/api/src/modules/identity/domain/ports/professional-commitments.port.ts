@@ -1,4 +1,4 @@
-/** Compromisso que impede tirar a pessoa do atendimento a hóspede. */
+/** Compromisso que impede tirar a pessoa do atendimento a cliente. */
 export interface ProfessionalCommitment {
   kind: 'service' | 'collective';
   id: string;

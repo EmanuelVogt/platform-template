@@ -38,13 +38,13 @@ describe("Attachment", () => {
       contentType: "application/pdf",
       sizeBytes: 1234,
       originalFilename: "relatório.pdf",
-      profile: "feedback-attachment",
+      profile: "multi",
       visibility: "restricted",
       ownerUserId: "user-1",
     })
     expect(pending.props.status).toBe("pending")
     expect(pending.props.checksum).toBeNull()
-    expect(pending.props.profile).toBe("feedback-attachment")
+    expect(pending.props.profile).toBe("multi")
     expect(pending.props.storageKey).toBe(`attachments/${pending.props.id}`)
   })
 
@@ -53,7 +53,7 @@ describe("Attachment", () => {
       contentType: "application/pdf",
       sizeBytes: 1234,
       originalFilename: null,
-      profile: "feedback-attachment",
+      profile: "multi",
       visibility: "restricted",
       ownerUserId: "user-1",
     })
@@ -71,7 +71,7 @@ describe("Attachment", () => {
       contentType: "application/pdf",
       sizeBytes: 0,
       originalFilename: "relato.pdf",
-      profile: "feedback-attachment",
+      profile: "multi",
       visibility: "restricted",
       ownerUserId: "user-1",
     })

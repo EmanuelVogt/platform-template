@@ -1,3 +1,4 @@
+import { requiresPermissionFloor } from "../../../shared/kernel/access/permission.types"
 import {
   InvalidPermissionSetError,
   InvalidProfessionalScopeError,
@@ -35,7 +36,7 @@ export function assertProfileFloor(
   profile: AccessProfile,
   permissions: readonly PermissionKey[],
 ): void {
-  if (profile === "master" || profile === "professional") return
+  if (!requiresPermissionFloor(profile)) return
   if (permissions.some((key) => moduleOf(key) === profile)) return
   throw new InvalidPermissionSetError(
     `O perfil de acesso exige ao menos uma permissão do módulo "${profile}".`,
@@ -69,7 +70,7 @@ export function assertCanGrant(
 export async function resolveUserAccess(
   input: {
     accessProfile: AssignableAccessProfile
-    attendsGuests: boolean
+    servesClients: boolean
     permissions: readonly PermissionKey[]
     areaIds: readonly string[]
     serviceIds: readonly string[]
@@ -96,13 +97,13 @@ export async function resolveUserAccess(
 
 async function resolveAttendanceScope(
   input: {
-    attendsGuests: boolean
+    servesClients: boolean
     areaIds: readonly string[]
     serviceIds: readonly string[]
   },
   scope: ProfessionalScope,
 ): Promise<{ areaIds: string[]; serviceIds: string[] }> {
-  if (!input.attendsGuests) return { areaIds: [], serviceIds: [] }
+  if (!input.servesClients) return { areaIds: [], serviceIds: [] }
   if (input.areaIds.length === 0) {
     throw new InvalidProfessionalScopeError(
       "Selecione ao menos uma área de atuação.",

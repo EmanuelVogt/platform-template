@@ -1,0 +1,42 @@
+{
+  "paths": {
+    "/v1/attachments/uploads": {
+      "post": {
+        "operationId": "uploadAttachments",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "array",
+                    "items": { "type": "string", "format": "binary" }
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UploadAttachmentsResponseDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/attachments/{id}": {
+      "get": {
+        "operationId": "downloadAttachment",
+        "responses": {
+          "200": {}
+        }
+      }
+    }
+  }
+}

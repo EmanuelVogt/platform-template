@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "promote_threshold": 2,
+  "window_days": 45,
+  "quarantine_threshold": 2,
+  "next_id": 3,
+  "lessons": [
+    {
+      "id": "L-001",
+      "key": "spec_deviation::when a rename removes an enum value fix the test fixture that still uses the old value instead of widening production code to tolerate unknown values",
+      "text": "When a rename removes an enum value, fix the test fixture that still uses the old value instead of widening production code to tolerate unknown values",
+      "signal": "spec_deviation",
+      "scope": "attachment",
+      "status": "candidate",
+      "features": [
+        "v0-2-product-slots"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        ".specs/features/v0-2-product-slots/validation.md Fix 1 — apps/api/src/modules/attachment/api/controllers/download-attachment.controller.ts:56-58 (attachment)"
+      ],
+      "created": "2026-08-19T02:25:01Z",
+      "last_seen": "2026-08-19T02:25:01Z"
+    },
+    {
+      "id": "L-002",
+      "key": "ac_gap::when the spec requires an error naming a value assert the message with tothrow value not only the error class",
+      "text": "When the spec requires an error naming a value, assert the message with toThrow(/value/), not only the error class",
+      "signal": "ac_gap",
+      "scope": "tests",
+      "status": "candidate",
+      "features": [
+        "v0-2-product-slots"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        ".specs/features/v0-2-product-slots/validation.md Fix 2 — apps/api/src/modules/notification/infrastructure/channels/email.channel.spec.ts:157,169 (tests)"
+      ],
+      "created": "2026-08-19T02:25:04Z",
+      "last_seen": "2026-08-19T02:25:04Z"
+    }
+  ]
+}

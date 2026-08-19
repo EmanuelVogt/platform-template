@@ -247,7 +247,8 @@ Lock shape (final):
 
 - Template: `apps/api/drizzle/migrations/` = `0000_kernel_baseline.sql` (+ snapshot) and `0001_kernel_outbox_notify.sql`; journal rebuilt; `db:check:journal` unchanged. Kernel numbering continues `NNNN_kernel_<slug>`.
 - Entries ship **tables as TS** + `migrations/custom/*.sql`; the child generates (§ 5.2 step 6). Product migrations keep `1000_` prefix convention (documented).
-- v0.2 children: changelog v1.0.0 step — run `pnpm platform module adopt` for each module present; rename `idempotency_keys.user_id → actor_id` via a provided SQL snippet; nothing else re-runs.
+- v0.2 children: changelog v1.0.0 step — run `pnpm platform module adopt` for each module present; nothing else re-runs.
+- ~~rename `idempotency_keys.user_id → actor_id` via a provided SQL snippet~~ — **corrected during Execute (T22, wave 4).** No such column ever existed: `idempotency_keys` is keyed `(scope, key)` and the actor lives inside the composite `scope` text. Carry-forward note 5 predicted this at T4 and T22 confirmed it against the baseline SQL. **T25 must not put this rename in the v1.0.0 changelog.**
 
 ---
 

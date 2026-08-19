@@ -28,6 +28,7 @@ In v0.2 the template ships a base-set of business-facing modules (identity, audi
 | Rewriting already-applied migrations in existing children | never; baseline policy only affects new children and the catalog entries |
 | A package registry / npm distribution of modules | catalog entries are copied source, not dependencies (shadcn model) |
 | Web design system / UI kit | headless remains; only the web *structure* of a module entry is specified |
+| Test-harness refactor (shared `shared/test/**`, entry `testing/` barrels, test lint, CI workflow, 95% ratchet) | successor feature `test-suite-refactor` (AD-021), runs after T22; it takes over T26 (`testing.md` rewrite) — entries written in wave 3 are migrated there |
 
 ---
 

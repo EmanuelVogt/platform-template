@@ -50,8 +50,12 @@ export class DownloadAttachmentController {
       return
     }
 
+    // Nome de perfil removido/renomeado (ex.: migração 0005) pode sobreviver em
+    // anexo antigo que a migração não alcançou — trata como tipo livre em vez
+    // de estourar, já que "desconhecido" nunca deve ser servido inline.
     const forceDownload =
-      result.profile !== "legacy" && this.profiles[result.profile].accept === "any"
+      result.profile !== "legacy" &&
+      (!(result.profile in this.profiles) || this.profiles[result.profile].accept === "any")
 
     if (forceDownload) {
       res.setHeader("Content-Type", "application/octet-stream")

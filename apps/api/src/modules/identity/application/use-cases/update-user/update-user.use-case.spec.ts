@@ -5,6 +5,7 @@ import {
   ProfessionalHasCommitmentsError,
   UserNotFoundError,
 } from "../../../domain/errors"
+import { fakeRequestContext } from "../../request-context.fixture"
 
 import { UpdateUserUseCase } from "./update-user.use-case"
 
@@ -59,16 +60,14 @@ function makeDeps(over: Record<string, any> = {}) {
     replaceSchedulingAreas: jest.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => new Date("2026-06-12T12:00:00.000Z") }
-  const ctx = over.ctx ?? {
-    get: () => ({
+  const ctx = over.ctx ?? fakeRequestContext(() => ({
       correlationId: "c1",
       locale: "pt-BR",
       userId: "u-admin",
       ip: null,
       userAgent: null,
       access: { permissions: new Set<string>(), isMaster: true },
-    }),
-  }
+    }))
   const scope = over.scope ?? {
     assertValid: jest.fn().mockResolvedValue(undefined),
   }
@@ -159,9 +158,7 @@ describe("UpdateUserUseCase", () => {
         update: jest.fn(),
         replacePermissions: jest.fn(),
       },
-      ctx: {
-        get: () => ({ correlationId: "c1", locale: "pt-BR", userId: "u-target" }),
-      },
+      ctx: fakeRequestContext(() => ({ correlationId: "c1", locale: "pt-BR", userId: "u-target" })),
     })
     await expect(uc.execute(BASE_INPUT)).rejects.toThrow(ForbiddenError)
     expect(users.update).not.toHaveBeenCalled()
@@ -177,9 +174,7 @@ describe("UpdateUserUseCase", () => {
         update: jest.fn(),
         replacePermissions: jest.fn(),
       },
-      ctx: {
-        get: () => ({ correlationId: "c1", locale: "pt-BR", userId: "u-target" }),
-      },
+      ctx: fakeRequestContext(() => ({ correlationId: "c1", locale: "pt-BR", userId: "u-target" })),
     })
     await expect(
       uc.execute({
@@ -203,14 +198,12 @@ describe("UpdateUserUseCase", () => {
         replaceProfessionalServices: jest.fn().mockResolvedValue(undefined),
         replaceSchedulingAreas: jest.fn().mockResolvedValue(undefined),
       },
-      ctx: {
-        get: () => ({
+      ctx: fakeRequestContext(() => ({
           correlationId: "c1",
           locale: "pt-BR",
           userId: "u-target",
           access: { permissions: new Set<string>(), isMaster: true },
-        }),
-      },
+        })),
     })
     await uc.execute(BASE_INPUT)
     expect(users.update).toHaveBeenCalledTimes(1)

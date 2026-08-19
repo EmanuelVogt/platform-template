@@ -1,6 +1,7 @@
 import { User } from "../../../domain/entities/user.entity"
 import { InvalidAccessLinkError, WeakPasswordError } from "../../../domain/errors"
 import { makeIdentityConfig } from "../../../identity.config.fixture"
+import { fakeRequestContext } from "../../request-context.fixture"
 import { CreateSessionService } from "../../services/create-session.service"
 
 import { SetPasswordUseCase } from "./set-password.use-case"
@@ -53,8 +54,7 @@ function makeSessionService() {
     hashOf: jest.fn().mockReturnValue("hash-of-raw"),
   }
   const config = makeIdentityConfig()
-  const ctx = {
-    get: () => ({
+  const ctx = fakeRequestContext(() => ({
       ip: "1.2.3.4",
       userAgent: "jest",
       correlationId: "c1",
@@ -63,9 +63,8 @@ function makeSessionService() {
       sessionId: null,
       traceId: null,
       spanId: null,
-    }),
-  }
-  return new CreateSessionService(sessions as never, devices as never, tokens as never, config, ctx as never)
+    }))
+  return new CreateSessionService(sessions as never, devices as never, tokens as never, config, ctx)
 }
 
 function makeDeps(over: Record<string, any> = {}) {
@@ -86,8 +85,7 @@ function makeDeps(over: Record<string, any> = {}) {
   const outbox = over.outbox ?? { publish: jest.fn().mockResolvedValue(undefined) }
   const authEvents = over.authEvents ?? { recordInTx: jest.fn().mockResolvedValue(undefined) }
   const clock = over.clock ?? { now: () => new Date("2026-06-08T00:00:00.000Z") }
-  const ctx = over.ctx ?? {
-    get: () => ({
+  const ctx = over.ctx ?? fakeRequestContext(() => ({
       ip: null,
       userAgent: null,
       correlationId: "c1",
@@ -96,8 +94,7 @@ function makeDeps(over: Record<string, any> = {}) {
       sessionId: null,
       traceId: null,
       spanId: null,
-    }),
-  }
+    }))
   const config = over.config ?? makeIdentityConfig()
   const attachments = over.attachments ?? { exists: jest.fn().mockResolvedValue(false) }
   const createSession = over.createSession ?? makeSessionService()

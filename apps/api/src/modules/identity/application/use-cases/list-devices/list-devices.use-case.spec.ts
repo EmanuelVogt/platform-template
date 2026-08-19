@@ -1,6 +1,7 @@
+import { fakeRequestContext } from "../../request-context.fixture"
+
 import { ListDevicesUseCase } from "./list-devices.use-case"
 
-import type { RequestContext } from "../../../../../shared/kernel/context/request-context"
 import type { DeviceRepository } from "../../../domain/ports/device.repository"
 import type { IdentityConfig } from "../../../identity.config"
 
@@ -26,9 +27,7 @@ describe("ListDevicesUseCase", () => {
       },
     ])
     const devices = { listActiveByUser } as unknown as DeviceRepository
-    const ctx = {
-      get: () => ({ userId: "u-1", sessionId: "s-1", deviceId: "d-1" }),
-    } as unknown as RequestContext
+    const ctx = fakeRequestContext(() => ({ userId: "u-1", sessionId: "s-1", deviceId: "d-1" }))
     const clock = { now: () => now }
     const config = {
       SESSION_IDLE_TTL_SECONDS: 100,

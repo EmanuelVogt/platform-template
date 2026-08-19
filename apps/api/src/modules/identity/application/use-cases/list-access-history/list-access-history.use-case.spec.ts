@@ -1,3 +1,5 @@
+import { fakeRequestContext } from "../../request-context.fixture"
+
 import { ListAccessHistoryUseCase } from "./list-access-history.use-case"
 import { ACCESS_HISTORY_EVENT_TYPES } from "./types"
 
@@ -5,7 +7,7 @@ import type { RequestContext } from "../../../../../shared/kernel/context/reques
 import type { AuthEventRepository } from "../../../domain/ports/auth-event.repository"
 
 function makeCtx(userId: string | null): RequestContext {
-  return { get: () => ({ userId, sessionId: userId ? "sess-1" : null }) } as unknown as RequestContext
+  return fakeRequestContext(() => ({ userId, sessionId: userId ? "sess-1" : null }))
 }
 
 describe("ListAccessHistoryUseCase", () => {

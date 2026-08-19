@@ -7,11 +7,11 @@ import {
 } from "../domain/errors"
 import { moduleOf, requiresOf } from "../domain/permissions/permission-catalog"
 
+import type { IdentityAccess } from "./identity-context"
 import type {
   AccessProfile,
   AssignableAccessProfile,
 } from "../../../shared/kernel/access/permission.types"
-import type { RequestAccess } from "../../../shared/kernel/context/request-context"
 import type { PermissionKey } from "../domain/permissions/permission-catalog"
 import type { ProfessionalScope } from "../domain/ports/professional-scope.port"
 
@@ -51,7 +51,7 @@ export type ResolvedUserAccess = {
 }
 
 export type GrantContext = {
-  actor: RequestAccess
+  actor: IdentityAccess
   current: readonly PermissionKey[]
 }
 

@@ -31,6 +31,7 @@ import {
 import { IDENTITY_CONFIG, type IdentityConfig } from "../../../identity.config"
 import { resolveUserAccess } from "../../access-policy"
 import { authEventOf } from "../../auth-event.factory"
+import { IDENTITY_ACCESS } from "../../identity-context"
 
 import type { CreateUserInput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
@@ -54,13 +55,15 @@ export class CreateUserUseCase implements UseCaseContract<CreateUserInput, void>
   @Traced({ name: "identity.createUser" })
   async execute(input: CreateUserInput): Promise<void> {
     const store = this.ctx.get()
-    if (store.access === null) {
-      // Fail-closed: a rota exige admin.users.create, então o PermissionsGuard
-      // sempre populou o access; null aqui é erro de configuração, não caso de uso.
+    const actorId = this.ctx.getActor()?.id ?? null
+    const actorAccess = this.ctx.getExtension(IDENTITY_ACCESS)
+    if (actorAccess === undefined) {
+      // Fail-closed: a rota exige admin.users.create, então o AuthMiddleware
+      // sempre publicou o access; ausente aqui é erro de configuração, não caso de uso.
       throw new ForbiddenError()
     }
     const access = await resolveUserAccess(input, this.scope, {
-      actor: store.access,
+      actor: actorAccess,
       current: [],
     })
 
@@ -79,7 +82,7 @@ export class CreateUserUseCase implements UseCaseContract<CreateUserInput, void>
       email,
       accessProfile: input.accessProfile,
       servesClients: input.servesClients,
-      createdByUserId: store.userId ?? null,
+      createdByUserId: actorId,
     })
     await this.users.insert(user)
     await this.users.replacePermissions(user.props.id, access.permissions)
@@ -117,7 +120,7 @@ export class CreateUserUseCase implements UseCaseContract<CreateUserInput, void>
     await this.authEvents.recordInTx(
       authEventOf(store, {
         userId: user.props.id,
-        actorUserId: store.userId,
+        actorUserId: actorId,
         eventType: "access_link_sent",
       }),
     )

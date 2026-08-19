@@ -23,6 +23,7 @@ import {
   type UserRepository,
 } from "../../../domain/ports/user.repository"
 import { resolveUserAccess } from "../../access-policy"
+import { IDENTITY_ACCESS } from "../../identity-context"
 
 import type { UpdateUserInput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
@@ -52,8 +53,7 @@ export class UpdateUserUseCase
       throw new ForbiddenError("Não é possível editar o usuário master.")
     }
 
-    const store = this.ctx.get()
-    if (user.props.id === store.userId) {
+    if (user.props.id === this.ctx.getActor()?.id) {
       const sameProfile = user.props.accessProfile === input.accessProfile
       const sameSet =
         current.length === input.permissions.length &&
@@ -66,7 +66,8 @@ export class UpdateUserUseCase
       }
     }
 
-    if (store.access === null) {
+    const actorAccess = this.ctx.getExtension(IDENTITY_ACCESS)
+    if (actorAccess === undefined) {
       throw new ForbiddenError()
     }
     await this.assertCanStopAttending(user.props.id, {
@@ -74,7 +75,7 @@ export class UpdateUserUseCase
       now: input.servesClients,
     })
     const access = await resolveUserAccess(input, this.scope, {
-      actor: store.access,
+      actor: actorAccess,
       current,
     })
 

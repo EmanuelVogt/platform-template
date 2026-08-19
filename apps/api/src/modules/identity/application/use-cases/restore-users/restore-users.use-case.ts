@@ -39,7 +39,7 @@ export class RestoreUsersUseCase
       await this.authEvents.recordInTx(
         authEventOf(store, {
           userId: user.props.id,
-          actorUserId: store.userId,
+          actorUserId: this.ctx.getActor()?.id ?? null,
           eventType: "user_restored",
         }),
       )

@@ -1,4 +1,5 @@
 import { InvalidAccessLinkError } from "../../../domain/errors"
+import { fakeRequestContext } from "../../request-context.fixture"
 
 import { CancelAccessLinkUseCase } from "./cancel-access-link.use-case"
 
@@ -11,8 +12,7 @@ function makeDeps(over: Record<string, any> = {}) {
   const tokens = over.tokens ?? { hashOf: jest.fn().mockReturnValue("hash-of-raw") }
   const authEvents = over.authEvents ?? { recordInTx: jest.fn().mockResolvedValue(undefined) }
   const clock = over.clock ?? { now: () => NOW }
-  const ctx = over.ctx ?? {
-    get: () => ({
+  const ctx = over.ctx ?? fakeRequestContext(() => ({
       ip: "1.2.3.4",
       userAgent: "jest",
       correlationId: "c1",
@@ -21,8 +21,7 @@ function makeDeps(over: Record<string, any> = {}) {
       sessionId: null,
       traceId: null,
       spanId: null,
-    }),
-  }
+    }))
   const uc = new CancelAccessLinkUseCase(verificationTokens, tokens, authEvents, clock, ctx)
   return { uc, verificationTokens, tokens, authEvents }
 }

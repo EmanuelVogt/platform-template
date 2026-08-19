@@ -1,6 +1,7 @@
 import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.error"
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import { SessionNotFoundError } from "../../../domain/errors"
+import { fakeRequestContext } from "../../request-context.fixture"
 
 import { GetCurrentUserUseCase } from "./get-current-user.use-case"
 
@@ -39,14 +40,12 @@ function makeDeps(over: Record<string, any> = {}) {
       permissions: ["admin.users.read"],
     }),
   }
-  const ctx = over.ctx ?? {
-    get: () => ({
+  const ctx = over.ctx ?? fakeRequestContext(() => ({
       correlationId: "c1",
       locale: "pt-BR",
       userId: "u-1",
       sessionId: "s-1",
-    }),
-  }
+    }))
   const uc = new GetCurrentUserUseCase(users, ctx)
   return { uc, users }
 }
@@ -55,7 +54,7 @@ function makeDeps(over: Record<string, any> = {}) {
 describe("GetCurrentUserUseCase", () => {
   it("sem auth lança ForbiddenError", async () => {
     const t = makeDeps({
-      ctx: { get: () => ({ correlationId: "c1", locale: "pt-BR", userId: null, sessionId: null }) },
+      ctx: fakeRequestContext(() => ({ correlationId: "c1", locale: "pt-BR", userId: null, sessionId: null })),
     })
     await expect(t.uc.execute({})).rejects.toBeInstanceOf(ForbiddenError)
   })

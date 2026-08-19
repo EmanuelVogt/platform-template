@@ -1,6 +1,7 @@
 import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.error"
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import { UserNotFoundError } from "../../../domain/errors"
+import { fakeRequestContext } from "../../request-context.fixture"
 
 import { DeleteUserUseCase } from "./delete-user.use-case"
 
@@ -43,15 +44,13 @@ function makeDeps(over: Record<string, any> = {}) {
     recordInTx: jest.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => new Date("2026-06-10T12:00:00.000Z") }
-  const ctx = over.ctx ?? {
-    get: () => ({
+  const ctx = over.ctx ?? fakeRequestContext(() => ({
       correlationId: "c1",
       locale: "pt-BR",
       userId: "u-admin",
       ip: "1.2.3.4",
       userAgent: "jest",
-    }),
-  }
+    }))
   const uc = new DeleteUserUseCase(users, sessions, authEvents, clock, ctx)
   return { uc, users, sessions, authEvents, clock, ctx }
 }
@@ -101,15 +100,13 @@ describe("DeleteUserUseCase", () => {
 
   it("recusa excluir a própria conta (actor == alvo)", async () => {
     const { uc, users } = makeDeps({
-      ctx: {
-        get: () => ({
+      ctx: fakeRequestContext(() => ({
           correlationId: "c1",
           locale: "pt-BR",
           userId: "u-target",
           ip: null,
           userAgent: null,
-        }),
-      },
+        })),
     })
     await expect(uc.execute({ userId: "u-target" })).rejects.toThrow(ForbiddenError)
     expect(users.update).not.toHaveBeenCalled()

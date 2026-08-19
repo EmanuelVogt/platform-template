@@ -27,8 +27,8 @@ export const RateLimit = (config: RateLimitConfig) =>
   SetMetadata(RATE_LIMIT_KEY, config)
 
 /**
- * Guard de rate-limit por IP+rota. Roda ANTES do AuthGuard e do argon2 —
- * bloqueio responde 429 sem custo de hash. Eixo por email-alvo fica no use-case.
+ * Guard de rate-limit por IP+rota. Roda antes do argon2 — bloqueio responde 429
+ * sem custo de hash. Eixo por email-alvo fica no use-case.
  */
 @Injectable()
 export class RateLimitGuard implements CanActivate {

@@ -1,5 +1,6 @@
 import { AccessLinkNotResendableError } from "../../../domain/errors"
 import { makeIdentityConfig } from "../../../identity.config.fixture"
+import { fakeRequestContext } from "../../request-context.fixture"
 
 import { ResendAccessLinkUseCase } from "./resend-access-link.use-case"
 
@@ -17,7 +18,7 @@ function makeDeps(over: Record<string, any> = {}) {
   const outbox = over.outbox ?? { publish: jest.fn().mockResolvedValue(undefined) }
   const authEvents = over.authEvents ?? { recordInTx: jest.fn().mockResolvedValue(undefined) }
   const clock = over.clock ?? { now: () => NOW }
-  const ctx = over.ctx ?? { get: () => ({ ip: null, userAgent: null, correlationId: "c1", locale: "pt-BR", userId: "master-1", sessionId: null, traceId: null, spanId: null }) }
+  const ctx = over.ctx ?? fakeRequestContext(() => ({ ip: null, userAgent: null, correlationId: "c1", locale: "pt-BR", userId: "master-1", sessionId: null, traceId: null, spanId: null }))
   const config = over.config ?? makeIdentityConfig()
   const uc = new ResendAccessLinkUseCase(users, verificationTokens, tokens, outbox, authEvents, clock, ctx, config)
   return { uc, users, verificationTokens, tokens, outbox, authEvents }

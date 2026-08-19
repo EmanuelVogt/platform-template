@@ -1,5 +1,6 @@
 import { User, type UserProps } from "../../domain/entities/user.entity"
 import { makeIdentityConfig } from "../../identity.config.fixture"
+import { fakeRequestContext } from "../request-context.fixture"
 
 import { CreateSessionService } from "./create-session.service"
 
@@ -48,23 +49,21 @@ function makeDeps(over: { sessionCount?: number } = {}) {
     generate: jest.fn().mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
     hashOf: jest.fn().mockReturnValue("cookie-hash"),
   }
-  const ctx = {
-    get: () => ({
+  const ctx = fakeRequestContext(() => ({
       ip: "1.2.3.4",
       userAgent: "jest",
       correlationId: "c1",
       locale: "pt-BR",
       userId: null,
       sessionId: null,
-    }),
-  }
+    }))
   const config = makeIdentityConfig({ SESSION_MAX_PER_USER: MAX_SESSIONS })
   const service = new CreateSessionService(
     sessions as never,
     devices as never,
     tokens as never,
     config,
-    ctx as never
+    ctx
   )
   return { service, sessions }
 }

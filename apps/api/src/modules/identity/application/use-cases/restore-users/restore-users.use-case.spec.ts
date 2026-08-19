@@ -1,4 +1,5 @@
 import { User, type UserProps } from "../../../domain/entities/user.entity"
+import { fakeRequestContext } from "../../request-context.fixture"
 
 import { RestoreUsersUseCase } from "./restore-users.use-case"
 
@@ -35,16 +36,14 @@ function makeDeps(found: User[]) {
     update: jest.fn().mockResolvedValue(undefined),
   }
   const authEvents = { recordInTx: jest.fn().mockResolvedValue(undefined) }
-  const ctx = {
-    get: () => ({
+  const ctx = fakeRequestContext(() => ({
       correlationId: "c1",
       locale: "pt-BR",
       userId: "u-admin",
       ip: "1.2.3.4",
       userAgent: "jest",
-    }),
-  }
-  const uc = new RestoreUsersUseCase(users as never, authEvents as never, ctx as never)
+    }))
+  const uc = new RestoreUsersUseCase(users as never, authEvents as never, ctx)
   return { uc, users, authEvents }
 }
 

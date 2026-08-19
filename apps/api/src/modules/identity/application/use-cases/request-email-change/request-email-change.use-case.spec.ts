@@ -8,6 +8,7 @@ import {
   RateLimitedError,
 } from "../../../domain/errors"
 import { makeIdentityConfig } from "../../../identity.config.fixture"
+import { fakeRequestContext } from "../../request-context.fixture"
 
 import { RequestEmailChangeUseCase } from "./request-email-change.use-case"
 
@@ -76,7 +77,7 @@ function makeDeps(over: Record<string, any> = {}) {
     recordInTx: jest.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => NOW }
-  const ctx = over.ctx ?? { get: () => authedStore }
+  const ctx = over.ctx ?? fakeRequestContext(() => authedStore)
   const config = makeIdentityConfig(over.config ?? {})
 
   const uc = new RequestEmailChangeUseCase(
@@ -147,16 +148,14 @@ describe("RequestEmailChangeUseCase", () => {
   describe("ForbiddenError — contexto não autenticado", () => {
     it("lança ForbiddenError quando não há userId no contexto", async () => {
       const t = makeDeps({
-        ctx: {
-          get: () => ({
+        ctx: fakeRequestContext(() => ({
             ip: "1.2.3.4",
             userAgent: "jest",
             correlationId: "c1",
             locale: "pt-BR",
             userId: null,
             sessionId: null,
-          }),
-        },
+          })),
       })
       await expect(
         t.uc.execute({ currentPassword: "senha-ok", newEmail: "novo@example.com" }),
@@ -371,7 +370,7 @@ describe("RequestEmailChangeUseCase", () => {
   describe("asserts negativos — nenhuma escrita em falha", () => {
     it("ForbiddenError (sem userId): nenhuma porta de escrita chamada", async () => {
       const t = makeDeps({
-        ctx: { get: () => ({ ip: "x", userAgent: "x", correlationId: "x", locale: "pt-BR", userId: null, sessionId: null }) },
+        ctx: fakeRequestContext(() => ({ ip: "x", userAgent: "x", correlationId: "x", locale: "pt-BR", userId: null, sessionId: null })),
       })
       await expect(t.uc.execute({ currentPassword: "x", newEmail: "x@x.com" })).rejects.toThrow()
       expect(t.users.update).not.toHaveBeenCalled()

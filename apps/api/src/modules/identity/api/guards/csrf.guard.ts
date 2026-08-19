@@ -75,7 +75,7 @@ export class CsrfGuard implements CanActivate {
   }
 
   // Só roda em SameSite=none: o token é HMAC sobre o sessionId (PK da sessão)
-  // resolvido pelo AuthGuard (req.sessionId), o MESMO valor que o emissor
+  // resolvido pelo AuthMiddleware (req.sessionId), o MESMO valor que o emissor
   // assina. Só se aplica a mutações autenticadas — rotas @Public pré-login não
   // têm sessionId e não carregam token CSRF ainda.
   private assertDoubleSubmit(req: Request): void {

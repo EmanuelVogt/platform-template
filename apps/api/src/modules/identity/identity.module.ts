@@ -1,16 +1,20 @@
 import { Module } from "@nestjs/common"
 import { APP_GUARD } from "@nestjs/core"
 
+import { ACCESS_POLICY } from "../../shared/kernel/access/access-policy.port"
 import { AttachmentModule } from "../attachment/attachment.module"
 
+import { IdentityAccessPolicy } from "./api/access/identity-access.policy"
 import { CONTROLLERS } from "./api/controllers"
 import { ProfessionalDirectoryFacade } from "./api/facades/professional-directory.facade"
 import { UsageAccessFacade } from "./api/facades/usage-access.facade"
 import { UserDirectoryFacade } from "./api/facades/user-directory.facade"
-import { AuthGuard } from "./api/guards/auth.guard"
 import { CsrfGuard } from "./api/guards/csrf.guard"
-import { PermissionsGuard } from "./api/guards/permissions.guard"
 import { RateLimitGuard } from "./api/guards/rate-limit.guard"
+import {
+  AUTH_MIDDLEWARE_ROUTE,
+  AuthMiddleware,
+} from "./api/middleware/auth.middleware"
 import { PurgeAuthEventsJob } from "./application/jobs/purge-auth-events.job"
 import { RevertExpiredEmailChangesJob } from "./application/jobs/revert-expired-email-changes.job"
 import { CreateSessionService } from "./application/services/create-session.service"
@@ -85,7 +89,13 @@ import { DrizzleVerificationTokenRepository } from "./infrastructure/repositorie
 import type { ProfessionalCommitments } from "./domain/ports/professional-commitments.port"
 import type { ProfessionalScope } from "./domain/ports/professional-scope.port"
 import type { IdentityConfig } from "./identity.config"
-import type { DynamicModule, Provider, Type } from "@nestjs/common"
+import type {
+  DynamicModule,
+  MiddlewareConsumer,
+  NestModule,
+  Provider,
+  Type,
+} from "@nestjs/common"
 
 // Ports → impls. Os adapters sem dependência (breach/token/strength) não têm
 // @Injectable; useClass instancia direto. Argon2 e HMAC-CSRF recebem a config
@@ -198,7 +208,11 @@ export interface IdentityProfessionalSlot {
 
 // SharedKernelModule é @Global — não reimportar Transactional/Context/Outbox/Clock aqui.
 @Module({})
-export class IdentityModule {
+export class IdentityModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(AuthMiddleware).forRoutes(AUTH_MIDDLEWARE_ROUTE)
+  }
+
   static forRoot(
     options: { professional?: IdentityProfessionalSlot } = {}
   ): DynamicModule {
@@ -240,16 +254,18 @@ export class IdentityModule {
         CreateSessionService,
         RevertExpiredEmailChangesJob,
         PurgeAuthEventsJob,
-        // AuthGuard é provider próprio (exportável) e também roda como guard global.
-        AuthGuard,
-        // Ordem dos guards globais: RateLimit (barato, antes do argon2) → Auth → Csrf → Permissions.
-        // Permissions por último: depende do userId que o AuthGuard põe no RequestContext.
+        AuthMiddleware,
+        // Identidade é middleware, não guard: o AccessGuard global do kernel vem
+        // do SharedKernelModule (importado antes) e rodaria antes de qualquer
+        // guard registrado aqui. Middleware roda antes de todos eles.
+        { provide: ACCESS_POLICY, useClass: IdentityAccessPolicy },
         { provide: APP_GUARD, useClass: RateLimitGuard },
-        { provide: APP_GUARD, useExisting: AuthGuard },
         { provide: APP_GUARD, useClass: CsrfGuard },
-        { provide: APP_GUARD, useClass: PermissionsGuard },
       ],
       exports: [
+        // O AccessGuard vive no SharedKernelModule: a policy precisa sair daqui
+        // (módulo global) para o injector dele enxergar o token.
+        ACCESS_POLICY,
         ProfessionalDirectoryFacade,
         UsageAccessFacade,
         UserDirectoryFacade,

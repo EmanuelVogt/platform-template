@@ -1,5 +1,6 @@
 import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.error"
 import { User, type UserProps } from "../../../domain/entities/user.entity"
+import { fakeRequestContext } from "../../request-context.fixture"
 
 import { UploadAvatarUseCase } from "./upload-avatar.use-case"
 
@@ -35,16 +36,14 @@ function makeUser(over: Partial<UserProps> = {}): User {
 function makeCtx(over: { userId?: string | null; sessionId?: string | null } = {}) {
   const userId = "userId" in over ? over.userId : "u-1"
   const sessionId = "sessionId" in over ? over.sessionId : "sess-1"
-  return {
-    get: () => ({
+  return fakeRequestContext(() => ({
       ip: "1.2.3.4",
       userAgent: "jest",
       correlationId: "c1",
       locale: "pt-BR",
       userId,
       sessionId,
-    }),
-  }
+    }))
 }
 
 function makeDeps(over: Record<string, any> = {}) {

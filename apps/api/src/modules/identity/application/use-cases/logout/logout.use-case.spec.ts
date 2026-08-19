@@ -1,4 +1,5 @@
 import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.error"
+import { fakeRequestContext } from "../../request-context.fixture"
 
 import { LogoutUseCase } from "./logout.use-case"
 
@@ -6,16 +7,14 @@ import { LogoutUseCase } from "./logout.use-case"
 function makeDeps(ctxStore: Record<string, any>) {
   const sessions = { deleteById: jest.fn().mockResolvedValue(1) }
   const authEvents = { recordInTx: jest.fn().mockResolvedValue(undefined) }
-  const ctx = {
-    get: () => ({
+  const ctx = fakeRequestContext(() => ({
       ip: null,
       userAgent: null,
       correlationId: "c1",
       locale: "pt-BR",
       ...ctxStore,
-    }),
-  }
-  const uc = new LogoutUseCase(sessions as never, authEvents as never, ctx as never)
+    }))
+  const uc = new LogoutUseCase(sessions as never, authEvents as never, ctx)
   return { uc, sessions, authEvents }
 }
 

@@ -1,6 +1,7 @@
 import { User } from "../../../domain/entities/user.entity"
 import { InvalidResetTokenError, WeakPasswordError } from "../../../domain/errors"
 import { makeIdentityConfig } from "../../../identity.config.fixture"
+import { fakeRequestContext } from "../../request-context.fixture"
 
 import { ResetPasswordUseCase } from "./reset-password.use-case"
 
@@ -53,16 +54,14 @@ function makeDeps(over: Record<string, any> = {}) {
     recordInTx: jest.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => new Date("2026-05-30T00:00:00.000Z") }
-  const ctx = over.ctx ?? {
-    get: () => ({
+  const ctx = over.ctx ?? fakeRequestContext(() => ({
       ip: null,
       userAgent: null,
       correlationId: "c1",
       locale: "pt-BR",
       userId: null,
       sessionId: null,
-    }),
-  }
+    }))
   const config = over.config ?? makeIdentityConfig()
   const uc = new ResetPasswordUseCase(
     verificationTokens,
@@ -199,16 +198,14 @@ describe("ResetPasswordUseCase", () => {
 
   it("notificação inclui locale correto do contexto de requisição", async () => {
     const t = makeDeps({
-      ctx: {
-        get: () => ({
+      ctx: fakeRequestContext(() => ({
           ip: null,
           userAgent: null,
           correlationId: "c2",
           locale: "en-US",
           userId: null,
           sessionId: null,
-        }),
-      },
+        })),
     })
     await t.uc.execute({ token: "tok", password: "nova-senha-forte-1" })
     expect(t.outbox.publish).toHaveBeenCalledWith(

@@ -1,14 +1,13 @@
 import { CannotRevokeCurrentDeviceError } from "../../../domain/errors"
+import { fakeRequestContext } from "../../request-context.fixture"
 
 import { RevokeDeviceUseCase } from "./revoke-device.use-case"
 
-import type { RequestContext } from "../../../../../shared/kernel/context/request-context"
 import type { AuthEventRepository } from "../../../domain/ports/auth-event.repository"
 import type { DeviceRepository } from "../../../domain/ports/device.repository"
 
 const makeCtx = (deviceId: string | null) =>
-  ({
-    get: () => ({
+  fakeRequestContext(() => ({
       userId: "u-1",
       sessionId: "s-1",
       deviceId,
@@ -18,8 +17,7 @@ const makeCtx = (deviceId: string | null) =>
       traceId: null,
       spanId: null,
       locale: "pt-BR",
-    }),
-  }) as unknown as RequestContext
+    }))
 
 const makeOutbox = () => ({ publish: jest.fn().mockResolvedValue(undefined) })
 

@@ -21,7 +21,7 @@ const allowAll = {
   consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
 }
 
-describe("authz — PermissionsGuard + validações (e2e)", () => {
+describe("authz — AuthMiddleware + AccessGuard + validações (e2e)", () => {
   let app: INestApplication
   let pool: Pool
   let masterCookie: string[]
@@ -103,6 +103,18 @@ describe("authz — PermissionsGuard + validações (e2e)", () => {
     await request(app.getHttpServer())
       .get("/v1/admin/users")
       .set("Cookie", readerCookie)
+      .expect(200)
+  })
+
+  it("anônimo recebe 401 em GET /v1/admin/users, não 403", async () => {
+    await request(app.getHttpServer()).get("/v1/admin/users").expect(401)
+  })
+
+  it("rota self-service exige sessão mas nenhuma permissão", async () => {
+    await request(app.getHttpServer()).get("/v1/auth/session").expect(401)
+    await request(app.getHttpServer())
+      .get("/v1/auth/session")
+      .set("Cookie", nopermCookie)
       .expect(200)
   })
 

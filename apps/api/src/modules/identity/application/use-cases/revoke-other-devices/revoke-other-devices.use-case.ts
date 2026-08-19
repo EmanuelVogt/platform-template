@@ -36,7 +36,10 @@ export class RevokeOtherDevicesUseCase
     // deviceId pode ser null (sessão órfã, D1): o repo trata apagando todos.
     await this.devices.deleteOthers(ctx.userId, ctx.deviceId)
     await this.authEvents.recordInTx(
-      authEventOf(ctx, { userId: ctx.userId, eventType: "sessions_revoked_all" })
+      authEventOf(this.ctx.get(), {
+        userId: ctx.userId,
+        eventType: "sessions_revoked_all",
+      })
     )
   }
 }

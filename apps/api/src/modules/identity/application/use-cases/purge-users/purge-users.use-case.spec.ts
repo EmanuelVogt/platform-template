@@ -1,5 +1,6 @@
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import { UserNotInTrashError } from "../../../domain/errors"
+import { fakeRequestContext } from "../../request-context.fixture"
 
 import { PurgeUsersUseCase } from "./purge-users.use-case"
 
@@ -37,20 +38,18 @@ function makeDeps(found: User[]) {
   }
   const authEvents = { recordInTx: jest.fn().mockResolvedValue(undefined) }
   const auditTrail = { purgeEntities: jest.fn().mockResolvedValue(0) }
-  const ctx = {
-    get: () => ({
+  const ctx = fakeRequestContext(() => ({
       correlationId: "c1",
       locale: "pt-BR",
       userId: "u-admin",
       ip: "1.2.3.4",
       userAgent: "jest",
-    }),
-  }
+    }))
   const uc = new PurgeUsersUseCase(
     users as never,
     authEvents as never,
     auditTrail as never,
-    ctx as never,
+    ctx,
   )
   return { uc, users, authEvents, auditTrail }
 }

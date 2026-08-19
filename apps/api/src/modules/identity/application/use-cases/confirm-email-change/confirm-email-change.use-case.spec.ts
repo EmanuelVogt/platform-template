@@ -4,6 +4,7 @@ import {
   InvalidEmailChangeTokenError,
 } from "../../../domain/errors"
 import { makeIdentityConfig } from "../../../identity.config.fixture"
+import { fakeRequestContext } from "../../request-context.fixture"
 import { CreateSessionService } from "../../services/create-session.service"
 
 import { ConfirmEmailChangeUseCase } from "./confirm-email-change.use-case"
@@ -57,16 +58,14 @@ function makeDeps(over: Record<string, any> = {}) {
     recordInTx: jest.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => NOW }
-  const ctx = over.ctx ?? {
-    get: () => ({
+  const ctx = over.ctx ?? fakeRequestContext(() => ({
       ip: "1.2.3.4",
       userAgent: "jest",
       correlationId: "c1",
       locale: "pt-BR",
       userId: null,
       sessionId: null,
-    }),
-  }
+    }))
   const sessions = over.sessions ?? {
     create: jest.fn().mockResolvedValue(undefined),
     countByUser: jest.fn().mockResolvedValue(1),

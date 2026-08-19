@@ -1,6 +1,7 @@
 import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.error"
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import { InvalidBirthDateError } from "../../../domain/errors"
+import { fakeRequestContext } from "../../request-context.fixture"
 
 import { UpdateMyProfileUseCase } from "./update-my-profile.use-case"
 
@@ -39,16 +40,14 @@ function makeDeps(over: Record<string, any> = {}) {
     update: jest.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => NOW }
-  const ctx = over.ctx ?? {
-    get: () => ({
+  const ctx = over.ctx ?? fakeRequestContext(() => ({
       userId: "u-1",
       sessionId: "s-1",
       ip: "1.2.3.4",
       userAgent: "jest",
       correlationId: "c1",
       locale: "pt-BR",
-    }),
-  }
+    }))
   const uc = new UpdateMyProfileUseCase(users, clock, ctx)
   return { uc, users, clock, ctx }
 }
@@ -86,16 +85,14 @@ describe("UpdateMyProfileUseCase", () => {
 
   it("ctx sem userId lança ForbiddenError e NÃO chama users.findById nem users.update", async () => {
     const t = makeDeps({
-      ctx: {
-        get: () => ({
+      ctx: fakeRequestContext(() => ({
           userId: null,
           sessionId: null,
           ip: null,
           userAgent: null,
           correlationId: "c1",
           locale: "pt-BR",
-        }),
-      },
+        })),
     })
     await expect(t.uc.execute({ name: "Ana" })).rejects.toBeInstanceOf(ForbiddenError)
     expect(t.users.findById).not.toHaveBeenCalled()
@@ -104,16 +101,14 @@ describe("UpdateMyProfileUseCase", () => {
 
   it("ctx sem sessionId lança ForbiddenError e NÃO chama users.findById nem users.update", async () => {
     const t = makeDeps({
-      ctx: {
-        get: () => ({
+      ctx: fakeRequestContext(() => ({
           userId: "u-1",
           sessionId: null,
           ip: null,
           userAgent: null,
           correlationId: "c1",
           locale: "pt-BR",
-        }),
-      },
+        })),
     })
     await expect(t.uc.execute({ name: "Ana" })).rejects.toBeInstanceOf(ForbiddenError)
     expect(t.users.findById).not.toHaveBeenCalled()
@@ -170,7 +165,7 @@ describe("UpdateMyProfileUseCase", () => {
   it("ctx.get() lança → erro propaga antes de findById ou update serem chamados", async () => {
     const ctxErr = new Error("RequestContext acessado fora de um escopo de request")
     const t = makeDeps({
-      ctx: { get: () => { throw ctxErr } },
+      ctx: fakeRequestContext(() => { throw ctxErr }),
     })
     await expect(t.uc.execute({ name: "Ana" })).rejects.toThrow(ctxErr)
     expect(t.users.findById).not.toHaveBeenCalled()

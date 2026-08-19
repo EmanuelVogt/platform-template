@@ -38,6 +38,7 @@ export class DeleteUserUseCase implements UseCaseContract<DeleteUserInput, void>
   @Traced({ name: "identity.deleteUser" })
   async execute(input: DeleteUserInput): Promise<void> {
     const store = this.ctx.get()
+    const actorId = this.ctx.getActor()?.id ?? null
     const user = await this.users.findById(input.userId)
     if (!user || user.isDeleted()) {
       throw new UserNotFoundError()
@@ -45,16 +46,16 @@ export class DeleteUserUseCase implements UseCaseContract<DeleteUserInput, void>
     if (user.isMaster()) {
       throw new ForbiddenError("Não é possível excluir o usuário master.")
     }
-    if (user.props.id === store.userId) {
+    if (user.props.id === actorId) {
       throw new ForbiddenError("Não é possível excluir a própria conta.")
     }
     await this.users.update(user.delete(this.clock.now()))
-    // Revoga as sessões do excluído: o próximo request cai no AuthGuard (401).
+    // Revoga as sessões do excluído: o próximo request segue anônimo (401).
     await this.sessions.deleteAllForUser(user.props.id)
     await this.authEvents.recordInTx(
       authEventOf(store, {
         userId: user.props.id,
-        actorUserId: store.userId,
+        actorUserId: actorId,
         eventType: "user_deleted",
       }),
     )

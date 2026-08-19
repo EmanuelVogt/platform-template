@@ -41,7 +41,7 @@ export class GetSessionController {
   ): Promise<{ user: UserView }> {
     const result = await this.getCurrentUser.execute({})
     // Bootstrap do SPA: reemite o cookie CSRF sob SameSite=none (sessionId vem
-    // do AuthGuard). Não altera o body — contrato preservado.
+    // do AuthMiddleware). Não altera o body — contrato preservado.
     const sessionId = (req as Request & { sessionId?: string }).sessionId
     if (this.config.COOKIE_SAMESITE === "none" && sessionId !== undefined) {
       setCsrfCookie(res, this.config, this.csrf.sign(sessionId))

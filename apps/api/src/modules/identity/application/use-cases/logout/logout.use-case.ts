@@ -34,7 +34,7 @@ export class LogoutUseCase implements UseCaseContract<LogoutInput, void> {
     // deleteById escopa por dono (anti-IDOR) — userId garante que é a própria.
     await this.sessions.deleteById(ctx.sessionId, ctx.userId)
     await this.authEvents.recordInTx(
-      authEventOf(ctx, { userId: ctx.userId, eventType: "logout" }),
+      authEventOf(this.ctx.get(), { userId: ctx.userId, eventType: "logout" }),
     )
   }
 }

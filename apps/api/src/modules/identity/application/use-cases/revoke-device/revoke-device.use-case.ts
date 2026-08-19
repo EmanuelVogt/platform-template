@@ -37,6 +37,7 @@ export class RevokeDeviceUseCase
   @Traced({ name: "identity.revokeDevice" })
   async execute(input: RevokeDeviceInput): Promise<void> {
     const ctx = requireAuth(this.ctx)
+    const store = this.ctx.get()
     // Logout encerra o device atual; revogar por aqui é só para os outros.
     if (input.deviceId === ctx.deviceId) {
       throw new CannotRevokeCurrentDeviceError()
@@ -45,7 +46,7 @@ export class RevokeDeviceUseCase
     const deleted = await this.devices.deleteById(input.deviceId, ctx.userId)
     if (deleted > 0) {
       await this.authEvents.recordInTx(
-        authEventOf(ctx, {
+        authEventOf(store, {
           userId: ctx.userId,
           eventType: "device_revoked",
           metadata: { deviceId: input.deviceId },
@@ -55,7 +56,7 @@ export class RevokeDeviceUseCase
         NotificationRequested.from({
           recipientId: ctx.userId,
           type: "device_revoked",
-          locale: ctx.locale,
+          locale: store.locale,
           data: { deviceId: input.deviceId },
         })
       )

@@ -37,7 +37,7 @@ import {
 } from "../../../domain/ports/user.repository"
 import { IDENTITY_CONFIG, type IdentityConfig } from "../../../identity.config"
 import { authEventOf } from "../../auth-event.factory"
-import { type AuthedStore, requireAuth } from "../../require-auth"
+import { type AuthedActor, requireAuth } from "../../require-auth"
 
 import type { ChangePasswordInput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
@@ -107,7 +107,7 @@ export class ChangePasswordUseCase
   private async applyChange(
     snapshot: User,
     newPasswordHash: string,
-    ctx: AuthedStore,
+    ctx: AuthedActor,
   ): Promise<void> {
     // Releitura com trava: a senha conferida fora da tx precisa ainda ser a
     // vigente; conta desligada/desativada/travada no intervalo é recusada.
@@ -127,14 +127,17 @@ export class ChangePasswordUseCase
     await this.sessions.deleteOthers(ctx.userId, ctx.sessionId)
 
     await this.authEvents.recordInTx(
-      authEventOf(ctx, { userId: ctx.userId, eventType: "password_changed" }),
+      authEventOf(this.ctx.get(), {
+        userId: ctx.userId,
+        eventType: "password_changed",
+      }),
     )
 
     await this.outbox.publish(
       NotificationRequested.from({
         recipientId: ctx.userId,
         type: "password_changed",
-        locale: ctx.locale,
+        locale: this.ctx.get().locale,
         data: { email: user.props.email, at: this.clock.now().toISOString() },
       }),
     )

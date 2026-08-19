@@ -2,6 +2,7 @@ import { Device } from "../../../domain/entities/device.entity"
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import { InvalidCredentialsError } from "../../../domain/errors"
 import { makeIdentityConfig } from "../../../identity.config.fixture"
+import { fakeRequestContext } from "../../request-context.fixture"
 import { CreateSessionService } from "../../services/create-session.service"
 
 import { LoginUseCase } from "./login.use-case"
@@ -68,16 +69,14 @@ function makeDeps(over: Record<string, any> = {}) {
     recordInTx: jest.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => new Date("2026-05-30T00:00:00.000Z") }
-  const ctx = over.ctx ?? {
-    get: () => ({
+  const ctx = over.ctx ?? fakeRequestContext(() => ({
       ip: "1.2.3.4",
       userAgent: "jest",
       correlationId: "c1",
       locale: "pt-BR",
       userId: null,
       sessionId: null,
-    }),
-  }
+    }))
   const outbox = over.outbox ?? { publish: jest.fn().mockResolvedValue(undefined) }
   const devices = over.devices ?? {
     findByUserAndCookieHash: jest.fn().mockResolvedValue(null),

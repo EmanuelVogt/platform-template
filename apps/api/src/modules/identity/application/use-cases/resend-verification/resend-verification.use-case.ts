@@ -84,7 +84,7 @@ export class ResendVerificationUseCase
       NotificationRequested.from({
         recipientId: user.props.id,
         type: "email_verification",
-        locale: ctx.locale,
+        locale: this.ctx.get().locale,
         data: { email: user.props.email, link, tokenExpiresAt: expiresAt.toISOString() },
       }),
     )

@@ -43,7 +43,7 @@ import {
 } from "../../../domain/ports/verification-token.repository"
 import { IDENTITY_CONFIG, type IdentityConfig } from "../../../identity.config"
 import { authEventOf } from "../../auth-event.factory"
-import { type AuthedStore, requireAuth } from "../../require-auth"
+import { requireAuth } from "../../require-auth"
 
 import type { RequestEmailChangeInput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
@@ -107,7 +107,7 @@ export class RequestEmailChangeUseCase
         : new EmailAlreadyInUseError()
     }
 
-    await this.applyInTx(user, newEmail, now, ctx)
+    await this.applyInTx(user, newEmail, now)
   }
 
   private assertNotInCooldown(last: Date | null, now: Date): void {
@@ -125,8 +125,7 @@ export class RequestEmailChangeUseCase
   private async applyInTx(
     snapshot: User,
     newEmail: string,
-    now: Date,
-    ctx: AuthedStore,
+    now: Date
   ): Promise<void> {
     // Releitura com trava: credencial velha em voo não pode iniciar a troca
     // depois de a senha ter sido trocada — a consequência seria entregar a
@@ -166,7 +165,7 @@ export class RequestEmailChangeUseCase
       NotificationRequested.from({
         recipientId: user.props.id,
         type: "email_change_requested",
-        locale: ctx.locale,
+        locale: this.ctx.get().locale,
         data: { email: newEmail, link, tokenExpiresAt: expiresAt.toISOString() },
       }),
     )
@@ -174,12 +173,12 @@ export class RequestEmailChangeUseCase
       NotificationRequested.from({
         recipientId: user.props.id,
         type: "email_change_notice",
-        locale: ctx.locale,
+        locale: this.ctx.get().locale,
         data: { email: user.props.email, at: now.toISOString() },
       }),
     )
     await this.authEvents.recordInTx(
-      authEventOf(ctx, {
+      authEventOf(this.ctx.get(), {
         userId: user.props.id,
         eventType: "email_change_requested",
       }),

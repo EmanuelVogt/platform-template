@@ -88,7 +88,7 @@ export class ResendAccessLinkUseCase implements UseCaseContract<ResendAccessLink
     await this.authEvents.recordInTx(
       authEventOf(store, {
         userId: input.userId,
-        actorUserId: store.userId,
+        actorUserId: this.ctx.getActor()?.id ?? null,
         eventType: "access_link_resent",
       }),
     )

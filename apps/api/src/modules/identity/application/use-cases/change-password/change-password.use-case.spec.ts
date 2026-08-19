@@ -5,6 +5,7 @@ import {
   WeakPasswordError,
 } from "../../../domain/errors"
 import { makeIdentityConfig } from "../../../identity.config.fixture"
+import { fakeRequestContext } from "../../request-context.fixture"
 
 import { ChangePasswordUseCase } from "./change-password.use-case"
 
@@ -63,8 +64,7 @@ function makeDeps(over: Record<string, any> = {}) {
     recordInTx: jest.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => NOW }
-  const ctx = over.ctx ?? {
-    get: () => ({
+  const ctx = over.ctx ?? fakeRequestContext(() => ({
       ip: "1.2.3.4",
       userAgent: "jest",
       correlationId: "c1",
@@ -73,8 +73,7 @@ function makeDeps(over: Record<string, any> = {}) {
       spanId: null,
       userId: "u-1",
       sessionId: "sess-1",
-    }),
-  }
+    }))
   const config = over.config ?? makeIdentityConfig()
 
   const uc = new ChangePasswordUseCase(
@@ -129,8 +128,7 @@ describe("ChangePasswordUseCase", () => {
 
   it("contexto sem userId lança ForbiddenError antes de qualquer IO", async () => {
     const t = makeDeps({
-      ctx: {
-        get: () => ({
+      ctx: fakeRequestContext(() => ({
           ip: "1.2.3.4",
           userAgent: "jest",
           correlationId: "c1",
@@ -139,8 +137,7 @@ describe("ChangePasswordUseCase", () => {
           spanId: null,
           userId: null,
           sessionId: null,
-        }),
-      },
+        })),
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(ForbiddenError)
     expect(t.users.findById).not.toHaveBeenCalled()

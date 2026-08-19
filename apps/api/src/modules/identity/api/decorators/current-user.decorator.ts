@@ -4,7 +4,7 @@ import type { ExecutionContext } from "@nestjs/common"
 import type { Request } from "express"
 
 /**
- * Injeta o id do usuário autenticado — populado pelo AuthGuard no request
+ * Injeta o id do usuário autenticado — populado pelo AuthMiddleware no request
  * (`req.userId`). Lança se usado fora de rota autenticada (defesa em profundidade;
  * o guard global já barra o anônimo antes do handler).
  */

@@ -1,5 +1,6 @@
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import { makeIdentityConfig } from "../../../identity.config.fixture"
+import { fakeRequestContext } from "../../request-context.fixture"
 
 import { RequestPasswordResetUseCase } from "./request-password-reset.use-case"
 
@@ -50,16 +51,14 @@ function makeDeps(over: Record<string, any> = {}) {
     recordInTx: jest.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => NOW }
-  const ctx = over.ctx ?? {
-    get: () => ({
+  const ctx = over.ctx ?? fakeRequestContext(() => ({
       ip: null,
       userAgent: null,
       correlationId: "c1",
       locale: "pt-BR",
       userId: null,
       sessionId: null,
-    }),
-  }
+    }))
   const config = over.config ?? makeIdentityConfig({ RESET_COOLDOWN_SECONDS: 3600 })
   const uc = new RequestPasswordResetUseCase(
     users,

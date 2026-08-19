@@ -1,5 +1,6 @@
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import { InvalidResetTokenError } from "../../../domain/errors"
+import { fakeRequestContext } from "../../request-context.fixture"
 
 import { VerifyEmailUseCase } from "./verify-email.use-case"
 
@@ -48,16 +49,14 @@ function makeDeps(over: Record<string, any> = {}) {
     recordInTx: jest.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => NOW }
-  const ctx = over.ctx ?? {
-    get: () => ({
+  const ctx = over.ctx ?? fakeRequestContext(() => ({
       ip: null,
       userAgent: null,
       correlationId: "c1",
       locale: "pt-BR",
       userId: null,
       sessionId: null,
-    }),
-  }
+    }))
   const uc = new VerifyEmailUseCase(
     verificationTokens,
     users,

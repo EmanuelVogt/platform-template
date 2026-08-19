@@ -92,7 +92,7 @@ export interface UserRepository {
   findByIdForUpdate(id: string): Promise<User | null>;
   /** Listagem paginada/ordenada/filtrada (admin). Ver buildListingClauses. */
   list(input: ListUsersInput): Promise<PaginatedResult<UserListRow>>;
-  /** User + set de permissões em 1 round-trip (consumo do PermissionsGuard). */
+  /** User + set de permissões em 1 round-trip (consumo do AuthMiddleware). */
   findByIdWithPermissions(
     id: string,
   ): Promise<{ user: User; permissions: readonly PermissionKey[] } | null>;

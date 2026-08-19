@@ -5,6 +5,7 @@ import {
   InvalidProfessionalScopeError,
 } from "../../../domain/errors"
 import { makeIdentityConfig } from "../../../identity.config.fixture"
+import { fakeRequestContext } from "../../request-context.fixture"
 
 import { CreateUserUseCase } from "./create-user.use-case"
 
@@ -40,8 +41,7 @@ function makeDeps(over: Record<string, any> = {}) {
   const outbox = over.outbox ?? { publish: jest.fn().mockResolvedValue(undefined) }
   const authEvents = over.authEvents ?? { recordInTx: jest.fn().mockResolvedValue(undefined) }
   const clock = over.clock ?? { now: () => NOW }
-  const ctx = over.ctx ?? {
-    get: () => ({
+  const ctx = over.ctx ?? fakeRequestContext(() => ({
       ip: null,
       userAgent: null,
       correlationId: "c1",
@@ -51,8 +51,7 @@ function makeDeps(over: Record<string, any> = {}) {
       traceId: null,
       spanId: null,
       access: { permissions: new Set<string>(), isMaster: true },
-    }),
-  }
+    }))
   const config = over.config ?? makeIdentityConfig()
   const uc = new CreateUserUseCase(users, verificationTokens, tokens, outbox, authEvents, clock, ctx, config, scope)
   return { uc, users, verificationTokens, tokens, outbox, authEvents, scope }

@@ -5,6 +5,7 @@ import { ScheduleModule } from "@nestjs/schedule"
 import { ZodValidationPipe } from "nestjs-zod"
 
 import * as schema from "./db/schema"
+import { PLATFORM_MODULES } from "./platform-modules"
 import { AttachmentModule } from "./modules/attachment/attachment.module"
 import { AuditModule } from "./modules/audit/audit.module"
 import { IdentityModule } from "./modules/identity/identity.module"
@@ -31,6 +32,7 @@ import { SharedKernelModule } from "./shared/kernel/shared-kernel.module"
     AuditTrailModule,
     HealthModule,
     StorageModule,
+    ...PLATFORM_MODULES,
     AttachmentModule,
     IdentityModule.forRoot(),
     NotificationModule,

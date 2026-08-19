@@ -125,7 +125,15 @@
       "^.+\\.(t|j)s$": "@swc/jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "**/*.ts",
+      "!**/*.spec.ts",
+      "!**/*.int-spec.ts",
+      "!**/*.e2e-spec.ts",
+      "!**/*.d.ts",
+      "!**/main.ts",
+      "!**/product-permission-catalogs.ts",
+      "!**/product-access-profiles.ts",
+      "!**/product-upload-profiles.ts"
     ],
     "coverageDirectory": "../coverage",
     "coverageThreshold": {
@@ -136,6 +144,7 @@
         "lines": 45
       }
     },
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "coverageProvider": "v8"
   }
 }

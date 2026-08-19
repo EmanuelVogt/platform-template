@@ -1,0 +1,6 @@
+{
+  "name": "deep-cycle-b",
+  "version": "1.0.0",
+  "kernelRange": ">=1.0.0 <2.0.0",
+  "dependsOn": [{ "name": "deep-cycle-a", "range": "^1.0.0" }]
+}

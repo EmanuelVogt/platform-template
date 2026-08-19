@@ -7,6 +7,7 @@ import { test } from "node:test";
 import { readManifest } from "../lib/manifest.mjs";
 import {
   AlreadyInstalledError,
+  CyclicDependencyError,
   KernelRangeError,
   MissingDepsError,
   checkKernelRange,
@@ -70,6 +71,72 @@ test("resolveDeps não reporta dependência já satisfeita pelo lock", () => {
   const lock = { modules: { alpha: { version: "1.0.0" } } };
   const result = resolveDeps({ catalogRoot: FIXTURES_ROOT, manifest: betaManifest, lock, withDeps: false });
   assert.deepEqual(result, { order: ["beta"], missing: [] });
+});
+
+test("resolveDeps lança CyclicDependencyError e nomeia o nó em um self-edge", () => {
+  const manifest = readManifest(path.join(FIXTURES_ROOT, "self-cycle", "module.json"));
+  const lock = { modules: {} };
+  try {
+    resolveDeps({ catalogRoot: FIXTURES_ROOT, manifest, lock, withDeps: true });
+    assert.fail("deveria ter lançado CyclicDependencyError");
+  } catch (err) {
+    assert.ok(err instanceof CyclicDependencyError);
+    assert.deepEqual(err.chain, ["self-cycle", "self-cycle"]);
+    assert.match(err.message, /self-cycle/);
+  }
+});
+
+test("resolveDeps lança CyclicDependencyError e nomeia os dois nós em um ciclo de dois nós", () => {
+  const manifest = readManifest(path.join(FIXTURES_ROOT, "cycle-a", "module.json"));
+  const lock = { modules: {} };
+  try {
+    resolveDeps({ catalogRoot: FIXTURES_ROOT, manifest, lock, withDeps: true });
+    assert.fail("deveria ter lançado CyclicDependencyError");
+  } catch (err) {
+    assert.ok(err instanceof CyclicDependencyError);
+    assert.deepEqual(err.chain, ["cycle-a", "cycle-b", "cycle-a"]);
+    assert.match(err.message, /cycle-a.*cycle-b.*cycle-a/);
+  }
+});
+
+test("resolveDeps lança CyclicDependencyError e nomeia a cadeia completa em um ciclo de três nós", () => {
+  const manifest = readManifest(path.join(FIXTURES_ROOT, "cycle-x", "module.json"));
+  const lock = { modules: {} };
+  try {
+    resolveDeps({ catalogRoot: FIXTURES_ROOT, manifest, lock, withDeps: true });
+    assert.fail("deveria ter lançado CyclicDependencyError");
+  } catch (err) {
+    assert.ok(err instanceof CyclicDependencyError);
+    assert.deepEqual(err.chain, ["cycle-x", "cycle-y", "cycle-z", "cycle-x"]);
+  }
+});
+
+test("resolveDeps detecta um ciclo alcançável apenas por um nó que não é o alvo da instalação", () => {
+  const manifest = readManifest(path.join(FIXTURES_ROOT, "root-cycle", "module.json"));
+  const lock = { modules: {} };
+  try {
+    resolveDeps({ catalogRoot: FIXTURES_ROOT, manifest, lock, withDeps: true });
+    assert.fail("deveria ter lançado CyclicDependencyError");
+  } catch (err) {
+    assert.ok(err instanceof CyclicDependencyError);
+    assert.ok(err.chain.includes("deep-cycle-a"));
+    assert.ok(err.chain.includes("deep-cycle-b"));
+  }
+});
+
+test("resolveDeps resolve um diamante sem falso positivo de ciclo, com ordem topológica válida", () => {
+  const manifest = readManifest(path.join(FIXTURES_ROOT, "diamond-a", "module.json"));
+  const lock = { modules: {} };
+  const result = resolveDeps({ catalogRoot: FIXTURES_ROOT, manifest, lock, withDeps: true });
+
+  assert.deepEqual(result.missing, []);
+  assert.deepEqual([...result.order].sort(), ["diamond-a", "diamond-b", "diamond-c", "diamond-d"]);
+
+  const indexOf = (name) => result.order.indexOf(name);
+  assert.ok(indexOf("diamond-d") < indexOf("diamond-b"));
+  assert.ok(indexOf("diamond-d") < indexOf("diamond-c"));
+  assert.ok(indexOf("diamond-b") < indexOf("diamond-a"));
+  assert.ok(indexOf("diamond-c") < indexOf("diamond-a"));
 });
 
 test("planCopy monta a lista from/to seguindo a convenção api/** -> apps/api/src/modules/<name>/**", () => {

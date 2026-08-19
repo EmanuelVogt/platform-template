@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
-import { ROUTES } from "./routes"
 import { ROUTE_ACCESS } from "./route-access"
+import { ROUTES } from "./routes"
 
 describe("ROUTE_ACCESS", () => {
   it("marca home e login como public", () => {

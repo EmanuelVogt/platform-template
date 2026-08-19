@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest"
 
+import { sessionKeys } from "./session.keys"
+import { sessionQueryOptions } from "./session.options"
+
 const { getSession } = vi.hoisted(() => ({ getSession: vi.fn() }))
 
 vi.mock("@platform/api-client/hooks/useGetSession", () => ({
   getSession,
 }))
-
-import { sessionQueryOptions } from "./session.options"
-import { sessionKeys } from "./session.keys"
 
 describe("sessionQueryOptions", () => {
   it("usa a key current e não refaz retry em 401", () => {

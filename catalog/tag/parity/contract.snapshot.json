@@ -1,0 +1,22 @@
+{
+  "paths": {
+    "/v1/admin/tags": {
+      "post": { "operationId": "createTag", "responses": { "201": {} } },
+      "get": { "operationId": "listTags", "responses": { "200": {} } }
+    },
+    "/v1/admin/tags/{id}": {
+      "get": { "operationId": "getTag", "responses": { "200": {} } },
+      "put": { "operationId": "updateTag", "responses": { "200": {} } },
+      "delete": { "operationId": "deleteTag", "responses": { "204": {} } }
+    },
+    "/v1/admin/tags/linkable": {
+      "get": { "operationId": "listLinkableTags", "responses": { "200": {} } }
+    },
+    "/v1/admin/tags/purge": {
+      "delete": { "operationId": "purgeTags", "responses": { "200": {} } }
+    },
+    "/v1/admin/tags/restore": {
+      "post": { "operationId": "restoreTags", "responses": { "200": {} } }
+    }
+  }
+}

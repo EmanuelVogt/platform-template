@@ -1,14 +1,15 @@
 import "reflect-metadata"
 
-import type { ExecutionContext } from "@nestjs/common"
 import { Reflector } from "@nestjs/core"
 
 import { ForbiddenError } from "../errors/forbidden.error"
 
-import type { AccessPolicy, AccessRequirement } from "./access-policy.port"
 import { AccessPolicyMissingError } from "./access.errors"
 import { AccessGuard } from "./access.guard"
 import { Authenticated, Public, RequirePermission } from "./decorators"
+
+import type { AccessPolicy, AccessRequirement } from "./access-policy.port"
+import type { ExecutionContext } from "@nestjs/common"
 
 jest.mock("../context/request-context", () => ({
   getActor: jest.fn(),
@@ -77,11 +78,9 @@ describe("AccessGuard", () => {
       const promise = guardWithout().canActivate(contextFor("permissionRoute"))
 
       await expect(promise).rejects.toBeInstanceOf(AccessPolicyMissingError)
-      await promise.catch((error: AccessPolicyMissingError) => {
-        expect(error.status).toBe(403)
-        expect(error.type).toBe(
-          "https://errors.example.com/access-policy-missing"
-        )
+      await expect(promise).rejects.toMatchObject({
+        status: 403,
+        type: "https://errors.example.com/access-policy-missing",
       })
     })
 
@@ -116,9 +115,7 @@ describe("AccessGuard", () => {
       )
 
       await expect(promise).rejects.toBeInstanceOf(ForbiddenError)
-      await promise.catch((error: ForbiddenError) => {
-        expect(error.status).toBe(403)
-      })
+      await expect(promise).rejects.toMatchObject({ status: 403 })
     })
 
     it("aguarda a política assíncrona antes de negar", async () => {

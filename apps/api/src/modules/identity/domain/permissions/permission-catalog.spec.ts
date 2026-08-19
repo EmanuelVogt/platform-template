@@ -167,7 +167,6 @@ describe("PermissionKeyRegistry augmentado por este catálogo", () => {
       return
     }
 
-    // @ts-expect-error chave fora do catálogo não pertence a PermissionKey
     @RequirePermission("nope")
     invalid(): void {
       return
@@ -181,5 +180,14 @@ describe("PermissionKeyRegistry augmentado por este catálogo", () => {
         handlerOf(Fixture.prototype, "allowed"),
       ),
     ).toEqual(["admin.users.read"])
+  })
+
+  it("@RequirePermission grava chave fora do catálogo — PermissionKey é string no kernel", () => {
+    expect(
+      Reflect.getMetadata(
+        REQUIRE_PERMISSION_KEY,
+        handlerOf(Fixture.prototype, "invalid"),
+      ),
+    ).toEqual(["nope"])
   })
 })

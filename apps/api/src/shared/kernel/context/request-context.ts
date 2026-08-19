@@ -5,10 +5,6 @@ import { Injectable } from "@nestjs/common"
 /** Camada que abriu o contexto — carimba `origin` na trilha de auditoria. */
 export type RequestOrigin = "http" | "event" | "job" | "backfill"
 
-/**
- * @deprecated superfície do PermissionsGuard; some em T8/T9 junto de
- * `setAccess`. Use `setExtension`/`getExtension` com um símbolo do módulo.
- */
 export type RequestAccess = {
   readonly permissions: ReadonlySet<string>
   readonly isMaster: boolean
@@ -24,6 +20,12 @@ export type Actor = {
   readonly tenantId?: string
 }
 
+/**
+ * Símbolo que carrega o tipo do valor guardado sem existir em runtime: o
+ * módulo dono declara `const KEY: ExtensionKey<Perms> = Symbol("…")`.
+ */
+export type ExtensionKey<T> = symbol & { readonly __extension?: T }
+
 export type RequestContextStore = {
   readonly requestId: string
   readonly correlationId: string
@@ -34,15 +36,15 @@ export type RequestContextStore = {
   readonly origin: RequestOrigin
   // actor/extensions/sessionId/deviceId são a superfície de escrita
   // pós-criação (setActor one-shot; setExtension por símbolo do módulo). Os
-  // demais são readonly de fato. Opcionais só até T8/T9 removerem os campos
-  // deprecados abaixo, quando passam a obrigatórios.
+  // demais são readonly de fato. `userId`, `access`, `RequestAccess`,
+  // `setAccess`, `setUserSession` e `getUserSession` são a superfície
+  // transicional lida direto do store por ~20 arquivos: T8/T9 migram esses
+  // leitores e removem os campos, e aí actor/extensions viram obrigatórios.
   actor?: Actor | null
   extensions?: Map<symbol, unknown>
   sessionId: string | null
   deviceId: string | null
-  /** @deprecated espelho de `actor.id`; removido em T8/T9. */
   userId: string | null
-  /** @deprecated use `extensions`; removido em T8/T9. */
   access: RequestAccess | null
   readonly locale: string
   readonly ip: string | null
@@ -50,69 +52,85 @@ export type RequestContextStore = {
   readonly startedAt: number
 }
 
+const als = new AsyncLocalStorage<RequestContextStore>()
+
+function requireStore(): RequestContextStore {
+  const store = als.getStore()
+  if (!store) {
+    throw new Error("RequestContext acessado fora de um escopo de request")
+  }
+  return store
+}
+
+/**
+ * Exceção controlada à imutabilidade do store: escrita one-shot null→valor
+ * feita pelo middleware do módulo de identidade antes do handler. Qualquer
+ * segunda chamada no mesmo escopo lança.
+ */
+export function setActor(actor: Actor): void {
+  const store = requireStore()
+  if (store.actor) {
+    throw new Error("actor já definido no escopo")
+  }
+  store.actor = actor
+  store.userId = actor.id
+}
+
+export function getActor(): Actor | null {
+  return als.getStore()?.actor ?? null
+}
+
+/**
+ * Sacola de extensões do store, endereçada por símbolo do módulo dono: o
+ * kernel guarda e devolve sem nunca ler o conteúdo.
+ */
+export function setExtension<T>(key: ExtensionKey<T>, value: T): void {
+  const store = requireStore()
+  const extensions = store.extensions ?? new Map<symbol, unknown>()
+  store.extensions = extensions
+  extensions.set(key, value)
+}
+
+export function getExtension<T>(key: ExtensionKey<T>): T | undefined {
+  return als.getStore()?.extensions?.get(key) as T | undefined
+}
+
 @Injectable()
 export class RequestContext {
-  private readonly als = new AsyncLocalStorage<RequestContextStore>()
-
   run<T>(store: RequestContextStore, fn: () => T): T {
-    return this.als.run(store, fn)
+    return als.run(store, fn)
   }
 
   get(): RequestContextStore {
-    const store = this.als.getStore()
-    if (!store) {
-      throw new Error("RequestContext acessado fora de um escopo de request")
-    }
-    return store
+    return requireStore()
   }
 
   tryGet(): RequestContextStore | null {
-    return this.als.getStore() ?? null
+    return als.getStore() ?? null
   }
 
-  /**
-   * Exceção controlada à imutabilidade do store: escrita one-shot null→valor
-   * feita pelo middleware do módulo de identidade antes do handler. Qualquer
-   * segunda chamada no mesmo escopo lança.
-   */
   setActor(actor: Actor): void {
-    const store = this.get()
-    if (store.actor) {
-      throw new Error("actor já definido no escopo")
-    }
-    store.actor = actor
-    store.userId = actor.id
+    setActor(actor)
   }
 
   getActor(): Actor | null {
-    return this.tryGet()?.actor ?? null
+    return getActor()
   }
 
-  /**
-   * Sacola de extensões do store, endereçada por símbolo do módulo dono: o
-   * kernel guarda e devolve sem nunca ler o conteúdo.
-   */
-  setExtension<T>(key: symbol, value: T): void {
-    const store = this.get()
-    const extensions = store.extensions ?? new Map<symbol, unknown>()
-    store.extensions = extensions
-    extensions.set(key, value)
+  setExtension<T>(key: ExtensionKey<T>, value: T): void {
+    setExtension(key, value)
   }
 
-  getExtension<T>(key: symbol): T | undefined {
-    return this.tryGet()?.extensions?.get(key) as T | undefined
+  getExtension<T>(key: ExtensionKey<T>): T | undefined {
+    return getExtension(key)
   }
 
-  /**
-   * @deprecated use `setActor`; removido em T8/T9. Mantém a tolerância a
-   * re-set idêntico do AuthGuard atual, mais frouxa que `setActor`.
-   */
   setUserSession(
     userId: string,
     sessionId: string,
     deviceId: string | null
   ): void {
-    const store = this.get()
+    const store = requireStore()
     if (store.userId !== null && store.userId !== userId) {
       throw new Error("userId já definido no escopo")
     }
@@ -126,13 +144,12 @@ export class RequestContext {
     }
   }
 
-  /** @deprecated use `getActor`; removido em T8/T9. */
   getUserSession(): {
     userId: string | null
     sessionId: string | null
     deviceId: string | null
   } {
-    const store = this.tryGet()
+    const store = als.getStore()
     return {
       userId: store?.actor?.id ?? null,
       sessionId: store?.sessionId ?? null,
@@ -140,12 +157,8 @@ export class RequestContext {
     }
   }
 
-  /**
-   * @deprecated use `setExtension` com um símbolo do módulo; removido em
-   * T8/T9. One-shot: qualquer segunda chamada lança.
-   */
   setAccess(access: RequestAccess): void {
-    const store = this.get()
+    const store = requireStore()
     if (store.access !== null) {
       throw new Error("access já definido no escopo")
     }

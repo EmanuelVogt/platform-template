@@ -32,13 +32,17 @@ describe("expectContractSubset", () => {
   it("passa quando o child reproduz a operação do snapshot", () => {
     const childPath = writeOpenApi(snapshot)
 
-    expect(() => expectContractSubset(childPath, snapshot)).not.toThrow()
+    expect(() => {
+      expectContractSubset(childPath, snapshot)
+    }).not.toThrow()
   })
 
   it("falha nomeando a operationId ausente no child", () => {
     const childPath = writeOpenApi({ paths: {} })
 
-    expect(() => expectContractSubset(childPath, snapshot)).toThrow(/createUser/)
+    expect(() => {
+      expectContractSubset(childPath, snapshot)
+    }).toThrow(/createUser/)
   })
 
   it("falha nomeando a operação e o campo obrigatório alterado", () => {
@@ -59,8 +63,12 @@ describe("expectContractSubset", () => {
       },
     })
 
-    expect(() => expectContractSubset(childPath, snapshot)).toThrow(/createUser/)
-    expect(() => expectContractSubset(childPath, snapshot)).toThrow(/email/)
+    expect(() => {
+      expectContractSubset(childPath, snapshot)
+    }).toThrow(/createUser/)
+    expect(() => {
+      expectContractSubset(childPath, snapshot)
+    }).toThrow(/email/)
   })
 
   it("passa quando o child tem operações extras além do snapshot", () => {
@@ -73,6 +81,8 @@ describe("expectContractSubset", () => {
       },
     })
 
-    expect(() => expectContractSubset(childPath, snapshot)).not.toThrow()
+    expect(() => {
+      expectContractSubset(childPath, snapshot)
+    }).not.toThrow()
   })
 })

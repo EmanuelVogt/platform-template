@@ -1,4 +1,9 @@
-import { RequestContext, type RequestContextStore } from "./request-context"
+import {
+  getActor,
+  RequestContext,
+  setActor,
+  type RequestContextStore,
+} from "./request-context"
 
 function makeStore(
   overrides: Partial<RequestContextStore> = {}
@@ -70,6 +75,19 @@ describe("RequestContext", () => {
 
   it("getActor devolve null fora de um escopo de request", () => {
     expect(new RequestContext().getActor()).toBeNull()
+  })
+
+  it("getActor exportado devolve null fora de um escopo de request", () => {
+    expect(getActor()).toBeNull()
+  })
+
+  it("getActor exportado enxerga o ator gravado no escopo corrente", () => {
+    const ctx = new RequestContext()
+    const actor = ctx.run(makeStore(), () => {
+      setActor({ id: "a-2", kind: "service" })
+      return getActor()
+    })
+    expect(actor).toEqual({ id: "a-2", kind: "service" })
   })
 
   it("getActor devolve null enquanto ninguém chamou setActor", () => {

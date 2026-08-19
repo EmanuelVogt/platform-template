@@ -8,7 +8,7 @@
 
 ## Feature Boundary
 
-The template ships the kernel only (no business-facing module); former base-set modules become copyable catalog entries owned by the child after `platform module add`; module maintenance flows through immutable advisories + an agent skill, never through copier 3-way merge of module code. Executed after RituaaliOS#92 lands.
+The template ships the kernel only (no business-facing module); former base-set modules become copyable catalog entries owned by the child after `platform module add`; module maintenance flows through immutable advisories + an agent skill, never through copier 3-way merge of module code. Executed now in this repo; RituaaliOS#92 re-scoped to "Rituaali adopts v1" afterwards (decision 2026-08-19, reverses the original sequencing).
 
 ---
 
@@ -73,7 +73,7 @@ The template ships the kernel only (no business-facing module); former base-set 
 
 ### Declined / Undiscussed Gray Areas → Assumptions
 
-- None declined. All seven GA rows in spec § Assumptions are confirmed; the remaining assumption rows (audit-trail infra → audit entry, decorators stay in kernel, lock shape, advisory id/ledger/hook, entry versioning, `module add` as `pnpm platform …` script) stay as agent defaults, re-checked against #92.
+- None declined. All seven GA rows in spec § Assumptions are confirmed; the remaining assumption rows (audit-trail infra → audit entry, decorators stay in kernel, lock shape, advisory id/ledger/hook, entry versioning, `module add` as `pnpm platform …` script) stay as agent defaults.
 
 ---
 
@@ -86,6 +86,6 @@ The template ships the kernel only (no business-facing module); former base-set 
 
 ## Deferred Ideas
 
-- Multi-bucket storage (kernel `StorageModule` port) — only if #92 shows a need.
+- Multi-bucket storage (kernel `StorageModule` port) — only if Rituaali's adoption shows a need.
 - A second smoke profile (`kernel+identity`) — dropped for simplicity; catalog CI covers it.
 - Sibling `platform-modules` repo — only if the catalog gains external maintainers.

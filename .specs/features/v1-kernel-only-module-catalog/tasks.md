@@ -6,12 +6,12 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **If the skill cannot be activated, STOP and tell the user — do not proceed without it.**
 
-**Execute precondition:** RituaaliOS#92 findings landed and § 0 of `design.md` re-checked (orchestrator records the re-check result in STATE.md Handoff before dispatching wave 1). Worktree `.worktrees/v1-kernel-only-module-catalog`, branch `feat/v1-kernel-only-module-catalog` from local `main`.
+**Execute precondition:** none beyond a clean `main` (sequencing reversed 2026-08-19 — RituaaliOS#92 runs *after* v1.0.0). Worktree `.worktrees/v1-kernel-only-module-catalog`, branch `feat/v1-kernel-only-module-catalog` from local `main`.
 
 ---
 
 **Design**: `.specs/features/v1-kernel-only-module-catalog/design.md`
-**Status**: Draft
+**Status**: Approved — ready for Execute
 
 ---
 

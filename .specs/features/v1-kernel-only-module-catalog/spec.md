@@ -2,7 +2,7 @@
 
 **Scope:** Complex (new model, new domain of tooling, ambiguity in 7 gray areas → discuss).
 **Supersedes:** the v0.2 "base-set + product slots" model (AD-001..AD-011 — each superseded or narrowed by the AD-0xx entries this feature records in `.specs/STATE.md`).
-**Sequencing:** planned now; executed after RituaaliOS#92 (Rituaali retrofitted as a child on the v0.2 model) lands its findings — see § Inputs consumed from #92.
+**Sequencing (revised 2026-08-19):** executed **now, in this repo, to 100%**; RituaaliOS#92 is re-scoped to "Rituaali adopts v1" (kernel `copier copy` + `module add` ×4 + port of its own code) and becomes the first real consumer of the catalog — see § Rituaali adoption (post-execution). The earlier "#92 first as field research" order was reversed: the coupling inventory comes from disk, the template modules are already product-neutral, and in v1 a missed kernel port costs the child an edit to its own copy + an advisory, not a template merge.
 
 ## Problem Statement
 
@@ -21,8 +21,8 @@ In v0.2 the template ships a base-set of business-facing modules (identity, audi
 | Feature | Reason |
 | --- | --- |
 | Multi-tenant identity implementation | future catalog variant `identity/multi-tenant`; this feature only leaves the tenant seam in ALS |
-| Any product feature, Rituaali-specific behaviour | the template has no product; Rituaali modules arrive as catalog entries via #92, re-extracted |
-| Executing this feature before #92's findings land | #92 is the field research that proves the kernel×module line (§ Sequencing) |
+| Any product feature, Rituaali-specific behaviour | the template has no product; catalog entries are extracted from the template's own (already neutral) modules |
+| Rituaali's adoption of v1 (#92) | a separate feature in the Rituaali repo, after this one ships v1.0.0; its findings feed kernel v1.x + advisories |
 | Follow-ups #2–#8 from the v0.2 sweep | referenced where a catalog entry absorbs one; not fixed here |
 | Automatic 3-way merge of module code into children | explicitly abandoned — child owns module code; updates go through advisories + `port-module-update` |
 | Rewriting already-applied migrations in existing children | never; baseline policy only affects new children and the catalog entries |
@@ -31,17 +31,16 @@ In v0.2 the template ships a base-set of business-facing modules (identity, audi
 
 ---
 
-## Inputs consumed from RituaaliOS#92 (execution prerequisite)
+## Rituaali adoption (post-execution, RituaaliOS#92 re-scoped)
 
-Design must list these explicitly; Specify names what is expected so the spec can be checked against #92's output when it lands:
+Not a prerequisite. After v1.0.0 ships, Rituaali adopts it and its findings feed the next kernel minor + advisories:
 
-| Expected output of #92 | Used by |
+| Expected finding from the adoption | Feeds |
 | --- | --- |
-| The list of kernel files Rituaali had to edit or could not avoid importing (the real kernel×module line) | KRN-* requirements; Design § Kernel ports |
-| Rituaali's identity/audit/attachment/notification as they exist in the child after retrofit (code, tests, migrations) | first catalog entries (CAT-*) — re-extracted as copyable modules |
-| Every `copier update` conflict on module files during the retrofit | justification + scope of the advisories channel (ADV-*) |
-| Migration renumbering pain in the child's journal | `module add` renumbering rules (TLG-*) and baseline policy (MIG-*) |
-| Web: which of `entities/session`, `features/login`, `app/router/guards` Rituaali changed | web shipping of a module entry (WEB-*) |
+| Kernel port Rituaali needed and the kernel lacks | kernel v1.x (new port) + advisory `kind: breaking` if an entry changes |
+| Divergence between Rituaali's module copies and the catalog entries | entry CHANGELOG / new variant; proves `port-module-update` on real code |
+| Migration friction during `module add` ×4 on a database that already exists | `module adopt` ergonomics (TLG) |
+| Web: what of `web/core`/recipes Rituaali reused vs rewrote | README recipes quality (WEB-01) |
 
 ---
 
@@ -57,7 +56,7 @@ Every item below must be resolved by a KRN-* requirement (port/registry in kerne
 | `shared/kernel/access/product-access-profiles.ts`, `product-permission-catalogs.ts` (AD-001 slot files) | static slot files | identity | deleted — a child edits its own copy of identity; slot mechanism retired |
 | `shared/kernel/access/decorators.ts` (`@RequirePermission`) | route metadata read by identity's `PermissionsGuard` | identity | decorator stays in kernel as a generic metadata key (`ACCESS_REQUIREMENT`) consumed by whatever guard the child installs; no identity import |
 | `shared/kernel/upload/upload-profile.types.ts`, `product-upload-profiles.ts` | `UploadProfileDef` | attachment | moves to `attachment` entry; kernel keeps storage (`StorageModule`) only |
-| `shared/kernel/audit/audit-trail.{repository,module}.ts`, `purge-audit.job.ts` | generic audit-trail table + purge | audit | moves to `audit` entry (kernel ships no audit tables) — unless #92 shows a kernel consumer |
+| `shared/kernel/audit/audit-trail.{repository,module}.ts`, `purge-audit.job.ts` | generic audit-trail table + purge | audit | moves to `audit` entry (kernel ships no audit tables; no kernel consumer found) |
 | `shared/kernel/idempotency/*` (`userId` in key) | actor id | identity (actor concept) | field renamed to `actorId: string \| null`; kernel never interprets it |
 | `shared/kernel/context/request-context.ts` (`RequestAccess { permissions, isMaster }`, `setAccess`, `setUserSession`), `job-context.ts` (`userId`) | actor + access in ALS | identity | kernel keeps an opaque `actor: { id, kind, tenantId? } \| null` + `setActor`; permission evaluation is the port above; `tenantId` is the multi-tenant seam |
 | `apps/api/drizzle/migrations/0000_platform_baseline.sql` | creates schemas `identity`, `attachment`, `notification`, `tag` + their tables alongside `_kernel.*` | all modules | baseline becomes kernel-only (`_kernel.*`); module tables ship inside each entry's migrations (MIG-*) |
@@ -100,7 +99,7 @@ Gray areas are discussed one at a time (context.md). Rows marked **pending** are
 | GA-5 `tag` kernel or catalog | catalog entry `tag` | it owns tables, routes, a contract → module-shaped; kernel ships no tables beyond `_kernel.*` | y |
 | GA-6 Baseline migration 0000 | new kernel-only `0000_kernel_baseline.sql` (+ `0001_kernel_outbox_notify`); entries ship `0000_<module>_baseline.sql` (squash) renumbered on `add`; existing children never rewritten (`module adopt`); supersedes AD-005 | keeps "applied migrations are immutable" for children, clean start for new ones | y |
 | GA-7 Template smoke composition | **one profile, `kernel-only`** (existing script, `fake-product` fixture retired); the `module add` path is proven by catalog CI per entry | keep the smoke simple; CAT-02 already exercises install | y |
-| `shared/kernel/audit` audit-trail infra | moves to `audit` entry | no kernel consumer known; re-check against #92 | n |
+| `shared/kernel/audit` audit-trail infra | moves to `audit` entry | no kernel consumer in the template (scout 2026-08-19) | n |
 | Identity decorators (`@RequirePermission`) | stay in kernel as generic access-requirement metadata | a guard-less kernel still needs a place for route metadata the child's guard reads | n |
 | Lock file name/shape | `.platform-modules.lock` (JSON): `{ catalogRef, modules: { "<name>": { variant, version, addedAt, files[] } } }` | `components.json` analogue; `files[]` lets `port-module-update` diff the right set | n |
 | Advisory id format | `ADV-YYYYMMDD-NN` | sortable, no central counter | n |
@@ -158,7 +157,7 @@ Gray areas are discussed one at a time (context.md). Rows marked **pending** are
 1. WHEN the catalog is listed THEN it SHALL contain at least `identity/single-tenant`, `audit`, `attachment`, `notification`, `tag`, each with `module.json` (`name, variant, version, dependsOn[], kernelRange, files, migrations, web?`), `README.md`, `CHANGELOG.md`, `api/**`, `migrations/**`, `parity/**`.
 2. WHEN the catalog CI job runs for an entry THEN it SHALL render a kernel-only child, `module add` the entry (and its `dependsOn`), and pass `pnpm check && pnpm test` and the entry's parity suite — one job per entry.
 3. WHEN an entry's README is linted THEN it SHALL contain the mandatory sections of the README contract (HBK-01): Contract (routes + events + facades), Kernel ports consumed, Data (schema + tables + migrations), Decisions (ADR list), Parity suite (how to run), Dependencies (other entries), Web part (if any).
-4. WHEN the identity entry is installed THEN its behaviour SHALL equal v0.2's identity module for the parity suite (login, sessions, CSRF, permissions guard, profiles master/admin/professional per AD-002 — note: `professional` slice stays inside the entry until #92 says otherwise).
+4. WHEN the identity entry is installed THEN its behaviour SHALL equal v0.2's identity module for the parity suite (login, sessions, CSRF, permissions guard, profiles master/admin/professional per AD-002 — `professional` slice stays inside the entry; AD-014).
 
 **Independent Test**: catalog CI matrix green for every entry.
 
@@ -317,5 +316,5 @@ Gray areas are discussed one at a time (context.md). Rows marked **pending** are
 
 - [ ] `pnpm template:smoke` (kernel-only) green on the v1.0.0 tag.
 - [ ] Catalog CI matrix green for the five entries.
-- [ ] Rituaali (post-#92) can `module adopt` its four modules and the advisories hook reports zero pending on day one.
+- [ ] Rituaali (#92, after v1.0.0) installs the four entries with `module add` and the advisories hook reports zero pending on day one.
 - [ ] A fresh agent, given only the kernel handbooks + one entry's README/ADRs/code, builds a new catalog-shaped module that passes the README lint and the boundaries spec (manual acceptance, once).

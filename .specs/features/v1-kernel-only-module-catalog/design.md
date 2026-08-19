@@ -2,23 +2,22 @@
 
 **Spec**: `.specs/features/v1-kernel-only-module-catalog/spec.md`
 **Context**: `.specs/features/v1-kernel-only-module-catalog/context.md` (GA-1..7 locked)
-**Status**: Draft (Execute blocked until RituaaliOS#92 lands)
+**Status**: Approved for Execute (sequencing reversed 2026-08-19: this feature ships first; RituaaliOS#92 = Rituaali adopts v1)
 **Decisions recorded**: AD-013..AD-020 in `.specs/STATE.md` (supersession table below)
 
 ---
 
-## 0. Inputs consumed from RituaaliOS#92
+## 0. Rituaali adoption (RituaaliOS#92, after v1.0.0)
 
-Execute starts only when these exist; each one re-checks a design choice below.
+No execution prerequisite. Rituaali is the first real consumer: `copier copy` kernel-only → `pnpm platform module add identity attachment audit notification` → port its product code over the copies → run parity. Findings become kernel v1.x ports, entry CHANGELOG entries and advisories — never a blocker for this feature. The table below is what the adoption is expected to report back; each row names the design section it re-checks afterwards.
 
-| #92 output | Re-checks |
+| Adoption finding | Re-checks |
 | --- | --- |
-| List of kernel files Rituaali edited / imported against the rules | § 2 Kernel ports — any file not covered becomes a new port or moves to an entry |
-| Rituaali's identity/audit/attachment/notification after retrofit | § 4 Entries — extraction source is the *child's* copy, diffed against the template's `modules/*` at v0.2.0; divergences become entry CHANGELOG 1.0.0 notes |
-| `copier update` conflicts on module files | § 6 Advisories — the first advisories are written from those conflicts (kind `breaking`) |
-| Journal renumbering pain | § 5 Migrations — validates "generate in the child" over "copy SQL" |
-| Web files Rituaali changed (`entities/session`, `features/login`, `router/guards`) | § 3 Web — confirms `web/core` scope and the README recipes |
-| Whether Rituaali consumes `shared/kernel/audit` from kernel code | § 2 — audit-trail infra stays in kernel only if a kernel consumer exists |
+| Kernel file Rituaali still had to edit | § 2 — becomes a new port in kernel v1.x |
+| Module copy diverging from the entry | § 4 / § 7 — `port-module-update` exercised on real code; possible new variant |
+| `module add` friction on an existing database | § 5.2 step 6 / § 8 — `adopt` path |
+| Reuse of `web/core` + recipes vs rewrite | § 3 — recipe quality |
+| Kernel consumer of `shared/kernel/audit` | § 2.3 — would move the trail back to the kernel in v1.x |
 
 ---
 
@@ -93,7 +92,7 @@ graph TD
 | From | To |
 | --- | --- |
 | `shared/kernel/upload/**` | `catalog/attachment/api/domain/upload/**` |
-| `shared/kernel/audit/**` (`AuditTrailModule`, repository, purge job) | `catalog/audit/api/infrastructure/trail/**` (pending #92: kernel consumer → stays) |
+| `shared/kernel/audit/**` (`AuditTrailModule`, repository, purge job) | `catalog/audit/api/infrastructure/trail/**` (no kernel consumer in the template) |
 | `app.module.ts` imports of `AttachmentModule`, `IdentityModule.forRoot()`, `NotificationModule`, `TagModule`, `AuditModule`, `AuditTrailModule` | `...PLATFORM_MODULES` from the generated registry (§ 5.3) |
 | `db/schema.ts` module `export *` | `export * from "./platform-schema"` (generated) |
 | `StorageModule` | **stays kernel** (`shared/infra/storage`, single bucket) |

@@ -1,1 +1,0 @@
-{"type":"object","properties":{"uploads":{"type":"array","items":{"type":"object","properties":{"attachmentId":{"type":"string"}},"required":["attachmentId"]}}},"required":["uploads"],"x-readme-ref-name":"UploadAttachmentsResponseDto"}

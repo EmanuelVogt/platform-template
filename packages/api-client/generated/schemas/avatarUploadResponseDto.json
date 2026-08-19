@@ -1,1 +1,0 @@
-{"type":"object","properties":{"avatarAttachmentId":{"type":"string"}},"required":["avatarAttachmentId"],"x-readme-ref-name":"AvatarUploadResponseDto"}

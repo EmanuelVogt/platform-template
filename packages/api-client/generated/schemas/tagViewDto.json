@@ -1,1 +1,0 @@
-{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"color":{"type":"string","nullable":true},"isActive":{"type":"boolean"},"createdAt":{"type":"string"},"updatedAt":{"type":"string"},"deletedAt":{"type":"string","nullable":true}},"required":["id","name","color","isActive","createdAt","updatedAt","deletedAt"],"x-readme-ref-name":"TagViewDto"}

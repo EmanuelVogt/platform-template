@@ -8,7 +8,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 ---
 
-**Design**: `.specs/features/v0-2-product-slots/design.md` · **Status**: Executing — wave 3 done, Verifier next (2026-08-18)
+**Design**: `.specs/features/v0-2-product-slots/design.md` · **Status**: Executing — Verifier round 1 FAIL → T25 fixed → re-verify (2026-08-18)
 Repo: `~/Projects/platform-template`, worktree `.worktrees/v0-2-product-slots` (crosses api + contract + migrations). Spec artifacts stay on `main`.
 
 ## Test Coverage Matrix
@@ -224,6 +224,13 @@ Wave 3: [I: T19→T20] (T24 fix between T19 and T20) → Verifier → T21 → T2
 **Where**: `scripts/template-smoke.mjs`, `package.json` · **Depends on**: T19 · **Requirement**: SMK-01
 **Done when**: [ ] `pnpm template:smoke` exits 0 locally (shell-runner, ≥ 5 min); [ ] failure of any child gate exits ≠ 0 (verify by breaking one slot line once, then restore).
 **Tests**: none (script is the test) · **Gate**: `pnpm template:smoke` · **Commit**: `chore(smoke): template smoke generates a child and extends every slot`
+
+### T25: Verifier round-1 gaps — fail-loudly download + typed error messages
+**Status**: ✅ Done — `253ea0d` (controller widening of T23 reverted; unknown stored profile → `AttachmentNotFoundError` 404, anti-enumeration; e2e fixture `feedback-attachment` → `document`; new e2e for unknown profile) `f02cb03` (email.channel.spec asserts type in message) — unit 1000 / int 342 / e2e 123
+**What**: Verifier gap 1 (spec Edge Case "unknown profile after rename → download SHALL fail loudly" contradicted by T23; real cause = stale fixture) and gap 2 (MAIL AC2/AC3 assertions did not check the type in the message).
+**Where**: `attachment/api/controllers/download-attachment.controller.ts`, `test/attachment/attachment-download.e2e-spec.ts`, `notification/infrastructure/channels/email.channel.spec.ts` · **Depends on**: Verifier round 1 · **Requirement**: UPL edge case, MAIL-02/03
+**Done when**: [x] full gate green; [x] fail-loudly e2e; [x] type in error assertions.
+**Tests**: e2e + unit · **Gate**: full · **Commit**: two, above
 
 ### T21: Final sweep + issue comment + follow-up issues
 **What**: re-run T1's sweep on the finished branch; update `coverage-sweep.md` (v0.2 rows → commit hashes); create one GitHub issue per remaining `remove`/`open slot` cluster (identity professional slice → v0.3; docs product references; others) via `gh issue create` (creating-issues skill), link in rows; post the table as a comment on issue #1 (`gh issue comment 1 -F`).

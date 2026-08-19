@@ -46,7 +46,7 @@ describe("NotificationTemplateSourceRegistry", () => {
 
   it("registrar o mesmo tipo duas vezes lança nomeando o tipo", () => {
     const registry = new NotificationTemplateSourceRegistry()
-    expect(() =>
+    expect(() => {
       registry.register({
         type: "access_link_sent",
         catalog: defineCatalogEntry({
@@ -54,8 +54,8 @@ describe("NotificationTemplateSourceRegistry", () => {
           channels: ["email"],
           dataSchema: z.object({}),
         }),
-      }),
-    ).toThrow(DuplicateNotificationTemplateSourceError)
+      })
+    }).toThrow(DuplicateNotificationTemplateSourceError)
   })
 
   it("require de um tipo não registrado lança nomeando o tipo", () => {

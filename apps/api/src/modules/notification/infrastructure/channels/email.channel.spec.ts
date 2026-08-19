@@ -140,7 +140,10 @@ describe("EmailChannel", () => {
       email: {
         template: "produto",
         subject: () => "assunto do produto",
-        recipient: (data) => `${data.userId}@produto.internal`,
+        recipient: (data) => {
+          const { userId } = data as { userId: string }
+          return `${userId}@produto.internal`
+        },
       },
     })
     channel = new EmailChannel(registry, { render }, { send })

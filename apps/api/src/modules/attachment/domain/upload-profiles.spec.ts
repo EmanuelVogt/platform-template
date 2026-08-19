@@ -3,6 +3,7 @@ import { parseAttachmentConfig } from "../attachment.config"
 import {
   BASE_UPLOAD_PROFILE_NAMES,
   buildRouteUploadProfileNames,
+  buildUploadProfileNames,
   buildUploadProfiles,
   isUploadProfileName,
   ROUTE_UPLOAD_PROFILE_NAMES,
@@ -115,6 +116,26 @@ describe("UPLOAD_PROFILE_NAMES / ROUTE_UPLOAD_PROFILE_NAMES", () => {
       "document",
       "image",
       "multi",
+    ])
+  })
+
+  it("buildUploadProfileNames acrescenta a chave do UploadProfileDef de produto depois dos nomes base", () => {
+    const fakeDef: UploadProfileDef = {
+      key: "sample-product-thing",
+      accept: "any",
+      maxBytes: 10,
+      maxTotalBytes: 10,
+      maxFiles: 1,
+      visibility: "restricted",
+      uploadRoute: true,
+    }
+    expect(buildUploadProfileNames([fakeDef])).toEqual([
+      "avatar",
+      "access-link-avatar",
+      "document",
+      "image",
+      "multi",
+      "sample-product-thing",
     ])
   })
 

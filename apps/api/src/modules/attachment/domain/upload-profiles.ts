@@ -12,11 +12,12 @@ export const BASE_UPLOAD_PROFILE_NAMES = [
   "multi",
 ] as const
 
-// Slot de produto vazio no template: `(typeof PRODUCT_UPLOAD_PROFILES)[number]`
-// hoje é `never` (nada pra indexar), e uniar com `never` é redundante — por
-// isso o tipo só cobre os nomes base. Um produto que popule o array deve
-// estender esta união com `| (typeof PRODUCT_UPLOAD_PROFILES)[number]["key"]`.
-export type UploadProfileName = (typeof BASE_UPLOAD_PROFILE_NAMES)[number]
+type ProductUploadProfileKey = (typeof PRODUCT_UPLOAD_PROFILES)[number]["key"]
+
+type RouteProductUploadProfileKey = Extract<
+  (typeof PRODUCT_UPLOAD_PROFILES)[number],
+  { uploadRoute: true }
+>["key"]
 
 export interface UploadProfile {
   /** "image" exige sniff de magic bytes; "any" aceita qualquer byte. */
@@ -31,12 +32,18 @@ export const UPLOAD_PROFILES: unique symbol = Symbol("UploadProfiles")
 
 export type UploadProfileCatalog = Record<UploadProfileName, UploadProfile>
 
-const productProfileDefs: readonly UploadProfileDef[] = PRODUCT_UPLOAD_PROFILES
+export function buildUploadProfileNames(
+  productDefs: readonly UploadProfileDef[] = PRODUCT_UPLOAD_PROFILES,
+): readonly string[] {
+  return [...BASE_UPLOAD_PROFILE_NAMES, ...productDefs.map((def) => def.key)]
+}
 
-export const UPLOAD_PROFILE_NAMES: readonly string[] = [
-  ...BASE_UPLOAD_PROFILE_NAMES,
-  ...productProfileDefs.map((def) => def.key),
+export const UPLOAD_PROFILE_NAMES = buildUploadProfileNames() as readonly [
+  ...typeof BASE_UPLOAD_PROFILE_NAMES,
+  ...ProductUploadProfileKey[],
 ]
+
+export type UploadProfileName = (typeof UPLOAD_PROFILE_NAMES)[number]
 
 export function buildRouteUploadProfileNames(
   productDefs: readonly UploadProfileDef[] = PRODUCT_UPLOAD_PROFILES,
@@ -53,7 +60,7 @@ export const ROUTE_UPLOAD_PROFILE_NAMES = buildRouteUploadProfileNames() as read
   "document",
   "image",
   "multi",
-  ...UploadProfileName[],
+  ...RouteProductUploadProfileKey[],
 ]
 
 export function buildUploadProfiles(
@@ -104,5 +111,5 @@ export function buildUploadProfiles(
 }
 
 export function isUploadProfileName(value: string): value is UploadProfileName {
-  return UPLOAD_PROFILE_NAMES.includes(value)
+  return (UPLOAD_PROFILE_NAMES as readonly string[]).includes(value)
 }

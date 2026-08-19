@@ -10,6 +10,7 @@ import { readManifest } from "../manifest.mjs";
 import { MigrationFailureError, generateForModule } from "../migrations.mjs";
 import {
   AlreadyInstalledError,
+  CyclicDependencyError,
   KernelRangeError,
   MissingDepsError,
   checkKernelRange,
@@ -129,6 +130,10 @@ export async function addCommand({ name, options, cwd = process.cwd(), run = def
   try {
     ({ order } = resolveDeps({ catalogRoot: catalog.root, manifest, lock, withDeps: Boolean(options["with-deps"]) }));
   } catch (err) {
+    if (err instanceof CyclicDependencyError) {
+      process.stderr.write(`${err.message}\n`);
+      return EXIT_CODES.MISSING_DEPS;
+    }
     if (!(err instanceof MissingDepsError)) throw err;
     const missing = err.missing.map((dep) => `${dep.name}@${dep.range}`).join(", ");
     process.stderr.write(`dependências ausentes (use --with-deps): ${missing}\n`);

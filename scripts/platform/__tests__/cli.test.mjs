@@ -131,6 +131,20 @@ test("module add retorna exit 5 quando faltam dependências sem --with-deps", as
   assert.equal(existsSync(path.join(child, ".platform-modules.lock")), false);
 });
 
+test("module add retorna exit 5 e sem stack trace quando há ciclo de dependências", async () => {
+  const child = makeChild();
+  const { run: stubRun } = makeStubRun();
+
+  const { result: exitCode, output } = await captureOutput("stderr", () =>
+    run(["module", "add", "cycle-a", "--catalog-ref", CATALOG_ROOT, "--with-deps"], { cwd: child, run: stubRun }),
+  );
+
+  assert.equal(exitCode, EXIT_CODES.MISSING_DEPS);
+  assert.match(output, /cycle-a -> cycle-b -> cycle-a/);
+  assert.doesNotMatch(output, /\bat .+\.mjs:\d+/);
+  assert.equal(existsSync(path.join(child, ".platform-modules.lock")), false);
+});
+
 test("module add --with-deps instala alpha antes de beta", async () => {
   const child = makeChild();
   const { run: stubRun, calls } = makeStubRun();

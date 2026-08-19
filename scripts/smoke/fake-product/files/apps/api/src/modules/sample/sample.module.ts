@@ -5,8 +5,10 @@ import { z } from "zod"
 
 import { AuditRegistry } from "../audit/application/services/audit-registry"
 import { AuditModule } from "../audit/audit.module"
-import { defineCatalogEntry } from "../notification/application/catalog/notification-catalog"
-import { NotificationTemplateSourceRegistry } from "../notification/application/templates/notification-template-registry"
+import {
+  defineCatalogEntry,
+  NotificationTemplateSourceRegistry,
+} from "../notification/api/facades/notification-templates.facade"
 import { NotificationModule } from "../notification/notification.module"
 
 import type { OnModuleInit } from "@nestjs/common"

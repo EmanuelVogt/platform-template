@@ -1,0 +1,236 @@
+import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync, rmSync } from "node:fs";
+import path from "node:path";
+import { parse as parseYaml } from "yaml";
+import { copyFiles, rollback as applyRollback, writeEnv, writeLock as persistEntry, writeRegistry } from "../apply.mjs";
+import { resolveCatalog } from "../catalog-source.mjs";
+import { EXIT_CODES } from "../exit-codes.mjs";
+import { readLock } from "../lock.mjs";
+import { readManifest } from "../manifest.mjs";
+import { MigrationFailureError, generateForModule } from "../migrations.mjs";
+import {
+  AlreadyInstalledError,
+  KernelRangeError,
+  MissingDepsError,
+  checkKernelRange,
+  checkLock,
+  planCopy,
+  resolveDeps,
+} from "../plan.mjs";
+
+function defaultRun(command, args, options) {
+  const result = spawnSync(command, args, { encoding: "utf8", ...options });
+  return { status: result.status ?? 0, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
+}
+
+function readTemplateVersion(cwd) {
+  const answersPath = path.join(cwd, ".copier-answers.yml");
+  if (!existsSync(answersPath)) return undefined;
+  const answers = parseYaml(readFileSync(answersPath, "utf8")) ?? {};
+  return answers._commit ? String(answers._commit).replace(/^v/, "") : undefined;
+}
+
+function paths(cwd) {
+  return {
+    lockPath: path.join(cwd, ".platform-modules.lock"),
+    envExamplePath: path.join(cwd, ".env.example"),
+    envPath: path.join(cwd, ".env"),
+    platformModulesPath: path.join(cwd, "apps/api/src/platform-modules.ts"),
+    platformSchemaPath: path.join(cwd, "apps/api/src/db/platform-schema.ts"),
+  };
+}
+
+function entryRootFor(catalogRoot, name, variant) {
+  return variant ? path.join(catalogRoot, name, variant) : path.join(catalogRoot, name);
+}
+
+function webRootFor(name, options) {
+  const base = options["web-root"] ?? "apps/web/src";
+  return path.join(base, "entities", name);
+}
+
+function registryEntry(manifest) {
+  return { name: manifest.name, apiModule: manifest.apiModule, schemaExports: manifest.schemaExports };
+}
+
+function buildRegistryEntries(catalogRoot, lockModules, known, excludeName) {
+  const entries = [];
+  for (const [moduleName, lockEntry] of Object.entries(lockModules ?? {})) {
+    if (moduleName === excludeName) continue;
+    const manifest =
+      known.get(moduleName) ?? readManifest(path.join(entryRootFor(catalogRoot, moduleName, lockEntry.variant), "module.json"));
+    entries.push(registryEntry(manifest));
+  }
+  return entries;
+}
+
+function runRollback({ name, options, cwd, lockPath, envExamplePath, envPath, platformModulesPath, platformSchemaPath }) {
+  const lock = readLock(lockPath);
+  const entry = lock.modules?.[name];
+  if (!entry) {
+    process.stdout.write(`nada para reverter: ${name} não está no lock\n`);
+    return EXIT_CODES.OK;
+  }
+
+  for (const fileName of entry.migrations ?? []) {
+    const migrationPath = path.join(cwd, "apps/api/drizzle/migrations", fileName);
+    if (existsSync(migrationPath)) rmSync(migrationPath);
+  }
+
+  let entries = [];
+  try {
+    const catalog = resolveCatalog(options["catalog-ref"], { copierAnswersPath: path.join(cwd, ".copier-answers.yml") });
+    entries = buildRegistryEntries(catalog.root, lock.modules, new Map(), name);
+  } catch {
+    entries = [];
+  }
+
+  applyRollback({ lockPath, name, envExamplePath, envPath, registry: { entries, platformModulesPath, platformSchemaPath } });
+  process.stdout.write(`${name} revertido\n`);
+  return EXIT_CODES.OK;
+}
+
+export async function addCommand({ name, options, cwd = process.cwd(), run = defaultRun }) {
+  const { lockPath, envExamplePath, envPath, platformModulesPath, platformSchemaPath } = paths(cwd);
+
+  if (options.rollback) {
+    return runRollback({ name, options, cwd, lockPath, envExamplePath, envPath, platformModulesPath, platformSchemaPath });
+  }
+
+  let catalog;
+  let manifest;
+  try {
+    catalog = resolveCatalog(options["catalog-ref"], { copierAnswersPath: path.join(cwd, ".copier-answers.yml") });
+    manifest = readManifest(path.join(entryRootFor(catalog.root, name, options.variant), "module.json"));
+  } catch (err) {
+    process.stderr.write(`catálogo inacessível ou módulo ausente: ${err.message}\n`);
+    return EXIT_CODES.CATALOG_UNREACHABLE;
+  }
+
+  const templateVersion = readTemplateVersion(cwd);
+  try {
+    checkKernelRange(manifest, templateVersion);
+  } catch (err) {
+    if (!(err instanceof KernelRangeError)) throw err;
+    process.stderr.write(`${err.message}\n`);
+    return EXIT_CODES.KERNEL_RANGE_UNSATISFIED;
+  }
+
+  let lock = readLock(lockPath);
+  try {
+    checkLock(lock, name);
+  } catch (err) {
+    if (!(err instanceof AlreadyInstalledError)) throw err;
+    process.stderr.write(`${err.message}\n`);
+    return EXIT_CODES.ALREADY_INSTALLED;
+  }
+
+  let order;
+  try {
+    ({ order } = resolveDeps({ catalogRoot: catalog.root, manifest, lock, withDeps: Boolean(options["with-deps"]) }));
+  } catch (err) {
+    if (!(err instanceof MissingDepsError)) throw err;
+    const missing = err.missing.map((dep) => `${dep.name}@${dep.range}`).join(", ");
+    process.stderr.write(`dependências ausentes (use --with-deps): ${missing}\n`);
+    return EXIT_CODES.MISSING_DEPS;
+  }
+
+  const noWebReact = Boolean(options["no-web-react"]);
+  const known = new Map([[name, manifest]]);
+  const plans = [];
+  for (const moduleName of order) {
+    const variant = moduleName === name ? options.variant : undefined;
+    const entryRoot = entryRootFor(catalog.root, moduleName, variant);
+    const moduleManifest = moduleName === name ? manifest : readManifest(path.join(entryRoot, "module.json"));
+    if (moduleName !== name) known.set(moduleName, moduleManifest);
+
+    let { files, conflicts } = planCopy(entryRoot, moduleManifest, { webRoot: webRootFor(moduleName, options), targetRoot: cwd });
+    if (noWebReact) {
+      const reactPrefix = path.join(cwd, webRootFor(moduleName, options), "react");
+      files = files.filter((file) => !file.to.startsWith(reactPrefix));
+      conflicts = conflicts.filter((conflict) => !conflict.startsWith(reactPrefix));
+    }
+
+    plans.push({
+      moduleName,
+      manifest: moduleManifest,
+      entryRoot,
+      files,
+      conflicts,
+      entryBase: {
+        version: moduleManifest.version,
+        variant: moduleManifest.variant,
+        installedAt: new Date().toISOString(),
+        catalogRef: catalog.ref,
+        files: files.map((file) => file.to),
+      },
+    });
+  }
+
+  const allConflicts = plans.flatMap((plan) => plan.conflicts);
+  if (allConflicts.length > 0 && !options.force) {
+    process.stderr.write(`arquivos já existem (use --force): ${allConflicts.join(", ")}\n`);
+    return EXIT_CODES.DESTINATION_EXISTS;
+  }
+
+  if (options["dry-run"]) {
+    for (const plan of plans) {
+      process.stdout.write(`módulo ${plan.moduleName}\n`);
+      for (const file of plan.files) process.stdout.write(`  copiar ${file.from} -> ${file.to}\n`);
+      for (const migration of plan.manifest.customMigrations ?? []) {
+        process.stdout.write(`  migração customizada: ${migration}\n`);
+      }
+      for (const envVar of plan.manifest.env ?? []) process.stdout.write(`  env: ${envVar.name}\n`);
+      if (plan.manifest.apiModule) process.stdout.write(`  registro: ${plan.manifest.apiModule.export}\n`);
+    }
+    return EXIT_CODES.OK;
+  }
+
+  try {
+    for (const plan of plans) {
+      copyFiles(plan.files);
+      writeEnv({ envExamplePath, envPath, moduleName: plan.moduleName, envVars: plan.manifest.env });
+      lock = persistEntry({ lockPath, lock, name: plan.moduleName, entry: { ...plan.entryBase, migrations: [] } });
+    }
+
+    const registryEntries = buildRegistryEntries(catalog.root, lock.modules, known, undefined);
+    writeRegistry({ entries: registryEntries, platformModulesPath, platformSchemaPath });
+
+    for (const plan of plans) {
+      const migrations = generateForModule(cwd, plan.manifest, { catalogEntryRoot: plan.entryRoot, run });
+      lock = persistEntry({ lockPath, lock, name: plan.moduleName, entry: { ...plan.entryBase, migrations } });
+    }
+  } catch (err) {
+    if (!(err instanceof MigrationFailureError)) throw err;
+    process.stderr.write(`${err.message} — arquivos mantidos, use --rollback\n`);
+    return EXIT_CODES.MIGRATION_FAILURE;
+  }
+
+  const contractResult = run("pnpm", ["contract"], { cwd });
+  if (contractResult.status !== 0) {
+    process.stderr.write(`contrato falhou — arquivos mantidos, use --rollback\n`);
+    return EXIT_CODES.TEST_FAILURE;
+  }
+
+  if (!options["skip-tests"]) {
+    const testResult = run("pnpm", ["--filter", "api", "test", "--", `modules/${name}`], { cwd });
+    if (testResult.status !== 0) {
+      process.stderr.write(`testes falharam — arquivos mantidos, use --rollback\n`);
+      return EXIT_CODES.TEST_FAILURE;
+    }
+
+    const targetPlan = plans.find((plan) => plan.moduleName === name);
+    const targetWebRoot = path.join(cwd, webRootFor(name, options));
+    const webCopied = targetPlan.files.some((file) => file.to.startsWith(targetWebRoot));
+    if (webCopied) {
+      const webResult = run("pnpm", ["--filter", "web", "vitest", "run", `entities/${name}`], { cwd });
+      if (webResult.status !== 0) {
+        process.stderr.write(`testes web falharam — arquivos mantidos, use --rollback\n`);
+        return EXIT_CODES.TEST_FAILURE;
+      }
+    }
+  }
+
+  process.stdout.write(`${name}@${manifest.version} instalado\n`);
+  return EXIT_CODES.OK;
+}

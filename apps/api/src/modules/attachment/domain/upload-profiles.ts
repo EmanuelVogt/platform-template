@@ -1,7 +1,7 @@
 import { PRODUCT_UPLOAD_PROFILES } from "../../../shared/kernel/upload/product-upload-profiles"
 
-import type { AttachmentConfig } from "../attachment.config"
 import type { UploadProfileDef } from "../../../shared/kernel/upload/upload-profile.types"
+import type { AttachmentConfig } from "../attachment.config"
 import type { Visibility } from "./access-policy"
 
 export const BASE_UPLOAD_PROFILE_NAMES = [
@@ -12,9 +12,11 @@ export const BASE_UPLOAD_PROFILE_NAMES = [
   "multi",
 ] as const
 
-export type UploadProfileName =
-  | (typeof BASE_UPLOAD_PROFILE_NAMES)[number]
-  | (typeof PRODUCT_UPLOAD_PROFILES)[number]["key"]
+// Slot de produto vazio no template: `(typeof PRODUCT_UPLOAD_PROFILES)[number]`
+// hoje é `never` (nada pra indexar), e uniar com `never` é redundante — por
+// isso o tipo só cobre os nomes base. Um produto que popule o array deve
+// estender esta união com `| (typeof PRODUCT_UPLOAD_PROFILES)[number]["key"]`.
+export type UploadProfileName = (typeof BASE_UPLOAD_PROFILE_NAMES)[number]
 
 export interface UploadProfile {
   /** "image" exige sniff de magic bytes; "any" aceita qualquer byte. */
@@ -102,5 +104,5 @@ export function buildUploadProfiles(
 }
 
 export function isUploadProfileName(value: string): value is UploadProfileName {
-  return (UPLOAD_PROFILE_NAMES as readonly string[]).includes(value)
+  return UPLOAD_PROFILE_NAMES.includes(value)
 }

@@ -1,8 +1,8 @@
-import type { PermissionKey } from "../../../shared/kernel/access/permission.types"
 import type {
   AuditedTableRegistration,
   RefTargetRegistration,
 } from "./audit-registration.types"
+import type { PermissionKey } from "../../../shared/kernel/access/permission.types"
 
 const USERS_OWNER: PermissionKey = "admin.users.audit.read"
 const PERMISSION_TEMPLATES_OWNER: PermissionKey =

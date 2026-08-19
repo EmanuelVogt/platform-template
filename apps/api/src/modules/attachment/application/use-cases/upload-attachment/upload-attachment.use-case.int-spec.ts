@@ -14,10 +14,10 @@ import { DrizzleAttachmentRepository } from "../../../infrastructure/repositorie
 
 import { UploadAttachmentUseCase } from "./upload-attachment.use-case"
 
-import type { UploadProfileName } from "../../../domain/upload-profiles"
 import type { ObjectStoragePort } from "../../../../../shared/infra/storage/object-storage.port"
 import type { RequestContextStore } from "../../../../../shared/kernel/context/request-context"
 import type { UploadProfileDef } from "../../../../../shared/kernel/upload/upload-profile.types"
+import type { UploadProfileName } from "../../../domain/upload-profiles"
 import type { Pool } from "pg"
 
 function makeInMemoryStorage(): ObjectStoragePort {

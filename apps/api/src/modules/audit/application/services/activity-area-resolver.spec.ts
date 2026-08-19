@@ -1,5 +1,5 @@
-import { AuditRegistry } from "./audit-registry"
 import { ActivityAreaResolver } from "./activity-area-resolver"
+import { AuditRegistry } from "./audit-registry"
 
 describe("ActivityAreaResolver", () => {
   function makeResolver(): ActivityAreaResolver {

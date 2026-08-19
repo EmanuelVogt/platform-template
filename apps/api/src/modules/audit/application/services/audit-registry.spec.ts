@@ -124,21 +124,21 @@ describe("AuditRegistry", () => {
 
     it("registerTables com tabela já registrada lança nomeando-a", () => {
       const registry = new AuditRegistry()
-      expect(() =>
+      expect(() => {
         registry.registerTables([
           { schema: "identity", table: "users", owner: "admin.users.audit.read" },
         ])
-      ).toThrow(DuplicateAuditRegistrationError)
-      expect(() =>
+      }).toThrow(DuplicateAuditRegistrationError)
+      expect(() => {
         registry.registerTables([
           { schema: "identity", table: "users", owner: "admin.users.audit.read" },
         ])
-      ).toThrow(/users/)
+      }).toThrow(/users/)
     })
 
     it("registerRefTargets com coluna já registrada lança nomeando-a", () => {
       const registry = new AuditRegistry()
-      expect(() =>
+      expect(() => {
         registry.registerRefTargets([
           {
             column: "user_id",
@@ -147,8 +147,8 @@ describe("AuditRegistry", () => {
             labelColumn: "name",
           },
         ])
-      ).toThrow(DuplicateAuditRegistrationError)
-      expect(() =>
+      }).toThrow(DuplicateAuditRegistrationError)
+      expect(() => {
         registry.registerRefTargets([
           {
             column: "user_id",
@@ -157,7 +157,7 @@ describe("AuditRegistry", () => {
             labelColumn: "name",
           },
         ])
-      ).toThrow(/user_id/)
+      }).toThrow(/user_id/)
     })
   })
 })

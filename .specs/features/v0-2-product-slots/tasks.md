@@ -8,7 +8,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 ---
 
-**Design**: `.specs/features/v0-2-product-slots/design.md` · **Status**: Executing — wave 1 done (2026-08-18)
+**Design**: `.specs/features/v0-2-product-slots/design.md` · **Status**: Executing — wave 2 done (2026-08-18)
 Repo: `~/Projects/platform-template`, worktree `.worktrees/v0-2-product-slots` (crosses api + contract + migrations). Spec artifacts stay on `main`.
 
 ## Test Coverage Matrix
@@ -52,6 +52,7 @@ Execute is delegated and parallel (`docs/agents/workflow.md`): the orchestrator 
 | 2 | F e2e mailer | T10 | `test/**` mailer fakes (identity e2e files already renamed by A), `test/notifications-product-extension.e2e-spec.ts`, `test/fixtures/**` | sonnet |
 | 2 | G contract | T17 | `openapi.json`, `packages/api-client/generated/**`, `apps/web/**` | sonnet |
 | 2 | H docs | T4 → T18 | `docs/dev/template.md`, `docs/dev/template-changelog.md`, `docs/back/back-arch.md`, `AGENTS.md.jinja` | sonnet |
+| 2.5 | J gate fix | T23 | `apps/api/src/modules/attachment/**`, `apps/api/src/modules/audit-registration/**` (+ the file behind the attachment-download 500) | sonnet |
 | 3 | I smoke | T19 → T20 | `scripts/smoke/**`, `scripts/template-smoke.mjs`, `package.json` | sonnet |
 | 3→ | orchestrator | Verifier → T21 → T22 | `.specs/**`, GitHub, tag | — |
 
@@ -61,6 +62,7 @@ Only shared file across wave-1 clusters is `drizzle/migrations/meta/_journal.jso
 Wave 0: T1
 Wave 1: [A: T2→T3→T5→T6] ‖ [C: T7→T8→T9] ‖ [D: T11→T12→T13] ‖ [E: T14→T15→T16]
 Wave 2: [F: T10] ‖ [G: T17] ‖ [H: T4→T18]
+Wave 2.5: [J: T23]  (gate debt found by wave 2)
 Wave 3: [I: T19→T20] → Verifier → T21 → T22
 ```
 
@@ -91,6 +93,7 @@ Wave 3: [I: T19→T20] → Verifier → T21 → T22
 **Tests**: integration + e2e · **Gate**: full · **Commit**: `feat(identity): profiles from registry; access-catalog lists profiles`
 
 ### T4: Slots doc — profiles + permission catalogs section
+**Status**: ✅ Done — `4cfd918`
 **What**: add "Slots e registries" table to `docs/dev/template.md` with the profile + permission rows (other rows filled by later tasks), incl. product migration snippet and the `ADD VALUE` same-batch caveat.
 **Where**: `docs/dev/template.md` · **Depends on**: T3 · **Requirement**: REL-02
 **Done when**: [ ] section present, pt-BR, ≤ 30 lines; [ ] `pnpm format:check` passes for the file.
@@ -132,6 +135,7 @@ Wave 3: [I: T19→T20] → Verifier → T21 → T22
 **Tests**: unit · **Gate**: quick + `pnpm --filter api typecheck` · **Commit**: `feat(notification): generic e-mail dispatch from template source`
 
 ### T10: E2E — one-method fakes + product extension proof
+**Status**: ✅ Done — `bf73446` — unit 999 / int 342 / e2e 121 passed; typecheck green; `sent[]` filtered by recipient(+subject) in create-user-flow/verify-email (concurrent `device_new_login` mail); surfaced pre-existing failure `test/attachment/attachment-download.e2e-spec.ts:231` (500 vs 200, "perfil de tipo livre") → fix task before wave 3
 **What**: switch 10 e2e files to `fakeMailer()`; `notifications-email.e2e-spec.ts` asserts `sent[]` (to/subject/idempotencyKey); new `test/notifications-product-extension.e2e-spec.ts` with `FakeProductModule` (`declare module` adds `"sample_welcome"`; registers source with `templateDir` = `test/fixtures/sample-templates`, `sample-welcome.hbs`) using `createE2eApp({ extraModules })` from T13.
 **Where**: `apps/api/test/**`, `apps/api/test/fixtures/sample-templates/` · **Depends on**: T9, T6, T13 · **Requirement**: MAIL-05
 **Done when**: [ ] product e2e: mailer receives `{to: data.email, subject: "Bem-vindo, Ana", html ⊃ "Ana", idempotencyKey = delivery id}`; [ ] full gate green; e2e count ≥ baseline+1.
@@ -180,16 +184,25 @@ Wave 3: [I: T19→T20] → Verifier → T21 → T22
 **Tests**: integration · **Gate**: full · **Commit**: `feat(attachment): migration 0005 renames feedback-attachment rows to multi`
 
 ### T17: Contract regen + web green
+**Status**: ✅ Done — `2c3ec748` — no web fallout (skeleton web); needed local `apps/api/.env` (gitignored); note: `pnpm check` red on 14 api lint errors (attachment/audit/notification + 1 e2e) → fix task before wave 3
 **What**: `pnpm contract`, `pnpm --filter @platform/api-client build`; fix web fallout (`router.test.tsx` fixture if any); commit `openapi.json` + `generated/` alone.
 **Where**: `openapi.json`, `packages/api-client/generated/**`, `apps/web/**` · **Depends on**: T3, T6, T15 · **Requirement**: REL-01
 **Done when**: [ ] contract gate green; [ ] `rg -c "attendsGuests|feedback-attachment" openapi.json packages/api-client/generated` = 0; [ ] `access-catalog` schema has `profiles`; [ ] `git diff --exit-code openapi.json` after a second `pnpm contract`.
 **Tests**: none (build gate) · **Gate**: contract · **Commit**: `chore(contract): regenerate openapi + api-client for v0.2`
 
 ### T18: Slots table complete + template changelog with child migration note
+**Status**: ✅ Done — `a8eea19` — back-arch.md unchanged (no `remove` hit inside the five points' sections; whole-doc verdict → follow-up issue in T21); AGENTS.md.jinja outside prettier scope
 **What**: finish `docs/dev/template.md` slots table (notification, audit, upload, routes, identity forRoot, schema aggregator, migrations numbering AD-005); create `docs/dev/template-changelog.md` `v0.2.0`: breaking (`servesClients`, upload profile names/env, `Mailer.send`, template source shape, access-catalog `profiles`), steps (`copier update`, resolve `_journal.json` merge + `when` re-stamp, `pnpm install`, `pnpm contract`, update mailer fakes/sources, env vars, run migrations); update `docs/back/back-arch.md` lines flagged `remove` in T1 that sit inside the five points' sections; `AGENTS.md.jinja` mention of the changelog.
 **Where**: `docs/dev/template.md`, `docs/dev/template-changelog.md`, `docs/back/back-arch.md`, `AGENTS.md.jinja` · **Depends on**: T17 · **Requirement**: REL-02
 **Done when**: [ ] every slot/registry/port from design has a row; [ ] changelog lists all 5 breaking changes with a step each; [ ] prettier passes.
 **Tests**: none · **Gate**: build · **Commit**: `docs(template): v0.2.0 slots table and child migration note`
+
+### T23: Wave-2 gate fixes — api lint + attachment-download 500
+**Status**: ⏳ Open
+**What**: (a) `pnpm --filter api lint` = 13 errors, all in `apps/api/src/modules/attachment/attachment.config.ts` (import order L4/L5/L17; `never` overridden in union L12; unnecessary assertion L105) and `apps/api/src/modules/audit-registration/audit-registration.{resolver,types}.ts` (import order; void expression in arrow shorthand L50/128/133/142/152; template literal with `unknown` L143) — fix without `eslint-disable`; (b) e2e `test/attachment/attachment-download.e2e-spec.ts:231` "força download e nosniff em anexo de perfil de tipo livre" gets 500 instead of 200 — reproduces alone (`pnpm --filter api test:e2e -- attachment-download`, log `/tmp/claude-1000/w2-attach.log`); pre-existing since wave 1 E (T15 `document` profile: accept `any`, forced download + nosniff), root cause in `apps/api/src/modules/attachment/**` — do NOT weaken the test.
+**Where**: files above · **Depends on**: T10, T17 · **Requirement**: REL-01 (gates green)
+**Done when**: [ ] `pnpm --filter api lint` exit 0; [ ] `pnpm --filter api test:e2e` 122/122; [ ] unit ≥ 999, int ≥ 342, `module-boundaries.spec.ts` green with NO new allowlist entry.
+**Tests**: existing · **Gate**: full · **Commit**: two commits — `fix(attachment): download of free-type profile returns the file` (+ `style(api): lint fixes in attachment config and audit registration` — or `fix(...)` if a lint error is a real bug)
 
 ### T19: Template smoke — fake product overlay
 **What**: `scripts/smoke/fake-product/` overlay: `apps/api/src/modules/sample/sample.module.ts` (+ template source, audit registrations, `declare module` augmentations, permission catalog `SAMPLE_CATALOG`), `sample-welcome.hbs`, `1000_sample_init.sql` (`CREATE SCHEMA sample; CREATE TABLE sample.things…; ALTER TYPE identity.access_profile ADD VALUE IF NOT EXISTS 'receptionist';`), `slot-appends.json` (lines to append to the 3 slot files + `app.module.ts` import + `db/schema.ts` export + journal entry), `sample.spec.ts` asserting the derived sets contain the sample entries.

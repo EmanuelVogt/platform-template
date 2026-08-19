@@ -32,7 +32,12 @@ export class IdentityAccessPolicy implements AccessPolicy {
 
     const access = this.ctx.getExtension(IDENTITY_ACCESS)
     if (access === undefined) return false
+    if (access.isMaster) return true
 
-    return access.isMaster || access.permissions.has(requirement.key)
+    if (requirement.kind === "anyPermission") {
+      return requirement.keys.some((key) => access.permissions.has(key))
+    }
+
+    return access.permissions.has(requirement.key)
   }
 }

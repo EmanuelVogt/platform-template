@@ -6,7 +6,13 @@ import { ForbiddenError } from "../errors/forbidden.error"
 
 import { AccessPolicyMissingError } from "./access.errors"
 import { AccessGuard } from "./access.guard"
-import { Authenticated, Public, RequirePermission } from "./decorators"
+import {
+  Authenticated,
+  OptionalAuth,
+  Public,
+  RequireAnyPermission,
+  RequirePermission,
+} from "./decorators"
 
 import type { AccessPolicy, AccessRequirement } from "./access-policy.port"
 import type { ExecutionContext } from "@nestjs/common"
@@ -32,6 +38,16 @@ class Routes {
 
   @RequirePermission("admin.users.read")
   permissionRoute(): void {
+    return
+  }
+
+  @OptionalAuth()
+  optionalRoute(): void {
+    return
+  }
+
+  @RequireAnyPermission(["admin.users.audit.read", "admin.tags.audit.read"])
+  anyPermissionRoute(): void {
     return
   }
 
@@ -137,6 +153,34 @@ describe("AccessGuard", () => {
         kind: "permission",
         key: "admin.users.read",
       } satisfies AccessRequirement)
+    })
+
+    it("rota @OptionalAuth chega no handler sem ator e sem consultar a política", async () => {
+      const policy = policyReturning(false)
+
+      await expect(
+        guardWith(policy).canActivate(contextFor("optionalRoute"))
+      ).resolves.toBe(true)
+      expect(policy.can).not.toHaveBeenCalled()
+    })
+
+    it("encaminha o requisito OR do @RequireAnyPermission para a política", async () => {
+      const policy = policyReturning(true)
+
+      await guardWith(policy).canActivate(contextFor("anyPermissionRoute"))
+
+      expect(policy.can).toHaveBeenCalledWith(null, {
+        kind: "anyPermission",
+        keys: ["admin.users.audit.read", "admin.tags.audit.read"],
+      } satisfies AccessRequirement)
+    })
+
+    it("nega com 403 a rota OR quando a política responde false", async () => {
+      await expect(
+        guardWith(policyReturning(false)).canActivate(
+          contextFor("anyPermissionRoute")
+        )
+      ).rejects.toBeInstanceOf(ForbiddenError)
     })
 
     it("handler sem decorator exige ator autenticado (fail closed)", async () => {

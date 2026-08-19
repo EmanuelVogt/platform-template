@@ -118,6 +118,15 @@ describe("decorators de acesso", () => {
       ).toEqual({ kind: "permission", key: "admin.users.read" })
     })
 
+    it("@OptionalAuth grava { kind: public } — anônimo chega no handler", () => {
+      expect(
+        Reflect.getMetadata(
+          ACCESS_REQUIREMENT,
+          handlerOf(Fixture.prototype, "optionalRoute")
+        )
+      ).toEqual({ kind: "public" })
+    })
+
     it("handler sem decorator não tem requisito — o guard decide o default", () => {
       expect(
         Reflect.getMetadata(
@@ -143,6 +152,24 @@ describe("RequireAnyPermission", () => {
     expect(
       Reflect.getMetadata(REQUIRE_ANY_PERMISSION_KEY, handlerOf(T.prototype, "h"))
     ).toEqual(["admin.users.audit.read", "admin.tags.audit.read"])
+  })
+
+  it("grava { kind: anyPermission, keys } no requisito do kernel", () => {
+    class T {
+      @RequireAnyPermission([
+        "admin.users.audit.read",
+        "admin.tags.audit.read",
+      ])
+      h(): void {
+        return
+      }
+    }
+    expect(
+      Reflect.getMetadata(ACCESS_REQUIREMENT, handlerOf(T.prototype, "h"))
+    ).toEqual({
+      kind: "anyPermission",
+      keys: ["admin.users.audit.read", "admin.tags.audit.read"],
+    })
   })
 
   it("lista vazia lança na definição", () => {

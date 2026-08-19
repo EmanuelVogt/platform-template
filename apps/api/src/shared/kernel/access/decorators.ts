@@ -39,10 +39,14 @@ export const IS_OPTIONAL_AUTH_KEY = "access:isOptionalAuth"
 
 /**
  * Auth opcional: o AuthGuard popula `userId` quando o cookie for válido mas NÃO
- * lança quando ausente/inválido; o PermissionsGuard pula a rota — quem decide o
- * acesso é a ACL do use case (modelo do download de attachment).
+ * lança quando ausente/inválido. Para o AccessGuard a rota é `public` — quem
+ * decide o acesso é a ACL do use case (modelo do download de attachment).
  */
-export const OptionalAuth = () => SetMetadata(IS_OPTIONAL_AUTH_KEY, true)
+export const OptionalAuth = () =>
+  applyDecorators(
+    SetMetadata(IS_OPTIONAL_AUTH_KEY, true),
+    requirement({ kind: "public" })
+  )
 
 /** Chave de metadata: rota autenticada sem exigência de permissão. */
 export const IS_SELF_SERVICE_KEY = "access:isSelfService"
@@ -64,13 +68,16 @@ export const RequirePermission = (key: PermissionKey) =>
 export const REQUIRE_ANY_PERMISSION_KEY = "access:requireAnyPermission"
 
 /**
- * Exige AO MENOS UMA das chaves (OR). Lida pelo PermissionsGuard. Lista vazia
- * lança na definição da classe (module load) — o authz-coverage importa todos
- * os controllers, então `[]` explode em teste, não em produção silenciosa.
+ * Exige AO MENOS UMA das chaves (OR). Lista vazia lança na definição da classe
+ * (module load) — o authz-coverage importa todos os controllers, então `[]`
+ * explode em teste, não em produção silenciosa.
  */
 export const RequireAnyPermission = (keys: readonly PermissionKey[]) => {
   if (keys.length === 0) {
     throw new Error("RequireAnyPermission exige ao menos uma chave")
   }
-  return SetMetadata(REQUIRE_ANY_PERMISSION_KEY, keys)
+  return applyDecorators(
+    SetMetadata(REQUIRE_ANY_PERMISSION_KEY, keys),
+    requirement({ kind: "anyPermission", keys })
+  )
 }

@@ -20,6 +20,11 @@ const PERMISSION: AccessRequirement = {
   key: "admin.users.read",
 }
 
+const ANY_PERMISSION: AccessRequirement = {
+  kind: "anyPermission",
+  keys: ["admin.users.audit.read", "admin.tags.audit.read"],
+}
+
 function storeOf(): RequestContextStore {
   return {
     requestId: "r",
@@ -101,5 +106,39 @@ describe("IdentityAccessPolicy", () => {
 
   it("ator sem permissões publicadas (usuário excluído) é negado", () => {
     expect(decide(ACTOR, PERMISSION)).toBe(false)
+  })
+
+  describe("requisito OR (anyPermission)", () => {
+    it("libera com uma única das chaves exigidas", () => {
+      expect(
+        decide(ACTOR, ANY_PERMISSION, {
+          permissions: ["admin.tags.audit.read"],
+          isMaster: false,
+        })
+      ).toBe(true)
+    })
+
+    it("nega quando o ator não tem nenhuma das chaves", () => {
+      expect(
+        decide(ACTOR, ANY_PERMISSION, {
+          permissions: ["admin.users.read"],
+          isMaster: false,
+        })
+      ).toBe(false)
+    })
+
+    it("master passa sem ter chave nenhuma (bypass)", () => {
+      expect(
+        decide(ACTOR, ANY_PERMISSION, { permissions: [], isMaster: true })
+      ).toBe(true)
+    })
+
+    it("sem ator responde 401, não 403", () => {
+      expect(() => decide(null, ANY_PERMISSION)).toThrow(UnauthorizedException)
+    })
+
+    it("ator sem permissões publicadas é negado", () => {
+      expect(decide(ACTOR, ANY_PERMISSION)).toBe(false)
+    })
   })
 })

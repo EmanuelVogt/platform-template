@@ -12,6 +12,7 @@ export type AccessRequirement =
   | { kind: "public" }
   | { kind: "authenticated" }
   | { kind: "permission"; key: PermissionKey }
+  | { kind: "anyPermission"; keys: readonly PermissionKey[] }
 
 export interface AccessPolicy {
   can(

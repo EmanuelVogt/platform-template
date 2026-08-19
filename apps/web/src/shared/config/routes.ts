@@ -15,7 +15,10 @@ export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES]
 
 /** Rotas protegidas (área logada) — destinos válidos para restaurar ou
  *  redirecionar um usuário autenticado. */
-const PROTECTED_ROUTES = new Set<string>([ROUTES.INICIO])
+const PROTECTED_ROUTES = new Set<string>([
+  ROUTES.INICIO,
+  "/inicio/$segment",
+])
 
 function matchesRouteTemplate(pathname: string, template: string): boolean {
   const pathParts = pathname.split("/").filter(Boolean)

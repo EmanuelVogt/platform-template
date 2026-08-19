@@ -16,8 +16,10 @@ vi.mock("../model/use-login", () => ({
   useLogin: () => loginState,
 }))
 
+const navigate = vi.fn()
+
 vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => vi.fn(),
+  useNavigate: () => navigate,
 }))
 
 describe("LoginForm", () => {
@@ -85,4 +87,18 @@ describe("LoginForm", () => {
     renderWithProviders(<LoginForm />)
     expect(screen.getByText(/não foi possível entrar/i)).toBeInTheDocument()
   })
+
+  it("onSuccess navega para destino autenticado", async () => {
+    loginState.mutate = vi.fn((_payload, options: { onSuccess: () => void }) => {
+      options.onSuccess()
+    })
+    renderWithProviders(<LoginForm />)
+    await userEvent.type(screen.getByLabelText("E-mail"), "dev@example.com")
+    await userEvent.type(screen.getByLabelText("Senha"), "MinhaSenh@1")
+    await userEvent.click(screen.getByRole("button", { name: "Entrar" }))
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith({ to: "/inicio" })
+    })
+  })
+
 })

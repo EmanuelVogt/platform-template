@@ -14,6 +14,11 @@ vi.mock("@platform/api-client/hooks/useGetSession", () => ({
 }))
 
 describe("HomePage", () => {
+  it("exibe traço quando não há e-mail na sessão", () => {
+    renderWithProviders(<HomePage />)
+    expect(screen.getByText(/Sessão ativa: —/)).toBeInTheDocument()
+  })
+
   it("exibe o e-mail da sessão corrente", () => {
     const queryClient = makeTestQueryClient()
     queryClient.setQueryData(sessionKeys.current(), {

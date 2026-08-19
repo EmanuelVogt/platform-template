@@ -1,11 +1,12 @@
 import { QueryClient } from "@tanstack/react-query"
+import { createMemoryHistory } from "@tanstack/react-router"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useAuthStore } from "@/shared/store/auth.store"
 
 import { requireAccess, requireAnon, resolveRootRedirect } from "./guards"
 import { productRoutes } from "./product-routes"
-import { router } from "./router"
+import { createAppRouter, router } from "./router"
 
 import type { AnyRouteMatch } from "@tanstack/react-router"
 
@@ -61,6 +62,35 @@ describe("guards de rota", () => {
           matchesFor({ kind: "permission", permission: "produto.exemplo.read" })
         )
       ).resolves.toBeUndefined()
+    })
+
+
+    it("aceita quando o usuário tem uma permissão do array", async () => {
+      sessionFetch.mockResolvedValue({ user })
+      await expect(
+        requireAccess(
+          makeClient(),
+          "/inicio",
+          matchesFor({
+            kind: "permission",
+            permission: ["produto.exemplo.read", "produto.outra.read"],
+          }),
+        ),
+      ).resolves.toBeUndefined()
+    })
+
+    it("redireciona quando falta todas as permissões do array", async () => {
+      sessionFetch.mockResolvedValue({ user })
+      await expect(
+        requireAccess(
+          makeClient(),
+          "/inicio",
+          matchesFor({
+            kind: "permission",
+            permission: ["produto.outra.read", "produto.mais.read"],
+          }),
+        ),
+      ).rejects.toBeDefined()
     })
 
     it("redireciona quando falta a permissão exigida", async () => {
@@ -125,5 +155,30 @@ describe("routeTree", () => {
 
   it("sobe sem rota de produto — a lista é a costura de extensão", () => {
     expect(productRoutes).toHaveLength(0)
+  })
+})
+
+
+describe("createAppRouter", () => {
+  it("serializa arrays de string como CSV na query", () => {
+    const client = makeClient()
+    const appRouter = createAppRouter({ queryClient: client })
+    expect(appRouter.options.stringifySearch?.({ layers: ["a", "b"] })).toBe(
+      "?layers=a%2Cb",
+    )
+  })
+
+  it("serializa arrays mistos como JSON", () => {
+    const client = makeClient()
+    const appRouter = createAppRouter({ queryClient: client })
+    expect(appRouter.options.stringifySearch?.({ layers: ["a", 1] })).toBe(
+      '?layers=%5B%22a%22%2C1%5D',
+    )
+  })
+
+  it("serializa valores não-array como JSON", () => {
+    const client = makeClient()
+    const appRouter = createAppRouter({ queryClient: client })
+    expect(appRouter.options.stringifySearch?.({ n: 1 })).toBe("?n=1")
   })
 })

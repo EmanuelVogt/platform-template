@@ -6,7 +6,8 @@ import { ROUTES } from "@/shared/config/routes"
 
 import { AuthenticatedLayout } from "./authenticated-layout"
 
-const { logoutMutate, navigate, session } = vi.hoisted(() => ({
+const { logoutMutate, navigate, session, logoutHook } = vi.hoisted(() => ({
+  logoutHook: { mutate: vi.fn(), isPending: false },
   logoutMutate: vi.fn(),
   navigate: vi.fn(),
   session: { data: undefined as { user: { name: string } } | undefined },
@@ -19,13 +20,15 @@ vi.mock("@tanstack/react-router", () => ({
 
 vi.mock("@/entities/session/api/session.queries", () => ({
   useSession: () => session,
-  useLogout: () => ({ mutate: logoutMutate, isPending: false }),
+  useLogout: () => logoutHook,
 }))
 
 describe("AuthenticatedLayout", () => {
   beforeEach(() => {
     logoutMutate.mockReset()
     navigate.mockReset()
+    logoutHook.mutate = logoutMutate
+    logoutHook.isPending = false
     session.data = { user: { name: "Ana" } }
   })
 
@@ -50,4 +53,16 @@ describe("AuthenticatedLayout", () => {
     expect(logoutMutate).toHaveBeenCalled()
     expect(navigate).toHaveBeenCalledWith({ to: ROUTES.LOGIN })
   })
+  it("exibe botão desabilitado enquanto logout pendente", () => {
+    logoutHook.isPending = true
+    render(<AuthenticatedLayout />)
+    expect(screen.getByRole("button", { name: "Saindo…" })).toBeDisabled()
+  })
+
+  it("renderiza layout quando sessão sem user", () => {
+    session.data = undefined
+    render(<AuthenticatedLayout />)
+    expect(screen.getByRole("button", { name: "Sair" })).toBeInTheDocument()
+  })
+
 })

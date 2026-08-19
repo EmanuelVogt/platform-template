@@ -24,6 +24,17 @@ describe("toSafeProtectedRoute", () => {
 })
 
 describe("resolveProtectedRouteTemplate", () => {
+  it("resolve template paramétrico sob /inicio", () => {
+    expect(resolveProtectedRouteTemplate("/inicio/detalhe")).toBe(
+      "/inicio/$segment",
+    )
+    expect(toSafeProtectedRoute("/inicio/detalhe")).toBe("/inicio/detalhe")
+  })
+
+  it("rejeita pathname com segmentos a mais que o template", () => {
+    expect(resolveProtectedRouteTemplate("/inicio/a/b")).toBeNull()
+  })
+
   it("devolve null para path desconhecido", () => {
     expect(resolveProtectedRouteTemplate("/nao-existe")).toBeNull()
   })

@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { renderHook } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
+import { sessionKeys } from "../api/session.keys"
+
 import { useCan } from "./permissions"
 
 import type { ReactNode } from "react"
@@ -18,5 +20,20 @@ describe("useCan — sem sessão", () => {
     }
     const { result } = renderHook(() => useCan(), { wrapper })
     expect(result.current("admin.users.read")).toBe(false)
+  })
+})
+
+describe("useCan — com sessão", () => {
+  it("delega ao can quando há user", async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    qc.setQueryData(sessionKeys.current(), {
+      user: { permissions: ["admin.users.read"], accessProfile: "admin" },
+    })
+    function wrapper({ children }: { children: ReactNode }) {
+      return <QueryClientProvider client={qc}>{children}</QueryClientProvider>
+    }
+    const { result } = renderHook(() => useCan(), { wrapper })
+    expect(result.current("admin.users.read")).toBe(true)
+    expect(result.current("admin.users.create")).toBe(false)
   })
 })

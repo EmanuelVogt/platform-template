@@ -439,9 +439,18 @@ Extra deviation from the fix: `setExtension`/`getExtension` take `ExtensionKey<T
 | C10 | T13 | `838149f` | `catalog-lint`: manifest, README H2 order (source `docs/catalog/README-contract.md`), CHANGELOG version heading, `web/**` import allow-list, advisory frontmatter — 14 tests |
 | C10 | T14 | `5115162` | `advisory-required.mjs` + lefthook `commit-msg`/`pre-commit` wiring — 7 tests (advisories 16 unchanged) |
 
-**Wave 2 Build gate — NOT RUN.** Two authorization regressions from T8 must land first (a green scoped gate would be misleading: neither turns a test red).
+### Wave 2b — authorization fixes (both DONE)
 
-**Blocking fix tasks (wave 2b) — dispatch these before the Build gate:**
+| Task | Commit | Result |
+| --- | --- | --- |
+| T8a | `fa4484a` | `@OptionalAuth()` emits `{ kind: "public" }`; `{ kind: "anyPermission"; keys }` added to the port + decorator + an OR branch in `IdentityAccessPolicy` (master bypass hoisted, applies to both kinds). `access.guard.ts` needed **zero** edits — it already forwards the requirement verbatim. — 560 tests / 66 suites |
+| T9a | `f583b0d` | **PARTIAL by design.** `setUserSession`/`getUserSession`/`setAccess` removed (0 callers repo-wide); `logger.factory.ts` and `transaction-manager.ts` read `actor.id`. Deletion of the rest deferred — see note 15. — 206 tests / 29 suites |
+
+T8a ran the delete-the-branch sensor by hand: removing the OR branch turns `IdentityAccessPolicy › requisito OR › libera com uma única das chaves exigidas` red (expected true, received false). The silent privilege widening is now covered by a test that kills it.
+
+**Wave 2 Build gate — PASS.** `pnpm --filter api typecheck` 0 · `pnpm --filter api lint` 0 · `pnpm --filter api test` **1052 passed / 151 suites** · `pnpm test:scripts` **71 passed / 0 failed**. Zero failures. `apps/web` not run: wave 2 touched no file under it (full web suite runs at Final).
+
+**Original blocking-fix specification (both now landed, kept for traceability):**
 
 - **T8a (opus, auth) — `@OptionalAuth()` / `@RequireAnyPermission()` lost their enforcement.** Both decorators predate T1 and emit no `ACCESS_REQUIREMENT`, so with `PermissionsGuard` deleted they now fall through to the kernel default.
   - `@OptionalAuth()` → default `authenticated` → **anonymous access is now 401**. Breaks `modules/attachment/api/controllers/download-attachment.controller.ts:39` and the assertion at `apps/api/test/identity/authz.e2e-spec.ts:394` (left red by T8 on purpose). Fix: emit `{ kind: "public" }`.
@@ -456,7 +465,14 @@ Extra deviation from the fix: `setExtension`/`getExtension` take `ExtensionKey<T
 10. **T8 behaviour deviations (accepted, documented):** a DB failure during session lookup is now 503 for every request carrying a cookie (v0.2 degraded `@OptionalAuth` to anonymous); a 401 on a request with *no* cookie no longer emits the clearing `Set-Cookie` (stale/expired cookies still are cleared by the middleware).
 11. **T12** — the exact invocation shapes for `drizzle-kit check` and `db:check:journal` were not in design § 5.2; the worker extended the `pnpm --filter api exec drizzle-kit …` pattern the design gives for the baseline `generate`. **T15 owns the real command line** and must confirm these against the child's actual scripts.
 12. **T13/T14** — `parseAdvisory`/`AdvisoryParseError` were extracted from `lib/advisories.mjs` into new `lib/frontmatter.mjs`; `advisories.mjs` re-exports both, T6's 16 tests unchanged. T15/T24 import from whichever they prefer.
-13. **C8 note** — audit's use of `RequestAccess` is permission-scoping, unrelated to actor/userId; T9 correctly left it. It dies with T8a/T9a or T22, not before.
+13. **C8 note** — audit's use of `RequestAccess` is permission-scoping, unrelated to actor/userId; T9 correctly left it. It dies with T22.
+14. **T8a** — `anyPermission.keys` is typed `readonly PermissionKey[]`, not design § 2.1's `string[]` (`PermissionKey = string` in the kernel; `readonly` is what accepts the decorator's readonly param without a cast). Not a semantic change.
+15. **T22 absorbs T9a's residual — binding.** T9a stopped short of deleting `userId`, `sessionId`, `deviceId`, `access`, `RequestAccess` from `request-context.ts` and of flipping `actor`/`extensions` to required, because ~12 files outside its ownership still depend on them. A dedicated T9b was **not** dispatched: 8 of those files live under `apps/api/src/modules/**`, which T22 deletes wholesale, and the rest are in `shared/kernel/{audit,errors,outbox}` which T22 already rewrites (audit leaves the kernel in the same task). Migrating spec literals in files that are about to be deleted is churn. **T22 must therefore also:**
+    - migrate the surviving readers `modules/audit/application/list-audit-entries/list-audit-entries.use-case.ts:62` (`.access`) and `modules/notification/application/require-recipient.ts:10` (`store.userId`) — or delete them with their modules;
+    - update the store literals in `shared/kernel/audit/audit-trigger.int-spec.ts:190`, `shared/kernel/errors/problem-details.filter.spec.ts:101`, `shared/kernel/outbox/outbox.int-spec.ts:78` (they build `RequestContextStore` without `actor`/`extensions`);
+    - **remove the shim**: `setActor` currently still writes `store.userId` for unmigrated readers. This is live kernel code, not a spec — if T22 misses it, the shim ships to children;
+    - then delete the five remaining transitional fields and flip `actor`/`extensions` to **required**. Only then is KRN-04's "grep = 0" clause satisfied.
+16. **Accepted consequence, not a deviation** — `logger.factory.ts` no longer logs `sessionId`. Under AD-017 the kernel cannot read identity's `IDENTITY_SESSION` extension (kernel never imports a module), so no kernel-safe source for it exists. T9a flagged it `SPEC_DEVIATION`; the orchestrator reclassified it as the correct consequence of the seam. **T25 must carry it as a v1.0.0 changelog note for children** ("kernel logs lose `sessionId`; re-add it from your own module if you need it").
 
 ---
 

@@ -5,9 +5,10 @@ import request from "supertest"
 import { AppModule } from "../../src/app.module"
 import { applySecurity } from "../../src/main"
 import { RATE_LIMITER } from "../../src/modules/identity/domain/ports/rate-limiter"
-import { MAILER, type Mailer } from "../../src/modules/notification/domain/ports/mailer"
+import { MAILER } from "../../src/modules/notification/domain/ports/mailer"
 import { RequestContext } from "../../src/shared/kernel/context/request-context"
 import { createRequestContextMiddleware } from "../../src/shared/kernel/context/request-context.middleware"
+import { fakeMailer } from "../setup/fake-mailer"
 import { seedUser } from "../setup/seed-user"
 import { createTestPool, truncateIdentity, truncateKernel } from "../setup/test-db"
 
@@ -18,19 +19,6 @@ const PASSWORD = "Senha-Muito-Forte-AuthZ-2026!"
 
 const allowAll = {
   consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
-}
-
-function makeFakeMailer(): jest.Mocked<Mailer> {
-  return {
-    sendAccessLink: jest.fn().mockResolvedValue(undefined),
-    sendPasswordReset: jest.fn().mockResolvedValue(undefined),
-    sendEmailVerification: jest.fn().mockResolvedValue(undefined),
-    sendLockoutNotice: jest.fn().mockResolvedValue(undefined),
-    sendPasswordChanged: jest.fn().mockResolvedValue(undefined),
-    sendDeviceNewLogin: jest.fn().mockResolvedValue(undefined),
-    sendEmailChangeConfirmation: jest.fn().mockResolvedValue(undefined),
-    sendEmailChangeNotice: jest.fn().mockResolvedValue(undefined),
-  }
 }
 
 describe("authz — PermissionsGuard + validações (e2e)", () => {
@@ -63,7 +51,7 @@ describe("authz — PermissionsGuard + validações (e2e)", () => {
       .overrideProvider(RATE_LIMITER)
       .useValue(allowAll)
       .overrideProvider(MAILER)
-      .useValue(makeFakeMailer())
+      .useValue(fakeMailer())
       .compile()
     app = moduleRef.createNestApplication()
     app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })

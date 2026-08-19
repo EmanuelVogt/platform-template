@@ -5,12 +5,13 @@ import request from "supertest"
 import { AppModule } from "../../src/app.module"
 import { applySecurity } from "../../src/main"
 import { RATE_LIMITER } from "../../src/modules/identity/domain/ports/rate-limiter"
-import { MAILER, type Mailer } from "../../src/modules/notification/domain/ports/mailer"
+import { MAILER } from "../../src/modules/notification/domain/ports/mailer"
 import { DeliveryDispatcher } from "../../src/modules/notification/infrastructure/delivery/delivery.dispatcher"
 import { RequestContext } from "../../src/shared/kernel/context/request-context"
 import { createRequestContextMiddleware } from "../../src/shared/kernel/context/request-context.middleware"
 import { OutboxDispatcher } from "../../src/shared/kernel/outbox/outbox.dispatcher"
 import { setCookies } from "../setup/cookies"
+import { fakeMailer } from "../setup/fake-mailer"
 import { seedUser } from "../setup/seed-user"
 import {
   createTestPool,
@@ -18,23 +19,19 @@ import {
   truncateKernel,
 } from "../setup/test-db"
 
+import type { EmailMessage } from "../../src/modules/notification/domain/ports/mailer"
+
 const ORIGIN = "http://localhost:5173"
 
 const allowAll = {
   consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
 }
 
-function makeFakeMailer(): jest.Mocked<Mailer> {
-  return {
-    sendAccessLink: jest.fn().mockResolvedValue(undefined),
-    sendPasswordReset: jest.fn().mockResolvedValue(undefined),
-    sendEmailVerification: jest.fn().mockResolvedValue(undefined),
-    sendLockoutNotice: jest.fn().mockResolvedValue(undefined),
-    sendPasswordChanged: jest.fn().mockResolvedValue(undefined),
-    sendDeviceNewLogin: jest.fn().mockResolvedValue(undefined),
-    sendEmailChangeConfirmation: jest.fn().mockResolvedValue(undefined),
-    sendEmailChangeNotice: jest.fn().mockResolvedValue(undefined),
-  }
+/** Extrai o href renderizado no botão de ação do e-mail (link com token). */
+function linkFromHtml(html: string): string {
+  const match = /href="([^"]+)"/.exec(html)
+  if (!match) throw new Error("link não encontrado no e-mail")
+  return match[1]!
 }
 
 async function waitFor(
@@ -53,7 +50,7 @@ async function waitFor(
 describe("Fluxo de criação de usuário (e2e)", () => {
   let app: INestApplication
   let dispatcher: OutboxDispatcher
-  let fakeMailer: jest.Mocked<Mailer>
+  let mailer: ReturnType<typeof fakeMailer>
 
   // Preenchido por um `it` e consumido pelos seguintes: a suíte é
   // ordem-dependente de propósito.
@@ -70,14 +67,14 @@ describe("Fluxo de criação de usuário (e2e)", () => {
     )
     await pool.end()
 
-    fakeMailer = makeFakeMailer()
+    mailer = fakeMailer()
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     })
       .overrideProvider(RATE_LIMITER)
       .useValue(allowAll)
       .overrideProvider(MAILER)
-      .useValue(fakeMailer)
+      .useValue(mailer)
       .compile()
     app = moduleRef.createNestApplication()
     app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
@@ -129,10 +126,13 @@ describe("Fluxo de criação de usuário (e2e)", () => {
   it("outbox + delivery dispatcher disparam sendAccessLink com token", async () => {
     await dispatcher.poll()
     await app.get(DeliveryDispatcher).poll()
-    await waitFor(() => fakeMailer.sendAccessLink.mock.calls.length >= 1)
+    // Casa pelo destinatário: o login do master pode disparar um e-mail de
+    // device_new_login antes do access-link, deslocando o índice.
+    const sentToAna = (): EmailMessage | undefined =>
+      mailer.sent.find((message) => message.to === "ana@example.com")
+    await waitFor(() => sentToAna() !== undefined)
 
-    const [, link] = fakeMailer.sendAccessLink.mock.calls[0] ?? []
-    const token = new URL(link).searchParams.get("token")
+    const token = new URL(linkFromHtml(sentToAna()!.html)).searchParams.get("token")
     expect(token).toBeTruthy()
     // Persiste o token para os its seguintes.
     accessToken = token!

@@ -6,10 +6,11 @@ import { AppModule } from "../../src/app.module"
 import { setupDocsAuth } from "../../src/docs/docs-auth"
 import { applySecurity } from "../../src/main"
 import { RATE_LIMITER } from "../../src/modules/identity/domain/ports/rate-limiter"
-import { MAILER, type Mailer } from "../../src/modules/notification/domain/ports/mailer"
+import { MAILER } from "../../src/modules/notification/domain/ports/mailer"
 import { RequestContext } from "../../src/shared/kernel/context/request-context"
 import { createRequestContextMiddleware } from "../../src/shared/kernel/context/request-context.middleware"
 import { allowAllRateLimiter } from "../setup/app-factory"
+import { fakeMailer } from "../setup/fake-mailer"
 import { seedUser } from "../setup/seed-user"
 import { createTestPool, truncateIdentity, truncateKernel } from "../setup/test-db"
 
@@ -26,19 +27,6 @@ const EMPTY_DOCUMENT = {
   paths: {},
 } as OpenAPIObject
 
-function makeFakeMailer(): jest.Mocked<Mailer> {
-  return {
-    sendAccessLink: jest.fn().mockResolvedValue(undefined),
-    sendPasswordReset: jest.fn().mockResolvedValue(undefined),
-    sendEmailVerification: jest.fn().mockResolvedValue(undefined),
-    sendLockoutNotice: jest.fn().mockResolvedValue(undefined),
-    sendPasswordChanged: jest.fn().mockResolvedValue(undefined),
-    sendDeviceNewLogin: jest.fn().mockResolvedValue(undefined),
-    sendEmailChangeConfirmation: jest.fn().mockResolvedValue(undefined),
-    sendEmailChangeNotice: jest.fn().mockResolvedValue(undefined),
-  }
-}
-
 describe("docs login — checagem de origem (e2e)", () => {
   let app: INestApplication
   let pool: Pool
@@ -52,7 +40,7 @@ describe("docs login — checagem de origem (e2e)", () => {
       .overrideProvider(RATE_LIMITER)
       .useValue(allowAllRateLimiter)
       .overrideProvider(MAILER)
-      .useValue(makeFakeMailer())
+      .useValue(fakeMailer())
       .compile()
     app = moduleRef.createNestApplication()
     app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })

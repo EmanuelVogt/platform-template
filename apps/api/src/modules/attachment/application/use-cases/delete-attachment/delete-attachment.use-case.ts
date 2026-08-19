@@ -39,7 +39,7 @@ export class DeleteAttachmentUseCase {
     const store = this.ctx.get()
     await this.accessLog.recordInTx({
       attachmentId: input.id,
-      userId: store.userId,
+      userId: this.ctx.getActor()?.id ?? null,
       ip: store.ip,
       userAgent: store.userAgent,
       action: "delete",

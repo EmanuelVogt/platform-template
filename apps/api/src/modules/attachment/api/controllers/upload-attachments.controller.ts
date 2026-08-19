@@ -65,7 +65,7 @@ export class UploadAttachmentsController {
   ): Promise<UploadAttachmentsResponseDto> {
     return this.upload.execute({
       profile: query.profile,
-      ownerUserId: this.ctx.get().userId,
+      ownerUserId: this.ctx.getActor()?.id ?? null,
       files: readMultipartFiles(req, res, "file"),
     })
   }

@@ -27,7 +27,6 @@ export interface DownloadResult {
 }
 
 type AccessLogContext = {
-  userId: string | null
   ip: string | null
   userAgent: string | null
   correlationId: string | null
@@ -56,22 +55,23 @@ export class GetAttachmentForDownloadUseCase {
     trusted?: boolean
   }): Promise<DownloadResult> {
     const store = this.ctx.get()
+    const actorId = this.ctx.getActor()?.id ?? null
     const attachment = await this.repo.findById(input.id)
 
     if (attachment?.props.status !== "ready" || attachment.props.checksum === null) {
-      await this.log(input.id, "denied", store)
+      await this.log(input.id, "denied", store, actorId)
       throw new AttachmentNotFoundError()
     }
 
     if (!input.trusted) {
       const policy = new AccessPolicy(attachment.props.visibility)
-      if (!policy.canBeReadBy(store.userId, attachment.props.ownerUserId)) {
-        await this.log(input.id, "denied", store)
+      if (!policy.canBeReadBy(actorId, attachment.props.ownerUserId)) {
+        await this.log(input.id, "denied", store, actorId)
         throw new AttachmentNotFoundError()
       }
     }
 
-    await this.log(input.id, "allowed", store)
+    await this.log(input.id, "allowed", store, actorId)
     const stream = await this.storage.getStream(attachment.props.storageKey)
     return {
       stream,
@@ -87,10 +87,11 @@ export class GetAttachmentForDownloadUseCase {
     attachmentId: string,
     outcome: "allowed" | "denied",
     store: AccessLogContext,
+    actorId: string | null,
   ): Promise<void> {
     await this.accessLog.record({
       attachmentId,
-      userId: store.userId,
+      userId: actorId,
       ip: store.ip,
       userAgent: store.userAgent,
       action: "download",

@@ -35,7 +35,10 @@ function makeDeps(userId: string | null) {
     listByAttachment: jest.fn(),
     deleteBatchOlderThan: jest.fn(),
   }
-  const ctx = { get: () => ({ userId, ip: "2.2.2.2", userAgent: "ua", correlationId: "c2" }) }
+  const ctx = {
+    get: () => ({ ip: "2.2.2.2", userAgent: "ua", correlationId: "c2" }),
+    getActor: () => (userId === null ? null : { id: userId, kind: "user" }),
+  }
   const uc = new GetAttachmentForDownloadUseCase(storage, repo, log, ctx as never)
   return { uc, storage, repo, log }
 }

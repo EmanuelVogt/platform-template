@@ -84,7 +84,7 @@ export class UploadAttachmentUseCase {
     const store = this.ctx.get()
     await this.accessLog.record({
       attachmentId: id,
-      userId: store.userId,
+      userId: this.ctx.getActor()?.id ?? null,
       ip: store.ip,
       userAgent: store.userAgent,
       action: "upload",

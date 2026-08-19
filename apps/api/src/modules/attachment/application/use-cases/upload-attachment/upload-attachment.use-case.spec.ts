@@ -31,7 +31,10 @@ function makeDeps() {
     deleteBatchOlderThan: jest.fn(),
   }
   const tx = { run: (fn: () => Promise<void>) => fn() }
-  const ctx = { get: () => ({ userId: "admin-1", ip: "1.1.1.1", userAgent: "jest", correlationId: "c1" }) }
+  const ctx = {
+    get: () => ({ ip: "1.1.1.1", userAgent: "jest", correlationId: "c1" }),
+    getActor: () => ({ id: "admin-1", kind: "user" }),
+  }
   const profiles = buildUploadProfiles({
     ATTACHMENT_MAX_UPLOAD_BYTES: 5_000_000,
     ATTACHMENT_ACCESS_LOG_RETENTION_DAYS: 180,
@@ -62,7 +65,7 @@ describe("UploadAttachmentUseCase", () => {
     const { id } = await uc.execute({ bytes: png, declaredContentType: "image/png", originalFilename: "a.png", profile: "avatar", ownerUserId: "u-1" })
     expect(storage.put).toHaveBeenCalledTimes(1)
     expect(repo.insert).toHaveBeenCalledTimes(1)
-    expect(log.record).toHaveBeenCalledWith(expect.objectContaining({ action: "upload", outcome: "allowed", attachmentId: id }))
+    expect(log.record).toHaveBeenCalledWith(expect.objectContaining({ action: "upload", outcome: "allowed", attachmentId: id, userId: "admin-1" }))
   })
 
   it("aceita arquivo exatamente no limite e não lança PayloadTooLargeError", async () => {

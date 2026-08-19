@@ -28,7 +28,10 @@ function makeDeps(found: Attachment | null) {
     deleteBatchOlderThan: jest.fn(),
   }
   const tx = { onCommit: (cb: () => Promise<void> | void) => onCommitCbs.push(cb) }
-  const ctx = { get: () => ({ userId: "u-1", ip: null, userAgent: null, correlationId: "c" }) }
+  const ctx = {
+    get: () => ({ ip: null, userAgent: null, correlationId: "c" }),
+    getActor: () => ({ id: "u-1", kind: "user" }),
+  }
   const uc = new DeleteAttachmentUseCase(storage, repo, log, tx as never, ctx as never)
   return { uc, storage, repo, log, onCommitCbs }
 }

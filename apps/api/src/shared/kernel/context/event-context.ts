@@ -30,6 +30,8 @@ export function buildEventContextStore(
     spanId: null,
     tenantId: envelope.tenantId,
     origin: "event",
+    actor: null,
+    extensions: new Map(),
     userId: null,
     sessionId: null,
     deviceId: null,

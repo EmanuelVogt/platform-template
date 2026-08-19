@@ -34,17 +34,21 @@ export type RequestContextStore = {
   readonly spanId: string | null
   readonly tenantId: string | null
   readonly origin: RequestOrigin
-  // actor/extensions/sessionId/deviceId são a superfície de escrita
-  // pós-criação (setActor one-shot; setExtension por símbolo do módulo). Os
-  // demais são readonly de fato. `userId`, `access`, `RequestAccess`,
-  // `setAccess`, `setUserSession` e `getUserSession` são a superfície
-  // transicional lida direto do store por ~20 arquivos: T8/T9 migram esses
-  // leitores e removem os campos, e aí actor/extensions viram obrigatórios.
+  // actor/extensions são a superfície de escrita pós-criação (setActor
+  // one-shot; setExtension por símbolo do módulo dono). Os demais campos são
+  // readonly de fato.
+  // SPEC_DEVIATION: T9a não apagou a superfície transicional nem tornou
+  // actor/extensions obrigatórios. Reason: consumidores fora da posse deste
+  // worker (apps/api/src/modules/** e partes não listadas de
+  // shared/kernel/**) ainda constroem o store sem actor/extensions ou leem
+  // userId/sessionId/deviceId/access direto do literal; forçar isso
+  // quebraria o typecheck deles. Só `setUserSession`, `getUserSession` e
+  // `setAccess` saíram — não sobrou nenhum consumidor desses métodos.
   actor?: Actor | null
   extensions?: Map<symbol, unknown>
+  userId: string | null
   sessionId: string | null
   deviceId: string | null
-  userId: string | null
   access: RequestAccess | null
   readonly locale: string
   readonly ip: string | null
@@ -73,6 +77,8 @@ export function setActor(actor: Actor): void {
     throw new Error("actor já definido no escopo")
   }
   store.actor = actor
+  // Sincroniza o campo transicional para leitores ainda não migrados
+  // (ver SPEC_DEVIATION em RequestContextStore).
   store.userId = actor.id
 }
 
@@ -123,45 +129,5 @@ export class RequestContext {
 
   getExtension<T>(key: ExtensionKey<T>): T | undefined {
     return getExtension(key)
-  }
-
-  setUserSession(
-    userId: string,
-    sessionId: string,
-    deviceId: string | null
-  ): void {
-    const store = requireStore()
-    if (store.userId !== null && store.userId !== userId) {
-      throw new Error("userId já definido no escopo")
-    }
-    store.userId = userId
-    store.sessionId = sessionId
-    store.deviceId = deviceId
-    store.actor = {
-      id: userId,
-      kind: "user",
-      ...(store.tenantId === null ? {} : { tenantId: store.tenantId }),
-    }
-  }
-
-  getUserSession(): {
-    userId: string | null
-    sessionId: string | null
-    deviceId: string | null
-  } {
-    const store = als.getStore()
-    return {
-      userId: store?.actor?.id ?? null,
-      sessionId: store?.sessionId ?? null,
-      deviceId: store?.deviceId ?? null,
-    }
-  }
-
-  setAccess(access: RequestAccess): void {
-    const store = requireStore()
-    if (store.access !== null) {
-      throw new Error("access já definido no escopo")
-    }
-    store.access = access
   }
 }

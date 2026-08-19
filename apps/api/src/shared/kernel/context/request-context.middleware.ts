@@ -48,6 +48,8 @@ export function createRequestContextMiddleware(ctx: RequestContext) {
       spanId: spanContext?.spanId ?? null,
       tenantId: null,
       origin: "http",
+      actor: null,
+      extensions: new Map(),
       userId: null,
       sessionId: null,
       deviceId: null,

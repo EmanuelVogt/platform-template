@@ -151,7 +151,7 @@ export class TransactionManager implements OnModuleInit {
     const store = this.requestContext?.tryGet()
     if (!store) return
     const payload = JSON.stringify({
-      actor_user_id: store.userId,
+      actor_user_id: store.actor?.id ?? null,
       correlation_id: store.correlationId,
       origin: store.origin,
     })

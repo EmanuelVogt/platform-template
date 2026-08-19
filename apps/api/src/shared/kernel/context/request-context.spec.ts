@@ -31,46 +31,8 @@ function makeStore(
 }
 
 describe("RequestContext", () => {
-  it("guarda e devolve sessionId dentro do escopo", () => {
-    const ctx = new RequestContext()
-    const result = ctx.run(
-      makeStore({ sessionId: "sess-123", userId: "u-1" }),
-      () => {
-        const store = ctx.get()
-        return { sessionId: store.sessionId, userId: store.userId }
-      }
-    )
-    expect(result).toEqual({ sessionId: "sess-123", userId: "u-1" })
-  })
-
   it("tryGet retorna null fora de escopo", () => {
     expect(new RequestContext().tryGet()).toBeNull()
-  })
-
-  it("setUserSession escreve null→valor e get reflete", () => {
-    const ctx = new RequestContext()
-    const result = ctx.run(makeStore(), () => {
-      ctx.setUserSession("u-9", "sess-9", "dev-9")
-      return ctx.get()
-    })
-    expect(result.userId).toBe("u-9")
-    expect(result.sessionId).toBe("sess-9")
-    expect(result.deviceId).toBe("dev-9")
-  })
-
-  it("setUserSession com userId divergente lança", () => {
-    const ctx = new RequestContext()
-    expect(() => {
-      ctx.run(makeStore({ userId: "u-1" }), () => {
-        ctx.setUserSession("u-2", "sess-x", null)
-      })
-    }).toThrow(/userId já definido/)
-  })
-
-  it("setUserSession fora de escopo lança", () => {
-    expect(() => { new RequestContext().setUserSession("u", "s", null) }).toThrow(
-      /fora de um escopo/
-    )
   })
 
   it("getActor devolve null fora de um escopo de request", () => {
@@ -129,33 +91,6 @@ describe("RequestContext", () => {
       return ctx.getActor()?.tenantId
     })
     expect(tenantId).toBe("t-9")
-  })
-
-  it("setUserSession deriva o ator com kind user e o tenantId do escopo", () => {
-    const ctx = new RequestContext()
-    const actor = ctx.run(makeStore({ tenantId: "t-7" }), () => {
-      ctx.setUserSession("u-4", "sess-4", null)
-      return ctx.getActor()
-    })
-    expect(actor).toEqual({ id: "u-4", kind: "user", tenantId: "t-7" })
-  })
-
-  it("getUserSession lê o ator corrente e devolve nulls fora de escopo", () => {
-    const ctx = new RequestContext()
-    const inside = ctx.run(makeStore(), () => {
-      ctx.setUserSession("u-5", "sess-5", "dev-5")
-      return ctx.getUserSession()
-    })
-    expect(inside).toEqual({
-      userId: "u-5",
-      sessionId: "sess-5",
-      deviceId: "dev-5",
-    })
-    expect(ctx.getUserSession()).toEqual({
-      userId: null,
-      sessionId: null,
-      deviceId: null,
-    })
   })
 
   it("getExtension devolve undefined para símbolo nunca gravado", () => {

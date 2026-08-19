@@ -427,7 +427,36 @@ Extra deviation from the fix: `setExtension`/`getExtension` take `ExtensionKey<T
 5. **T4 is a no-op on SQL** — `idempotency_keys` has no `user_id` column; the actor lives inside the composite `scope` text column. T22's baseline rewrite is unaffected on this point.
 6. **T15** — `writeRegistry`/`rollback` in `apply.mjs` take registry `entries` (`{name, apiModule, schemaExports}`) as an explicit parameter; the lock shape in design § 7 does not carry `apiModule`/`schemaExports`, so the command layer must supply them from the manifests it holds.
 7. **Tooling** — `test:scripts` is `node --test scripts/platform/__tests__/*.test.mjs` (glob, not bare dir: Node 24 fails to resolve a directory test path). `turbo.json` untouched — root tasks are not turbo-orchestrated, so Final runs `test:scripts` explicitly. `lib/manifest.mjs` validates by hand against `module.schema.json` (no JSON-Schema dependency added).
-8. **Standing condition** — `AccessGuard` is globally registered and fail-closed with no `ACCESS_POLICY` provider bound until T8. Every non-`@Public` route answers 403 `access-policy-missing` in the meantime; e2e/integration red in that window is expected, not a regression.
+8. **Standing condition** — `AccessGuard` is globally registered and fail-closed with no `ACCESS_POLICY` provider bound until T8. Every non-`@Public` route answers 403 `access-policy-missing` in the meantime; e2e/integration red in that window is expected, not a regression. **Lifted by T8 (`90233b9`).**
+
+### Wave 2 — all 4 clusters committed; Build gate NOT run (blocked, see below)
+
+| Cluster | Task | Commit | Result |
+| --- | --- | --- | --- |
+| C7 | T8 | `90233b9` | `AuthMiddleware` publishes `Actor{kind:"user"}` + `IDENTITY_SESSION`/`IDENTITY_ACCESS` extensions; `IdentityAccessPolicy` bound to `ACCESS_POLICY`, exported from the global `IdentityModule`; `AuthGuard` + `PermissionsGuard` deleted — 509 tests / 62 suites |
+| C8 | T9 | `c8d176b` | attachment use-cases on `getActor()`; audit/notification/tag had no `getUserSession`/`store.userId` hits — 220 tests / 45 suites |
+| C9 | T12 | `acfdb12` | `lib/migrations.mjs` — `drizzle-kit check` → baseline `generate` → `--custom` per `customMigrations` → `db:check:journal`, abort → exit 9; returns generated names for the lock — 4 tests |
+| C10 | T13 | `838149f` | `catalog-lint`: manifest, README H2 order (source `docs/catalog/README-contract.md`), CHANGELOG version heading, `web/**` import allow-list, advisory frontmatter — 14 tests |
+| C10 | T14 | `5115162` | `advisory-required.mjs` + lefthook `commit-msg`/`pre-commit` wiring — 7 tests (advisories 16 unchanged) |
+
+**Wave 2 Build gate — NOT RUN.** Two authorization regressions from T8 must land first (a green scoped gate would be misleading: neither turns a test red).
+
+**Blocking fix tasks (wave 2b) — dispatch these before the Build gate:**
+
+- **T8a (opus, auth) — `@OptionalAuth()` / `@RequireAnyPermission()` lost their enforcement.** Both decorators predate T1 and emit no `ACCESS_REQUIREMENT`, so with `PermissionsGuard` deleted they now fall through to the kernel default.
+  - `@OptionalAuth()` → default `authenticated` → **anonymous access is now 401**. Breaks `modules/attachment/api/controllers/download-attachment.controller.ts:39` and the assertion at `apps/api/test/identity/authz.e2e-spec.ts:394` (left red by T8 on purpose). Fix: emit `{ kind: "public" }`.
+  - `@RequireAnyPermission([...])` → default `authenticated` → **OR-permission enforcement silently disappears**; `modules/audit/api/controllers/audit.controller.ts:43` degrades to "any authenticated user". Fix: new `{ kind: "anyPermission"; keys: string[] }` in `access-policy.port.ts` + `decorators.ts` + a branch in `IdentityAccessPolicy`. Needs a spec that fails when the branch is absent (no existing test catches this).
+  - Touches: `shared/kernel/access/{decorators.ts,access-policy.port.ts,access.guard.ts}` (+specs), `modules/identity/api/access/identity-access.policy.ts` (+spec).
+- **T9a (sonnet) — transitional surface removal, deferred by C8 as designed.** After T8a, migrate the last unowned readers onto `actor` and delete the deprecated surface. Remaining consumers at C8's grep: all of `modules/identity/**` (now migrated by T8 — re-grep), plus `shared/kernel/logging/logger.factory.ts:54` (`store.userId`), and the three kernel readers left untouched (`transactional/transaction-manager.ts`, `context/request-context.middleware.ts`, `context/event-context.ts`). Then delete `userId`, `sessionId`, `deviceId`, `access`, `RequestAccess`, `setAccess`, `setUserSession`, `getUserSession` from `request-context.ts` and flip `actor`/`extensions` to **required**. Closes KRN-04's "grep = 0" clause.
+  - T8a and T9a are file-disjoint and can run in parallel.
+
+**Carry-forward from wave 2:**
+
+9. **T8 e2e was not run** — `test:e2e` needs a live Postgres (`createTestPool`), unavailable in the worker environment. Compensation shipped: `modules/identity/api/middleware/auth-seam.spec.ts`, a DB-free Nest boot spec that mounts the real kernel `AccessGuard` + `ACCESS_POLICY` and proves middleware-before-guard (guarded 200 with session, 401 anon, 401 stale cookie, public 200) and that the `{*splat}` route pattern boots on Express 5. **The e2e claim in T8's Done-when is still unverified — the Verifier must run it at Final.**
+10. **T8 behaviour deviations (accepted, documented):** a DB failure during session lookup is now 503 for every request carrying a cookie (v0.2 degraded `@OptionalAuth` to anonymous); a 401 on a request with *no* cookie no longer emits the clearing `Set-Cookie` (stale/expired cookies still are cleared by the middleware).
+11. **T12** — the exact invocation shapes for `drizzle-kit check` and `db:check:journal` were not in design § 5.2; the worker extended the `pnpm --filter api exec drizzle-kit …` pattern the design gives for the baseline `generate`. **T15 owns the real command line** and must confirm these against the child's actual scripts.
+12. **T13/T14** — `parseAdvisory`/`AdvisoryParseError` were extracted from `lib/advisories.mjs` into new `lib/frontmatter.mjs`; `advisories.mjs` re-exports both, T6's 16 tests unchanged. T15/T24 import from whichever they prefer.
+13. **C8 note** — audit's use of `RequestAccess` is permission-scoping, unrelated to actor/userId; T9 correctly left it. It dies with T8a/T9a or T22, not before.
 
 ---
 

@@ -8,7 +8,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 ---
 
-**Design**: `.specs/features/v0-2-product-slots/design.md` · **Status**: Executing — Verifier PASS at `f02cb03` (round 2); T21 → T22 left (2026-08-18)
+**Design**: `.specs/features/v0-2-product-slots/design.md` · **Status**: DONE — merged `aa0b294` 2026-08-18; tag/push pending user authorization
 Repo: `~/Projects/platform-template`, worktree `.worktrees/v0-2-product-slots` (crosses api + contract + migrations). Spec artifacts stay on `main`.
 
 ## Test Coverage Matrix
@@ -240,6 +240,7 @@ Wave 3: [I: T19→T20] (T24 fix between T19 and T20) → Verifier → T21 → T2
 **Tests**: none · **Gate**: none · **Commit**: `docs(specs): final coverage sweep verdicts`
 
 ### T22: Merge + tag v0.2.0 (needs explicit user authorization)
+**Status**: ✅ Merged — `aa0b294` (main, no-ff); build+contract gate green on main (check 0, unit 1000, journal ok, openapi idempotent). ⏳ `git tag v0.2.0` + `git push` (main + tags) + close issue #1 pending the user's explicit "sim"
 **What**: merge worktree branch into `main` locally (`merge:` commit), verify build gate on `main`, then — only with the user's explicit ok — `git tag v0.2.0` and `git push --tags` (+ push main).
 **Where**: repo root · **Depends on**: T21 · **Requirement**: REL-03
 **Done when**: [ ] build + contract gates green on `main`; [ ] tag exists and is pushed after authorization; [ ] `.specs/features/v0-2-product-slots/` moved to `.specs/features/done/`.

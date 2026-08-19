@@ -221,7 +221,7 @@ describe("Attachment (e2e): download com ACL", () => {
     const id = await seedAttachment(pool, storage, {
       ownerUserId: userId,
       visibility: "restricted",
-      profile: "feedback-attachment",
+      profile: "document",
       originalFilename: "log.txt",
     })
 
@@ -236,6 +236,35 @@ describe("Attachment (e2e): download com ACL", () => {
     )
     expect(res.headers["x-content-type-options"]).toBe("nosniff")
     expect(res.headers["cache-control"]).toBe("private, max-age=300")
+  })
+
+  it("perfil desconhecido (removido/renomeado) falha alto em vez de servir octet-stream", async () => {
+    const userId = await seedUser(app, pool, {
+      email: "att-unknown-profile@example.com",
+      name: "Legado",
+      password: "Senha-Att-Muito-Forte-2026!",
+    })
+    const loginRes = await request(app.getHttpServer())
+      .post("/v1/auth/login")
+      .set("Origin", ORIGIN)
+      .send({ email: "att-unknown-profile@example.com", password: "Senha-Att-Muito-Forte-2026!" })
+      .expect(200)
+    const cookies = loginRes.headers["set-cookie"]
+
+    const id = await seedAttachment(pool, storage, {
+      ownerUserId: userId,
+      visibility: "restricted",
+      profile: "legacy-profile",
+      originalFilename: "antigo.txt",
+    })
+
+    const res = await request(app.getHttpServer())
+      .get(`/v1/attachments/${id}`)
+      .set("Cookie", cookies!)
+      .expect(404)
+
+    expect(res.body.type).toMatch(/\/not-found$/)
+    expect(res.headers["content-disposition"]).toBeUndefined()
   })
 
   it("mantém avatar inline", async () => {

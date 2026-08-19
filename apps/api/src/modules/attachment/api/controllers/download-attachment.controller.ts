@@ -4,6 +4,7 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger"
 import { OptionalAuth } from "../../../../shared/kernel/access/decorators"
 import { buildContentDisposition } from "../../../../shared/kernel/http/content-disposition"
 import { GetAttachmentForDownloadUseCase } from "../../application/use-cases/get-attachment-for-download/get-attachment-for-download.use-case"
+import { AttachmentNotFoundError } from "../../domain/errors"
 import { UPLOAD_PROFILES, type UploadProfileCatalog } from "../../domain/upload-profiles"
 import { AttachmentIdParamDto } from "../contracts/attachment.contract"
 
@@ -51,11 +52,15 @@ export class DownloadAttachmentController {
     }
 
     // Nome de perfil removido/renomeado (ex.: migração 0005) pode sobreviver em
-    // anexo antigo que a migração não alcançou — trata como tipo livre em vez
-    // de estourar, já que "desconhecido" nunca deve ser servido inline.
+    // anexo antigo que a migração não alcançou. Servir como octet-stream seria
+    // supor "tipo livre" sem base; reaproveita o mesmo 404 anti-enumeração do
+    // caso "não encontrado" em vez de vazar o estado interno inconsistente.
+    if (result.profile !== "legacy" && !(result.profile in this.profiles)) {
+      throw new AttachmentNotFoundError()
+    }
+
     const forceDownload =
-      result.profile !== "legacy" &&
-      (!(result.profile in this.profiles) || this.profiles[result.profile].accept === "any")
+      result.profile !== "legacy" && this.profiles[result.profile].accept === "any"
 
     if (forceDownload) {
       res.setHeader("Content-Type", "application/octet-stream")

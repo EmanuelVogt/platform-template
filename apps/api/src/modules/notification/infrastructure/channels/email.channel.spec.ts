@@ -157,6 +157,9 @@ describe("EmailChannel", () => {
     await expect(channel.send({ id: "x", type: "device_revoked", payload: {} })).rejects.toThrow(
       EmailBindingMissingError,
     )
+    await expect(channel.send({ id: "x", type: "device_revoked", payload: {} })).rejects.toThrow(
+      /device_revoked/,
+    )
   })
 
   it("recipient ausente e data.email não é string → EmailRecipientMissingError", async () => {
@@ -167,5 +170,12 @@ describe("EmailChannel", () => {
         payload: { name: "Ana", link: "https://app/x" },
       }),
     ).rejects.toThrow(EmailRecipientMissingError)
+    await expect(
+      channel.send({
+        id: "x",
+        type: "access_link_sent",
+        payload: { name: "Ana", link: "https://app/x" },
+      }),
+    ).rejects.toThrow(/access_link_sent/)
   })
 })

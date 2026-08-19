@@ -1,5 +1,6 @@
 import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.error"
 import { User, type UserProps } from "../../../domain/entities/user.entity"
+import { ProfileImageStoreMissingError } from "../../../domain/errors"
 import { fakeRequestContext } from "../../request-context.fixture"
 
 import { UploadAvatarUseCase } from "./upload-avatar.use-case"
@@ -54,10 +55,13 @@ function makeDeps(over: Record<string, any> = {}) {
   }
   const clock = over.clock ?? { now: () => NOW }
   const ctx = over.ctx ?? makeCtx()
-  const attachments = over.attachments ?? {
-    upload: jest.fn().mockResolvedValue({ id: "att-new" }),
-    delete: jest.fn().mockResolvedValue(undefined),
-  }
+  const attachments =
+    "attachments" in over
+      ? over.attachments
+      : {
+          upload: jest.fn().mockResolvedValue({ id: "att-new" }),
+          delete: jest.fn().mockResolvedValue(undefined),
+        }
   const logger = { warn: jest.fn(), info: jest.fn(), error: jest.fn() }
   const loggerFactory = { forModule: () => logger }
 
@@ -87,6 +91,19 @@ describe("UploadAvatarUseCase", () => {
       }),
     )
     expect(t.users.update).toHaveBeenCalledTimes(1)
+  })
+
+  it("sem provider da porta: lança ProfileImageStoreMissingError e não altera o usuário", async () => {
+    const t = makeDeps({
+      attachments: null,
+      user: makeUser({ avatarAttachmentId: "att-old" }),
+    })
+    await expect(t.uc.execute(DUMMY_INPUT)).rejects.toMatchObject({
+      status: 501,
+      type: "https://errors.example.com/auth/profile-image-store-missing",
+      name: ProfileImageStoreMissingError.name,
+    })
+    expect(t.users.update).not.toHaveBeenCalled()
   })
 
   it("sem avatar anterior: não chama attachments.delete", async () => {

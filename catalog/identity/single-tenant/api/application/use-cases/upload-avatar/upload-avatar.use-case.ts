@@ -1,4 +1,4 @@
-import { Inject } from "@nestjs/common"
+import { Inject, Optional } from "@nestjs/common"
 
 import { CLOCK, type Clock } from "../../../../../shared/kernel/clock/clock"
 import { RequestContext } from "../../../../../shared/kernel/context/request-context"
@@ -10,7 +10,11 @@ import {
 import { Traced } from "../../../../../shared/kernel/tracing/traced.decorator"
 import { Transactional } from "../../../../../shared/kernel/transactional/transactional.decorator"
 import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
-import { AttachmentFacade } from "../../../../attachment/api/facades/attachment.facade"
+import {
+  PROFILE_IMAGE_STORE,
+  type ProfileImageStore,
+  requireProfileImageStore,
+} from "../../../domain/ports/profile-image-store"
 import {
   USER_REPOSITORY,
   type UserRepository,
@@ -22,8 +26,8 @@ import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/us
 
 /**
  * Upload de avatar do usuário autenticado: sobe o blob (validado/sniffado no
- * AttachmentFacade), associa ao user e remove o avatar anterior. O PUT no R2
- * roda FORA de qualquer tx (IO de rede não segura conexão).
+ * provider de PROFILE_IMAGE_STORE), associa ao user e remove o avatar anterior.
+ * O PUT no R2 roda FORA de qualquer tx (IO de rede não segura conexão).
  */
 @UseCase()
 export class UploadAvatarUseCase
@@ -35,7 +39,9 @@ export class UploadAvatarUseCase
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly ctx: RequestContext,
-    private readonly attachments: AttachmentFacade,
+    @Optional()
+    @Inject(PROFILE_IMAGE_STORE)
+    private readonly profileImages: ProfileImageStore | null = null,
     loggerFactory: LoggerFactory,
   ) {
     this.log = loggerFactory.forModule("UploadAvatar")
@@ -49,8 +55,9 @@ export class UploadAvatarUseCase
       throw new ForbiddenError()
     }
     const previousAvatarId = user.props.avatarAttachmentId
+    const images = requireProfileImageStore(this.profileImages)
 
-    const { id } = await this.attachments.upload({
+    const { id } = await images.upload({
       bytes: input.bytes,
       declaredContentType: input.declaredContentType,
       originalFilename: input.originalFilename,
@@ -63,7 +70,7 @@ export class UploadAvatarUseCase
     // Limpeza do avatar antigo é melhor-esforço: órfão tolerável, não falha a request.
     if (previousAvatarId && previousAvatarId !== id) {
       try {
-        await this.attachments.delete(previousAvatarId)
+        await images.delete(previousAvatarId)
       } catch (error) {
         this.log.warn("avatar.cleanup_failed", {
           previousAvatarId,

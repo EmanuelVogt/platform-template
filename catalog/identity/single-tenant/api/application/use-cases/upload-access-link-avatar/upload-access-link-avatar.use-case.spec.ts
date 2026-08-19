@@ -1,4 +1,7 @@
-import { InvalidAccessLinkError } from "../../../domain/errors"
+import {
+  InvalidAccessLinkError,
+  ProfileImageStoreMissingError,
+} from "../../../domain/errors"
 
 import { UploadAccessLinkAvatarUseCase } from "./upload-access-link-avatar.use-case"
 
@@ -22,7 +25,10 @@ function makeDeps(over: Record<string, any> = {}) {
   const users = over.users ?? { findById: jest.fn().mockResolvedValue(pendingUserProps()) }
   const tokens = over.tokens ?? { hashOf: jest.fn().mockReturnValue("hash-of-raw") }
   const clock = over.clock ?? { now: () => NOW }
-  const attachments = over.attachments ?? { upload: jest.fn().mockResolvedValue({ id: "att-1" }) }
+  const attachments =
+    "attachments" in over
+      ? over.attachments
+      : { upload: jest.fn().mockResolvedValue({ id: "att-1" }) }
   const uc = new UploadAccessLinkAvatarUseCase(verificationTokens, users, tokens, clock, attachments)
   return { uc, verificationTokens, users, tokens, attachments }
 }
@@ -39,6 +45,16 @@ describe("UploadAccessLinkAvatarUseCase", () => {
       profile: "access-link-avatar",
       ownerUserId: "u-1",
     })
+  })
+
+  it("sem provider da porta: lança ProfileImageStoreMissingError depois de validar o token", async () => {
+    const t = makeDeps({ attachments: null })
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toMatchObject({
+      status: 501,
+      type: "https://errors.example.com/auth/profile-image-store-missing",
+      name: ProfileImageStoreMissingError.name,
+    })
+    expect(t.verificationTokens.findActiveByHash).toHaveBeenCalledTimes(1)
   })
 
   it("token inválido/expirado lança InvalidAccessLinkError sem chamar facade", async () => {

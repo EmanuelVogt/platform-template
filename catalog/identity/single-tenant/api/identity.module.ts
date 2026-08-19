@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common"
 import { APP_GUARD } from "@nestjs/core"
 
 import { ACCESS_POLICY } from "../../shared/kernel/access/access-policy.port"
-import { AttachmentModule } from "../attachment/attachment.module"
 
 import { IdentityAccessPolicy } from "./api/access/identity-access.policy"
 import { CONTROLLERS } from "./api/controllers"
@@ -241,7 +240,7 @@ export class IdentityModule implements NestModule {
       global: true,
       // Sem forwardRef: num módulo dinâmico o forwardRef chega cru ao container
       // (addDynamicModules) e gera uma SEGUNDA instância do módulo alvo.
-      imports: [AttachmentModule, ...(professional ? [professional.module] : [])],
+      imports: professional ? [professional.module] : [],
       controllers: CONTROLLERS,
       providers: [
         { provide: IDENTITY_CONFIG, useFactory: loadIdentityConfig },

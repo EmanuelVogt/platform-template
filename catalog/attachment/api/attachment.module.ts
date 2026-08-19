@@ -1,5 +1,8 @@
-import { Module } from "@nestjs/common"
+import { Global, Module } from "@nestjs/common"
 
+import { PROFILE_IMAGE_STORE } from "../identity/domain/ports/profile-image-store"
+
+import { AttachmentProfileImageStore } from "./api/adapters/profile-image-store.adapter"
 import { CONTROLLERS } from "./api/controllers"
 import { AttachmentFacade } from "./api/facades/attachment.facade"
 import { PurgeAttachmentAccessLogsJob } from "./application/jobs/purge-attachment-access-logs.job"
@@ -39,6 +42,10 @@ const USE_CASES = [
 
 // O histórico precisa do UserDirectoryFacade, que chega pelo IdentityModule
 // global montado na raiz — importar a classe aqui criaria uma segunda instância.
+// Global porque a identidade não importa mais o attachment: o binding de
+// PROFILE_IMAGE_STORE precisa alcançar o injector do IdentityModule sem aresta
+// de import, que recriaria o ciclo entre as duas entradas.
+@Global()
 @Module({
   controllers: [...CONTROLLERS],
   providers: [
@@ -53,7 +60,8 @@ const USE_CASES = [
     PurgeAttachmentAccessLogsJob,
     PurgePendingAttachmentsJob,
     AttachmentFacade,
+    { provide: PROFILE_IMAGE_STORE, useClass: AttachmentProfileImageStore },
   ],
-  exports: [AttachmentFacade],
+  exports: [AttachmentFacade, PROFILE_IMAGE_STORE],
 })
 export class AttachmentModule {}

@@ -1,5 +1,9 @@
 import { User } from "../../../domain/entities/user.entity"
-import { InvalidAccessLinkError, WeakPasswordError } from "../../../domain/errors"
+import {
+  InvalidAccessLinkError,
+  ProfileImageStoreMissingError,
+  WeakPasswordError,
+} from "../../../domain/errors"
 import { makeIdentityConfig } from "../../../identity.config.fixture"
 import { fakeRequestContext } from "../../request-context.fixture"
 import { CreateSessionService } from "../../services/create-session.service"
@@ -96,7 +100,10 @@ function makeDeps(over: Record<string, any> = {}) {
       spanId: null,
     }))
   const config = over.config ?? makeIdentityConfig()
-  const attachments = over.attachments ?? { exists: jest.fn().mockResolvedValue(false) }
+  const attachments =
+    "attachments" in over
+      ? over.attachments
+      : { exists: jest.fn().mockResolvedValue(false) }
   const createSession = over.createSession ?? makeSessionService()
   const uc = new SetPasswordUseCase(
     verificationTokens,
@@ -117,6 +124,26 @@ function makeDeps(over: Record<string, any> = {}) {
 }
 
 describe("SetPasswordUseCase", () => {
+  it("sem provider da porta e com avatar submetido: lança ProfileImageStoreMissingError sem consumir o token", async () => {
+    const t = makeDeps({ attachments: null })
+    await expect(
+      t.uc.execute({ ...VALID_INPUT, avatarAttachmentId: "att-x" }),
+    ).rejects.toMatchObject({
+      status: 501,
+      type: "https://errors.example.com/auth/profile-image-store-missing",
+      name: ProfileImageStoreMissingError.name,
+    })
+    expect(t.verificationTokens.consumeByHash).not.toHaveBeenCalled()
+    expect(t.users.update).not.toHaveBeenCalled()
+  })
+
+  it("sem provider da porta e sem avatar submetido: a senha é definida normalmente", async () => {
+    const t = makeDeps({ attachments: null })
+    await t.uc.execute(VALID_INPUT)
+    expect(t.verificationTokens.consumeByHash).toHaveBeenCalledTimes(1)
+    expect(t.users.update).toHaveBeenCalledTimes(1)
+  })
+
   it("token inválido (findActive null) lança InvalidAccessLinkError sem consumir", async () => {
     const t = makeDeps({
       verificationTokens: {

@@ -119,6 +119,23 @@ export class AccessLinkNotResendableError extends DomainError {
   }
 }
 
+/**
+ * Ninguém registrou PROFILE_IMAGE_STORE: o módulo que guarda arquivos não está
+ * instalado. Falha de configuração, não do chamador — só as operações de imagem
+ * de perfil param, o resto da identidade continua funcionando.
+ */
+export class ProfileImageStoreMissingError extends DomainError {
+  readonly status = 501;
+  readonly type = `${TYPE_BASE}/profile-image-store-missing`;
+
+  constructor() {
+    super(
+      'Imagem de perfil indisponível',
+      'Nenhum armazenamento de imagem de perfil está registrado.',
+    );
+  }
+}
+
 /** Transição `setPassword` em usuário que não está pendente. */
 export class InvalidAccountStateError extends DomainError {
   readonly status = 409;

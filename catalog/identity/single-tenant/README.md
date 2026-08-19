@@ -21,7 +21,7 @@ Prefixo global `/v1`. `Acesso` é a `AccessRequirement` que o `AccessGuard` do k
 | POST | `/v1/auth/verify-email` | `verifyEmail` | public | — | — |
 | GET | `/v1/auth/access-link` | `validateAccessLink` | public | — | — |
 | POST | `/v1/auth/access-link/cancel` | `cancelAccessLink` | public | — | — |
-| POST | `/v1/auth/access-link/avatar` | `uploadAccessLinkAvatar` | public | — | `AttachmentFacade` |
+| POST | `/v1/auth/access-link/avatar` | `uploadAccessLinkAvatar` | public | — | `PROFILE_IMAGE_STORE` |
 | GET | `/v1/auth/email-change` | `validateEmailChange` | public | — | — |
 | POST | `/v1/auth/confirm-email-change` | `confirmEmailChange` | public | — | — |
 | GET | `/v1/auth/session` | `getSession` | authenticated | — | — |
@@ -30,7 +30,7 @@ Prefixo global `/v1`. `Acesso` é a `AccessRequirement` que o `AccessGuard` do k
 | POST | `/v1/auth/resend-verification` | `resendVerification` | authenticated | `notification.requested` | — |
 | GET | `/v1/auth/access-history` | `accessHistory` | authenticated | — | — |
 | PATCH | `/v1/auth/profile` | `updateMyProfile` | authenticated | — | — |
-| POST | `/v1/auth/avatar` | `uploadAvatar` | authenticated | — | `AttachmentFacade` |
+| POST | `/v1/auth/avatar` | `uploadAvatar` | authenticated | — | `PROFILE_IMAGE_STORE` |
 | POST | `/v1/auth/change-email` | `requestEmailChange` | authenticated | `notification.requested` | — |
 | GET | `/v1/auth/devices` | `listDevices` | authenticated | — | — |
 | DELETE | `/v1/auth/devices` | `revokeOtherDevices` | authenticated | — | — |
@@ -52,6 +52,13 @@ Prefixo global `/v1`. `Acesso` é a `AccessRequirement` que o `AccessGuard` do k
 Facades **exportadas** para outras entradas: `UserDirectoryFacade` (nome/e-mail/avatar por id),
 `UsageAccessFacade` (checagem de uso antes de apagar) e `ProfessionalDirectoryFacade` (usuários
 que atendem cliente). `IdentityModule` é `global: true` e exporta o token `ACCESS_POLICY`.
+
+Porta **declarada** pela entrada e ligada por quem quiser: `PROFILE_IMAGE_STORE`
+(`domain/ports/profile-image-store`), com `upload`, `delete` e `exists` para as imagens de perfil.
+É opcional e resolvida com `@Optional()`: sem provider registrado, `uploadAvatar`,
+`uploadAccessLinkAvatar` e `setPassword` **quando** recebe `avatarAttachmentId` respondem `501`
+com `type` `.../auth/profile-image-store-missing`; login, sessão, administração de usuários e o
+`setPassword` sem avatar continuam funcionando.
 
 Todo evento sai pelo outbox do kernel (`notification.requested`, consumido pela entrada
 `notification`); a trilha própria da entrada é a tabela `identity.auth_events` (§ Dados).
@@ -193,18 +200,16 @@ operações de tags `Auth`, `Session`, `Device`, `Admin` e `Access` e grave em
 
 ## Dependências
 
-| Entrada | Range | Por quê |
-| --- | --- | --- |
-| `attachment` | `^1.0.0` | `AttachmentFacade` no upload de avatar (próprio e de link de acesso) |
+`dependsOn: []` — a entrada instala sozinha num filho só com o kernel.
 
-A aresta é **dura**, não degradável: `identity.module.ts` faz `imports: [AttachmentModule]` e três
-casos de uso injetam `AttachmentFacade` como dependência obrigatória de construtor, sem
-`@Optional()` — `upload-avatar`, `upload-access-link-avatar` e `set-password`. Sem a entrada
-`attachment` o `IdentityModule` não resolve no boot. Instalar com `--with-deps`.
+A antiga aresta para `attachment` virou porta: `identity.module.ts` não importa mais o
+`AttachmentModule` e os três casos de uso (`upload-avatar`, `upload-access-link-avatar` e
+`set-password`) resolvem `PROFILE_IMAGE_STORE` com `@Optional()` (§ Contrato). Quem liga a porta
+hoje é a entrada `attachment`, que continua declarando `dependsOn: identity` (usa
+`UserDirectoryFacade`) — a aresta agora tem um sentido só e o grafo de instalação é acíclico.
 
-A entrada `attachment` declara `dependsOn: identity` (usa `UserDirectoryFacade`), o que fecha um
-**ciclo** entre as duas entradas. O ciclo é real no código de hoje e a resolução é de design
-(quebrar por porta/evento, ou fundir as duas numa instalação conjunta), não desta entrada.
+Sem a entrada `attachment` (ou qualquer outro provider de `PROFILE_IMAGE_STORE`) o
+`IdentityModule` resolve normalmente no boot; só as operações de imagem de perfil respondem `501`.
 
 A entrada `audit` **não** é dependência: `migrations/custom/02_audit_attach.sql` é guardado e não
 faz nada quando `audit.attach` não existe (§ Dados).

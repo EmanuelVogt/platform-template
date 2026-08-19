@@ -6,13 +6,8 @@
   },
   {
     "file": "apps/api/src/shared/kernel/access/product-permission-catalogs.ts",
-    "find": "import type { ModuleDef } from \"./permission.types\"",
-    "replace": "import { SAMPLE_CATALOG } from \"../../../modules/sample/sample-catalog\"\n\nimport type { ModuleDef } from \"./permission.types\""
-  },
-  {
-    "file": "apps/api/src/shared/kernel/access/product-permission-catalogs.ts",
     "find": "export const PRODUCT_PERMISSION_CATALOGS = [] as const satisfies readonly ModuleDef[]",
-    "replace": "export const PRODUCT_PERMISSION_CATALOGS = [SAMPLE_CATALOG] as const satisfies readonly ModuleDef[]"
+    "replace": "export const SAMPLE_CATALOG = {\n  key: \"sample\",\n  label: \"Amostra\",\n  features: [\n    {\n      key: \"things\",\n      label: \"Coisas\",\n      permissions: [\n        {\n          key: \"sample.things.audit.read\",\n          label: \"Ver logs de coisas\",\n          requires: [],\n        },\n      ],\n    },\n  ],\n} as const satisfies ModuleDef\n\nexport const PRODUCT_PERMISSION_CATALOGS = [SAMPLE_CATALOG] as const satisfies readonly ModuleDef[]\n\ntype SampleCatalogPermissionKey =\n  (typeof SAMPLE_CATALOG)[\"features\"][number][\"permissions\"][number][\"key\"]\n\ndeclare module \"./permission.types\" {\n  interface PermissionKeyRegistry {\n    readonly sample: SampleCatalogPermissionKey\n  }\n}"
   },
   {
     "file": "apps/api/src/shared/kernel/upload/product-upload-profiles.ts",

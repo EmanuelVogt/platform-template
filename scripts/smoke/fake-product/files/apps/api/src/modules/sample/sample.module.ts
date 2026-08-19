@@ -3,7 +3,7 @@ import { join } from "node:path"
 import { Injectable, Module } from "@nestjs/common"
 import { z } from "zod"
 
-import { AuditRegistry } from "../audit/application/services/audit-registry"
+import { AuditRegistry } from "../audit/api/facades/audit-registry.facade"
 import { AuditModule } from "../audit/audit.module"
 import {
   defineCatalogEntry,

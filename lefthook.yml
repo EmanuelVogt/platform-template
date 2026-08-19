@@ -12,3 +12,14 @@ pre-push:
     # web roda com coverage: o threshold do vitest.config barra push que erode a cobertura.
     test-web:
       run: pnpm turbo test:cov --filter=web
+
+pre-commit:
+  commands:
+    catalog-lint:
+      glob: "{catalog/**,docs/advisories/**}"
+      run: pnpm catalog:lint
+
+commit-msg:
+  commands:
+    advisory-required:
+      run: node scripts/platform/advisory-required.mjs {1}

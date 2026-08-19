@@ -2,14 +2,15 @@
 
 **Date**: 2026-08-18
 **Spec**: `.specs/features/v0-2-product-slots/spec.md`
-**Diff range**: `main..HEAD` (`13125bc`), worktree `.worktrees/v0-2-product-slots`, branch `feat/v0-2-product-slots`
+**Diff range**: `main..HEAD` (`f02cb03`), worktree `.worktrees/v0-2-product-slots`, branch `feat/v0-2-product-slots`
 **Verifier**: independent sub-agent (author ≠ verifier), evidence-or-zero
+**Rounds**: round 1 at `13125bc` → FAIL (2 gaps) · fix loop 1 (`253ea0d`, `f02cb03`) → re-verified below
 
-**Verdict**: ❌ **FAIL** — every AC of the five slots is covered with evidence and the full gate is
-green, but one **spec Edge Case is contradicted by the implementation** (unknown upload profile on
-download) and the e2e that should cover the free-type download path asserts a profile name this
-feature removed. Two ACs carry partial evidence. Two ACs (SWP-01 issue comment, SWP-02 follow-up
-issues) are orchestrator-owned and still open in T21 — recorded as *pending*, not as failures.
+**Verdict**: ✅ **PASS** — both round-1 gaps are closed with evidence and both were re-killed by
+fresh mutations. Every AC of the five slots is covered, the full gate was green at `13125bc` and the
+two touched suites are green at `f02cb03`. The only open items are orchestrator-owned: SWP-01 (issue
+#1 comment) and SWP-02 (follow-up issues) in T21, and REL-03 (tag) in T22 — recorded as *pending*,
+not as failures.
 
 ---
 
@@ -18,6 +19,7 @@ issues) are orchestrator-owned and still open in T21 — recorded as *pending*, 
 | Task | Status | Notes |
 | ---- | ------ | ----- |
 | T1–T20, T23, T24 | ✅ Done | hashes recorded in `tasks.md`; all present in `main..HEAD` |
+| Fix loop 1 | ✅ Done | `253ea0d` fix(attachment): unknown stored profile fails loudly on download · `f02cb03` test(notification): e-mail binding errors assert the type in the message |
 | T21 | ⏳ Pending | sweep re-run, issue #1 comment, follow-up issues — orchestrator-owned (SWP-01/02) |
 | T22 | ⏳ Pending | merge + tag `v0.2.0` — needs explicit user authorization (REL-03) |
 
@@ -39,8 +41,8 @@ issues) are orchestrator-owned and still open in T21 — recorded as *pending*, 
 | Criterion | Spec-defined outcome | `file:line` + assertion | Result |
 | --- | --- | --- | --- |
 | AC1 registered product type → `Mailer.send({ to: data.email, subject: subject(data), html })`, `idempotencyKey = delivery.id` | exact payload object | `notification/infrastructure/channels/email.channel.spec.ts:113-118` — `expect(send).toHaveBeenCalledWith({ to: payload.email, subject, html: "<html>ok</html>", idempotencyKey: "dlv-1" })`; e2e `test/notifications-product-extension.e2e-spec.ts:127-130` — `expect(message?.to).toBe(email)` / `expect(message?.subject).toBe(\`Bem-vindo, ${name}\`)` / `expect(message?.html).toContain(name)` / `expect(message?.idempotencyKey).toBe(delivery.id)` | ✅ PASS |
-| AC2 catalog lists `email` but no binding → delivery fails with an error **naming the type**, never a silent skip | error message contains the type | `email.channel.spec.ts:156-160` — `.rejects.toThrow(EmailBindingMissingError)`; message built at `notification/domain/errors.ts:13` (`tipo de notificação sem binding de e-mail: ${type}`) | ⚠️ Partial — the assertion targets the class, not the message naming the type (contrast `audit-registry.spec.ts:136` which does assert `.toThrow(/users/)`) |
-| AC3 `recipient` absent and `data.email` not a string → `MissingRecipient` naming the type | error message contains the type | `email.channel.spec.ts:162-169` — `.rejects.toThrow(EmailRecipientMissingError)`; guard `email.channel.ts:32-34`; message `errors.ts:21` | ⚠️ Partial — same: class asserted, message not |
+| AC2 catalog lists `email` but no binding → delivery fails with an error **naming the type**, never a silent skip | error message contains the type | `email.channel.spec.ts:157-159` — `.rejects.toThrow(EmailBindingMissingError)` **and** `:160-162` — `.rejects.toThrow(/device_revoked/)`; message built at `notification/domain/errors.ts:13` (`tipo de notificação sem binding de e-mail: ${type}`) | ✅ PASS *(round 1: ⚠️ partial — fixed by `f02cb03`)* |
+| AC3 `recipient` absent and `data.email` not a string → `MissingRecipient` naming the type | error message contains the type | `email.channel.spec.ts:166-172` — `.rejects.toThrow(EmailRecipientMissingError)` **and** `:173-179` — `.rejects.toThrow(/access_link_sent/)`; guard `email.channel.ts:32-34`; message `errors.ts:21` | ✅ PASS *(round 1: ⚠️ partial — fixed by `f02cb03`)* |
 | AC4 all 8 base types keep the v0.1 subject/template; no per-type method or `case` | same subject + template name, generic path | `email.channel.spec.ts:108` `it.each(BASE_EMAIL_CASES)` (table `:12-93`, 8 entries) + `:112` `expect(render).toHaveBeenCalledWith(template, expect.any(Object))` + `:113-118`; `rg 'case "|switch \(' email.channel.ts mailer/*.ts` = **0 matches**; sources data-only at `application/templates/base-template-sources.ts:13-98` | ✅ PASS |
 | AC5 `MAIL_TRANSPORT=log` → `LogMailer` logs `to`, `subject`, `idempotencyKey`, every `href` | exact log payload | `notification/infrastructure/mailer/log-mailer.spec.ts:21-26` — `expect(info).toHaveBeenCalledWith("e-mail (dev)", { to:"a@b.com", subject:"Configure seu acesso à plataforma", idempotencyKey:"d1", links:["https://x.test/1","https://x.test/2"] })`; `:36-41` zero-link case `links: []`; impl `log-mailer.ts:25-31` | ✅ PASS |
 
@@ -96,7 +98,9 @@ AD-007 shape verified: `application/templates/notification-template-registry.ts:
 - [x] Template source registers a duplicate `template`/type → throws — `notification-template-registry.spec.ts:49-58`
 - [x] Delivery payload without `locale` → rendering still succeeds — base cases in `email.channel.spec.ts:12-93` render without `locale`
 - [x] Child already has migration idx 0004 → journal position decides order; `db:check:journal` guides the `when` fix — documented `docs/dev/template.md:70-77`, gate exit 0
-- [ ] **Stored attachment with an unknown profile after the rename → download SHALL fail loudly** — **NOT honoured**. `attachment/api/controllers/download-attachment.controller.ts:56-58` now reads `const forceDownload = result.profile !== "legacy" && (!(result.profile in this.profiles) || this.profiles[result.profile].accept === "any")`, i.e. an unknown profile is silently served as `application/octet-stream` instead of failing. The only e2e over that branch, `test/attachment/attachment-download.e2e-spec.ts:208-239` ("força download e nosniff em anexo de perfil de tipo livre"), seeds `profile: "feedback-attachment"` — a name this feature removed — so it asserts the tolerance path, not the free-type (`document`/`multi`) path its title claims. No test covers a real free-type profile on download, and none covers fail-loudly for an unknown one.
+- [x] **Stored attachment with an unknown profile after the rename → download SHALL fail loudly** — honoured as of `253ea0d`. `attachment/api/controllers/download-attachment.controller.ts:58-60` — `if (result.profile !== "legacy" && !(result.profile in this.profiles)) { throw new AttachmentNotFoundError() }`, raised **before** any header or byte is written; `forceDownload` at `:62-63` is back to the strict form (`result.profile in this.profiles` implied, `accept === "any"`). Proof: `test/attachment/attachment-download.e2e-spec.ts:241-268` — seeds `profile: "legacy-profile"`, `.expect(404)`, `expect(res.body.type).toMatch(/\/not-found$/)`, `expect(res.headers["content-disposition"]).toBeUndefined()`. The free-type test at `:208-239` now seeds `profile: "document"` (a real base profile), so it proves the path its title claims.
+  - **Is 404 "loudly"? Yes — accepted, not a spec-precision gap.** The spec says "fail loudly (existing behaviour)" without naming a status. `AttachmentNotFoundError` (`attachment/domain/errors.ts:6-13`) is a deliberate `DomainError` with `status = 404` and RFC 7807 `type .../not-found`: non-2xx, no bytes served, no `Content-Disposition`, no leak of the inconsistent internal state. It is strictly better than the previous 500 (an unhandled crash) and it reuses the module's own anti-enumeration convention — the same error the use case throws for "not found" and "denied" (`get-attachment-for-download.use-case.ts:63,70`). The requirement is "does not silently serve the bytes", and that is what the assertion targets.
+  - **Non-blocking observation (out of spec scope, no AC touched)**: the throw sits in the controller, so it runs after the use case already recorded the access trail as `allowed` and opened the storage stream (`get-attachment-for-download.use-case.ts:74-77`). The trail therefore logs an allowed download that served nothing, and the unconsumed `Readable` is left to GC. Worth an issue, not a fix task for this feature.
 
 ---
 
@@ -114,15 +118,24 @@ AD-007 shape verified: `application/templates/notification-template-registry.ts:
 | 6 | `identity/api/controllers/access-catalog/get-access-catalog.controller.ts:37` | response omits non-assignable profiles from `profiles` | `pnpm --filter api test:e2e -- access-catalog` → exit 1, 1 failed / 2 passed (deep-equality diff on `body.profiles`) | ✅ Killed |
 | 7 | `attachment/api/controllers/download-attachment.controller.ts:56-58` | unknown profile no longer forces `Content-Disposition: attachment` | `pnpm --filter api test:e2e -- attachment-download` → exit 1, 1 failed / 4 passed (`Expected "application/octet-stream", Received "image/png"`) | ✅ Killed — but see below |
 
-**Result**: 7/7 killed — ✅ PASS.
+**Round-1 result**: 7/7 killed. At the time, mutant 7 came with a caveat: it was killed by the *only*
+test over that branch, and that test proved the deviated behaviour (unknown profile tolerated) rather
+than the spec's — the assertion was load-bearing, the behaviour under it was not. Fix loop 1 removed
+the caveat.
 
-Mutant 7 is the one to read carefully: it was killed by the *only* test over that branch, and that test
-proves the deviated behaviour (unknown profile tolerated), not the spec's. The test also reveals the
-seeded fixture is a PNG served under the filename `log.txt`, so the sensor confirms the assertion is
-load-bearing while the *behaviour under it* is the one flagged in Edge Cases.
+### Fix loop 1 — re-mutations at `f02cb03`
+
+| # | File:line | Mutation | Scoped run | Killed? |
+| --- | --- | --- | --- | --- |
+| R1 | `attachment/api/controllers/download-attachment.controller.ts:58-63` | dropped the `AttachmentNotFoundError` throw; unknown profile falls back to force-download again (the exact round-1 behaviour) | `pnpm --filter api test:e2e -- attachment-download` → exit 1, 1 failed / 5 passed — `perfil desconhecido (removido/renomeado) falha alto em vez de servir octet-stream`: `expected 404 "Not Found", got 200 "OK"` at `:264` | ✅ Killed |
+| R2 | `notification/domain/errors.ts:13` | `EmailBindingMissingError` message drops the interpolated type (`super("tipo de notificação sem binding de e-mail")`) | `pnpm --filter api test -- email.channel` → exit 1, 1 failed / 11 passed — `Expected pattern: /device_revoked/ · Received message: "tipo de notificação sem binding de e-mail"` | ✅ Killed |
+
+**Result**: 9/9 mutations killed across both rounds — ✅ PASS. R1 and R2 each target exactly the code a
+round-1 gap blamed, and each is now caught by an assertion that did not exist before the fix loop.
 
 Every mutation was injected once, run once through the runner, and restored with
-`git checkout -- <file>`; `git status --short` printed nothing after each restore and after the last one.
+`git checkout -- <file>`; `git status --short` printed nothing after each restore and after the last one
+(verified again at the end of fix loop 1).
 
 ---
 
@@ -144,6 +157,13 @@ Single full-suite run, executed once through the runner from the worktree root.
 | 10 | `command -v copier` | 0 | `/home/emanuel/.local/bin/copier` |
 | 11 | `pnpm template:smoke` | 0 | child generated, all slots extended, child gates green |
 
+Fix loop 1 (`253ea0d`, `f02cb03`) touched two files; the two suites covering them were re-run at
+`f02cb03` by the Verifier: `pnpm --filter api test -- email.channel` exit 0 (**12 passed**, was 12 with
+2 new assertions inside existing tests) and `pnpm --filter api test:e2e -- attachment-download` exit 0
+(**6 passed**, was 5 — `+1` for the new unknown-profile test). The worker's own full gate at `f02cb03`
+reported unit 1000 / int 342 / e2e 123 / lint 0 / typecheck 0, consistent with the +1 e2e. The full
+suite was **not** re-run by the Verifier — the Final gate runs once, at `13125bc`.
+
 - **Test count before feature** (T1 baseline): unit 974 · int 337 · e2e 115 · web 65
 - **Test count after**: unit 1000 · int 342 · e2e 122 · web 65
 - **Delta**: +26 unit · +5 int · +7 e2e · web unchanged — no suite shrank, nothing skipped
@@ -160,7 +180,7 @@ Single full-suite run, executed once through the runner from the worktree root.
 | Surgical changes | ✅ |
 | No scope creep | ✅ |
 | Matches patterns | ✅ |
-| Spec-anchored outcome check (asserted values match spec) | ⚠️ 2 partial (MAIL AC2/AC3 assert the error class, not the message naming the type) |
+| Spec-anchored outcome check (asserted values match spec) | ✅ (round 1 had 2 partials on MAIL AC2/AC3; closed by `f02cb03`) |
 | Per-layer Coverage Expectation met | ✅ unit for every `define*`/catalog/registry, int for repositories + migrations, e2e per product-extension flow |
 | Every test maps to a spec requirement — no unclaimed tests | ✅ |
 | `module-boundaries.spec.ts` allowlist unchanged | ✅ `git diff main..HEAD -- apps/api/src/modules/module-boundaries.spec.ts` is empty |
@@ -177,13 +197,13 @@ Recorded deviations reviewed against the spec:
 | T19 `AuditRegistry` exposed via `audit/api/facades/audit-registry.facade.ts` | ✅ Acceptable — satisfies AD-009 through the repo's cross-module facade rule; documented at `docs/dev/template.md:53` |
 | T24 base-set assertions derive from slot constants | ✅ Acceptable — exact equality kept on `BASE_*` constants, derived sets composed from `BASE + PRODUCT_*` |
 | Notification registry class instead of a `NOTIFICATION_TEMPLATE_SOURCES` multi-provider (`SPEC_DEVIATION` at `notification-template-registry.ts:35-38`) | ✅ Acceptable — design-level, justified by Nest having no `multi: true`, precedent cited |
-| **T23 controller treats an unknown profile as force-download** | ❌ **Contradicts the spec Edge Case** — see Fix 1 |
+| **T23 controller treats an unknown profile as force-download** | ✅ **Reverted by `253ea0d`** — round 1 flagged it as contradicting the spec Edge Case; the controller now throws `AttachmentNotFoundError` and the e2e fixture seeds a real profile. No deviation remains. |
 
 ---
 
-## Fix Plans
+## Fix Plans — round 1 (both RESOLVED in fix loop 1)
 
-### Fix 1 — Unknown upload profile is silently served instead of failing loudly (Blocker)
+### Fix 1 — ✅ RESOLVED by `253ea0d` — Unknown upload profile is silently served instead of failing loudly (was Blocker)
 
 - **Root cause**: T23 (`00d23e0`) resolved the red `attachment-download` e2e by widening
   `download-attachment.controller.ts:56-58` so an unknown profile takes the force-download branch.
@@ -200,14 +220,22 @@ Recorded deviations reviewed against the spec:
   amendment of the spec's Edge Case, plus a dedicated test asserting the tolerated behaviour on a
   profile name that is not part of the contract.
 - **Priority**: Blocker (a spec requirement is contradicted; also a latent gap in the download ACL story)
+- **Resolution (`253ea0d`)**: both halves applied. The worker chose the loud failure over the strict
+  force-download form and reused the module's existing `AttachmentNotFoundError` (404, anti-enumeration)
+  instead of adding a new error class — accepted, see the Edge Cases section for why 404 satisfies "fail
+  loudly". Fixture at `:224` now seeds `document`; a new e2e at `:241-268` covers the unknown profile.
+  Re-mutation R1 confirms the new assertion is load-bearing.
 
-### Fix 2 — E-mail error assertions do not check that the message names the type (Minor)
+### Fix 2 — ✅ RESOLVED by `f02cb03` — E-mail error assertions do not check that the message names the type (was Minor)
 
 - **Root cause**: MAIL AC2/AC3 require "an error naming the type"; `email.channel.spec.ts:157` and `:169`
   assert only the error class, so a constructor that dropped the type from the message would survive.
 - **Fix task**: add `.toThrow(/device_revoked/)` and `.toThrow(/access_link_sent/)` next to the existing
   class assertions, matching the pattern already used at `audit-registry.spec.ts:136` and `:160`.
 - **Priority**: Minor
+- **Resolution (`f02cb03`)**: exactly that — `email.channel.spec.ts:160-162` and `:173-179`. Production
+  messages already carried the type, so this was a test-only change (no behaviour touched).
+  Re-mutation R2 confirms the new assertion is load-bearing.
 
 ### Pending (orchestrator-owned, not defects)
 
@@ -222,7 +250,7 @@ Recorded deviations reviewed against the spec:
 | --- | --- | --- |
 | PROF-01, PROF-02, PROF-03, PROF-04 | Implementing | ✅ Verified |
 | MAIL-01, MAIL-02, MAIL-03, MAIL-05 | Implementing | ✅ Verified |
-| MAIL-04 | Implementing | ⚠️ Verified with partial evidence (Fix 2) |
+| MAIL-04 | Implementing | ✅ Verified (round 1: partial evidence; closed by `f02cb03`) |
 | AUD-01, AUD-02, AUD-03 | Implementing | ✅ Verified |
 | REN-01, REN-02 | Implementing | ✅ Verified |
 | UPL-01, UPL-02, UPL-03, UPL-04 | Implementing | ✅ Verified |
@@ -230,17 +258,18 @@ Recorded deviations reviewed against the spec:
 | REL-03 | Implementing | ⏳ Pending T22 (authorization) |
 | SWP-01, SWP-02 | Implementing | ⏳ Pending T21 |
 | SMK-01 | Implementing | ✅ Verified |
-| Edge case "unknown profile on download" | — | ❌ Needs Fix (Fix 1) |
+| Edge case "unknown profile on download" | ❌ Needs Fix (round 1) | ✅ Verified (`253ea0d`) |
 
 ---
 
 ## Summary
 
-**Overall**: ❌ Not ready — one blocker, one minor gap, two orchestrator-owned pendings.
+**Overall**: ✅ Ready — both round-1 gaps closed and re-killed by fresh mutations; only the two
+orchestrator-owned pendings remain (T21 sweep comment + follow-up issues, T22 tag).
 
-**Spec-anchored check**: 22/24 ACs matched the spec outcome · 2 pending T21 · 2 partial (MAIL AC2/AC3) · 1 spec Edge Case contradicted
-**Sensor**: 7/7 mutations killed
-**Gate**: 11/11 commands exit 0 — unit 1000, int 342, e2e 122, web 65, journal ok, contract idempotent, template smoke green
+**Spec-anchored check**: 22/24 ACs matched the spec outcome · 2 ⏳ pending T21 (orchestrator-owned) · 0 partial · 0 contradicted
+**Sensor**: 9/9 mutations killed (7 in round 1 + 2 re-mutations in fix loop 1)
+**Gate**: 11/11 commands exit 0 at `13125bc` — unit 1000, int 342, e2e 122, web 65, journal ok, contract idempotent, template smoke green; at `f02cb03` the two touched suites re-run green (email.channel 12, attachment-download 6)
 
 **What works**: all five extension points are real slots — a fake product adds an access profile, a
 permission catalog, a notification type with its own template, audit table owners + ref targets, and an
@@ -248,9 +277,13 @@ upload profile without editing a single platform file, and the template smoke pr
 freshly generated child. The rename is complete across api/contract/client, both migrations are in a
 monotonic journal, and the base-set assertions no longer break in a child that fills the slots.
 
-**Issues found**: Fix 1 (unknown-profile download tolerance contradicts the spec Edge Case and the
-covering e2e still seeds a removed profile name) · Fix 2 (e-mail error assertions do not check the
-message names the type).
+**Issues found and closed**: Fix 1 (unknown-profile download tolerance contradicted the spec Edge Case
+and the covering e2e seeded a removed profile name) → `253ea0d` · Fix 2 (e-mail error assertions did not
+check the message names the type) → `f02cb03`. Nothing open.
 
-**Next steps**: route Fix 1 and Fix 2 to a worker, re-verify only those rows, then proceed with T21
-(sweep comment + follow-up issues) and T22 (merge + tag, with the user's explicit authorization).
+**Carried forward as an issue, not a fix task**: the unknown-profile 404 is raised in the controller
+after the use case logged the access as `allowed` and opened the storage stream — see the Edge Cases
+section. No AC covers it.
+
+**Next steps**: T21 (sweep comment on issue #1 + follow-up issues), then T22 (merge + tag `v0.2.0`, with
+the user's explicit authorization).

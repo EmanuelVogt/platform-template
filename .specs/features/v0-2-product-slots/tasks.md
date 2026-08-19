@@ -8,7 +8,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 ---
 
-**Design**: `.specs/features/v0-2-product-slots/design.md` · **Status**: Executing — Verifier round 1 FAIL → T25 fixed → re-verify (2026-08-18)
+**Design**: `.specs/features/v0-2-product-slots/design.md` · **Status**: Executing — Verifier PASS at `f02cb03` (round 2); T21 → T22 left (2026-08-18)
 Repo: `~/Projects/platform-template`, worktree `.worktrees/v0-2-product-slots` (crosses api + contract + migrations). Spec artifacts stay on `main`.
 
 ## Test Coverage Matrix

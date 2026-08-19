@@ -42,9 +42,25 @@ Fora do HTTP, a entrada exporta duas facades para outros módulos:
   genérico de captura são criados por uma migration manual do platform
   (hoje `apps/api/drizzle/migrations/0003_audit_trail.sql`), não por este
   código TS.
-- `migrations/custom/` está vazio nesta versão — a extração do trigger
-  genérico (`audit.attach()`, função de captura, redaction) para uma SQL
-  hand-written desta entrada ainda não foi feita. Ver `## Decisões`.
+- `migrations/custom/01_audit_trail_capture.sql` — extraído da migration do
+  platform `apps/api/drizzle/migrations/0003_audit_trail.sql` (schema, tabela
+  e índices não são gerados pelo drizzle-kit; ver acima). Cria: o schema
+  `audit`; a tabela `audit.entries` com seus índices (tempo, entidade, ator,
+  tx, brin de `occurred_at`); o trigger append-only (`restrict_mutation`) que
+  bloqueia `UPDATE` e só libera `DELETE` com o GUC transaction-scoped
+  `app.audit_maintenance=on`, mais o `REVOKE UPDATE, TRUNCATE` de defesa em
+  profundidade; a função de captura genérica `audit.record_row_change`
+  (redaction, `changed_keys`, contexto do ator via `app.audit_ctx`); o helper
+  `audit.attach(schema, tabela, pk_cols, colunas_redigidas)`; a extensão
+  `pg_trgm` e o índice GIN usado pela busca por `q`. **Não inclui** as
+  chamadas `SELECT audit.attach(...)` para tabelas específicas (ex.:
+  `identity.users`, `tag.tags`) — cada módulo dono de uma tabela auditável
+  chama `audit.attach(...)` na própria migration ao criar a tabela; isso não
+  é responsabilidade desta entrada (mesma decisão já expressa no comentário
+  original da migration: "módulo de produto novo anexa as suas em migration
+  própria"). Requisito de ambiente: o papel de banco usado pela migration
+  precisa de permissão para `CREATE EXTENSION pg_trgm` (extensão padrão do
+  Postgres; a maioria dos provedores gerenciados libera sem superuser).
 
 ## Decisões
 
@@ -69,9 +85,12 @@ Fora do HTTP, a entrada exporta duas facades para outros módulos:
   (`apps/api/src/modules/attachment/api/facades/attachment.facade.ts:97`) já
   expõe `listAccessLog(attachmentId: string): Promise<ListAttachmentAccessLogResult>`,
   então se um consumo futuro precisar do access log de um attachment, o
-  caminho certo é esse método — nada a substituir hoje. `dependsOn:
-  attachment` foi declarado mesmo assim, seguindo a convenção do template,
-  para deixar a rota de acesso já documentada quando esse consumo existir.
+  caminho certo é esse método — nada a substituir hoje. Não há `dependsOn:
+  attachment` no `module.json`: sem consumo real, declarar a dependência
+  forçaria todo child que instala `audit` a instalar `attachment` também e
+  quebraria o `resolveDeps` (aresta para uma entrada da qual `audit` não
+  depende de fato). Se um consumo real for adicionado depois, a dependência
+  entra junto.
 - **Fold da trilha de escrita.** O módulo, repositório e job de purge que
   viviam no kernel compartilhado viraram `api/infrastructure/trail/**` desta
   entrada. Nenhum consumidor do kernel resta no template. `AuditTrailModule`
@@ -79,12 +98,14 @@ Fora do HTTP, a entrada exporta duas facades para outros módulos:
   `@Global()` (comportamento preservado) porque a escrita da trilha precisa
   ficar disponível para qualquer módulo que faça purge de titular (ex.:
   identity, guest) sem um import cruzado explícito com este módulo.
-- **Gap conhecido — trigger SQL não extraído.** A tabela `audit.entries` e o
-  trigger genérico de captura ainda vivem numa migration do platform fora
-  desta entrada (ver `## Dados`). Extrair isso para
-  `migrations/custom/*.sql` ficou fora do escopo desta tarefa (T19) — só o
-  fold do TypeScript do antigo diretório de audit do kernel compartilhado
-  estava no `Touches`.
+- **Extração do trigger SQL para a entrada.** A tabela `audit.entries` e o
+  mecanismo de captura por trigger foram extraídos de
+  `apps/api/drizzle/migrations/0003_audit_trail.sql` (migration do platform,
+  fora do `Touches` original desta tarefa, mas necessário — sem isso a
+  entrada instala tabelas sem trigger de captura e audit não grava nada) para
+  `migrations/custom/01_audit_trail_capture.sql` (ver `## Dados`). As
+  chamadas `SELECT audit.attach(...)` específicas de identity/tag não vieram
+  junto — são wiring de cada módulo dono de tabela, não da entrada `audit`.
 
 ## Paridade
 
@@ -94,14 +115,23 @@ confirmando que a operação `listAuditEntries` (GET `/v1/audit`) segue exposta
 com o mesmo contrato. Rodar via `pnpm --filter api test` (specs do app) depois
 que a entrada for adotada em `apps/api/src/modules/audit/__parity__/`.
 
+Para confirmar que o trigger de captura (`migrations/custom/01_audit_trail_capture.sql`)
+realmente dispara depois de aplicado, `api/infrastructure/trail/audit-trigger.int-spec.ts`
+insere/atualiza/deleta em `tag.tags` e `identity.users` e lê `audit.entries`
+diretamente. Esse teste assume que essas duas tabelas já têm o trigger
+`audit_row` anexado via `SELECT audit.attach(...)` — chamada que pertence às
+migrations dos módulos `identity`/`tag`, não a esta entrada (ver `##
+Dados`). Um child que adota `audit` só vê esse int-spec passar depois que os
+módulos donos dessas tabelas chamarem `audit.attach(...)`.
+
 ## Dependências
 
 - `identity` (`^1.0.0`) — resolução de nome do ator
   (`UserDirectoryFacade`) e catálogo de permissões
   (`permission-catalog.facade`, chaves `AUDIT_PERMISSION_KEYS`/
   `FULL_AUDIT_PERMISSION`).
-- `attachment` (`^1.0.0`) — declarado por convenção; sem consumo real hoje
-  (ver `## Decisões`).
+- `attachment` — **não é dependência declarada** (sem consumo real hoje; ver
+  `## Decisões`).
 - `env`: nenhuma variável de ambiente própria.
 
 ## Parte web

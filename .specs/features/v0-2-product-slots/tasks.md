@@ -212,7 +212,7 @@ Wave 3: [I: T19→T20] (T24 fix between T19 and T20) → Verifier → T21 → T2
 **Tests**: none here (verified by T20) · **Gate**: build · **Commit**: `chore(smoke): fake product overlay for template smoke`
 
 ### T24: Base-set assertions extension-agnostic (found by T20 smoke)
-**Status**: ⏳ In progress (worker K)
+**Status**: ✅ Done — `d192bf9` — base exact-equality moved to BASE constants; derived sets = `[...BASE, ...PRODUCT_*]`; unit 1000/0, lint 0, typecheck 0
 **What**: 8 platform unit assertions equal DERIVED sets to base literals, so they fail in a child with product entries: `shared/kernel/access/define-access-profiles.spec.ts:29,33`, `identity/application/access-policy.spec.ts:71`, `identity/domain/permissions/permission-catalog.spec.ts:136`, `attachment/domain/upload-profiles.spec.ts:113,143`. Keep exact equality on BASE constants (spec), derive expected DERIVED sets from `BASE + PRODUCT_*` slot constants.
 **Where**: those 4 spec files · **Depends on**: T19 · **Requirement**: SMK-01
 **Done when**: [ ] unit ≥ 1000 / 0 failed; [ ] no assertion depends on empty slots; [ ] nothing deleted/skipped.

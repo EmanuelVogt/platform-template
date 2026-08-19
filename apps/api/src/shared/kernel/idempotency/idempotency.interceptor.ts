@@ -99,7 +99,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
     const requestHash = hashRequest(req)
     const ctx = this.ctx.tryGet()
-    const scope = `${ctx?.tenantId ?? "_"}:${ctx?.userId ?? "_"}`
+    const scope = `${ctx?.tenantId ?? "_"}:${ctx?.actor?.id ?? "_"}`
     const endpoint = `${req.method} ${req.originalUrl.split("?")[0] ?? ""}`
     const expiresAt = new Date(Date.now() + opts.ttlHours * 3_600_000)
 

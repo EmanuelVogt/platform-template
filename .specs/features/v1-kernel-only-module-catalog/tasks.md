@@ -403,6 +403,21 @@ Worktree `.worktrees/v1-kernel-only-module-catalog`, branch `feat/v1-kernel-only
 | C6 | T16 | `118c3e5` | `platform-modules.ts` + `platform-schema.ts`; `app.module.ts` spreads `...PLATFORM_MODULES` |
 | C6 | T30 | `b2adf66` | `expectContractSubset` parity helper — 4 tests |
 
+**Wave 1 Build gate — PASS (second run).**
+
+First run FAILED: `pnpm typecheck` exit 2, `pnpm lint` OOM-crashed under the combined turbo run. Split per package, the real picture was two disjoint sets:
+
+- **Ours** — `access.guard.ts:10` imported `getActor` from `../context/request-context`, which never exported it (it existed only as a `RequestContext` class method). The unit suite missed it because `access.guard.spec.ts` mocks that module and `@swc/jest` strips types without typechecking. Plus an orphaned `@ts-expect-error` in `permission-catalog.spec.ts:170` (kernel `PermissionKey` is now `string`) and 86 api lint errors, 69 of them `@typescript-eslint/no-deprecated` fired by T3's `@deprecated` tags.
+- **Not ours** — 6 web typecheck + 20 web lint errors, byte-identical on `main` (debt from `dca3188`, feature `pre-push-coverage-95`). The branch touches zero files under `apps/web`.
+
+Fixes: `99db93e` on the branch (ALS hoisted to module scope, `setActor`/`getActor`/`setExtension`/`getExtension` exported as free functions, class delegates — 43 injectors unaffected; `@deprecated` tags dropped from the transitional surface, members kept; regression test at `request-context.spec.ts:80` asserting the unmocked `getActor()` is `null` outside a request). `d4f5fe1` on `main` for the web baseline, merged into the branch as `848079b`.
+
+Gate results after the fixes: `pnpm --filter api typecheck` 0 · `pnpm --filter api lint` 0 (86 → 0) · `pnpm --filter api test` **1047 passed / 150 suites** · `pnpm --filter web typecheck` 0 · `pnpm --filter web lint` 0 · `pnpm --filter web test` **108 passed / 34 files**.
+
+Lesson for later waves: a spec that mocks the module it depends on hides a missing export from the unit gate entirely — the Build gate's typecheck is the only thing that catches a cross-cluster export mismatch, so it must run before a wave is called done.
+
+Extra deviation from the fix: `setExtension`/`getExtension` take `ExtensionKey<T> = symbol & { readonly __extension?: T }` rather than a bare `symbol` (the only shape that keeps the generic and satisfies `no-unnecessary-type-parameters`); a plain `symbol` stays assignable, so no call site changed.
+
 **Carry-forward notes (must reach the tasks named below):**
 
 1. **T8/T9** — T3 kept a wider deprecated surface than design § 2.2 states: `userId`, `sessionId`, `deviceId`, `access`, `RequestAccess`, `setAccess`, `setUserSession`, `getUserSession` all remain in `request-context.ts` (JSDoc `@deprecated`), and `actor`/`extensions` are **optional** store fields. Reason: ~20 unowned files read `store.userId`/`store.access` directly, including kernel `shared/kernel/transactional/transaction-manager.ts:154`, `context/request-context.middleware.ts` and `context/event-context.ts`. T8/T9 delete the deprecated fields and flip `actor`/`extensions` to required.

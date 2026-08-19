@@ -7,7 +7,7 @@
   {
     "file": "apps/api/src/shared/kernel/access/product-permission-catalogs.ts",
     "find": "import type { ModuleDef } from \"./permission.types\"",
-    "replace": "import { SAMPLE_CATALOG } from \"../../modules/sample/sample-catalog\"\n\nimport type { ModuleDef } from \"./permission.types\""
+    "replace": "import { SAMPLE_CATALOG } from \"../../../modules/sample/sample-catalog\"\n\nimport type { ModuleDef } from \"./permission.types\""
   },
   {
     "file": "apps/api/src/shared/kernel/access/product-permission-catalogs.ts",

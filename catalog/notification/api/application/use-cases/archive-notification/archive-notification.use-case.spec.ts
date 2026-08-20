@@ -6,7 +6,7 @@ import { ArchiveNotificationUseCase } from "./archive-notification.use-case"
 import type { RequestContext } from "../../../../../shared/kernel/context/request-context"
 import type { NotificationRepositoryPort } from "../../../domain/ports/notification.repository.port"
 
-const ctx = { get: () => ({ userId: "u1" }) } as unknown as RequestContext
+const ctx = { getActor: () => ({ id: "u1", kind: "user" }) } as unknown as RequestContext
 const clock = { now: () => new Date("2026-06-10T03:00:00Z") }
 
 describe("ArchiveNotificationUseCase", () => {
@@ -49,7 +49,7 @@ describe("ArchiveNotificationUseCase", () => {
   })
 
   it("contexto sem userId → lança ForbiddenError antes de consultar o repositório", async () => {
-    const anonCtx = { get: () => ({ userId: undefined }) } as unknown as RequestContext
+    const anonCtx = { getActor: () => null } as unknown as RequestContext
     const findByIdForRecipient = jest.fn()
     const update = jest.fn()
     const repo = {

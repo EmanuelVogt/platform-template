@@ -6,7 +6,7 @@ import { ListNotificationsUseCase } from "./list-notifications.use-case"
 import type { RequestContext } from "../../../../../shared/kernel/context/request-context"
 import type { NotificationRepositoryPort } from "../../../domain/ports/notification.repository.port"
 
-const ctx = { get: () => ({ userId: "u1" }) } as unknown as RequestContext
+const ctx = { getActor: () => ({ id: "u1", kind: "user" }) } as unknown as RequestContext
 
 describe("ListNotificationsUseCase", () => {
   it("lista com escopo de dono e devolve itens mapeados + paginação", async () => {
@@ -35,7 +35,7 @@ describe("ListNotificationsUseCase", () => {
 
   it("sem userId no contexto → lança (rota exige sessão)", async () => {
     const repo = { list: jest.fn() } as unknown as NotificationRepositoryPort
-    const anon = { get: () => ({ userId: null }) } as unknown as RequestContext
+    const anon = { getActor: () => null } as unknown as RequestContext
     await expect(
       new ListNotificationsUseCase(repo, new NotificationMapper(), anon).execute({
         page: 1,

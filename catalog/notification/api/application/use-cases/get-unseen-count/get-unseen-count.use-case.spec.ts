@@ -7,7 +7,7 @@ describe("GetUnseenCountUseCase", () => {
   it("conta não-vistas do recipient logado", async () => {
     const countUnseen = jest.fn().mockResolvedValue(3)
     const repo = { countUnseen } as unknown as NotificationRepositoryPort
-    const ctx = { get: () => ({ userId: "u1" }) } as unknown as RequestContext
+    const ctx = { getActor: () => ({ id: "u1", kind: "user" }) } as unknown as RequestContext
 
     const out = await new GetUnseenCountUseCase(repo, ctx).execute()
 

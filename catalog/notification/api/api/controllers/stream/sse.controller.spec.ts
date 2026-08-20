@@ -13,7 +13,7 @@ describe("SseController", () => {
     const close = jest.fn()
     const register = jest.fn().mockReturnValue({ stream: subject.asObservable(), close })
     const registry = { register } as unknown as SseConnectionRegistry
-    const ctx = { get: () => ({ userId: "u1" }) } as unknown as RequestContext
+    const ctx = { getActor: () => ({ id: "u1", kind: "user" }) } as unknown as RequestContext
 
     const handlers = new Map<string, () => void>()
     const req = {
@@ -30,7 +30,7 @@ describe("SseController", () => {
 
   it("sem userId no contexto → lança (rota exige sessão)", () => {
     const registry = { register: jest.fn() } as unknown as SseConnectionRegistry
-    const ctx = { get: () => ({ userId: null }) } as unknown as RequestContext
+    const ctx = { getActor: () => null } as unknown as RequestContext
     const req = { on: jest.fn() } as unknown as Request
     expect(() => new SseController(registry, ctx).stream(req)).toThrow()
   })

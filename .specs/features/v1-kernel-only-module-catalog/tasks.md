@@ -68,19 +68,26 @@ Waves run in order (barrier + Build gate between them). Clusters inside a wave r
 | 3 | C14 | T19 | `catalog/audit/**` | sonnet · depends T9,T13,T30 |
 | 3 | C15 | T20 → T21 | `catalog/notification/**`, `catalog/tag/**` | sonnet · depends T9,T13,T30 (folded: same worker, disjoint dirs) |
 | 4 (exclusive) | C16 | T22 | deletions under `apps/api/src/modules/**`, `apps/api/src/shared/kernel/{access,upload,audit}/**`, `apps/web/src/{entities/session,features/login,app/router/guards.ts,shared/config/route-access.ts}`, `apps/api/drizzle/migrations/**`, `apps/api/src/modules/module-boundaries.spec.ts`, `apps/api/src/db/schema-completeness.spec.ts`, `openapi.json`, `packages/api-client/generated/**`, `apps/api/.env.example`, web router files | opus (migration + contract regen) · gate: **full-unit** + `template:smoke` precheck |
+| 4b.1 | C16a | T22d | `apps/api/src/shared/kernel/scheduling/**` | opus (AD-022 registry) · depends T22 |
+| 4b.1 | C16b | T22e | `apps/api/src/{docs/**,openapi/**,main.ts}`, `apps/api/src/shared/kernel/access/decorators.ts`, `apps/api/test/openapi-contract.e2e-spec.ts` + its `__snapshots__` | sonnet · depends T22 · `/docs` remount + contract e2e restore + note 4 kernel side |
+| 4b.2 | C16c | T22f | `catalog/identity/single-tenant/**` | opus (AD-021 port inversion, AD-022 adoption, restore) · depends C16a,C16b |
+| 4b.2 | C16d | T22g | `catalog/{attachment,audit,notification,tag}/**` | sonnet (restore + audit purge job via the registry) · depends C16a,C16b |
 | 5 | C17 | T23 | `scripts/template-smoke.mjs`, `scripts/smoke/**` (delete) | sonnet · depends T22 |
 | 5 | C18 | T24 | `scripts/platform/catalog-check.mjs`, `scripts/platform/__tests__/catalog-check.test.mjs`, `package.json` (`catalog:check`) | sonnet · depends T15,T22 |
 | 5 | C19 | T25 → T26 | `docs/dev/{template.md,template-changelog.md}`, `TEMPLATE.md`, `CLAUDE.md`, `AGENTS.md.jinja`, `README.md.jinja`, `copier.yml`, `docs/back/back-arch.md`, `docs/front/front-arch.md`, `docs/test/testing.md` | sonnet (docs) · depends T22 |
 | 5 | C20 | T27 | `.agents/skills/port-module-update/**`, `.agents/skills/catalog-modules/**`, `.claude/skills/*` (symlinks) | sonnet · depends T15 |
+| 5 | C22 | T22a | `catalog/{identity,attachment,audit,notification,tag}/parity/contract.snapshot.json`, `catalog/{identity,attachment}/**/CHANGELOG.md` | sonnet · depends T22 · rebuild the 5 snapshots from `git show ee825dd:openapi.json` (53 ops) |
 | 6 | C21 | T28 | `catalog/**/README.md` `## Follow-ups absorvidos`, `docs/dev/template-changelog.md` (issue refs) | sonnet · depends T17–T21, T25 · runs `pnpm catalog:check` once via runner (heavy) |
 
 ```
 Wave 1:  [C1: T1→T2] ∥ [C2: T3→T4] ∥ [C3: T5→T10→T11] ∥ [C4: T6] ∥ [C5: T7] ∥ [C6: T16→T30]   (≤4 in flight → C5,C6 queue)
 Wave 2:  [C7: T8] ∥ [C8: T9] ∥ [C9: T12] ∥ [C10: T13→T14]
 Wave 3:  [C11: T15] ∥ [C12: T17] ∥ [C13: T18] ∥ [C14: T19] ∥ [C15: T20→T21]   (C15 queues)
-Wave 4:  [C16: T22]  (exclusive)
-Wave 5:  [C17: T23] ∥ [C18: T24] ∥ [C19: T25→T26] ∥ [C20: T27]
-Wave 6:  [C21: T28]
+Wave 4:    [C16: T22]  (exclusive)
+Wave 4b.1: [C16a: T22d] ∥ [C16b: T22e]
+Wave 4b.2: [C16c: T22f] ∥ [C16d: T22g]   (only after 4b.1's Build gate)
+Wave 5:    [C17: T23] ∥ [C18: T24] ∥ [C19: T25→T26] ∥ [C20: T27] ∥ [C22: T22a]   (≤4 in flight → C22 queues)
+Wave 6:    [C21: T28]
 ```
 
 ---
@@ -267,7 +274,7 @@ Wave 6:  [C21: T28]
 **Tests**: unit · **Gate**: quick · **Commit**: `feat(platform): catalog-check pre-tag gate`
 
 ### T25: Template docs + copier + changelog v1.0.0
-**What**: `docs/dev/template.md` (kernel/catalog/child table, `module add/adopt`, lock, advisories, port skill, migrations AD-015), `docs/dev/template-changelog.md` `## v1.0.0` (breaking + child steps incl. `module adopt`, `idempotency_keys.user_id → actor_id` snippet, slot files retired, web removals), `TEMPLATE.md`, `CLAUDE.md`, `AGENTS.md.jinja`, `README.md.jinja`, `copier.yml` (`_exclude` `catalog/`; `_skip_if_exists` `.platform-modules.lock`, `docs/advisories/APPLIED.md`).
+**What**: `docs/dev/template.md` (kernel/catalog/child table, `module add/adopt`, lock, advisories, port skill, migrations AD-015), `docs/dev/template-changelog.md` `## v1.0.0` (breaking + child steps incl. `module adopt`, slot files retired, web removals, the kernel logger's lost `sessionId` field, and the `RouteAccess` shape change — **must NOT mention any `idempotency_keys.user_id → actor_id` rename**: that column never existed, design § 8 corrected on main at `d92f9c7`), `TEMPLATE.md`, `CLAUDE.md`, `AGENTS.md.jinja`, `README.md.jinja`, `copier.yml` (`_exclude` `catalog/`; `_skip_if_exists` `.platform-modules.lock`, `docs/advisories/APPLIED.md`).
 **Touches**: listed · **Depends on**: T22 · **Requirement**: HBK-03, HBK-04, CAT-05, ADV-03
 **Done when**: no v0.2 slot reference remains (`rg "product-access-profiles|product-upload-profiles|product-permission-catalogs" docs TEMPLATE.md AGENTS.md.jinja` = 0); copier renders (smoke at Final).
 **Tests**: none · **Gate**: build · **Commit**: `docs(template): v1 kernel-only model, catalog, changelog v1.0.0`
@@ -291,6 +298,37 @@ Wave 6:  [C21: T28]
 **Depends on**: T17–T21, T24, T25 · **Requirement**: CAT-02, CAT-03
 **Done when**: every entry README lists its absorbed issues; `catalog:check` log saved and linked in tasks.md.
 **Tests**: lint · **Gate**: build (+ heavy run via runner) · **Commit**: `docs(catalog): absorbed follow-ups per entry`
+
+### T22d: Maintenance jobs become a runtime registry (AD-022)
+**What**: replace the closed `MAINTENANCE_SCHEDULE` const with a kernel `MaintenanceRegistry` (same shape as AD-009's `AuditRegistry`): entries register at boot; duplicate name and colliding `lockId` both throw; the kernel's own two jobs (`outbox.purge`, `idempotency.purge`) register through the same path. `@MaintenanceJob(name)` must stop requiring a name already present in a kernel union.
+**Touches**: `apps/api/src/shared/kernel/scheduling/**` · **Depends on**: T22 · **Requirement**: AD-022, CAT-01
+**Readers to migrate**: `maintenance-runtime.ts:14,135,174`, `maintenance-job.decorator.ts:5,22`, `maintenance-schedule.spec.ts:8,17,30,141,145,150`, `maintenance-runtime.int-spec.ts:20,116`.
+**Done when**: no kernel file has to change for a catalog entry to register a job; `maintenance-schedule.spec.ts:138-146` ("varredura resolve exatamente um arquivo de corpo por job do registro") is registry-driven or explicitly scoped to kernel jobs.
+**Tests**: unit (duplicate name throws, colliding `lockId` throws, kernel jobs still register) · **Gate**: scoped + `pnpm --filter api typecheck` · **Commit**: `refactor(kernel): maintenance jobs via runtime registry`
+
+### T22e: Kernel-only `/docs`, contract e2e, legacy access metadata
+**What**: (i) remount the Scalar UI at `/docs` with **no module coupling** — T22 deleted `apps/api/src/docs/**` and the route from `main.ts`; the pre-cutover mount at `ee825dd:apps/api/src/main.ts:8-9,55-58,66` went through `setupDocsAuth(app, document)`, which depended on identity's session. The login-gated variant becomes a recipe in the identity entry's README, not kernel code. (ii) restore `apps/api/test/openapi-contract.e2e-spec.ts` with its snapshot rebuilt for the 2-operation kernel contract. (iii) close note 4's residual: `kernel/access/decorators.ts` still writes the legacy metadata keys because `openapi/openapi-config.ts`, `authz-coverage.spec.ts` and identity's guard chain read them — remove the kernel side here (the entry side is T22f's).
+**Touches**: `apps/api/src/{docs/**,openapi/**,main.ts}`, `apps/api/src/shared/kernel/access/decorators.ts`, `apps/api/test/openapi-contract.e2e-spec.ts` + `__snapshots__` · **Depends on**: T22 · **Requirement**: HBK-01, CAT-01
+**Done when**: `/docs` serves the kernel contract in a kernel-only tree; no kernel file writes or reads a legacy access metadata key.
+**Tests**: e2e (contract snapshot) · **Gate**: scoped + `pnpm --filter api typecheck` · **Commit**: `feat(api): kernel-only /docs and contract e2e`
+
+### T22f: Identity entry — AD-021 port inversion, AD-022 adoption, restore
+**What**: (i) **AD-021 violation**: `api/application/use-cases/purge-users/purge-users.use-case.ts:1` imports the audit entry directly, so identity cannot install alone; invert it to an `@Optional()` port the audit entry binds, exactly like T17c's `ProfileImageStore`/`PROFILE_IMAGE_STORE`, and remove the in-file `SPEC_DEVIATION` marker. (ii) adopt the AD-022 registry for `purge-users`. (iii) stop reading the legacy access metadata keys T22e removed. (iv) restore the identity-owned content T22 deleted (note 29) under AD-021's test layering (`api/testing/` + the entry's e2e dir) and add every restored path to `module.json.files`.
+**Touches**: `catalog/identity/single-tenant/**` · **Depends on**: T22d, T22e · **Requirement**: CAT-01, CAT-04, AD-021, AD-022
+**Done when**: identity has no import of another entry; every restored path is listed in `module.json.files`.
+**Tests**: the restored e2e specs + existing parity · **Gate**: scoped + `pnpm --filter api typecheck` + `pnpm catalog:lint` · **Commit**: `fix(catalog): identity installs alone — ports and restored tests`
+
+### T22g: Restore attachment/audit/notification/tag content
+**What**: restore the entry-owned content T22 deleted (note 29) into each entry under AD-021's test layering, listing every path in the entry's `module.json.files`; register audit's purge job through the AD-022 registry.
+**Touches**: `catalog/{attachment,audit,notification,tag}/**` · **Depends on**: T22d, T22e · **Requirement**: CAT-01, CAT-04, AD-022
+**Done when**: the 8 restored specs live under their entry; `catalog:lint` passes; audit's purge job registers without a kernel edit.
+**Tests**: the restored e2e specs · **Gate**: scoped + `pnpm catalog:lint` · **Commit**: `fix(catalog): restore entry-owned tests and audit purge job`
+
+### T22a: Rebuild parity snapshots from the real pre-cutover contract
+**What**: rebuild the five `catalog/*/parity/contract.snapshot.json` from the real pre-cutover contract — `git show ee825dd:openapi.json`, **53 operations** (notes 18 + 24). They are currently derived only from `@ApiOperation`/`@HttpCode` decorators with response bodies reduced to status codes, so a changed field schema passes parity undetected. Also record T17c's port inversion as an `### Alterado` line in identity's and attachment's unreleased `1.0.0` CHANGELOG.
+**Touches**: `catalog/{identity,attachment,audit,notification,tag}/parity/contract.snapshot.json`, `catalog/{identity,attachment}/**/CHANGELOG.md` · **Depends on**: T22 · **Requirement**: CAT-03, PAR-01
+**Done when**: each snapshot carries the real request/response schemas for that entry's operations; `expectContractSubset` fails on a mutated field type.
+**Tests**: parity · **Gate**: scoped · **Commit**: `test(catalog): parity snapshots from the real contract`
 
 ---
 
@@ -506,6 +544,49 @@ T8a ran the delete-the-branch sensor by hand: removing the OR branch turns `Iden
 19. **`audit.attach()` is per-entry, guarded.** The audit entry ships the `audit` schema, `audit.entries`, the append-only guard, `record_row_change` and the `audit.attach()` helper. The per-table `SELECT audit.attach(...)` statements belong to each table-owning entry (tag shipped `01_audit_attach_tags.sql`; identity's is in its follow-up). They are wrapped in a `DO $$` block guarded on the function existing, so an entry installs cleanly in a child that never adds audit — **no entry declares `dependsOn: audit`**. Notification is EXEMPT from audit at the source (`0003_audit_trail.sql:171`).
 20. **T25 — `docs/catalog/catalog.md` lines 55–59** document the `web/**` allow-list without the test-file carve-out T13a added. Update it there; it was out of the fix worker's ownership.
 21. **T12's inferred commands were correct.** T15 verified against `apps/api/package.json`: `drizzle-kit` runs via `pnpm --filter api exec drizzle-kit …` (no `db:check` wrapper exists) and `db:check:journal` is a real script run via `pnpm --filter api run db:check:journal`. `lib/migrations.mjs` needed no change — note 11 is closed.
+
+### Wave 4 — DONE (C16 / T22, the cutover). Build gate full-unit PASS.
+
+| Task | Commit | Result |
+| --- | --- | --- |
+| T22 | `e30648f` | `feat!: kernel-only template — modules move to the catalog` · trailer `Advisory: none — entrada ainda nao publicada, relocacao interna do v1.0.0` |
+| T22 | `9b308cd` | `chore(contract): regenerate kernel-only client` |
+| T22 | `3dba9b0` | `fix(web): desacopla bootstrap e teste de transporte do contrato de identidade` — unplanned third commit: the client regen deleted the identity hooks that `main.tsx` and `app/config/transport.test.ts` imported, and `--amend` is forbidden |
+
+**Build gate (per package, all exit 0):** `pnpm --filter api typecheck` · `lint` · `test` **1052/151 → 297 passed / 42 suites** · `pnpm --filter web typecheck` · `lint` · `test` **108/34 → 68 passed / 24 files** · `pnpm test:scripts` 100/100 · `pnpm catalog:lint` · `pnpm --filter api run db:check:journal` (`journal ok — 2 migrations`). **Int/e2e NOT run** — no Postgres in the worker env; feeds note 9.
+
+Kernel-only `openapi.json` now holds exactly **2 operations**: `GET /health :: liveness`, `GET /ready :: readiness`. RULE C: 16 tokens exactly as design § 2.4 lists, case-sensitive, `tag.` implemented as `/"?\btag"?\.[a-z_]/`, allow-list `shared/test/**/*.fixture.ts`, scanning api `shared/**` + `app.module.ts` + `db/schema.ts` and web `app/**` + `shared/**` — **0 hits**.
+
+**Carry-forward closure:**
+
+- **3 — DONE.** `export * from "./platform-schema"` landed; the spec now follows the re-export chain and ignores the generated specifier.
+- **4 — PARTIAL.** `kernel/access/decorators.ts` still writes the legacy metadata keys because `openapi/openapi-config.ts`, `authz-coverage.spec.ts` and identity's guard chain read them. Kernel side → T22e; entry side → T22f.
+- **5 — CONFIRMED-NEGATIVE.** Nothing to change.
+- **13 — DONE.**
+- **15 — DONE.** Shim removed, 5 fields deleted, `actor`/`extensions` now required, all store literals migrated.
+- **17 — DONE.**
+- **19 — N/A.**
+- **9 — still open and now larger.** T8's e2e was never run (no live Postgres in any worker env) and the 26 e2e specs restored in wave 4b have never been executed either. The Verifier must actually run int+e2e; if Docker/testcontainers will not start, it reports a **PARTIAL** verdict naming every unverified assertion, starting with `apps/api/test/identity/authz.e2e-spec.ts:394`.
+
+**Carry-forward from wave 4 (binding, do not re-derive):**
+
+22. **The payload's ownership list was incomplete.** T22 also had to touch, legitimately in an exclusive wave: `apps/api/src/{main.ts,seeds/**,docs/**,openapi/transactional-coverage.spec.ts}`, `apps/api/src/shared/{config/env.ts,kernel/scheduling/**,kernel/logging/logger.factory.ts,kernel/shared-kernel.module.ts}`, `apps/api/test/**`, `apps/web/src/{main.tsx,pages/home/**,app/config/transport.test.ts}`. Widen the `Touches` union in later payloads.
+23. **`pnpm --filter api contract` fails silently.** It is `ts-node apps/api/src/openapi/export-openapi.ts`; it needs **no** Postgres/Redis and fails only on missing env, but `NestFactory.create(…, { logger: false })` swallows the error through ExceptionsZone, so it exits 1 with an **empty log**. Pass `DATABASE_URL`/`REDIS_URL`/`WEB_ORIGIN`/`R2_*` inline. Tell every worker — the silent failure costs a long debug otherwise.
+24. **Note 18 was wrong on one point: `openapi.json` *is* a static git-tracked file at the repo root.** Pre-cutover contract = **53 operations**, recoverable with `git show ee825dd:openapi.json`, so T22a has no scratchpad dependency. The rest of note 18 stands.
+25. **`module-boundaries.spec.ts` stayed at `apps/api/src/modules/module-boundaries.spec.ts`.** The `modules/` dir survives holding only that file — deliberate: it sits outside RULE C's scan set so it does not flag its own token list, and it gives RULE A a resolvable target. RULE B, `BASE_SET` and the allow-list rows are gone.
+26. **Two fragile spots in the baseline migration — flag to the Verifier.** `drizzle-kit generate` did **not** emit `CREATE SCHEMA "_kernel";` (T22 prepended it by hand), and the journal `when` values had to be bumped past `origin/main`'s max (`0000` = 1807072480194, `0001` = 1817072480194) or `db:check:journal` fails.
+27. **`RouteAccess` is a breaking shape change for children.** `apps/web/src/shared/config/route-access.types.ts` did not exist and was created; the type now matches design § 3 exactly (`self` → `authenticated`, `permission` → `key: string`). T25 owes it a v1.0.0 changelog line.
+28. **`/docs` is gone, not merely unmounted — and is remounted kernel-only.** T22 removed the route from `main.ts` and deleted `apps/api/src/docs/**`; nothing is exposed, but the kernel-only template lost its contract UI. At `ee825dd:apps/api/src/main.ts:8-9,55-58,66` it was mounted through `setupDocsAuth(app, document)`, a login gate depending on identity's session. **Decision:** the kernel remounts the Scalar UI at `/docs` with no module coupling (T22e); the login-gated variant becomes a recipe in the identity entry's README.
+29. **T22 deleted entry-owned content that no entry carries** (a T17/T18 gap; all recoverable at `ee825dd`) — restored in wave 4b:
+    - **identity** (T22f): `apps/api/test/identity/{access-catalog,access-history,access-link-activation,auth-anti-enum,auth-csrf-none,auth-login,auth-logout,auth-outbox-email,auth-rate-limit,auth-reset-token-logging,auth-session,authz,create-user-flow,devices,docs-login,idempotency,user-trash,verify-email}.e2e-spec.ts` (18) · `apps/api/test/setup/seed-user.ts` · `apps/api/src/seeds/{bootstrap-master,master-user.seed,run,types}.ts`
+    - **attachment** (T22g): `apps/api/test/attachment/{attachment-delete,attachment-download}.e2e-spec.ts`
+    - **audit** (T22g): `apps/api/test/{audit-product-extension.e2e-spec.ts,audit/audit.e2e-spec.ts}`
+    - **notification** (T22g): `apps/api/test/{notifications-email,notifications-feed,notifications-inapp,notifications-product-extension,notifications-sse}.e2e-spec.ts` · `apps/api/test/setup/fake-mailer.ts` · `apps/api/test/fixtures/sample-templates/sample-welcome.hbs`
+    - **tag** (T22g): `apps/api/test/tag/tags.e2e-spec.ts`
+    - **kernel** (T22e): `apps/api/src/docs/{docs-auth,docs-login.template}.ts` · `apps/api/test/openapi-contract.e2e-spec.ts` + its snapshot
+    `apps/api/test/setup/app-factory.ts` was modified, not deleted — confirm it still serves the restored specs.
+30. **AD-021 violation still open in the identity entry.** `catalog/identity/single-tenant/api/application/use-cases/purge-users/purge-users.use-case.ts:1` imports the audit entry directly, so identity cannot install alone. The T22 worker marked it `SPEC_DEVIATION` in-file. → T22f.
+31. **AD-022 recorded in `STATE.md`.** Maintenance jobs are a closed kernel union today, so no catalog entry can register one and identity's `purge-users` is dead code in every child. → T22d.
 
 ---
 

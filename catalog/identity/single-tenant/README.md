@@ -184,8 +184,9 @@ O que cada suíte garante:
   request/response. Operação extra no child é permitida; sumiço ou mudança de campo obrigatório
   reprova.
 - `route-access.parity.spec.ts` — a exigência de acesso de cada uma das 34 rotas (public /
-  authenticated / permission `<chave>`), reconstruída da metadata Nest. Rota nova sem linha na
-  tabela reprova, e só as rotas `@SelfService()` podem depender do default do kernel.
+  authenticated / permission `<chave>`), reconstruída da metadata `ACCESS_REQUIREMENT`. Rota nova
+  sem linha na tabela reprova, e nenhuma rota pode depender do default fail-closed do kernel:
+  `@SelfService()` escreve `authenticated` explicitamente.
 - `access-policy.parity.spec.ts` — `IdentityAccessPolicy`: público sem ator, 401 em rota
   autenticada sem ator, curinga do `master`, OR de `anyPermission`, fail-closed sem extensão.
 - `csrf.parity.spec.ts` — `CsrfGuard`: métodos seguros passam, Origin/Referer conferidos contra
@@ -193,6 +194,19 @@ O que cada suíte garante:
   rota pública ou máquina-a-máquina.
 - `profiles.parity.spec.ts` — enum `identity.access_profile` com os três perfis e `serves_clients`
   independente.
+
+Além da paridade, a entrada entrega as suítes e2e da v0.2 em `api/__e2e__/` (vão para
+`apps/api/src/modules/identity/__e2e__/`, cobertas pelo `test/jest-e2e.json` do child) e o
+material de harness em `api/testing/` — `seed-user.ts`, `fake-mailer.ts` e `seeds/` (bootstrap do
+usuário `master`). O plumbing do runner (containers, env, `test-db`) continua em `apps/api/test/`,
+do kernel.
+
+Duas ressalvas: `docs-login.e2e-spec.ts` da v0.2 não voltou — o kernel passou a montar `/docs`
+sem autenticação e sem acoplamento com módulo, então a rota que a suíte exercia deixou de
+existir; a variante com login vira receita no child, não código da entrada. E os seis e2e de
+e-mail (`access-link-activation`, `auth-outbox-email`, `authz`, `create-user-flow`, `user-trash`,
+`verify-email`) ainda importam a porta `MAILER` da entrada `notification` — coupling de teste
+registrado em `api/testing/fake-mailer.ts` e pendente de mudança fora desta entrada.
 
 Regerar o snapshot depois de mudar rota da entrada: extraia do `openapi.json` do template as
 operações de tags `Auth`, `Session`, `Device`, `Admin` e `Access` e grave em
@@ -212,7 +226,11 @@ Sem a entrada `attachment` (ou qualquer outro provider de `PROFILE_IMAGE_STORE`)
 `IdentityModule` resolve normalmente no boot; só as operações de imagem de perfil respondem `501`.
 
 A entrada `audit` **não** é dependência: `migrations/custom/02_audit_attach.sql` é guardado e não
-faz nada quando `audit.attach` não existe (§ Dados).
+faz nada quando `audit.attach` não existe (§ Dados). O purge LGPD da trilha em `purgeUsers` também
+virou porta — `AUDIT_TRAIL_PURGER` (`api/domain/ports/audit-trail-purger.ts`), resolvida com
+`@Optional()`. Quem liga é a entrada `audit`; sem provider a purga da trilha é no-op, e não `501`
+como em `PROFILE_IMAGE_STORE`, porque sem a entrada `audit` não existe trilha guardando o PII do
+titular — o hard delete do usuário já é completo.
 
 A entrada `notification` **não** é dependência: identity só publica `notification.requested` no
 outbox; sem a entrada instalada o evento fica sem consumidor.

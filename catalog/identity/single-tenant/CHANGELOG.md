@@ -22,6 +22,12 @@ já adaptado ao kernel v1 (porta `ACCESS_POLICY`, ator na ALS, guards do kernel)
 - `migrations/custom/01_auth_events_append_only.sql`: trigger append-only de
   `identity.auth_events` com escape hatch de retenção.
 - `parity/`: 5 suítes de paridade contra a v0.2 + `contract.snapshot.json` (34 operações).
+- `api/__e2e__/`: 17 suítes e2e da v0.2 (login, logout, sessão, devices, verificação de e-mail,
+  link de acesso, lixeira, authz, CSRF `SameSite=none`, rate limit, idempotência, outbox de
+  e-mail, anti-enumeração, catálogo e histórico de acesso).
+- `api/testing/`: `seed-user.ts`, `fake-mailer.ts` e `seeds/` (bootstrap do usuário `master`).
+- `api/domain/ports/audit-trail-purger.ts`: porta `AUDIT_TRAIL_PURGER` para o purge LGPD da
+  trilha em `purgeUsers` — ligada pela entrada `audit`, `@Optional()` (AD-021).
 
 ### Alterado (frente à v0.2)
 
@@ -31,6 +37,12 @@ já adaptado ao kernel v1 (porta `ACCESS_POLICY`, ator na ALS, guards do kernel)
   no banco) passam a ser locais da entrada (ver `README.md` § Decisões).
 - Parte web: guards de rota e componentes não são mais entregues como código — viram receitas
   no README (`## Parte web`).
+- `auth-events.purge` e `email-change.revert` passam a se registrar no `MaintenanceRegistry` do
+  kernel (AD-022), com o mesmo cron e os mesmos `lockId` (5 e 4) da v0.2.
+- `CsrfGuard` e as suítes de paridade leem `ACCESS_REQUIREMENT`; `IS_PUBLIC_KEY` e
+  `IS_SELF_SERVICE_KEY` deixaram de existir no kernel.
+- `docs-login.e2e-spec.ts` da v0.2 não foi reposto: o `/docs` do kernel deixou de ser protegido
+  por login e de conhecer módulo, então a rota que a suíte exercia não existe mais.
 
 ### Advisories
 

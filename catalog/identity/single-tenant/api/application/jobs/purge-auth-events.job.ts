@@ -6,10 +6,18 @@ import {
   LoggerFactory,
 } from "../../../../shared/kernel/logging/logger.factory"
 import { MaintenanceJob } from "../../../../shared/kernel/scheduling/maintenance-job.decorator"
+import { registerMaintenanceJob } from "../../../../shared/kernel/scheduling/maintenance-registry"
 import {
   AUTH_EVENT_REPOSITORY,
   type AuthEventRepository,
 } from "../../domain/ports/auth-event.repository"
+
+// Antes do decorator, que resolve a spec no registry ao avaliar a classe.
+registerMaintenanceJob({
+  name: "auth-events.purge",
+  cron: "45 3 * * *",
+  lockId: 5,
+})
 
 const RETENTION_MONTHS = 24
 

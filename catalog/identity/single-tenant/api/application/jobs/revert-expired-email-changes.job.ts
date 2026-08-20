@@ -6,10 +6,18 @@ import {
   LoggerFactory,
 } from "../../../../shared/kernel/logging/logger.factory"
 import { MaintenanceJob } from "../../../../shared/kernel/scheduling/maintenance-job.decorator"
+import { registerMaintenanceJob } from "../../../../shared/kernel/scheduling/maintenance-registry"
 import {
   USER_REPOSITORY,
   type UserRepository,
 } from "../../domain/ports/user.repository"
+
+// Antes do decorator, que resolve a spec no registry ao avaliar a classe.
+registerMaintenanceJob({
+  name: "email-change.revert",
+  cron: "*/15 * * * *",
+  lockId: 4,
+})
 
 /**
  * Auto-revert da troca de e-mail: contas com `pendingEmail` cujo token expirou

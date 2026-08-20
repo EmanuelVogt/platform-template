@@ -167,6 +167,26 @@ sem nunca rejeitar; quem rejeita é o `AccessGuard` do kernel delegando a `Ident
 `false` em `403`, e a v0.2 respondia 401 para sessão ausente). Ausência da extensão
 `IDENTITY_ACCESS` nega — fail closed. Coberto por `parity/access-policy.parity.spec.ts`.
 
+### AD-025 (local) — o e2e cruzado mora na entrada a jusante do DAG
+
+**Contexto**: vários e2e são testes de integração ENTRE entradas — precisam de usuário semeado
+com hash real e de sessão por `/v1/auth/login`, que só o identity entrega. Espalhados, eles
+fechavam o único ciclo do grafo de entradas: cinco e2e do `notification` e um do `tag`
+importavam `RATE_LIMITER` do identity, e o identity importa `NotificationRequested` do
+`notification` em dez use-cases de produção.
+**Decisão**: um e2e cruzado fica na entrada que **depende**, nunca na dependência. Como
+`identity → notification` é a direção do DAG, os quatro e2e cruzados que viviam no
+`notification` (`notifications-email`, `notifications-feed`, `notifications-inapp`,
+`notifications-sse`) passaram para `api/__e2e__/` desta entrada; `audit`, `attachment` e `tag`
+mantêm os seus, porque já dependem do identity. Os helpers que eles compartilham são desta
+entrada e ficam em `api/testing/` (`seed-user.ts`, `allow-all-rate-limiter.ts`,
+`fake-mailer.ts`) — nunca no harness de kernel `apps/api/test/setup/`, que não pode conhecer
+token de entrada.
+**Consequência**: `notification` volta a ser raiz limpa do DAG (nenhum arquivo seu, de produção
+ou teste, importa outra entrada) e o grafo fica acíclico incluindo testes. A suíte e2e desta
+entrada pressupõe `notification` instalado — o que já era verdade pelo `fakeMailer` e é
+coerente com `dependsOn: notification`, a ser declarado no `module.json` (T22l).
+
 ## Paridade
 
 `parity/*.parity.spec.ts` roda como suíte unitária do child depois do `module add` (os arquivos
@@ -196,8 +216,10 @@ O que cada suíte garante:
 
 Além da paridade, a entrada entrega as suítes e2e da v0.2 em `api/__e2e__/` (vão para
 `apps/api/src/modules/identity/__e2e__/`, cobertas pelo `test/jest-e2e.json` do child) e o
-material de harness em `api/testing/` — `seed-user.ts`, `fake-mailer.ts` e `seeds/` (bootstrap do
-usuário `master`). O plumbing do runner (containers, env, `test-db`) continua em `apps/api/test/`,
+material de harness em `api/testing/` — `seed-user.ts`, `allow-all-rate-limiter.ts`,
+`fake-mailer.ts` e `seeds/` (bootstrap do usuário `master`). `seed-user.ts` e
+`allow-all-rate-limiter.ts` são a superfície que `audit`, `attachment` e `tag` importam por
+`dependsOn` (AD-021/AD-025). O plumbing do runner (containers, env, `test-db`) continua em `apps/api/test/`,
 do kernel.
 
 Duas ressalvas: `docs-login.e2e-spec.ts` da v0.2 não voltou — o kernel passou a montar `/docs`
@@ -213,7 +235,9 @@ operações de tags `Auth`, `Session`, `Device`, `Admin` e `Access` e grave em
 
 ## Dependências
 
-`dependsOn: []` — a entrada instala sozinha num filho só com o kernel.
+`dependsOn: []` hoje no `module.json`, mas a entrada **não** instala sozinha num filho só com o
+kernel: ela importa `notification` em produção e em teste (ver mais abaixo e § Decisões, AD-025).
+Declarar `notification` é trabalho de T22l.
 
 A antiga aresta para `attachment` virou porta: `identity.module.ts` não importa mais o
 `AttachmentModule` e os três casos de uso (`upload-avatar`, `upload-access-link-avatar` e
@@ -235,8 +259,14 @@ kernel pela AD-024), resolvida com
 como em `PROFILE_IMAGE_STORE`, porque sem a entrada `audit` não existe trilha guardando o PII do
 titular — o hard delete do usuário já é completo.
 
-A entrada `notification` **não** é dependência: identity só publica `notification.requested` no
-outbox; sem a entrada instalada o evento fica sem consumidor.
+A entrada `notification` **é** dependência, e o `module.json` ainda não diz isso (T22l corrige).
+Dez casos de uso de produção importam `NotificationRequested` de `modules/notification`, o
+`api/testing/fake-mailer.ts` importa a porta `Mailer`, e os quatro e2e cruzados que chegaram por
+AD-025 importam `MAILER` e `DeliveryDispatcher`. Sob AD-025 a aresta é declarada, não invertida:
+`identity → notification` é a direção do DAG (`notification` é a raiz e não importa ninguém), e
+promover `NotificationRequested`/`MAILER` a porta do kernel colocaria vocabulário de módulo no
+kernel — o que a RULE C proíbe. O que continua verdade é que **publicar** no outbox não exige
+consumidor: sem a entrada instalada o evento fica sem quem o processe.
 
 Variáveis de ambiente (campo `env` do `module.json`, anexadas ao `.env.example` pelo
 `module add`). Obrigatórias: `WEB_ORIGIN`, `PASSWORD_PEPPER` (≥32 caracteres) e

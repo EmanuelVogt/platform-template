@@ -60,6 +60,23 @@ enums `notificationDeliveryStatus` e `notificationChannel`). As tabelas nascem d
   (resolve binding → recipient → subject → template → chama o mailer). Dublês de teste
   implementam um único método. `LogMailer` registra `to`, `subject`, `idempotencyKey` e os
   `href`s extraídos do HTML, para o fluxo de dev manter o link cru no log.
+- **AD-025, os e2e cruzados saíram desta entrada.** `notification` é a raiz do DAG: `identity`
+  importa `NotificationRequested` em dez use-cases de produção, então declarar
+  `dependsOn: identity` aqui fecharia ciclo. Quatro e2e que viviam em `api/__e2e__/`
+  (`notifications-email`, `notifications-feed`, `notifications-inapp`, `notifications-sse`)
+  precisavam de sessão autenticada: eles semeiam usuário com hash real e fazem login por
+  `/v1/auth/login` — rotas e tabelas do `identity`. A regra aplicada: **um e2e cruzado mora na
+  entrada a jusante no DAG**, ou seja em quem depende, nunca na dependência. Os quatro foram
+  movidos para `catalog/identity/single-tenant/api/__e2e__/` com o mesmo nome; eles seguem
+  cobrindo o feed, o SSE, os produtores in-app e o cutover de e-mail, agora do lado que
+  legitimamente pode importar as duas entradas. Nenhum teste foi enfraquecido ou removido.
+- **O único e2e que sobra aqui não toca `identity`.** `notifications-product-extension` publica
+  `NotificationRequested` direto no outbox com `recipientId: ulid()` e não faz nenhuma request
+  HTTP; o `overrideProvider(RATE_LIMITER)` que ele carregava era peso morto herdado de quando
+  tudo morava junto e foi removido. `notification.notifications.recipient_id` e
+  `notification.notification_deliveries.recipient_id` são `text` sem FK para `identity.users`
+  (`infrastructure/tables/notification.table.ts:10` e `notification-delivery.table.ts:21`), o que
+  torna esse e2e instalável e executável com a entrada sozinha.
 
 ## Paridade
 
@@ -83,8 +100,10 @@ rodam no jest do app filho:
 
 ## Dependências
 
-- `dependsOn`: nenhuma. Varredura em `apps/api/src/modules/notification/**` não encontrou
-  import de `identity`, `attachment`, `audit` ou `tag`.
+- `dependsOn`: nenhuma, e agora isso vale também para os testes — nenhum arquivo desta entrada,
+  de produção ou de teste, importa `identity`, `attachment`, `audit` ou `tag`. É a raiz do DAG de
+  entradas e precisa continuar assim: `identity` depende dela, então qualquer aresta de volta
+  fecharia ciclo (ver § Decisões, AD-025).
 - `env` (`module.json`): `MAIL_TRANSPORT`, `RESEND_API_KEY`, `MAIL_FROM`,
   `DELIVERY_MAX_ATTEMPTS`.
 

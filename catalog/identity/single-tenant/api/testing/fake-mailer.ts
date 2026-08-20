@@ -1,16 +1,9 @@
-// SPEC_DEVIATION: AD-021 — este fake e os 6 e2e que o usam
-// (access-link-activation, auth-outbox-email, authz, create-user-flow,
-// user-trash, verify-email) importam a porta `MAILER`/`Mailer` da entrada
-// notification, então a suíte e2e do identity não roda num filho kernel-only.
-// Reason: o fluxo coberto é identity → outbox → notification → mailer, ou seja
-// estes e2e são testes de integração ENTRE entradas e pressupõem duas
-// instaladas. Mover fake e specs para `catalog/notification` só inverte a
-// aresta (lá eles passariam a depender do login do identity), e promover
-// `MAILER` a porta do kernel colocaria "e-mail" no kernel para servir a um
-// teste — notification declara E liga esse token, não é porta entre entradas
-// (AD-024 não se aplica). A correção é dar um lugar no catálogo para suíte
-// cruzada, instalada/typechecada só quando as duas entradas existem: mexe em
-// `catalog/schema/**` e `scripts/**`, fora do ownership desta task.
+// Este fake importa `MAILER`/`Mailer` da entrada notification. Sob AD-025 isso
+// é dependência declarada, não desvio: identity já importa notification em dez
+// use-cases de produção (`NotificationRequested`), a aresta identity →
+// notification é a direção do DAG e não fecha ciclo. Os e2e cruzados
+// identity ↔ notification moram aqui pela mesma razão — o e2e cruzado fica na
+// entrada a jusante, nunca na dependência.
 import type { EmailMessage, Mailer } from "../../notification/domain/ports/mailer"
 
 export function fakeMailer(): Mailer & { sent: EmailMessage[] } {

@@ -4,7 +4,6 @@ import { Injectable, Module } from "@nestjs/common"
 import { ulid } from "ulid"
 import { z } from "zod"
 
-import { RATE_LIMITER } from "../../../../src/modules/identity/domain/ports/rate-limiter"
 import { NotificationRequested } from "../api/events/notification-requested.event"
 import { defineCatalogEntry } from "../application/catalog/notification-catalog"
 import { NotificationTemplateSourceRegistry } from "../application/templates/notification-template-registry"
@@ -17,7 +16,7 @@ import { OutboxDispatcher } from "../../../../src/shared/kernel/outbox/outbox.di
 import { OutboxPublisher } from "../../../../src/shared/kernel/outbox/outbox.publisher"
 import { TransactionManager } from "../../../../src/shared/kernel/transactional/transaction-manager"
 
-import { allowAllRateLimiter, createE2eApp } from "../../../../test/setup/app-factory"
+import { createE2eApp } from "../../../../test/setup/app-factory"
 import { fakeMailer } from "../testing/fake-mailer"
 import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
 
@@ -73,12 +72,7 @@ describe("Produto registra um tipo de e-mail ponta a ponta (e2e)", () => {
 
     mailer = fakeMailer()
     app = await createE2eApp(
-      (b) =>
-        b
-          .overrideProvider(RATE_LIMITER)
-          .useValue(allowAllRateLimiter)
-          .overrideProvider(MAILER)
-          .useValue(mailer),
+      (b) => b.overrideProvider(MAILER).useValue(mailer),
       [FakeProductModule],
     )
   })

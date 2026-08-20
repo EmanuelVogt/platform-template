@@ -3,8 +3,11 @@ import { Inject, Injectable } from "@nestjs/common"
 import { CLOCK, type Clock } from "../../../../shared/kernel/clock/clock"
 import { type AppLogger, LoggerFactory } from "../../../../shared/kernel/logging/logger.factory"
 import { MaintenanceJob } from "../../../../shared/kernel/scheduling/maintenance-job.decorator"
+import { registerMaintenanceJob } from "../../../../shared/kernel/scheduling/maintenance-registry"
 
 import { AuditTrailRepository } from "./audit-trail.repository"
+
+registerMaintenanceJob({ name: "audit.purge", cron: "30 3 * * *", lockId: 10 })
 
 const RETENTION_MONTHS = 24
 

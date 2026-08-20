@@ -72,6 +72,8 @@ Waves run in order (barrier + Build gate between them). Clusters inside a wave r
 | 4b.1 | C16b | T22e | `apps/api/src/{docs/**,openapi/**,main.ts}`, `apps/api/src/shared/kernel/access/decorators.ts`, `apps/api/test/openapi-contract.e2e-spec.ts` + its `__snapshots__` | sonnet · depends T22 · `/docs` remount + contract e2e restore + note 4 kernel side |
 | 4b.2 | C16c | T22f | `catalog/identity/single-tenant/**` | opus (AD-021 port inversion, AD-022 adoption, restore) · depends C16a,C16b |
 | 4b.2 | C16d | T22g | `catalog/{attachment,audit,notification,tag}/**` | sonnet (restore + audit purge job via the registry) · depends C16a,C16b |
+| 4c.1 | C25 | T22j | `apps/api/tsconfig.catalog.json` (new), `package.json` (`catalog:typecheck`), `lefthook.yml` | sonnet · nothing type-checks `catalog/**` today |
+| 4c.2 (exclusive) | C24 | T22i | `apps/api/src/shared/kernel/ports/**`, `catalog/{identity,attachment,audit,notification}/**` | opus (AD-024) · depends T22j · port tokens move to the kernel, audit binds the purger, `fake-mailer` cross-entry import, remaining entry jobs registered |
 | 5 | C17 | T23 | `scripts/template-smoke.mjs`, `scripts/smoke/**` (delete) | sonnet · depends T22 |
 | 5 | C18 | T24 | `scripts/platform/catalog-check.mjs`, `scripts/platform/__tests__/catalog-check.test.mjs`, `package.json` (`catalog:check`) | sonnet · depends T15,T22 |
 | 5 | C19 | T25 → T26 | `docs/dev/{template.md,template-changelog.md}`, `TEMPLATE.md`, `CLAUDE.md`, `AGENTS.md.jinja`, `README.md.jinja`, `copier.yml`, `docs/back/back-arch.md`, `docs/front/front-arch.md`, `docs/test/testing.md` | sonnet (docs) · depends T22 |
@@ -87,6 +89,8 @@ Wave 3:  [C11: T15] ∥ [C12: T17] ∥ [C13: T18] ∥ [C14: T19] ∥ [C15: T20�
 Wave 4:    [C16: T22]  (exclusive)
 Wave 4b.1: [C16a: T22d] ∥ [C16b: T22e]
 Wave 4b.2: [C16c: T22f] ∥ [C16d: T22g]   (only after 4b.1's Build gate)
+Wave 4c.1: [C25: T22j]
+Wave 4c.2: [C24: T22i]  (exclusive — kernel + four entries)
 Wave 5:    [C17: T23] ∥ [C18: T24] ∥ [C19: T25→T26] ∥ [C20: T27] ∥ [C22: T22a] ∥ [C23: T22h]   (≤4 in flight → C22, C23 queue)
 Wave 6:    [C21: T28]
 ```
@@ -336,6 +340,18 @@ Wave 6:    [C21: T28]
 **Touches**: `apps/api/src/shared/kernel/scheduling/maintenance-runtime.int-spec.ts` · **Depends on**: T22d · **Requirement**: AD-022, CAT-01
 **Done when**: no assertion references a job or lockId that left the kernel. The spec cannot be executed without Postgres — the Verifier runs it at the Final gate.
 **Tests**: int (not runnable in the worker env) · **Gate**: `pnpm --filter api typecheck` + `pnpm --filter api lint` · **Commit**: `test(kernel): re-anchor maintenance int-spec to kernel jobs`
+
+### T22j: Type-check `catalog/**`
+**What**: nothing type-checks the catalog today. `apps/api/tsconfig.json` includes only `src/**/*` and `test/**/*`; `catalog:lint` validates `module.json` and the README contract shape, nothing more. Every entry's TypeScript — including the 27 e2e specs restored in wave 4b, whose relative import paths were rewritten by hand — is unverified by construction. Add a tsconfig that compiles `catalog/**` against the kernel's paths (`noEmit`), expose it as `pnpm catalog:typecheck`, and wire it into the pre-push hook next to the other gates.
+**Touches**: `apps/api/tsconfig.catalog.json` (new), `package.json`, `lefthook.yml` · **Depends on**: T22f, T22g · **Requirement**: CAT-01, CAT-03
+**Done when**: `pnpm catalog:typecheck` compiles every entry and reports the real errors. **Expect it to fail on first run** — report the full error list; fixing it is T22i's job, not this task's.
+**Tests**: none (the command is the test) · **Gate**: `pnpm catalog:typecheck` (may exit non-zero — that is the deliverable) + `pnpm --filter api typecheck` + `pnpm catalog:lint` · **Commit**: `build(catalog): type-check catalog entries`
+
+### T22i: Entry-to-entry ports move to the kernel (AD-024)
+**What**: (i) implement **AD-024** — move the token + interface of every entry-to-entry port into the kernel (`apps/api/src/shared/kernel/ports/`), mirroring `ACCESS_POLICY`: `AuditTrailPurger`/`AUDIT_TRAIL_PURGER` (declared by identity in `53417b2`) and T17c's `ProfileImageStore`/`PROFILE_IMAGE_STORE`. Consumer and provider then both import from the kernel and neither imports the other. (ii) bind `AUDIT_TRAIL_PURGER` in the audit entry — `AuditTrailRepository.purgeEntities` at `catalog/audit/api/infrastructure/trail/audit-trail.repository.ts:40-51` already matches structurally. (iii) fix the cross-entry import in the test layer: `catalog/identity/single-tenant/api/testing/fake-mailer.ts` and 6 restored e2e (`access-link-activation`, `auth-outbox-email`, `authz`, `create-user-flow`, `user-trash`, `verify-email`) import `MAILER`/`Mailer` (2 also `delivery.dispatcher`) from `catalog/notification/api/domain/ports/mailer.ts`, so identity's e2e suite cannot run in a kernel-only child — the `SPEC_DEVIATION` marker in `fake-mailer.ts:1` comes out when it is fixed. (iv) fix everything `pnpm catalog:typecheck` (T22j) reports. (v) register any remaining entry-owned maintenance job through the AD-022 registry — wave 4b registered identity's two and audit's one; notification (historic lockId 3) and attachment (7, 8) were never checked.
+**Touches**: `apps/api/src/shared/kernel/ports/**`, `catalog/{identity,attachment,audit,notification}/**` · **Depends on**: T22j · **Requirement**: CAT-01, CAT-04, AD-021, AD-024
+**Done when**: no entry imports another entry, in source or in test code; `pnpm catalog:typecheck` exits 0; no `SPEC_DEVIATION` marker for AD-021 remains.
+**Tests**: unit for the kernel ports + the restored specs · **Gate**: `pnpm catalog:typecheck` + `pnpm --filter api typecheck` + `lint` + `test` + `pnpm catalog:lint` · **Commit**: one per sub-item, all carrying `Advisory: none — entrada ainda nao publicada, correcao interna do v1.0.0`
 
 ---
 
@@ -618,6 +634,37 @@ Kernel-only `openapi.json` now holds exactly **2 operations**: `GET /health :: l
 34. **`/docs` cannot be exercised over HTTP in the e2e suite.** `apps/api/test/setup/scalar-stub.ts` is wired through jest `moduleNameMapper` because the real `@scalar/nestjs-api-reference` is ESM/CJS-incompatible under jest, so the package is a no-op there. The restored `openapi-contract.e2e-spec.ts` validates the contract against the static `openapi.json` snapshot, **not** a live `GET /docs` call. The mount itself is therefore unverified by automated tests — flag to the Verifier.
 35. **`authz-coverage.spec.ts` lost its "no duplicate declaration" check.** Once the legacy keys collapse into the single `ACCESS_REQUIREMENT` key, `SetMetadata` silently overwrites, so a double declaration is undetectable at that layer. `SelfService()` and `OptionalAuth()` now write `ACCESS_REQUIREMENT` directly (`authenticated` / `public`) instead of a bare legacy flag with no kernel-readable equivalent.
 36. **`MaintenanceJobName` is now `string`** (open namespace), and the old "lockId é único por job, salvo compartilhamento declarado" test lost its `declaredShares` escape hatch — AD-022 makes a shared `lockId` a hard throw, so declared sharing is no longer expressible. `maintenance-schedule.spec.ts:138-146` survives inside `maintenance-registry.spec.ts` as "varredura resolve exatamente um arquivo de corpo por job do kernel", scoped to `KERNEL_MAINTENANCE_JOBS` (catalog job bodies live outside `apps/api/src`, so the scan cannot see them) and strengthened: it also asserts the scan finds no `@MaintenanceJob` name in `apps/api/src` outside the kernel set.
+
+### Wave 4b.2 — DONE (C16c / T22f ∥ C16d / T22g). Build gate PASS, 9/9 exit 0.
+
+| Task | Cluster | Commit | Result |
+| --- | --- | --- | --- |
+| T22f | C16c | `53417b2` | `fix(catalog): identity declares a port for the audit trail` — AD-021 inversion, `SPEC_DEVIATION` removed, +1 unit test |
+| T22f | C16c | `0f1332e` | `feat(catalog): identity registers its jobs via the maintenance registry` — +3 tests |
+| T22f | C16c | `7fbffda` | `refactor(catalog): identity reads ACCESS_REQUIREMENT` — csrf guard + 2 specs + 2 parity specs |
+| T22f | C16c | `db182fd` | `test(catalog): restore identity-owned specs and seeds` — 17 e2e + `api/testing/{seed-user,fake-mailer,seeds/*}` |
+| T22f | C16c | `52d4d3a` | `docs(catalog): identity README and CHANGELOG for the v1 cutover` |
+| T22g | C16d | `7aea2ec` | `test(catalog): restore attachment e2e specs` — 2 specs into `api/__e2e__/` |
+| T22g | C16d | `5572519` | `test(catalog): restore audit e2e specs` — the 2 specs already existed since `dd60720` but with unresolvable imports; repaired |
+| T22g | C16d | `6414c4a` | `test(catalog): restore notification specs and fixtures` — 5 e2e + `fake-mailer.ts` + `sample-welcome.hbs` |
+| T22g | C16d | `6199fa0` | `test(catalog): restore tag e2e spec` |
+| T22g | C16d | `4004124` | `feat(catalog): audit registers its purge job via the maintenance registry` |
+
+**Build gate (per package, all exit 0):** api typecheck · lint · test **299 passed / 42 suites** · web typecheck · lint · test **68 passed / 24 files** · `test:scripts` 100/100 · `catalog:lint` · `db:check:journal` ok. Tree clean at `4004124`. Int/e2e not run (no Postgres/Docker in the worker env).
+
+**Maintenance `lockId` ledger after AD-022** (a collision throws at boot — keep this current): kernel **1** `outbox.purge`, **2** `idempotency.purge`; identity **4** `email-change.revert`, **5** `auth-events.purge`; audit **10** `audit.purge` (the v0.2 value was 6; C16d chose 10 deliberately to stay clear of the low range). Notification's historic **3** and attachment's **7**/**8** were never checked — see T22i (v).
+
+**Carry-forward from wave 4b.2:**
+
+37. **`module.json.files` does not exist.** `catalog/schema/module.schema.json:6` is `additionalProperties: false` with no `files` property, and no entry has one — the catalog is convention-over-config (design § 4), files are discovered by directory. Both workers correctly refused to add it. **The instruction to "add every restored path to `module.json.files`" in the T22f/T22g cards was wrong** and is void; `catalog:lint` confirms the restores are complete without it.
+38. **AD-022's motivating example was wrong: `purge-users` is not a maintenance job** — it is an admin route plus a use case. The jobs that were actually dead code in every child are identity's **`auth-events.purge`** and **`email-change.revert`**, whose `@MaintenanceJob(name)` threw at class-evaluation time without a prior registration. The decision itself is unaffected and AD-022 has been corrected in `.specs/STATE.md`.
+39. **Nothing type-checks `catalog/**` — the largest verification hole in this feature.** No tsconfig `include` reaches it (`apps/api/tsconfig.json` is `src/**/*` + `test/**/*`) and `catalog:lint` only validates `module.json` and README shape. So the four catalog commits of C16c and the five of C16d **provably could not move typecheck, lint or test**, and the 27 e2e specs restored in wave 4b — whose relative import paths were all rewritten by hand — are unverified by construction. → new task **T22j** (C25, wave 4c.1).
+40. **AD-021 has a hole its own precedent shares: a port's token cannot live in the consumer entry.** C16c declared `AUDIT_TRAIL_PURGER` inside `catalog/identity/**`; C16d then could not bind it from `catalog/audit/**` without importing the type from identity — an AD-021 violation in the reverse direction — and correctly refused to guess. T17c's `PROFILE_IMAGE_STORE` has the same shape. The `ACCESS_POLICY` precedent works only because its token lives in the **kernel**. → **AD-024**: entry-to-entry port tokens and interfaces move to `apps/api/src/shared/kernel/ports/`. → new task **T22i** (C24, wave 4c.2, exclusive).
+41. **The restored identity test layer imports the notification entry.** `catalog/identity/single-tenant/api/testing/fake-mailer.ts:1` and 6 restored e2e (`access-link-activation`, `auth-outbox-email`, `authz`, `create-user-flow`, `user-trash`, `verify-email`) import `MAILER`/`Mailer` from `catalog/notification/api/domain/ports/mailer.ts`; 2 of them also pull `delivery.dispatcher`. Identity's e2e suite therefore cannot run in a kernel-only child. Marked `SPEC_DEVIATION` in `fake-mailer.ts:1`. → folded into **T22i (iii)**.
+42. **`docs-login.e2e-spec.ts` was dropped, not restored** — 17 identity e2e, not 18. Its target `apps/api/src/docs/docs-auth` ceased to exist in `ed5d0e1`, and the identity README has no `/docs` recipe to re-target it at (zero hits). Recorded in the entry's README § Paridade and CHANGELOG. **The login-gated `/docs` recipe is still owed** — note 28 promised it; T25 or the entry README must deliver it, otherwise the behaviour is simply gone.
+43. **A missing `AUDIT_TRAIL_PURGER` degrades to a no-op, not to an RFC 7807 501** — deliberately unlike `PROFILE_IMAGE_STORE`. Without the audit entry there is no trail holding the subject's PII, so the purge is already complete; a 501 would kill trash-purge in a valid kernel-only install. Rationale is in the port's docstring and the README § Dependências.
+44. **The e2e specs still import the legacy harness at `apps/api/test/setup/*`.** The AD-021 test-harness layer (`apps/api/src/shared/test/{unit,int,e2e}`) does not exist yet — only `parity/` does — and the kernel was frozen for this sub-wave, so both workers rewrote relative paths against the legacy location. That is `test-suite-refactor`'s work, not this feature's; it is recorded here so the Verifier does not read it as a regression.
+45. **Three `SPEC_DEVIATION` markers remain in the tree** (`rg -n SPEC_DEVIATION catalog apps`): `catalog/notification/api/application/templates/notification-template-registry.ts:37` (design C-NTPL wants a `NOTIFICATION_TEMPLATE_SOURCES` registry), `catalog/identity/single-tenant/api/testing/fake-mailer.ts:1` (note 41 → T22i), `apps/api/src/shared/kernel/logging/logger.factory.ts:55` (`sessionId` dropped from the log → note 16, T25's changelog line). The Verifier must account for all three.
 
 ---
 

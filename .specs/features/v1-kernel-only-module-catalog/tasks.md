@@ -799,6 +799,26 @@ Four root causes: (a) `apps/api/test/setup/seed-user.ts` does not exist; (b) `ap
 62. **Design § 7's lock shape does not match the code.** It shows a repo-wide `catalog: { source, ref }` block; `scripts/platform/lib/apply.mjs::writeLock` actually writes only a per-module `catalogRef`. Also **no `catalog/<entry>@x.y.z` git tag exists anywhere** — AD-016's tagging has never been exercised. T27 documented both as gaps inside `port-module-update`'s SKILL rather than silently writing fiction. Neither is a v1 blocker; both are real debt.
 63. **`d92f9c7` corrected design § 8 but missed § 2.2.** Line 87 still promised `shared/kernel/idempotency/*`: `user_id` → `actor_id`, on **main** as well as on the branch — the same non-existent column the whole feature has been told not to mention. Found by the T25/T26 worker checking a payload premise. Fixed on main at `2cfd1d5`. `job-context.ts`'s `userId` → `actorId` **is** a real rename and stays.
 
+### Wave 6 — IN PROGRESS (C31 `catalog:check` drive-to-completion; one worker per defect, sequential). Headline: note 50.
+
+| Task | Cluster | Commit | Result |
+| --- | --- | --- | --- |
+| T28 | C31 | `58f8bb8` | `## Follow-ups absorvidos` — all five `absorbs` genuinely `[]`; nothing from issues #2–#8 was ever absorbed (attachment still has #8's access-trail/404 ordering, audit still has #6's leaked fixtures). Worker refused to invent lines |
+| T28a | C31 | `47b2a2e` + `450f277` | `catalog-source.mjs`: `<path>#<ref>` was one literal path; `defaultCatalogRef` never descended into `catalog/` for a local source. `test:scripts` 133 → 141 |
+| T28b | C31 | `e3b31e2` | `catalog:check` simulates kernel **1.0.0** (highest `## vX.Y.Z` in `docs/dev/template-changelog.md`) by patching `_commit` in the child's `.copier-answers.yml`. No tag is created. `test:scripts` → 149 |
+| T28c | C31 | `77593aa` | kernel journal `when` 1807072480194/1817072480194 → 1787062300194/1787062360194 — T22 had hand-bumped them into 2027, so every child-generated migration was born out of order and `module add` could never succeed |
+| T28d | C31 | `f125204` | `check-journal.ts` recognises a **baseline reset** (added migration at idx 0 + vanished base entries), loud pt-BR notice. api unit 303 → **308 / 43**; `db:check:journal` exit 0 |
+| T28e | C31 | `f0ff79b` | `export-openapi.ts` passes `abortOnError: false` — Nest no longer swallows bootstrap failures into an empty log; error text is `message`, not `stack` |
+| T28e | C31 | `d629b37` | `catalog-check.mjs::withContractEnv` supplies inert `DATABASE_URL`/`REDIS_URL`/`WEB_ORIGIN` to the `contract` step. **Deviation from the card**: injected at the call site instead of `cp .env.example .env`; accepted — never overrides a present value, unit-tested. `test:scripts` → 150 |
+| T28f | C31 | — | **dispatched**: `contract` step hangs on an eager ioredis connection; per-step timeout + temp-dir cleanup in `catalog-check.mjs` |
+
+**`catalog:check` progression:** exit 3 (source resolution, T28a) → 8 (kernel range, T28b) → 9 (journal order, T28c/T28d) → 7 (contract step, empty log, T28e) → **hang** at `d629b37`: `module add notification` installs (migrations `notifications` 12 cols, `notification_deliveries` 12 cols applied), then `pnpm contract` in the child loops forever on `[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.` (~2 lines/s, host Redis at the placeholder `redis://localhost:6379` demands AUTH). Two orphan runs and ~10 `/tmp/catalog-check-*` dirs were found — the script cleans nothing on failure. → **T28f**. No entry spec has executed yet; note 50 still fully open.
+
+**Carry-forward from wave 6 (so far):**
+
+64. **The `contract` step is not side-effect free.** `d629b37`'s premise — "only builds the Nest graph, opens no connection" — is false: a kernel provider constructs an ioredis client eagerly at instantiation, so `NestFactory.create` alone connects. With no Redis reachable the export would have failed fast; with a Redis that demands AUTH it retries forever. Any gate that boots `AppModule` without infrastructure (contract export, `catalog:check`, future smoke) depends on that seam being lazy.
+65. **`catalog-check.mjs` had no step timeout and no cleanup on failure**, so a hung child step hangs the gate and every failed run leaks a rendered child under `/tmp`. Fixed by T28f (timeout → exit 7 with the step named; cleanup on every exit path unless `--keep`).
+
 ---
 
 ## Tools per task

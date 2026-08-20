@@ -11,6 +11,7 @@ import {
   LoggerFactory,
 } from "../../../../shared/kernel/logging/logger.factory"
 import { MaintenanceJob } from "../../../../shared/kernel/scheduling/maintenance-job.decorator"
+import { registerMaintenanceJob } from "../../../../shared/kernel/scheduling/maintenance-registry"
 import { TransactionManager } from "../../../../shared/kernel/transactional/transaction-manager"
 import { EMAIL_CHANNEL } from "../../domain/ports/channel.port"
 import {
@@ -23,6 +24,9 @@ import {
 } from "../tables/notification-delivery.table"
 
 import type { ChannelPort } from "../../domain/ports/channel.port"
+
+// Antes do decorator, que resolve a spec no registry ao avaliar a classe.
+registerMaintenanceJob({ name: "delivery.purge", cron: "30 3 * * *", lockId: 3 })
 
 const POLL_INTERVAL_MS = 1000
 const BATCH_SIZE = 10

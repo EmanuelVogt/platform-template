@@ -9,11 +9,19 @@ import {
   LoggerFactory,
 } from "../../../../shared/kernel/logging/logger.factory"
 import { MaintenanceJob } from "../../../../shared/kernel/scheduling/maintenance-job.decorator"
+import { registerMaintenanceJob } from "../../../../shared/kernel/scheduling/maintenance-registry"
 import { Traced } from "../../../../shared/kernel/tracing/traced.decorator"
 import {
   ATTACHMENT_REPOSITORY,
   type AttachmentRepository,
 } from "../../domain/ports/attachment.repository"
+
+// Antes do decorator, que resolve a spec no registry ao avaliar a classe.
+registerMaintenanceJob({
+  name: "attachment-pending.purge",
+  cron: "0 5 * * *",
+  lockId: 8,
+})
 
 const STALE_AFTER_HOURS = 24
 

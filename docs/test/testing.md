@@ -76,8 +76,15 @@ pnpm --filter api test:all    unit + int + e2e
 pnpm --filter web test        vitest (jsdom)
 
 # raiz
-pnpm test                     turbo: roda o `test` (unit) de cada app
+pnpm test                     turbo: roda o `test` (unit) de cada app — NÃO cobre catalog/**
+pnpm test:scripts             node --test em scripts/platform/__tests__/*.test.mjs
+pnpm catalog:lint             lint de catalog/** e docs/advisories/** (hook pre-commit)
+pnpm catalog:typecheck        só compila as entradas (espelho staged, não roda spec nenhum)
+pnpm catalog:check            único comando que instala e roda os testes de uma entrada
 ```
+
+`pnpm test:scripts` usa o runner nativo do Node (`node --test`) — não há jest/vitest
+configurado para `scripts/`; é o único lugar do monorepo que usa esse runner.
 
 `test:int` roda **paralelo** (`maxWorkers: 4`): cada worker usa um database próprio (`test_w<N>`, clone do DB migrado via `CREATE DATABASE ... TEMPLATE`), então suítes truncam à vontade sem corrida. `test:e2e` roda **serial** (`maxWorkers: 1`) — o app boota no DB base e as suítes compartilham Redis (estado de rate-limit).
 
@@ -174,6 +181,23 @@ it("rota inexistente → 404 RFC 7807 com correlationId do header", async () => 
 
 - **Contract de facade:** quando houver facade pública entre módulos, snapshot do formato que cada consumidor espera (`*.spec.ts`, sem banco).
 - **OpenAPI:** o CI roda `pnpm contract` e falha se `openapi.json` divergir (`git diff --exit-code openapi.json`). Mudou contrato → regerar e commitar.
+- **`/docs` não dá pra exercitar via HTTP no e2e.** `test/setup/scalar-stub.ts` neutraliza `@scalar/nestjs-api-reference` via `moduleNameMapper` do jest (o pacote é ESM puro, incompatível com o CJS do jest) — o e2e de contrato assevera o `openapi.json` estático, não a página `/docs` renderizada.
+
+## Parity (catálogo)
+
+Toda entrada do catálogo carrega `parity/*.parity.spec.ts` + `parity/contract.snapshot.json`
+ao lado do código — comparam o comportamento observável da entrada (rota, evento, facade)
+contra o snapshot gravado na versão da entrada. `module add` copia os specs de paridade para
+`apps/api/src/modules/<entry>/__parity__/` (convenção de path do `module.json`), onde o
+jest do produto os enxerga como qualquer outro `*.spec.ts`.
+
+**Nenhum gate deste repositório roda um spec do catálogo isoladamente.** `pnpm --filter api
+test` não enxerga `catalog/**` (fora do `rootDir` do jest); `pnpm catalog:typecheck` só
+prova que as entradas compilam, via um espelho staged e gitignored em
+`apps/api/.catalog-stage/`. Os specs unit/integration/e2e/parity de uma entrada só rodam
+**dentro de um produto renderizado**, depois de `module add` — ou seja, via
+`pnpm catalog:check`. Quem quer provar que uma entrada passa nos próprios testes roda
+`catalog:check`, nunca um comando na raiz do template.
 
 ## Web (vitest + RTL)
 

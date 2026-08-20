@@ -1,9 +1,10 @@
 # Frontend — Heurísticas e Guidelines (FSD)
 
-> **Nota do template.** O front gerado é *headless*: só transporte, sessão, guard e login
-> sem estilo. As seções sobre FSD completo, formulários, listagem e design system descrevem a
-> arquitetura de referência de um front completo — valem se o produto adotar essa pilha;
-> as regras de contrato (Kubb), transporte, sessão e roteamento valem sempre.
+> **Nota do template.** O front gerado é *headless*: só transporte e roteador shell, sem
+> sessão nem login (isso é parte web de uma entrada instalada, ver `## Parte web de uma
+> entrada instalada` abaixo). As seções sobre FSD completo, formulários, listagem e design
+> system descrevem a arquitetura de referência de um front completo — valem se o produto
+> adotar essa pilha; as regras de contrato (Kubb), transporte e roteamento valem sempre.
 
 Handbook. Stack: **React + Vite + TanStack Query + React Hook Form + Zod + `@platform/api-client` (Kubb)**. Arquitetura: **Feature-Sliced Design**.
 
@@ -368,13 +369,39 @@ Exceção: `app/config/api-client.ts` importa `configureApiClient` do barrel rai
 
 ## Kernel da aplicação — Isolamento do shell e `shared/`
 
-A arquitetura da web também distingue camadas de kernel (base-set) e produto:
+O kernel web **não conhece sessão nem login** — isso saiu do template junto com o módulo de
+identidade; quem precisa dessa fatia instala a entrada correspondente do catálogo.
 
-- **`shared/`** (UI kit, libs, config — sem domínio) nunca importa de `pages/`, `features/` ou `entities/` exceto `entities/session/` (identidade). Compartilhamento de UI específica de domínio sobe para widget/feature/page.
-- **App shell** (`app/config`, `app/providers`, `app/router/{shell.tsx, guards, router.tsx}`) importa de `@platform/api-client` **apenas** o cliente de transporte e tipos de identidade/sessão. Qualquer schema específico de produto (hospedagem, agenda, serviço) não entra aqui; shells não conhecem o domínio.
-- **Roteador split** — `router.tsx` monta `shell.tsx` (rotas públicas + autenticadas base-set: login, reset, home, perfil) + `product-routes.tsx` (todas as entidades e fluxos de negócio). Assim, o shell encapsula autenticação e permissão sem acoplamento à agenda ou às políticas de disponibilidade.
+- **`shared/`** (UI kit, libs, config — sem domínio) nunca importa de `pages/`, `features/`
+  ou `entities/`. Compartilhamento de UI específica de domínio sobe para widget/feature/page.
+- **App shell** (`app/config`, `app/providers`, `app/router/{shell.tsx, router.tsx}`) importa
+  de `@platform/api-client` **apenas** o cliente de transporte. Nenhum tipo de sessão,
+  permissão ou schema de produto entra aqui — o shell não conhece domínio nenhum.
+- **Roteador split** — `router.tsx` monta `shell.tsx` (rotas públicas do kernel, sem
+  sessão) + `product-routes.tsx` (entidades e fluxos de negócio do produto, incluindo o que
+  uma entrada instalada expõe). O shell nunca acopla autenticação a nenhum domínio.
 
 Ambas as travas (compartimentalização de imports e roteador split) são **verificadas por `apps/web/test/kernel-boundary.test.ts`**.
+
+## Regra raw-web (entradas do catálogo)
+
+A parte web de uma entrada do catálogo (`web/core` + `web/react`, quando existir) segue a
+regra raw-web para ficar portável entre stacks web diferentes (Vite, Next…): `web/core` é
+TypeScript puro (só `zod`, `@platform/api-client`, imports relativos — nenhum componente,
+página ou roteador); `web/react` soma `react` e `@tanstack/react-query` (só hooks e opções
+de query — nunca componente, página ou roteador). Detalhe completo da regra (allow-list de
+import, `--web-root`, exceção de arquivo de teste) está em
+[`docs/catalog/catalog.md`](../catalog/catalog.md#regra-raw-web) — este handbook não
+duplica a lista, só aponta pra ela.
+
+## Parte web de uma entrada instalada
+
+`module add` copia `web/core`/`web/react` para `apps/web/src/entities/<entry>/{core,react}`
+por padrão (`--web-root` muda a raiz; produtos Next passam a própria raiz `src/`). Depois da
+cópia, a entrada é só mais uma `entities/<entry>/` comum — consumida por widget/feature/page
+como qualquer outra. **Integração de UI/roteador (rota protegida, layout com guard, form de
+login) é responsabilidade do produto**, documentada como receita na seção `## Parte web` do
+README da própria entrada — o template não traz esse fiapo de roteador pronto.
 
 ## Idempotência — geração de key
 

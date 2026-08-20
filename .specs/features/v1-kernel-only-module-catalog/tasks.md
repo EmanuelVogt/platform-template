@@ -378,6 +378,12 @@ Wave 6:    [C21: T28]
 **Done when**: `pnpm --filter api test:e2e` exits 0, 8 passed / 8.
 **Tests**: e2e · **Gate**: `pnpm --filter api test:e2e` + `typecheck` + `lint` · **Commit**: `test(api): atualiza snapshot do contrato do kernel`
 
+### T22o: `expectContractSubset` must dereference `$ref` and compare field types
+**What**: T22a proved, by running the helper, that parity could not meet its own acceptance criterion. `expectContractSubset` matched operations by `operationId` alone, unioned `schema.required` name arrays at the literal JSON position, **never dereferenced `$ref` and never compared `type`** — while `export-openapi.ts` writes the child's contract with `$ref`s intact. So parity proved a route still existed and still returned the same required field names for inline bodies, and nothing about field types or about any DTO behind a `$ref`. Teach the helper to resolve `$ref` **on both sides** and compare field types, keeping subset semantics (the child may add operations and optional fields).
+**Touches**: `apps/api/src/shared/test/parity/contract-snapshot.ts`, `contract-snapshot.spec.ts` · **Depends on**: T22e · **Requirement**: CAT-03, PAR-01
+**Done when**: unmutated real contract passes on both sides; a mutated field `type` fails naming operation and field; a removed required field fails; an extra optional field or extra operation still passes. One unit test each.
+**Tests**: unit · **Gate**: `pnpm --filter api typecheck` + `lint` + `test` + `pnpm catalog:typecheck` · **Commit**: `fix(parity): resolve $ref e compara tipos no contrato`
+
 ---
 
 ## Requirement Coverage
@@ -766,6 +772,32 @@ Four root causes: (a) `apps/api/test/setup/seed-user.ts` does not exist; (b) `ap
 55. **Note 9 is closed for the kernel suites, and only for those.** int and e2e now demonstrably run on this machine, and 102 of 113 assertions pass with both failures diagnosed and assigned. What is still unproven is the entire catalog test surface — see note 50, which is now the headline risk of the feature. The Verifier must run int + e2e (they work) **and** `pnpm catalog:check` (T28), and must not treat a green kernel suite as evidence about the entries.
 56. **Cross-entry e2e placement is now a rule, not a judgement call** — AD-026. The rule is directional: downstream in the `dependsOn` DAG. It also means an entry's e2e count is not a measure of its own coverage: identity now carries 21 e2e, four of which primarily exercise notification.
 57. **The kernel test harness still knows entry schema names.** `apps/api/test/setup/test-db.ts` exports `truncateIdentity` / `truncateTag` / `truncateAttachment` — kernel-side code naming three entries. T22m found it and correctly left it alone: it is `test-suite-refactor`'s AD-021 harness-layering work (note 44), not a v1 regression. Flag to the Verifier so it is not read as one.
+
+### Wave 5 — DONE (C17, C18, C19, C20, C22, C23, C29, C30; ≤4 in flight). Build gate PASS **12/12**, int and e2e included.
+
+| Task | Cluster | Commit | Result |
+| --- | --- | --- | --- |
+| T22n | C29 | `c37da6f` | `test(api): atualiza snapshot do contrato do kernel` — serializer-only diff, operation set confirmed still exactly the 2 kernel ops before regenerating |
+| T22h | C23 | `909aff1` | `test(kernel): re-anchor maintenance int-spec to kernel jobs` — int **95/105 → 105/105** |
+| T24 | C18 | `845d369` | `feat(platform): catalog-check pre-tag gate` — +16 unit tests (`test:scripts` 100 → 116); new `lib/catalog-graph.mjs` and `lib/render-child.mjs` |
+| T22a (½) | C22 | `1079dcd` | `docs(catalog): registra a inversão da porta de imagem de perfil` — T17c in identity's and attachment's `1.0.0` |
+| T25 | C19 | `a6f347d` | `docs(template): v1 kernel-only model, catalog, changelog v1.0.0` |
+| T26 | C19 | `1b63264` | `docs(handbooks): kernel ports, module anatomy, parity` |
+| T27 | C20 | `e1a4f6f` | `feat(skills): port-module-update e catalog-modules` — 11 symlinks under `.claude/skills/` |
+| T23 | C17 | `e6cb737` | `feat(smoke): kernel-only profile, fake-product fixture removed` — +17 tests (`test:scripts` 116 → 133) |
+| T22o | C30 | `b01cd3a` | `fix(parity): resolve $ref e compara tipos no contrato` — api test 299 → **303** |
+| T22a (½) | C22b | `48e6855` | `test(catalog): parity snapshots from the real contract` — all five rebuilt with their `components.schemas` closure |
+
+**Build gate, 12/12 exit 0:** api typecheck · lint · test **303 / 42 suites** · web typecheck · lint · test **68 / 24** · `test:scripts` **133/133** · `catalog:lint` · `catalog:typecheck` **0 errors** · `db:check:journal` ok · **`test:int` 105/105, 8 suites** · **`test:e2e` 8/8, 3 suites**. Tree clean at `48e6855`.
+
+**Carry-forward from wave 5:**
+
+58. **Parity was structurally incapable of catching a retyped field, and now is not.** T22a refused to rebuild the snapshots and reported why, having executed the helper rather than reasoned about it: `expectContractSubset` keyed on `operationId` alone, unioned `schema.required` name arrays at the literal JSON position, and never dereferenced `$ref` or compared `type` — while the child's `openapi.json` keeps `$ref`s verbatim. Dereferencing one side only made the **unmutated** baseline throw (`perdeu o campo obrigatório "email"`). → **T22o**, which resolves `$ref` on both sides against each document's own `components`, guards cycles twice (a pointer set per chain, plus a memoised `snapshotPointer::childPointer` pair per operation), and **changed the matching key from `operationId` to `METHOD path`** with `operationId` asserted as an equality check on the matched route — two entries can collide on an id in a merged child, and the old key made a re-path invisible.
+59. **All five snapshots pinned nothing but the route.** They carried `$ref`s and **no `components` section at all**, so every reference dangled; a dangling snapshot-side `$ref` pins nothing and is skipped. Identity's looked like a full real-schema copy and discriminated exactly as little as the four status-only ones. T22a's rebuild carries the transitive closure: identity 34 ops / 27 schemas, tag 8/8, notification 6/2, attachment 2/1, audit 1/1 — 51 entry operations plus the kernel's 2 = 53, no leftovers, no `allOf` anywhere in the real contract. Discrimination is proven per entry by a real mutation run, e.g. `contract-snapshot: operação "uploadAttachments" mudou o tipo do campo "responses.201.uploads[].attachmentId" de "string" para "number"`.
+60. **`maintenance-runtime.int-spec.ts` had no runtime defect behind it.** Every one of the 10 failures was a stale fixture: holder locks used identity's and attachment's lockIds (4/5/6/7/8) for what are now the kernel's two jobs (1, 2), so the test-held locks never actually conflicted and leaked detached jobs cascaded into later tests. One genuine test bug was found and fixed on the way — the `tryStartDetached` in-flight assertion was reading `outbox.purge`'s carried-over `"skipped"` outcome from the previous test, so it could only pass while locking was broken; it now uses a throwaway `detached-probe` job on free lockId 6.
+61. **`template-smoke.mjs` exported nothing** — a monolithic top-level script, not a library with helpers to extract. T24 therefore created `scripts/platform/lib/render-child.mjs` (`renderChild`, `installChild`) mirroring its copier invocation, and T23 consumed it unchanged. It is now shared by `catalog-check.mjs` and `template-smoke.mjs`: **changing it changes both gates.** T23's Postgres provisioning uses the raw `docker` CLI rather than `@testcontainers/postgresql`, which is an `apps/api` devDependency and unreachable from root scripts — no new dependency was added.
+62. **Design § 7's lock shape does not match the code.** It shows a repo-wide `catalog: { source, ref }` block; `scripts/platform/lib/apply.mjs::writeLock` actually writes only a per-module `catalogRef`. Also **no `catalog/<entry>@x.y.z` git tag exists anywhere** — AD-016's tagging has never been exercised. T27 documented both as gaps inside `port-module-update`'s SKILL rather than silently writing fiction. Neither is a v1 blocker; both are real debt.
+63. **`d92f9c7` corrected design § 8 but missed § 2.2.** Line 87 still promised `shared/kernel/idempotency/*`: `user_id` → `actor_id`, on **main** as well as on the branch — the same non-existent column the whole feature has been told not to mention. Found by the T25/T26 worker checking a payload premise. Fixed on main at `2cfd1d5`. `job-context.ts`'s `userId` → `actorId` **is** a real rename and stays.
 
 ---
 

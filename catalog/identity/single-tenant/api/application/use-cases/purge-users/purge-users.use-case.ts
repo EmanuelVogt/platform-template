@@ -1,17 +1,14 @@
-import { Inject } from "@nestjs/common"
+import { Inject, Optional } from "@nestjs/common"
 
-// SPEC_DEVIATION: AD-021 exige que o acoplamento entre entradas passe por port
-// `@Optional()`, não por import direto — aqui identity depende do arquivo da
-// entrada audit e não compila sozinha.
-// Reason: a nota 17 da T22 manda relocar o repositório para dentro da entrada
-// audit e repontar o import; inverter para port é mudança de desenho própria,
-// fora do escopo desta task.
-import { AuditTrailRepository } from "../../../../../../audit/api/infrastructure/trail/audit-trail.repository"
 import { RequestContext } from "../../../../../shared/kernel/context/request-context"
 import { Traced } from "../../../../../shared/kernel/tracing/traced.decorator"
 import { Transactional } from "../../../../../shared/kernel/transactional/transactional.decorator"
 import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
 import { UserNotInTrashError } from "../../../domain/errors"
+import {
+  AUDIT_TRAIL_PURGER,
+  type AuditTrailPurger,
+} from "../../../domain/ports/audit-trail-purger"
 import {
   AUTH_EVENT_REPOSITORY,
   type AuthEventRepository,
@@ -32,8 +29,10 @@ export class PurgeUsersUseCase
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(AUTH_EVENT_REPOSITORY) private readonly authEvents: AuthEventRepository,
-    private readonly auditTrail: AuditTrailRepository,
     private readonly ctx: RequestContext,
+    @Optional()
+    @Inject(AUDIT_TRAIL_PURGER)
+    private readonly auditTrail: AuditTrailPurger | null = null,
   ) {}
 
   @Transactional()
@@ -57,7 +56,7 @@ export class PurgeUsersUseCase
     await this.users.hardDeleteByIds(found.map((user) => user.props.id))
     // Purge LGPD da trilha do titular DEPOIS do hard delete (que gera as linhas
     // op=delete com PII em row_old), na mesma tx via escape hatch.
-    await this.auditTrail.purgeEntities(
+    await this.auditTrail?.purgeEntities(
       found.map((user) => ({ table: "users", entityId: user.props.id })),
     )
     return { purged: found.length }

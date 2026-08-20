@@ -31,7 +31,7 @@ function makeUser(over: Partial<UserProps> = {}): User {
   })
 }
 
-function makeDeps(found: User[]) {
+function makeDeps(found: User[], withAuditTrail = true) {
   const users = {
     findByIds: jest.fn().mockResolvedValue(found),
     hardDeleteByIds: jest.fn().mockResolvedValue(undefined),
@@ -48,8 +48,8 @@ function makeDeps(found: User[]) {
   const uc = new PurgeUsersUseCase(
     users as never,
     authEvents as never,
-    auditTrail as never,
     ctx,
+    withAuditTrail ? auditTrail : null,
   )
   return { uc, users, authEvents, auditTrail }
 }
@@ -90,6 +90,18 @@ describe("PurgeUsersUseCase", () => {
     await expect(uc.execute({ userIds: ["u-1"] })).rejects.toThrow(UserNotInTrashError)
     expect(users.hardDeleteByIds).not.toHaveBeenCalled()
     expect(authEvents.recordInTx).not.toHaveBeenCalled()
+  })
+
+  it("sem provider de AUDIT_TRAIL_PURGER: purga o usuário e pula a trilha", async () => {
+    const a = makeUser({ id: "u-a" })
+    const { uc, users, authEvents, auditTrail } = makeDeps([a], false)
+
+    const out = await uc.execute({ userIds: ["u-a"] })
+
+    expect(out).toEqual({ purged: 1 })
+    expect(users.hardDeleteByIds).toHaveBeenCalledWith(["u-a"])
+    expect(authEvents.recordInTx).toHaveBeenCalledTimes(1)
+    expect(auditTrail.purgeEntities).not.toHaveBeenCalled()
   })
 
   it("ids inexistentes: no-op com purged 0", async () => {

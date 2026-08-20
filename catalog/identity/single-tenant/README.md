@@ -41,7 +41,7 @@ Prefixo global `/v1`. `Acesso` é a `AccessRequirement` que o `AccessGuard` do k
 | PUT | `/v1/admin/users/{id}` | `updateUser` | permission `admin.users.update` | — | — |
 | DELETE | `/v1/admin/users/{id}` | `deleteUser` | permission `admin.users.delete` | — | — |
 | POST | `/v1/admin/users/restore` | `restoreUsers` | permission `admin.users.trash.restore` | — | — |
-| POST | `/v1/admin/users/purge` | `purgeUsers` | permission `admin.users.trash.purge` | — | `AuditTrailRepository` |
+| POST | `/v1/admin/users/purge` | `purgeUsers` | permission `admin.users.trash.purge` | — | `AuditTrailPurger` (port) |
 | POST | `/v1/admin/users/{id}/resend-access-link` | `resendAccessLink` | permission `admin.users.access_link.resend` | `notification.requested` | — |
 | GET | `/v1/admin/permission-templates` | `listPermissionTemplates` | permission `admin.permission_templates.read` | — | — |
 | POST | `/v1/admin/permission-templates` | `createPermissionTemplate` | permission `admin.permission_templates.create` | — | — |

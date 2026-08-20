@@ -1,7 +1,7 @@
 import "reflect-metadata"
 
 import {
-  REQUIRE_PERMISSION_KEY,
+  ACCESS_REQUIREMENT,
   RequirePermission,
 } from "../../../../shared/kernel/access/decorators"
 import { definePermissionCatalog } from "../access/define-permission-catalog"
@@ -176,18 +176,18 @@ describe("PermissionKeyRegistry augmentado por este catálogo", () => {
   it("@RequirePermission aceita chave do catálogo e a grava na metadata", () => {
     expect(
       Reflect.getMetadata(
-        REQUIRE_PERMISSION_KEY,
+        ACCESS_REQUIREMENT,
         handlerOf(Fixture.prototype, "allowed"),
       ),
-    ).toEqual(["admin.users.read"])
+    ).toEqual({ kind: "permission", key: "admin.users.read" })
   })
 
   it("@RequirePermission grava chave fora do catálogo — PermissionKey é string no kernel", () => {
     expect(
       Reflect.getMetadata(
-        REQUIRE_PERMISSION_KEY,
+        ACCESS_REQUIREMENT,
         handlerOf(Fixture.prototype, "invalid"),
       ),
-    ).toEqual(["nope"])
+    ).toEqual({ kind: "permission", key: "nope" })
   })
 })

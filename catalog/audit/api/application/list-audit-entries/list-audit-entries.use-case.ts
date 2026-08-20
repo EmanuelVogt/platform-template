@@ -6,6 +6,7 @@ import { Traced } from "../../../../shared/kernel/tracing/traced.decorator"
 import { ReadOnly } from "../../../../shared/kernel/transactional/transactional.decorator"
 import { UseCase } from "../../../../shared/kernel/use-case/use-case.decorator"
 import { FULL_AUDIT_PERMISSION } from "../../../identity/api/facades/permission-catalog.facade"
+import { IDENTITY_ACCESS } from "../../../identity/application/identity-context"
 import { UserDirectoryFacade } from "../../../identity/api/facades/user-directory.facade"
 import {
   AUDIT_REPOSITORY,
@@ -59,8 +60,8 @@ export class ListAuditEntriesUseCase
   async execute(
     input: ListAuditEntriesQuery
   ): Promise<PaginatedResult<AuditEntryView>> {
-    const { access } = this.ctx.get()
-    if (access === null) {
+    const access = this.ctx.getExtension(IDENTITY_ACCESS)
+    if (access === undefined) {
       throw new ForbiddenError()
     }
     const { table, ...rest } = input

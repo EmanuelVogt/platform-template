@@ -3,9 +3,9 @@ import { AuditRegistry } from "../services/audit-registry"
 
 import { ListAuditEntriesUseCase } from "./list-audit-entries.use-case"
 
-import type { RequestAccess } from "../../../../shared/kernel/context/request-context"
 import type { PaginatedResult } from "../../../../shared/kernel/listing/paginated"
 import type { UserDirectoryFacade } from "../../../identity/api/facades/user-directory.facade"
+import type { IdentityAccess } from "../../../identity/application/identity-context"
 import type {
   AuditEntryReadRow,
   AuditRepository,
@@ -65,7 +65,7 @@ function makeUseCase(
   const findNamesByIds = jest.fn().mockResolvedValue(names)
   const facade = { findNamesByIds } as unknown as UserDirectoryFacade
   const masterCtx = {
-    get: () => ({ access: { permissions: new Set<string>(), isMaster: true } }),
+    getExtension: () => ({ permissions: new Set<string>(), isMaster: true }),
   }
   return {
     useCase: new ListAuditEntriesUseCase(
@@ -197,7 +197,7 @@ describe("ListAuditEntriesUseCase", () => {
 })
 
 describe("ListAuditEntriesUseCase — escopo por permissão (ADR 0049)", () => {
-  function makeScopedUseCase(access: RequestAccess | null) {
+  function makeScopedUseCase(access: IdentityAccess | null) {
     const repo = {
       list: jest.fn().mockResolvedValue({
         data: [],
@@ -206,7 +206,7 @@ describe("ListAuditEntriesUseCase — escopo por permissão (ADR 0049)", () => {
     }
     const users = { findNamesByIds: jest.fn().mockResolvedValue(new Map()) }
     const refs = { findLabels: jest.fn().mockResolvedValue(new Map()) }
-    const ctx = { get: () => ({ access }) }
+    const ctx = { getExtension: () => access ?? undefined }
     const useCase = new ListAuditEntriesUseCase(
       repo,
       users as never,

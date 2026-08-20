@@ -7,6 +7,7 @@ import { RequestContext } from "../../../../../shared/kernel/context/request-con
 import { TransactionManager } from "../../../../../shared/kernel/transactional/transaction-manager"
 import { User } from "../../../domain/entities/user.entity"
 import { parseIdentityConfig } from "../../../identity.config"
+import { IDENTITY_SESSION } from "../../identity-context"
 
 import { ChangePasswordUseCase } from "./change-password.use-case"
 
@@ -48,10 +49,10 @@ function authedStore(): RequestContextStore {
     spanId: null,
     tenantId: null,
     origin: "http",
-    userId: "u-1",
-    sessionId: "sess-1",
-    deviceId: null,
-    access: null,
+    actor: { id: "u-1", kind: "user" },
+    extensions: new Map([
+      [IDENTITY_SESSION, { sessionId: "sess-1", deviceId: null }],
+    ]),
     locale: "pt-BR",
     ip: null,
     userAgent: null,

@@ -25,6 +25,7 @@ import { DrizzleDeviceRepository } from "../../../infrastructure/repositories/dr
 import { DrizzleSessionRepository } from "../../../infrastructure/repositories/drizzle-session.repository"
 import { DrizzleUserRepository } from "../../../infrastructure/repositories/drizzle-user.repository"
 import { DrizzleVerificationTokenRepository } from "../../../infrastructure/repositories/drizzle-verification-token.repository"
+import { IDENTITY_SESSION } from "../../identity-context"
 import { RevertExpiredEmailChangesJob } from "../../jobs/revert-expired-email-changes.job"
 import { CreateSessionService } from "../../services/create-session.service"
 import { ConfirmEmailChangeUseCase } from "../confirm-email-change/confirm-email-change.use-case"
@@ -59,10 +60,10 @@ function authedStore(userId: string): RequestContextStore {
     spanId: null,
     tenantId: null,
     origin: "http",
-    userId,
-    sessionId: "sess-test",
-    deviceId: null,
-    access: null,
+    actor: { id: userId, kind: "user" },
+    extensions: new Map([
+      [IDENTITY_SESSION, { sessionId: "sess-test", deviceId: null }],
+    ]),
     locale: "pt-BR",
     ip: null,
     userAgent: null,
@@ -310,7 +311,7 @@ describe("Fluxo de troca de e-mail (int)", () => {
 
     // Confirma com o token (ctx anônimo — correlationId obrigatório para auth_event)
     const result = await ctx.run(
-      { ...authedStore(user.props.id), userId: null, sessionId: null },
+      { ...authedStore(user.props.id), actor: null, extensions: new Map() },
       () => confirmEmailChange.execute({ token: capturedRaw! }),
     )
 

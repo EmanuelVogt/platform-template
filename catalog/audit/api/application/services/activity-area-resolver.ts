@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 
 import {
   featureOf,
+  isPermissionKey,
   moduleOf,
 } from "../../../identity/api/facades/permission-catalog.facade"
 
@@ -20,7 +21,7 @@ export class ActivityAreaResolver {
 
   activityAreaOf(tableName: string): ActivityArea {
     const owner = this.registry.ownerOf(tableName)
-    if (owner === undefined) return UNMAPPED_AREA
+    if (owner === undefined || !isPermissionKey(owner)) return UNMAPPED_AREA
     const feature = featureOf(owner)
     return { key: `${moduleOf(owner)}.${feature.key}`, label: feature.label }
   }

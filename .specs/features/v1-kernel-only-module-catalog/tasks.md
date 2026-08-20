@@ -354,6 +354,24 @@ Wave 6:    [C21: T28]
 **Done when**: no entry imports another entry, in source or in test code; `pnpm catalog:typecheck` exits 0; no `SPEC_DEVIATION` marker for AD-021 remains.
 **Tests**: unit for the kernel ports + the restored specs · **Gate**: `pnpm catalog:typecheck` + `pnpm --filter api typecheck` + `lint` + `test` + `pnpm catalog:lint` · **Commit**: one per sub-item, all carrying `Advisory: none — entrada ainda nao publicada, correcao interna do v1.0.0`
 
+### T22k: `apps/api` lint must ignore the `catalog:typecheck` stage
+**What**: `catalog:typecheck` leaves `apps/api/.catalog-stage/` on disk; eslint then walks files outside every tsconfig `project` and `pnpm --filter api lint` exits 1 with ~532 parsing errors. The lefthook pre-push gate runs the two in sequence, so it was red on ordering alone.
+**Touches**: `apps/api/eslint.config.mjs` · **Depends on**: T22j · **Requirement**: CAT-03
+**Done when**: `pnpm --filter api lint` exits 0 with `apps/api/.catalog-stage/` present on disk.
+**Tests**: none (the command is the test) · **Gate**: `catalog:typecheck` then `pnpm --filter api lint` + `typecheck` · **Commit**: `build(api): eslint ignora o stage do catalog:typecheck`
+
+### T22m: Break the `identity ↔ notification` cycle and close `catalog:typecheck` (AD-025)
+**What**: the only cycle in the entry graph is closed by **test-only** imports of identity's `RATE_LIMITER` — 5 in `catalog/notification/api/__e2e__/notifications-{email,feed,inapp,product-extension,sse}.e2e-spec.ts` and 1 in `catalog/tag/api/__e2e__/tags.e2e-spec.ts`, all via `../../../../src/modules/identity/domain/ports/rate-limiter`. Audit's 2 and attachment's 2 `RATE_LIMITER` e2e imports do not close a cycle (both already declare `dependsOn: identity`) but travel with the same fix. The same 16 remaining `catalog:typecheck` errors are one cluster with them: 7× `TS2305 allowAllRateLimiter` (a helper that has never existed — `app-factory.ts` exports only `createE2eApp`) and 9× `TS2307 test/setup/seed-user` (a file that has never existed; identity ships its own `api/testing/seed-user.ts`). Per **AD-025**, invert only what closes the cycle; per **note 44**, do not build the `apps/api/src/shared/test/**` layer — that is `test-suite-refactor`'s. The 8 e2e that need a seeded user are cross-entry integration tests presupposing identity; decide their home and record it in the affected entries' README § Decisões.
+**Touches**: `catalog/{identity,attachment,audit,notification,tag}/**`, `apps/api/test/setup/**`, `apps/api/src/shared/kernel/**` (only if a kernel-side rate-limit seam proves necessary) · **Depends on**: T22i, T22k · **Requirement**: CAT-01, CAT-04, AD-021, AD-025 · **Exclusive**: yes
+**Done when**: `pnpm catalog:typecheck` exits **0**; no entry graph cycle remains including test files; the `SPEC_DEVIATION` at `catalog/identity/single-tenant/api/testing/fake-mailer.ts:1-14` is resolved or restated to match what actually remains.
+**Tests**: the restored specs must compile; unit for any new kernel seam · **Gate**: `pnpm catalog:typecheck` + `pnpm --filter api typecheck` + `lint` + `test` + `pnpm catalog:lint` · **Commit**: one per sub-item, each carrying `Advisory: none — entrada ainda não publicada, correção interna do v1.0.0`
+
+### T22l: `module.json.dependsOn` tells the truth (AD-025)
+**What**: `identity.dependsOn` is `[]` while identity imports `NotificationRequested` from notification in **10 production use-cases** — the manifest lies, and `resolveDeps` would install identity into a child with no notification entry. Add it. `attachment` declares `[{name:"identity",range:">=1.0.0 <2.0.0"}]` and `audit` declares `[{name:"identity",range:"^1.0.0"}]` — same intent, two syntaxes; normalize. Then reflect every declared edge in each entry's README § Dependências, and state in § Decisões that per AD-025 the edge is a declared dependency rather than an inverted port because it does not close a cycle.
+**Touches**: `catalog/*/module.json`, `catalog/*/README.md` · **Depends on**: T22m · **Requirement**: CAT-01, CAT-04, AD-025
+**Done when**: every production cross-entry edge in the inventory (note 51) appears in the importing entry's `dependsOn`; `pnpm catalog:lint` exits 0; `resolveDeps` topo-sorts the five entries without a cycle.
+**Tests**: `catalog:lint` + the `resolveDeps` unit tests · **Gate**: `pnpm catalog:lint` + `pnpm test:scripts` · **Commit**: `fix(catalog): dependsOn declara as arestas reais entre entradas`
+
 ---
 
 ## Requirement Coverage
@@ -694,6 +712,33 @@ Four root causes: (a) `apps/api/test/setup/seed-user.ts` does not exist; (b) `ap
 46. **`catalog:typecheck` covers `catalog/<entry>/(<variant>/)?api/**` only.** `web/**` and `parity/**` are excluded — the first is frontend TypeScript with a different tsconfig, the second is compiled only once copied next to the module in a child. The worker flagged this rather than dropping it silently. **`parity/**` is a real remaining hole**: those specs are hand-maintained TypeScript with rewritten imports and nothing compiles them either. → folded into **T22a** (C22, wave 5), which already owns `parity/`.
 47. **The staging chain lives inline in the root `package.json` script.** It uses `ln -s`/`cp`, so it is POSIX-only, and it rebuilds `.catalog-stage/` on every invocation. Acceptable for a template repo whose other gates are already POSIX shell, but it is a wart: if `catalog:typecheck` ever needs to become cross-platform or incremental, it should move to `scripts/platform/catalog-typecheck.mjs` next to the other tooling. Not blocking v1.0.0.
 48. **T22i's `Touches` was too narrow.** The 30 errors reach `catalog/tag/**` (2) and the legacy harness `apps/api/test/setup/**` (8, causes (a) and (b) above), neither of which the T22i card listed. The card has been widened in § Task Breakdown. The `seed-user` fix carries a real AD-021 decision: identity already ships its own `api/testing/seed-user.ts` (`db182fd`), so four other entries cannot simply import it — that would be the entry-to-entry violation of note 41 in a new place.
+
+### Wave 4c.2 — DONE, PARTIAL by design (C24 / T22i, exclusive; + C26 / T22k follow-up). Build gate PASS 9/9.
+
+| Task | Cluster | Commit | Result |
+| --- | --- | --- | --- |
+| T22i (i) | C24 | `2fa2794` | AD-024 port move — `shared/kernel/profile-image/profile-image-store.port.ts` and `shared/kernel/audit-trail/audit-trail-purger.port.ts`; killed 2 attachment→identity **source** imports |
+| T22i (ii) | C24 | `327d6ba` | `AuditTrailRepository implements AuditTrailPurger`; the already-`@Global()` `AuditTrailModule` binds `useExisting` and exports the token |
+| T22i (iii) | C24 | — | **BLOCKED at the declared harness boundary** — `MAILER` does *not* become a kernel port |
+| T22i (iv) | C24 | `2b196d4` | `catalog:typecheck` **30 → 16**; every non-e2e error fixed |
+| T22i (v) | C24 | `16f4bb9` | 3 missing `registerMaintenanceJob` added, historic lockIds recovered from `550f5b2:…/maintenance-schedule.ts` |
+| T22i | C24 | `eb0b8e5` | corrected the `fake-mailer.ts:1` `SPEC_DEVIATION` — its proposed fix was wrong, moving the specs into notification only reverses the edge |
+| T22k | C26 | `0ca7e32` | `build(api): eslint ignora o stage do catalog:typecheck` — flat-config `{ ignores: [".catalog-stage/**"] }` |
+
+**Build gate (per package, all exit 0):** api typecheck · lint · test **299 passed / 42 suites** · web typecheck · lint · test **68 passed / 24 files** · `test:scripts` 100/100 · `catalog:lint` · `db:check:journal` ok. `pnpm catalog:typecheck` **exit 1, 16 errors** — 7× TS2305 `allowAllRateLimiter`, 9× TS2307 `test/setup/seed-user`, every one in an `__e2e__` file. Tree clean at `0ca7e32`.
+
+**AD-024 landed beside the concept, not in a `ports/` tree.** `apps/api/src/shared/kernel/ports/` never existed; the kernel's actual convention is `access/access-policy.port.ts`. A second `ports/` tree would be a second lookup path for the same kind of thing (AD-009), so the ports went to `shared/kernel/{profile-image,audit-trail}/*.port.ts`. `requireProfileImageStore` and `ProfileImageStoreMissingError` stayed in identity — degradation policy is the consumer's, not the port's. AD-024 in `.specs/STATE.md` has been corrected to match.
+
+**RULE C did not force a rename.** The token list is at `apps/api/src/modules/module-boundaries.spec.ts:522-539`, scanning the raw text of `apps/api/src/shared/**`, case-sensitive. Its audit tokens are `auditTrail`, `audit_trail`, `AuditRegistry` — **not** `audit` — so `AUDIT_TRAIL_PURGER`/`AuditTrailPurger` pass, as does `ProfileImageStore`. Nothing was weakened. See note 49.
+
+**Carry-forward from wave 4c.2:**
+
+49. **The RULE C token list is narrower than its intent.** It catches `auditTrail`/`audit_trail`/`AuditRegistry` but not the PascalCase, SCREAMING_SNAKE or kebab forms of the same concept, so `AuditTrailPurger` and `AUDIT_TRAIL_PURGER` entered the kernel without tripping it. Either the list gains those forms — and then AD-024's ports need module-agnostic names — or the intent is genuinely narrower than it reads. **Unresolved; decide it in T24 or at the Verifier**, do not silently rely on the gap.
+50. **No gate anywhere executes a single catalog spec.** `pnpm --filter api test` does not see `catalog/**` at all — jest's roots are `apps/api/src` + `apps/api/test`. The entries' unit, int and e2e specs only run inside a rendered child after `module add`, which means `pnpm catalog:check` (T27/T28) is the **only** thing in this repo that can ever execute them. `catalog:typecheck` proves they compile; nothing proves they pass. This is note 9 generalised from e2e to the entire catalog test surface and it is the single most important thing to tell the Verifier.
+51. **Full entry-to-entry inventory (measured at `eb0b8e5`), the basis of AD-025.** Production-source edges: `identity → notification` ×10 (`NotificationRequested`, in `change-password`, `create-user`, `login`, `request-email-change`, `request-password-reset`, `resend-access-link`, `resend-verification`, `reset-password`, `revoke-device`, `set-password`); `audit → identity` ×7 (`audit.module.ts:3` imports `IdentityModule`; `UserDirectoryFacade` ×2; `permission-catalog.facade` ×3; `IDENTITY_ACCESS`/`IdentityAccess`); `attachment → identity` ×1 (`UserDirectoryFacade`). **That subgraph is acyclic** — topo order `notification, identity, audit, attachment, tag`. Test-only edges add `notification → identity` ×5 and `tag → identity` ×1 (all `RATE_LIMITER`), plus identity→notification ×12, audit→identity ×7, attachment→identity ×3. **The only cycle in the whole graph is `identity ↔ notification`, and it is closed exclusively by test files.** → **AD-025**, → T22m, T22l.
+52. **Rate limiting is identity's, not the kernel's.** `RATE_LIMITER` is declared at `catalog/identity/single-tenant/api/domain/ports/rate-limiter` and the guard at `…/api/api/guards/rate-limit.guard.ts`. The pre-dispatch assumption that `allowAllRateLimiter` belonged in the kernel harness `app-factory.ts` was **wrong** — putting it there would make the kernel test harness import an entry token, the exact violation being fixed. T22m must find another seam.
+53. **`api/api/` nesting inside every entry is intentional, not a restore artefact.** `catalog/<entry>/api/` is the install root; the inner `api/` is the HTTP layer (`controllers`, `contracts`, `facades`). All five entries share it. Nothing to fix.
+54. **`apps/api/src/modules/` still exists and holds exactly one file** — `module-boundaries.spec.ts`. The cutover deleted the module trees but kept the boundary spec there. Payloads that call the directory non-existent are wrong.
 
 ---
 

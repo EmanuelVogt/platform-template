@@ -1,22 +1,572 @@
 {
+  "openapi": "3.0.0",
   "paths": {
     "/v1/admin/tags": {
-      "post": { "operationId": "createTag", "responses": { "201": {} } },
-      "get": { "operationId": "listTags", "responses": { "200": {} } }
+      "post": {
+        "operationId": "createTag",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Chave única gerada pelo cliente por tentativa (ex.: UUID v4). Reenviar a mesma chave com o mesmo payload devolve a resposta original (replay) por até 1h, sem repetir o efeito — seguro pra retry após timeout. Mesma chave com payload diferente retorna 422. Sem o header, o request executa normalmente, sem dedup.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTagDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagViewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Tag"
+        ]
+      },
+      "get": {
+        "operationId": "listTags",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "name",
+                "createdAt"
+              ]
+            }
+          },
+          {
+            "name": "isActive",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          },
+          {
+            "name": "deleted",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListTagsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Tag"
+        ]
+      }
     },
     "/v1/admin/tags/{id}": {
-      "get": { "operationId": "getTag", "responses": { "200": {} } },
-      "put": { "operationId": "updateTag", "responses": { "200": {} } },
-      "delete": { "operationId": "deleteTag", "responses": { "204": {} } }
+      "get": {
+        "operationId": "getTag",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagViewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Tag"
+        ]
+      },
+      "put": {
+        "operationId": "updateTag",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Chave única gerada pelo cliente por tentativa (ex.: UUID v4). Reenviar a mesma chave com o mesmo payload devolve a resposta original (replay) por até 1h, sem repetir o efeito — seguro pra retry após timeout. Mesma chave com payload diferente retorna 422. Sem o header, o request executa normalmente, sem dedup.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTagDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagViewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Tag"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteTag",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Tag"
+        ]
+      }
     },
     "/v1/admin/tags/linkable": {
-      "get": { "operationId": "listLinkableTags", "responses": { "200": {} } }
+      "get": {
+        "operationId": "listLinkableTags",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkableTagsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Tag"
+        ]
+      }
     },
     "/v1/admin/tags/purge": {
-      "delete": { "operationId": "purgeTags", "responses": { "200": {} } }
+      "delete": {
+        "operationId": "purgeTags",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagIdsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurgeTagsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Tag"
+        ]
+      }
     },
     "/v1/admin/tags/restore": {
-      "post": { "operationId": "restoreTags", "responses": { "200": {} } }
+      "post": {
+        "operationId": "restoreTags",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagIdsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreTagsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Tag"
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateTagDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "color": {
+            "type": "string",
+            "pattern": "^#[0-9a-f]{6}$",
+            "nullable": true
+          },
+          "isActive": {
+            "default": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "LinkableTagsResponseDto": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "color": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "color"
+          ]
+        }
+      },
+      "ListTagsResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "color": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "isActive": {
+                  "type": "boolean"
+                },
+                "usage": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "total"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "deletedAt": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "color",
+                "isActive",
+                "usage",
+                "createdAt",
+                "deletedAt"
+              ]
+            }
+          },
+          "page": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "page": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "pageSize": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "total",
+              "page",
+              "pageSize",
+              "totalPages"
+            ]
+          }
+        },
+        "required": [
+          "data",
+          "page"
+        ]
+      },
+      "PurgeTagsResponseDto": {
+        "type": "object",
+        "properties": {
+          "purged": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "purged"
+        ]
+      },
+      "RestoreTagsResponseDto": {
+        "type": "object",
+        "properties": {
+          "restored": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "restored"
+        ]
+      },
+      "TagIdsDto": {
+        "type": "object",
+        "properties": {
+          "tagIds": {
+            "minItems": 1,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "tagIds"
+        ]
+      },
+      "TagViewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "color",
+          "isActive",
+          "createdAt",
+          "updatedAt",
+          "deletedAt"
+        ]
+      },
+      "UpdateTagDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "color": {
+            "type": "string",
+            "pattern": "^#[0-9a-f]{6}$",
+            "nullable": true
+          },
+          "isActive": {
+            "default": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      }
     }
   }
 }

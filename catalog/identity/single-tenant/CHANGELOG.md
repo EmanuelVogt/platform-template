@@ -43,6 +43,9 @@ já adaptado ao kernel v1 (porta `ACCESS_POLICY`, ator na ALS, guards do kernel)
   `IS_SELF_SERVICE_KEY` deixaram de existir no kernel.
 - `docs-login.e2e-spec.ts` da v0.2 não foi reposto: o `/docs` do kernel deixou de ser protegido
   por login e de conhecer módulo, então a rota que a suíte exercia não existe mais.
+- A dependência direta em `AttachmentFacade` para o avatar de perfil foi invertida: `identity`
+  passa a consumir a porta `PROFILE_IMAGE_STORE`/`ProfileImageStore` do kernel, implementada
+  pela entrada `attachment` (AD-024, T17c).
 
 ### Advisories
 

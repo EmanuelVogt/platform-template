@@ -15,3 +15,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 - Testes de paridade (`parity/*.parity.spec.ts` + `contract.snapshot.json`) cobrindo o contrato
   HTTP (`uploadAttachments`, `downloadAttachment`), as regras dos perfis de upload e o contrato
   de `AttachmentFacade.listAccessLog`.
+
+### Alterado
+
+- Passa a implementar (bind) a porta `PROFILE_IMAGE_STORE`/`ProfileImageStore` do kernel para o
+  avatar de perfil do `identity`, invertendo a dependência direta que a entrada tinha em
+  `AttachmentFacade` (AD-024, T17c).

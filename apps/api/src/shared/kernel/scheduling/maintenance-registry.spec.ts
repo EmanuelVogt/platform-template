@@ -45,9 +45,9 @@ describe("MaintenanceRegistry", () => {
     const registry = new MaintenanceRegistry()
     registry.register({ name: "alfa.purge", cron: "0 3 * * *", lockId: 41 })
 
-    expect(() =>
+    expect(() => {
       registry.register({ name: "alfa.purge", cron: "0 9 * * *", lockId: 42 })
-    ).toThrow('Job de manutenção "alfa.purge" já registrado.')
+    }).toThrow('Job de manutenção "alfa.purge" já registrado.')
     expect(registry.require("alfa.purge").cron).toBe("0 3 * * *")
   })
 
@@ -55,9 +55,9 @@ describe("MaintenanceRegistry", () => {
     const registry = new MaintenanceRegistry()
     registry.register({ name: "alfa.purge", cron: "0 3 * * *", lockId: 41 })
 
-    expect(() =>
+    expect(() => {
       registry.register({ name: "beta.purge", cron: "0 4 * * *", lockId: 41 })
-    ).toThrow(
+    }).toThrow(
       'Job de manutenção "beta.purge" usa o lockId 41, já registrado por "alfa.purge".'
     )
     expect(registry.has("beta.purge")).toBe(false)

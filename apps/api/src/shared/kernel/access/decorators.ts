@@ -1,4 +1,4 @@
-import { applyDecorators, SetMetadata } from "@nestjs/common"
+import { SetMetadata } from "@nestjs/common"
 
 import type { AccessRequirement, PermissionKey } from "./access-policy.port"
 
@@ -8,15 +8,8 @@ export const ACCESS_REQUIREMENT = "access:requirement"
 const requirement = (value: AccessRequirement) =>
   SetMetadata(ACCESS_REQUIREMENT, value)
 
-/** Chave de metadata: rota pública (opt-out dos guards de autenticação). */
-export const IS_PUBLIC_KEY = "access:isPublic"
-
 /** Marca a rota como pública — sem sessão e sem permissão. */
-export const Public = () =>
-  applyDecorators(
-    SetMetadata(IS_PUBLIC_KEY, true),
-    requirement({ kind: "public" })
-  )
+export const Public = () => requirement({ kind: "public" })
 
 /** Exige apenas ator autenticado, sem permissão. */
 export const Authenticated = () => requirement({ kind: "authenticated" })
@@ -34,38 +27,18 @@ export const IS_MACHINE_TO_MACHINE_KEY = "access:isMachineToMachine"
 export const MachineToMachine = () =>
   SetMetadata(IS_MACHINE_TO_MACHINE_KEY, true)
 
-/** Chave de metadata: auth opcional (popula userId se houver sessão, não barra). */
-export const IS_OPTIONAL_AUTH_KEY = "access:isOptionalAuth"
-
 /**
- * Auth opcional: o AuthGuard popula `userId` quando o cookie for válido mas NÃO
- * lança quando ausente/inválido. Para o AccessGuard a rota é `public` — quem
- * decide o acesso é a ACL do use case (modelo do download de attachment).
+ * Auth opcional: quem decide o acesso é a ACL do use case (modelo do download
+ * de attachment) — para o AccessGuard a rota é `public`.
  */
-export const OptionalAuth = () =>
-  applyDecorators(
-    SetMetadata(IS_OPTIONAL_AUTH_KEY, true),
-    requirement({ kind: "public" })
-  )
+export const OptionalAuth = () => requirement({ kind: "public" })
 
-/** Chave de metadata: rota autenticada sem exigência de permissão. */
-export const IS_SELF_SERVICE_KEY = "access:isSelfService"
-
-/** Rota self-service: exige sessão (AuthGuard), não exige permissão (sessão, devices, notificações…). */
-export const SelfService = () => SetMetadata(IS_SELF_SERVICE_KEY, true)
-
-/** Chave de metadata: permissões exigidas pela rota (AND). */
-export const REQUIRE_PERMISSION_KEY = "access:requirePermission"
+/** Rota self-service: exige sessão, não exige permissão (sessão, devices, notificações…). */
+export const SelfService = () => requirement({ kind: "authenticated" })
 
 /** Exige a chave. Lida pelo AccessGuard do kernel. */
 export const RequirePermission = (key: PermissionKey) =>
-  applyDecorators(
-    SetMetadata(REQUIRE_PERMISSION_KEY, [key]),
-    requirement({ kind: "permission", key })
-  )
-
-/** Chave de metadata: permissões alternativas da rota (OR — basta uma). */
-export const REQUIRE_ANY_PERMISSION_KEY = "access:requireAnyPermission"
+  requirement({ kind: "permission", key })
 
 /**
  * Exige AO MENOS UMA das chaves (OR). Lista vazia lança na definição da classe
@@ -76,8 +49,5 @@ export const RequireAnyPermission = (keys: readonly PermissionKey[]) => {
   if (keys.length === 0) {
     throw new Error("RequireAnyPermission exige ao menos uma chave")
   }
-  return applyDecorators(
-    SetMetadata(REQUIRE_ANY_PERMISSION_KEY, keys),
-    requirement({ kind: "anyPermission", keys })
-  )
+  return requirement({ kind: "anyPermission", keys })
 }

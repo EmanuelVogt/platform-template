@@ -3,25 +3,11 @@ import "reflect-metadata"
 import { readdirSync } from "node:fs"
 import { join, relative } from "node:path"
 
-import {
-  IS_OPTIONAL_AUTH_KEY,
-  IS_PUBLIC_KEY,
-  IS_SELF_SERVICE_KEY,
-  REQUIRE_ANY_PERMISSION_KEY,
-  REQUIRE_PERMISSION_KEY,
-} from "../shared/kernel/access/decorators"
+import { ACCESS_REQUIREMENT } from "../shared/kernel/access/decorators"
 
 // Constants do Nest fora do exports map — mesma razão do operation-id.spec.ts.
 const PATH_METADATA = "path"
 const METHOD_METADATA = "method"
-
-const ACCESS_KEYS = [
-  IS_PUBLIC_KEY,
-  IS_SELF_SERVICE_KEY,
-  IS_OPTIONAL_AUTH_KEY,
-  REQUIRE_PERMISSION_KEY,
-  REQUIRE_ANY_PERMISSION_KEY,
-] as const
 
 const SRC_DIR = join(__dirname, "..")
 
@@ -29,7 +15,7 @@ type RouteAccess = {
   file: string
   controller: string
   handler: string
-  declarations: string[]
+  declared: boolean
 }
 
 function findControllerFiles(): string[] {
@@ -45,11 +31,10 @@ function isControllerClass(value: unknown): value is new () => object {
   )
 }
 
-function declarationsOf(handler: object, controller: object): string[] {
-  return ACCESS_KEYS.filter(
-    (key) =>
-      Reflect.getMetadata(key, handler) !== undefined ||
-      Reflect.getMetadata(key, controller) !== undefined
+function declaresAccess(handler: object, controller: object): boolean {
+  return (
+    Reflect.getMetadata(ACCESS_REQUIREMENT, handler) !== undefined ||
+    Reflect.getMetadata(ACCESS_REQUIREMENT, controller) !== undefined
   )
 }
 
@@ -69,7 +54,7 @@ async function collectRoutes(): Promise<RouteAccess[]> {
           file: relative(SRC_DIR, file),
           controller: exported.name,
           handler: name,
-          declarations: declarationsOf(handler, exported),
+          declared: declaresAccess(handler, exported),
         })
       }
     }
@@ -77,7 +62,7 @@ async function collectRoutes(): Promise<RouteAccess[]> {
   return routes
 }
 
-describe("authz-coverage — toda rota declara exatamente um modo de acesso", () => {
+describe("authz-coverage — toda rota declara o requisito de acesso do kernel", () => {
   let routes: RouteAccess[] = []
 
   beforeAll(async () => {
@@ -88,13 +73,8 @@ describe("authz-coverage — toda rota declara exatamente um modo de acesso", ()
     expect(routes.length).toBeGreaterThan(0)
   })
 
-  it("nenhuma rota sem declaração (@Public | @SelfService | @OptionalAuth | @RequirePermission)", () => {
-    const undeclared = routes.filter((r) => r.declarations.length === 0)
+  it("nenhuma rota sem declaração (@Public | @Authenticated | @RequirePermission | @RequireAnyPermission)", () => {
+    const undeclared = routes.filter((r) => !r.declared)
     expect(undeclared).toEqual([])
-  })
-
-  it("nenhuma rota com declaração dupla", () => {
-    const duplicated = routes.filter((r) => r.declarations.length > 1)
-    expect(duplicated).toEqual([])
   })
 })

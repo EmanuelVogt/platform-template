@@ -84,7 +84,7 @@ graph TD
   ```
   `extensions` is the module-owned bag (identity caches its resolved permission set under its own symbol; nothing in the kernel reads it).
 - `job-context.ts`: `userId` → `actorId: string | null`; outbox/job dispatch copies `actor?.id`.
-- `shared/kernel/idempotency/*`: column/field `user_id` → `actor_id` (kernel baseline is rewritten anyway — GA-6; existing children: changelog note + `ALTER TABLE … RENAME COLUMN` in the v1.0.0 migration step).
+- `shared/kernel/idempotency/*`: **no column rename.** An earlier draft promised `user_id` → `actor_id` here; that column never existed — `idempotency_keys` is keyed `(scope, key)` and the actor lives inside the stored command payload, not in a column of its own. § 8 was corrected on main at `d92f9c7`; this line was missed by that correction and is fixed here. **No changelog line, no `ALTER TABLE … RENAME COLUMN`, no migration step may mention it.**
 - `tenantId` is stored and propagated only (KRN-07).
 
 ### 2.3 Leaves the kernel

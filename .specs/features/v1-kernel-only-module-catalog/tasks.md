@@ -77,6 +77,7 @@ Waves run in order (barrier + Build gate between them). Clusters inside a wave r
 | 5 | C19 | T25 → T26 | `docs/dev/{template.md,template-changelog.md}`, `TEMPLATE.md`, `CLAUDE.md`, `AGENTS.md.jinja`, `README.md.jinja`, `copier.yml`, `docs/back/back-arch.md`, `docs/front/front-arch.md`, `docs/test/testing.md` | sonnet (docs) · depends T22 |
 | 5 | C20 | T27 | `.agents/skills/port-module-update/**`, `.agents/skills/catalog-modules/**`, `.claude/skills/*` (symlinks) | sonnet · depends T15 |
 | 5 | C22 | T22a | `catalog/{identity,attachment,audit,notification,tag}/parity/contract.snapshot.json`, `catalog/{identity,attachment}/**/CHANGELOG.md` | sonnet · depends T22 · rebuild the 5 snapshots from `git show ee825dd:openapi.json` (53 ops) |
+| 5 | C23 | T22h | `apps/api/src/shared/kernel/scheduling/maintenance-runtime.int-spec.ts` | sonnet · depends T22d · stale advisory-lock assertions since T22 |
 | 6 | C21 | T28 | `catalog/**/README.md` `## Follow-ups absorvidos`, `docs/dev/template-changelog.md` (issue refs) | sonnet · depends T17–T21, T25 · runs `pnpm catalog:check` once via runner (heavy) |
 
 ```
@@ -86,7 +87,7 @@ Wave 3:  [C11: T15] ∥ [C12: T17] ∥ [C13: T18] ∥ [C14: T19] ∥ [C15: T20�
 Wave 4:    [C16: T22]  (exclusive)
 Wave 4b.1: [C16a: T22d] ∥ [C16b: T22e]
 Wave 4b.2: [C16c: T22f] ∥ [C16d: T22g]   (only after 4b.1's Build gate)
-Wave 5:    [C17: T23] ∥ [C18: T24] ∥ [C19: T25→T26] ∥ [C20: T27] ∥ [C22: T22a]   (≤4 in flight → C22 queues)
+Wave 5:    [C17: T23] ∥ [C18: T24] ∥ [C19: T25→T26] ∥ [C20: T27] ∥ [C22: T22a] ∥ [C23: T22h]   (≤4 in flight → C22, C23 queue)
 Wave 6:    [C21: T28]
 ```
 
@@ -280,7 +281,7 @@ Wave 6:    [C21: T28]
 **Tests**: none · **Gate**: build · **Commit**: `docs(template): v1 kernel-only model, catalog, changelog v1.0.0`
 
 ### T26: Handbooks
-**What**: `docs/back/back-arch.md` (kernel ports, module anatomy = entry, facades/events rule, `PLATFORM_MODULES`), `docs/front/front-arch.md` (raw web part, recipes), `docs/test/testing.md` (parity suites, `__parity__`, snapshot helper, `node --test`).
+**What**: `docs/back/back-arch.md` (kernel ports, module anatomy = entry, facades/events rule, `PLATFORM_MODULES`; **line 456 still documents "entrada em `maintenance-schedule.ts` com cron e lockId unico" — that file no longer exists after T22d, the sentence must become `registerMaintenanceJob(...)` no topo do arquivo do job**), `docs/front/front-arch.md` (raw web part, recipes), `docs/test/testing.md` (parity suites, `__parity__`, snapshot helper, `node --test`).
 **Touches**: the three files · **Depends on**: T22 · **Requirement**: HBK-02
 **Done when**: each file has the sections named in design § 9; RULE C vocabulary appears only in `docs/catalog/**`.
 **Tests**: none · **Gate**: build · **Commit**: `docs(handbooks): kernel ports, module anatomy, parity`
@@ -329,6 +330,12 @@ Wave 6:    [C21: T28]
 **Touches**: `catalog/{identity,attachment,audit,notification,tag}/parity/contract.snapshot.json`, `catalog/{identity,attachment}/**/CHANGELOG.md` · **Depends on**: T22 · **Requirement**: CAT-03, PAR-01
 **Done when**: each snapshot carries the real request/response schemas for that entry's operations; `expectContractSubset` fails on a mutated field type.
 **Tests**: parity · **Gate**: scoped · **Commit**: `test(catalog): parity snapshots from the real contract`
+
+### T22h: Fix the stale assertions in `maintenance-runtime.int-spec.ts`
+**What**: the spec still asserts advisory-lock holders 4/5/6/7/8 and the application names `api:job:email-change.revert`, `api:job:auth-events.purge`, `api:job:attachment-access-log.purge` while running `outbox.purge`/`idempotency.purge`, which hold lockIds 1 and 2. Stale since T22 moved those jobs to `catalog/**`; it compiles (T22d migrated its registry reads) but fails on a real database. Re-anchor every assertion to the two kernel jobs.
+**Touches**: `apps/api/src/shared/kernel/scheduling/maintenance-runtime.int-spec.ts` · **Depends on**: T22d · **Requirement**: AD-022, CAT-01
+**Done when**: no assertion references a job or lockId that left the kernel. The spec cannot be executed without Postgres — the Verifier runs it at the Final gate.
+**Tests**: int (not runnable in the worker env) · **Gate**: `pnpm --filter api typecheck` + `pnpm --filter api lint` · **Commit**: `test(kernel): re-anchor maintenance int-spec to kernel jobs`
 
 ---
 
@@ -587,6 +594,30 @@ Kernel-only `openapi.json` now holds exactly **2 operations**: `GET /health :: l
     `apps/api/test/setup/app-factory.ts` was modified, not deleted — confirm it still serves the restored specs.
 30. **AD-021 violation still open in the identity entry.** `catalog/identity/single-tenant/api/application/use-cases/purge-users/purge-users.use-case.ts:1` imports the audit entry directly, so identity cannot install alone. The T22 worker marked it `SPEC_DEVIATION` in-file. → T22f.
 31. **AD-022 recorded in `STATE.md`.** Maintenance jobs are a closed kernel union today, so no catalog entry can register one and identity's `purge-users` is dead code in every child. → T22d.
+
+### Wave 4b.1 — DONE (C16a / T22d ∥ C16b / T22e). Build gate PASS, 9/9 exit 0.
+
+| Task | Cluster | Commit | Result |
+| --- | --- | --- | --- |
+| T22d | C16a | `70e5517` | `refactor(kernel): maintenance jobs via runtime registry` |
+| T22d | C16a | `04cd952` | `style(kernel): chaves no arrow void do spec de manutencao` — lint fixup, `--amend` forbidden |
+| T22e | C16b | `ed5d0e1` | `feat(api): kernel-only /docs mount` — new `apps/api/src/docs/docs.ts` + `main.ts` |
+| T22e | C16b | `9c5118f` | `test(api): restore kernel contract e2e` — spec + snapshot for the 2-operation contract |
+| T22e | C16b | `dd52317` | `refactor(kernel): drop legacy access metadata keys` — `decorators.ts`, `decorators.spec.ts`, `openapi/openapi-config.ts`, `openapi/authz-coverage.spec.ts` |
+
+**Build gate (per package, all exit 0):** `pnpm --filter api typecheck` · `lint` · `test` **299 passed / 42 suites** · `pnpm --filter web typecheck` · `lint` · `test` **68 passed / 24 files** · `pnpm test:scripts` 100/100 · `pnpm catalog:lint` · `pnpm --filter api run db:check:journal` (`journal ok — 2 migrations em ordem`). Tree clean at `dd52317`. Int/e2e not run (no Postgres/Docker in the worker env).
+
+**T22d design.** `MaintenanceRegistry` is a process-level singleton in a new `maintenance-registry.ts` (`register`/`require`/`has`/`names`/`entries`), throwing on a duplicate name and on a colliding `lockId` (the message names the current owner). The kernel's two jobs register in that same file through the public `registerMaintenanceJob`, so the import graph guarantees they exist before any `@MaintenanceJob` class is evaluated. **No DI provider on purpose**: the decorator runs at class-definition time, before a Nest container exists, and a second lookup path would break AD-009's "one lookup path". `maintenance-schedule.ts` and its spec are deleted; `maintenance-registry.spec.ts` supersedes them with 15 unit tests. All T22d payload premises verified correct.
+
+**T22e premise corrections.** `env.ts` requires only `DATABASE_URL`/`REDIS_URL`/`WEB_ORIGIN` — **no `R2_*`**; note 23's env list is wider than reality. `IS_MACHINE_TO_MACHINE_KEY` is **not** a legacy access-requirement key (it is a CSRF opt-out flag) and stays in `decorators.ts`. `apps/api/test/setup/app-factory.ts` was **not** modified by T22 and needed nothing. `openapi.json` was regenerated to verify and came out byte-identical, so it was left untouched.
+
+**Carry-forward from wave 4b.1:**
+
+32. **`docs/back/back-arch.md:456` is stale.** It documents "entrada em `maintenance-schedule.ts` com cron e lockId unico"; that file no longer exists. Must become `registerMaintenanceJob(...)` no topo do arquivo do job. Folded into the T26 card (C19, wave 5).
+33. **`maintenance-runtime.int-spec.ts` has been asserting dead jobs since T22.** It expects advisory-lock holders 4/5/6/7/8 and the application names `api:job:email-change.revert`, `api:job:auth-events.purge`, `api:job:attachment-access-log.purge`, while the runtime it drives now runs only `outbox.purge` (lockId 1) and `idempotency.purge` (lockId 2). It compiles — T22d migrated its registry reads — but it will fail on a real database. → new task **T22h** (C23, wave 5).
+34. **`/docs` cannot be exercised over HTTP in the e2e suite.** `apps/api/test/setup/scalar-stub.ts` is wired through jest `moduleNameMapper` because the real `@scalar/nestjs-api-reference` is ESM/CJS-incompatible under jest, so the package is a no-op there. The restored `openapi-contract.e2e-spec.ts` validates the contract against the static `openapi.json` snapshot, **not** a live `GET /docs` call. The mount itself is therefore unverified by automated tests — flag to the Verifier.
+35. **`authz-coverage.spec.ts` lost its "no duplicate declaration" check.** Once the legacy keys collapse into the single `ACCESS_REQUIREMENT` key, `SetMetadata` silently overwrites, so a double declaration is undetectable at that layer. `SelfService()` and `OptionalAuth()` now write `ACCESS_REQUIREMENT` directly (`authenticated` / `public`) instead of a bare legacy flag with no kernel-readable equivalent.
+36. **`MaintenanceJobName` is now `string`** (open namespace), and the old "lockId é único por job, salvo compartilhamento declarado" test lost its `declaredShares` escape hatch — AD-022 makes a shared `lockId` a hard throw, so declared sharing is no longer expressible. `maintenance-schedule.spec.ts:138-146` survives inside `maintenance-registry.spec.ts` as "varredura resolve exatamente um arquivo de corpo por job do kernel", scoped to `KERNEL_MAINTENANCE_JOBS` (catalog job bodies live outside `apps/api/src`, so the scan cannot see them) and strengthened: it also asserts the scan finds no `@MaintenanceJob` name in `apps/api/src` outside the kernel set.
 
 ---
 

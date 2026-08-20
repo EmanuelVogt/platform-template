@@ -11,9 +11,9 @@ import { TransactionManager } from "../transactional/transaction-manager"
 
 import { advisorySessionUnlock, tryAdvisorySessionLock } from "./advisory-lock"
 import {
-  MAINTENANCE_SCHEDULE,
+  maintenanceRegistry,
   type MaintenanceJobName,
-} from "./maintenance-schedule"
+} from "./maintenance-registry"
 
 import type { Client } from "pg"
 
@@ -132,7 +132,7 @@ export class MaintenanceRuntime implements OnModuleInit, OnModuleDestroy {
     name: MaintenanceJobName,
     startedAt: number
   ): Promise<Client | null> {
-    const { lockId } = MAINTENANCE_SCHEDULE[name]
+    const { lockId } = maintenanceRegistry.require(name)
     let client: Client
     try {
       client = await this.dedicatedClients.create(`job:${name}`)
@@ -171,10 +171,10 @@ export class MaintenanceRuntime implements OnModuleInit, OnModuleDestroy {
     client: Client,
     body: () => Promise<void>
   ): Promise<void> {
-    const spec = MAINTENANCE_SCHEDULE[name]
+    const spec = maintenanceRegistry.require(name)
     try {
       try {
-        await ("atomic" in spec && spec.atomic ? this.txm.run(body) : body())
+        await (spec.atomic === true ? this.txm.run(body) : body())
         this.log.info("job.completed", {
           job: name,
           durationMs: elapsed(startedAt),

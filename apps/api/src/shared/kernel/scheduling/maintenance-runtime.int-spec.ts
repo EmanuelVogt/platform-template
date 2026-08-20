@@ -16,13 +16,10 @@ import {
   MAINTENANCE_LOCK_NAMESPACE,
   tryAdvisorySessionLock,
 } from "./advisory-lock"
+import { registerMaintenanceJob } from "./maintenance-registry"
 import { MaintenanceRuntime } from "./maintenance-runtime"
-import { MAINTENANCE_SCHEDULE } from "./maintenance-schedule"
 
-import type {
-  MaintenanceJobName,
-  MaintenanceJobSpec,
-} from "./maintenance-schedule"
+import type { MaintenanceJobName } from "./maintenance-registry"
 import type { Env } from "../../config/env"
 import type {
   DrizzleDb,
@@ -112,11 +109,6 @@ function outcomeOf(
 ): string | undefined {
   return runtime.lastRuns().find((r) => r.name === name)?.outcome
 }
-
-const mutableSchedule = MAINTENANCE_SCHEDULE as unknown as Record<
-  string,
-  MaintenanceJobSpec
->
 
 describe("MaintenanceRuntime (integração)", () => {
   let pool: Pool
@@ -399,20 +391,20 @@ describe("MaintenanceRuntime (integração)", () => {
   // Nenhum job real declara `atomic: true` hoje: o ramo é exercitado por uma
   // entrada sintética no registro, sem tornar atômico um job de produção.
   describe("corpo com atomic: true", () => {
-    const atomicJob = "atomic-probe" as unknown as MaintenanceJobName
+    const atomicJob = "atomic-probe"
     const atomicLockId = 99
 
     beforeAll(async () => {
-      mutableSchedule[atomicJob] = {
+      registerMaintenanceJob({
+        name: atomicJob,
         cron: "0 0 * * *",
         lockId: atomicLockId,
         atomic: true,
-      }
+      })
       await pool.query('CREATE TABLE IF NOT EXISTS "_atomic_probe" (v int)')
     })
 
     afterAll(async () => {
-      Reflect.deleteProperty(mutableSchedule, atomicJob)
       await pool.query('DROP TABLE IF EXISTS "_atomic_probe"')
     })
 

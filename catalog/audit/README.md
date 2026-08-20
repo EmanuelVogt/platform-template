@@ -19,7 +19,10 @@ Fora do HTTP, a entrada exporta duas facades para outros módulos:
 ## Portas do kernel consumidas
 
 - `shared/kernel/access/decorators` (`RequireAnyPermission`) e
-  `shared/kernel/access/permission.types` (`PermissionKey`).
+  `shared/kernel/access/access-policy.port` (`PermissionKey`).
+- `shared/kernel/audit-trail/audit-trail-purger.port` (`AUDIT_TRAIL_PURGER`,
+  `AuditTrailPurger`) — esta entrada é o **provedor**: `AuditTrailModule` liga o
+  token em `AuditTrailRepository` (ver `## Dependências`).
 - `shared/kernel/context/request-context` (`RequestContext`, escopo de acesso
   do ator).
 - `shared/kernel/errors/forbidden.error` e `shared/kernel/errors/domain.error`.
@@ -98,6 +101,17 @@ Fora do HTTP, a entrada exporta duas facades para outros módulos:
   `@Global()` (comportamento preservado) porque a escrita da trilha precisa
   ficar disponível para qualquer módulo que faça purge de titular (ex.:
   identity, guest) sem um import cruzado explícito com este módulo.
+- **A porta de expurgo do titular é do kernel (AD-024), e a ausência dela é
+  no-op.** `AuditTrailRepository` implementa `AuditTrailPurger` e
+  `AuditTrailModule` liga `AUDIT_TRAIL_PURGER` (`useExisting`). O token mora no
+  kernel porque um token declarado dentro do consumidor obrigaria esta entrada a
+  importar aquela entrada — exatamente a aresta que a porta existe para cortar.
+  Quem consome resolve com `@Optional()`, e **sem provider a purga é no-op, não
+  um 501**: sem esta entrada instalada não existe trilha guardando o PII do
+  titular, então o expurgo já está completo; responder 501 tiraria a purga de
+  lixeira inteira de um filho que não instalou `audit`, que é uma instalação
+  válida. Isso é deliberadamente diferente de `PROFILE_IMAGE_STORE`, onde a
+  ausência do provider degrada a operação com RFC 7807.
 - **Extração do trigger SQL para a entrada.** A tabela `audit.entries` e o
   mecanismo de captura por trigger foram extraídos de
   `apps/api/drizzle/migrations/0003_audit_trail.sql` (migration do platform,
@@ -132,6 +146,9 @@ módulos donos dessas tabelas chamarem `audit.attach(...)`.
   `FULL_AUDIT_PERMISSION`).
 - `attachment` — **não é dependência declarada** (sem consumo real hoje; ver
   `## Decisões`).
+- Ligar `AUDIT_TRAIL_PURGER` **não** cria dependência: o token é do kernel e
+  quem consome resolve com `@Optional()`, então a aresta não existe em nenhum
+  dos dois sentidos.
 - `env`: nenhuma variável de ambiente própria.
 
 ## Parte web

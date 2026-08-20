@@ -1,5 +1,7 @@
 import { Global, Module } from "@nestjs/common"
 
+import { AUDIT_TRAIL_PURGER } from "../../../../shared/kernel/audit-trail/audit-trail-purger.port"
+
 import { AuditTrailRepository } from "./audit-trail.repository"
 import { PurgeAuditJob } from "./purge-audit.job"
 
@@ -12,7 +14,11 @@ import { PurgeAuditJob } from "./purge-audit.job"
  */
 @Global()
 @Module({
-  providers: [AuditTrailRepository, PurgeAuditJob],
-  exports: [AuditTrailRepository],
+  providers: [
+    AuditTrailRepository,
+    PurgeAuditJob,
+    { provide: AUDIT_TRAIL_PURGER, useExisting: AuditTrailRepository },
+  ],
+  exports: [AuditTrailRepository, AUDIT_TRAIL_PURGER],
 })
 export class AuditTrailModule {}

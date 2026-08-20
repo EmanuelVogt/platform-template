@@ -3,10 +3,13 @@ import { sql } from "drizzle-orm"
 
 import { TransactionManager } from "../../../../shared/kernel/transactional/transaction-manager"
 
+import type {
+  AuditTrailEntityRef,
+  AuditTrailPurger,
+} from "../../../../shared/kernel/audit-trail/audit-trail-purger.port"
 import type { DrizzleExecutor } from "../../../../shared/infra/database/drizzle.provider"
 
-/** Referência a uma entidade auditada (para purge LGPD do titular). */
-export type AuditEntityRef = { table: string; entityId: string }
+export type AuditEntityRef = AuditTrailEntityRef
 
 /**
  * Escrita de manutenção da trilha `audit.entries` (retention + purge LGPD).
@@ -15,7 +18,7 @@ export type AuditEntityRef = { table: string; entityId: string }
  * cada método exige uma transação aberta. Ver ADR 0041.
  */
 @Injectable()
-export class AuditTrailRepository {
+export class AuditTrailRepository implements AuditTrailPurger {
   constructor(private readonly tx: TransactionManager) {}
 
   private get db(): DrizzleExecutor {

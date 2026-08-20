@@ -3,10 +3,7 @@ import "reflect-metadata"
 import { RequestMethod } from "@nestjs/common"
 import { METHOD_METADATA, PATH_METADATA } from "@nestjs/common/constants"
 
-import {
-  ACCESS_REQUIREMENT,
-  IS_SELF_SERVICE_KEY,
-} from "../../../shared/kernel/access/decorators"
+import { ACCESS_REQUIREMENT } from "../../../shared/kernel/access/decorators"
 import { CONTROLLERS } from "../api/controllers"
 
 import type { AccessRequirement } from "../../../shared/kernel/access/access-policy.port"
@@ -62,8 +59,8 @@ const EXPECTED: Record<string, AccessRequirement> = {
   "DELETE admin/permission-templates/{id}": permission("admin.permission_templates.delete"),
 }
 
-/** Rotas cuja exigência vem do default fail-closed do kernel (sem metadata
- *  `ACCESS_REQUIREMENT`), marcadas com `@SelfService()`. */
+/** Rotas marcadas com `@SelfService()` — o decorator escreve
+ *  `ACCESS_REQUIREMENT: authenticated`, nenhuma depende do default do kernel. */
 const SELF_SERVICE = [
   "GET auth/session",
   "POST auth/logout",
@@ -82,7 +79,6 @@ const SELF_SERVICE = [
 type Route = {
   key: string
   explicit: AccessRequirement | undefined
-  selfService: boolean
 }
 
 function trim(segment: string): string {
@@ -105,7 +101,6 @@ function collectRoutes(): Route[] {
       routes.push({
         key: `${VERBS[verb]} ${path}`,
         explicit: Reflect.getMetadata(ACCESS_REQUIREMENT, handler) as AccessRequirement | undefined,
-        selfService: Reflect.getMetadata(IS_SELF_SERVICE_KEY, handler) === true,
       })
     }
   }
@@ -126,12 +121,17 @@ describe("paridade de acesso das rotas do identity", () => {
     expect(route?.explicit ?? AUTHENTICATED).toEqual(expected)
   })
 
-  it("só as rotas self-service dependem do default fail-closed do kernel", () => {
+  it("nenhuma rota depende do default fail-closed do kernel", () => {
     const implicit = routes.filter((route) => route.explicit === undefined).map((route) => route.key)
 
-    expect(implicit.sort()).toEqual([...SELF_SERVICE].sort())
-    expect(routes.filter((route) => route.selfService).map((route) => route.key).sort()).toEqual(
-      [...SELF_SERVICE].sort(),
-    )
+    expect(implicit).toEqual([])
+  })
+
+  it("as rotas self-service declaram authenticated explicitamente", () => {
+    const authenticated = routes
+      .filter((route) => route.explicit?.kind === "authenticated")
+      .map((route) => route.key)
+
+    expect(authenticated.sort()).toEqual([...SELF_SERVICE].sort())
   })
 })

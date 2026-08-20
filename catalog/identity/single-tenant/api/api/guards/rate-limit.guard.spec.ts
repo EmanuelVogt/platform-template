@@ -1,8 +1,6 @@
 import { HttpException } from "@nestjs/common"
 import { Reflector } from "@nestjs/core"
 
-import { IS_PUBLIC_KEY } from "../../../../shared/kernel/access/decorators"
-
 import { RateLimitGuard, RATE_LIMIT_KEY, RateLimit } from "./rate-limit.guard"
 
 import type { RateLimiter } from "../../domain/ports/rate-limiter"
@@ -89,6 +87,5 @@ describe("RateLimitGuard", () => {
 
   it("exporta a chave de metadata", () => {
     expect(typeof RATE_LIMIT_KEY).toBe("string")
-    expect(typeof IS_PUBLIC_KEY).toBe("string")
   })
 })

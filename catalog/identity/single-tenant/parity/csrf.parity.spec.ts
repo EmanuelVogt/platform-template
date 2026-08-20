@@ -4,8 +4,8 @@ import { ForbiddenException } from "@nestjs/common"
 import { Reflector } from "@nestjs/core"
 
 import {
+  ACCESS_REQUIREMENT,
   IS_MACHINE_TO_MACHINE_KEY,
-  IS_PUBLIC_KEY,
 } from "../../../shared/kernel/access/decorators"
 import { CsrfGuard } from "../api/guards/csrf.guard"
 
@@ -119,7 +119,7 @@ describe("paridade do CsrfGuard", () => {
   it("dispensa double-submit em rota pública (pré-login não tem sessão)", () => {
     const context = contextFor(
       { method: "POST", headers: { origin: WEB_ORIGIN } },
-      { [IS_PUBLIC_KEY]: true },
+      { [ACCESS_REQUIREMENT]: { kind: "public" } },
     )
 
     expect(guard("none").canActivate(context)).toBe(true)

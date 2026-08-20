@@ -1,6 +1,9 @@
 import { ForbiddenException } from "@nestjs/common"
 
-import { IS_MACHINE_TO_MACHINE_KEY } from "../../../../shared/kernel/access/decorators"
+import {
+  ACCESS_REQUIREMENT,
+  IS_MACHINE_TO_MACHINE_KEY,
+} from "../../../../shared/kernel/access/decorators"
 import { HmacCsrf } from "../../infrastructure/hashing/hmac-csrf"
 
 import { CsrfGuard, type CsrfConfig } from "./csrf.guard"
@@ -40,8 +43,13 @@ function makeGuard(
   isMachineToMachine = false,
 ): CsrfGuard {
   const reflector = {
-    getAllAndOverride: (key: string) =>
-      key === IS_MACHINE_TO_MACHINE_KEY ? isMachineToMachine : isPublic,
+    getAllAndOverride: (key: string) => {
+      if (key === IS_MACHINE_TO_MACHINE_KEY) return isMachineToMachine
+      if (key === ACCESS_REQUIREMENT) {
+        return isPublic ? { kind: "public" } : { kind: "authenticated" }
+      }
+      return undefined
+    },
   } as unknown as Reflector
   return new CsrfGuard(reflector, csrf, cfg)
 }

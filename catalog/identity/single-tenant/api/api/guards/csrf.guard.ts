@@ -2,12 +2,13 @@ import { ForbiddenException, Inject, Injectable } from "@nestjs/common"
 import { Reflector } from "@nestjs/core"
 
 import {
+  ACCESS_REQUIREMENT,
   IS_MACHINE_TO_MACHINE_KEY,
-  IS_PUBLIC_KEY,
 } from "../../../../shared/kernel/access/decorators"
 import { CSRF } from "../../domain/ports/csrf"
 import { IDENTITY_CONFIG } from "../../identity.config"
 
+import type { AccessRequirement } from "../../../../shared/kernel/access/access-policy.port"
 import type { Csrf } from "../../domain/ports/csrf"
 import type { CanActivate, ExecutionContext } from "@nestjs/common"
 import type { Request } from "express"
@@ -53,11 +54,11 @@ export class CsrfGuard implements CanActivate {
 
     // double-submit só em rota autenticada: rotas @Public (login/forgot/reset)
     // não têm sessionId nem token CSRF ainda — o Origin-check já as cobre.
-    const isPublic = this.reflector.getAllAndOverride<boolean | undefined>(
-      IS_PUBLIC_KEY,
-      [context.getHandler(), context.getClass()],
-    )
-    if (this.cfg.COOKIE_SAMESITE === "none" && isPublic !== true) {
+    const requirement = this.reflector.getAllAndOverride<
+      AccessRequirement | undefined
+    >(ACCESS_REQUIREMENT, [context.getHandler(), context.getClass()])
+    const isPublic = requirement?.kind === "public"
+    if (this.cfg.COOKIE_SAMESITE === "none" && !isPublic) {
       this.assertDoubleSubmit(req)
     }
     return true

@@ -8,8 +8,10 @@ type SnapshotDocument = {
 }
 
 const SNAPSHOT_PATH = join(__dirname, "contract.snapshot.json")
-// __parity__ → identity → modules → src → api → apps → raiz do repositório.
-const OPENAPI_PATH = join(__dirname, "..", "..", "..", "..", "..", "..", "openapi.json")
+// cwd é sempre apps/api (pnpm --filter api roda o script na raiz do package,
+// no kernel ou num child renderizado) — subir dois níveis chega na raiz do
+// repo, onde o `pnpm contract` grava o openapi.json.
+const OPENAPI_PATH = join(process.cwd(), "..", "..", "openapi.json")
 
 const snapshot = JSON.parse(readFileSync(SNAPSHOT_PATH, "utf-8")) as SnapshotDocument
 

@@ -398,5 +398,5 @@ Três pontos que costumam ser esquecidos ao reescrever a tela:
 
 ## Follow-ups absorvidos
 
-Nenhum ainda. Os follow-ups do sweep v0.2 que esta entrada absorve são anotados aqui e no campo
-`absorbs` do `module.json` na consolidação do catálogo; até lá o campo fica vazio de propósito.
+Nenhum. `module.json.absorbs` está vazio — nenhum dos follow-ups do sweep v0.2 (#2–#8) foi
+corrigido na extração desta entrada; seguem abertos nos próprios issues.

@@ -36,6 +36,29 @@ function entryLabel(entry) {
   return entry.manifest.variant ? `${entry.name}/${entry.manifest.variant}` : entry.name;
 }
 
+// Placeholders inertes para o passo "contract" (só monta o grafo Nest, nunca
+// abre conexão) — o child renderizado não carrega o .env real do produto.
+// Nunca sobrescrevem um valor já presente no ambiente do processo.
+const CONTRACT_ENV_DEFAULTS = {
+  DATABASE_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder",
+  REDIS_URL: "redis://localhost:6379",
+  WEB_ORIGIN: "http://localhost:3000",
+};
+
+function withContractEnv(run) {
+  return (command, args = [], options = {}) => {
+    if (command !== "pnpm" || args[0] !== "contract") return run(command, args, options);
+    const env = {
+      ...process.env,
+      DATABASE_URL: process.env.DATABASE_URL ?? CONTRACT_ENV_DEFAULTS.DATABASE_URL,
+      REDIS_URL: process.env.REDIS_URL ?? CONTRACT_ENV_DEFAULTS.REDIS_URL,
+      WEB_ORIGIN: process.env.WEB_ORIGIN ?? CONTRACT_ENV_DEFAULTS.WEB_ORIGIN,
+      ...options.env,
+    };
+    return run(command, args, { ...options, env });
+  };
+}
+
 export async function runCatalogCheck({
   entries = [],
   repoRoot = process.cwd(),
@@ -104,7 +127,7 @@ export async function runCatalogCheck({
     log(`catalog:check — module add ${label}`);
     const args = ["module", "add", entry.name];
     if (entry.manifest.variant) args.push("--variant", entry.manifest.variant);
-    const exitCode = await runCli(args, { cwd: childDir, run });
+    const exitCode = await runCli(args, { cwd: childDir, run: withContractEnv(run) });
     if (exitCode !== EXIT_CODES.OK) {
       log(
         `catalog:check — falha ao instalar a entrada "${label}" (module add saiu com código ${exitCode}); ver a saída acima para o spec/asserção que falhou`,

@@ -200,6 +200,50 @@ test("runCatalogCheck happy path renders, installs, adds every entry in order (w
   }
 });
 
+test("runCatalogCheck gives the child's pnpm contract step placeholder DATABASE_URL/REDIS_URL/WEB_ORIGIN, without touching other commands", async () => {
+  const catalogRoot = withTmpCatalog(buildRealGraphCatalog);
+  const run = stubRun();
+  const runCli = stubRunCli();
+  const savedEnv = {
+    DATABASE_URL: process.env.DATABASE_URL,
+    REDIS_URL: process.env.REDIS_URL,
+    WEB_ORIGIN: process.env.WEB_ORIGIN,
+  };
+  delete process.env.DATABASE_URL;
+  delete process.env.REDIS_URL;
+  delete process.env.WEB_ORIGIN;
+  try {
+    await runCatalogCheck({
+      entries: ["notification"],
+      repoRoot: "/repo",
+      catalogRoot,
+      scratchDir: "/scratch/child",
+      run,
+      runCli,
+      log: () => {},
+    });
+
+    const wrappedRun = runCli.calls[0].deps.run;
+    wrappedRun("pnpm", ["contract"], { cwd: "/scratch/child" });
+    const contractCall = run.calls.find((call) => call.command === "pnpm" && call.args[0] === "contract");
+    assert.ok(contractCall, "wrapped run deve repassar a chamada real para pnpm contract");
+    assert.equal(contractCall.options.cwd, "/scratch/child");
+    assert.equal(contractCall.options.env.DATABASE_URL, "postgresql://placeholder:placeholder@localhost:5432/placeholder");
+    assert.equal(contractCall.options.env.REDIS_URL, "redis://localhost:6379");
+    assert.equal(contractCall.options.env.WEB_ORIGIN, "http://localhost:3000");
+
+    wrappedRun("pnpm", ["check"], { cwd: "/scratch/child" });
+    const otherCall = run.calls.find((call) => call.command === "pnpm" && call.args[0] === "check");
+    assert.equal(otherCall.options.env, undefined, "comandos fora do passo contract não recebem env injetado");
+  } finally {
+    cleanup(catalogRoot);
+    for (const [key, value] of Object.entries(savedEnv)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
+
 test("runCatalogCheck fails fast on an unknown entry without rendering anything", async () => {
   const catalogRoot = withTmpCatalog(buildRealGraphCatalog);
   const run = stubRun();

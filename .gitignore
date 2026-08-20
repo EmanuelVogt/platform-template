@@ -58,6 +58,9 @@ storybook-static
 # design-sync (claude.ai/design) — build artifacts, staged scripts, verification state
 .design-sync/sb-reference/
 .design-sync/learnings/
+
+# catalog:typecheck — mirror do catalog/**/api no layout instalado, gerado a cada execução
+apps/api/.catalog-stage/
 .design-sync/.cache/
 .design-sync/node_modules
 .ds-sync/

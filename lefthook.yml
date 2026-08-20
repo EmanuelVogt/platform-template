@@ -7,6 +7,8 @@ pre-push:
       run: pnpm --filter api db:check:journal
     typecheck:
       run: pnpm turbo typecheck
+    catalog-typecheck:
+      run: pnpm catalog:typecheck
     test-api:
       run: pnpm turbo test --filter=api
     # web roda com coverage: o threshold do vitest.config barra push que erode a cobertura.

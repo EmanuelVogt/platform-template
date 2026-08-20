@@ -57,6 +57,14 @@ reencaixe retroativo automático).
 Nenhuma decisão local além da extração 1:1 de `apps/api/src/modules/tag/**` — sem sucessor de
 AD-003/004/007/008/009/010 nesta entrada.
 
+**Casa dos e2e que precisam de usuário logado (AD-025).** `api/__e2e__/tags.e2e-spec.ts` é um
+teste de integração entre entradas: semeia usuários com permissão e faz login por `/v1/auth/login`
+antes de exercitar o CRUD de tags. Ele importa `seedUser` e `allowAllRateLimiter` da camada
+`api/testing/` do `identity`, não de um harness compartilhado. A regra que vale aqui: **um e2e
+cruzado mora na entrada que está a jusante no DAG de `dependsOn`** — quem depende hospeda o teste,
+nunca a dependência. Por isso o spec fica no `tag` e a aresta `tag → identity` passa a ser
+declarada (ver § Dependências); ela não fecha ciclo, já que `identity` não importa `tag`.
+
 ## Paridade
 
 Os specs em `parity/*.parity.spec.ts` são copiados para `apps/api/src/modules/tag/__parity__/`
@@ -74,10 +82,13 @@ junto com `parity/contract.snapshot.json` e rodam no jest do app filho:
 
 ## Dependências
 
-- `dependsOn`: nenhuma no `module.json` — varredura em `apps/api/src/modules/tag/**` não
-  encontrou import de `identity`, `attachment`, `audit` ou `notification`. A única ligação com
-  `audit` é opcional e vive em `migrations/custom/01_audit_attach_tags.sql` (guardada, ver
-  § Dados), não em código TS.
+- `dependsOn`: `identity` (`>=1.0.0 <2.0.0`). **A aresta é só de teste**: nenhum arquivo de
+  produção do `tag` importa `identity`, `attachment`, `audit` ou `notification` — quem importa é
+  `api/__e2e__/tags.e2e-spec.ts`, que consome `identity/api/testing/{seed-user,
+  allow-all-rate-limiter}` para montar a sessão autenticada que o CRUD exige. Sob AD-025 a aresta
+  precisa ser declarada mesmo assim: uma entrada só importa outra por `dependsOn` declarado e
+  acíclico. A única ligação com `audit` continua opcional e vive em
+  `migrations/custom/01_audit_attach_tags.sql` (guardada, ver § Dados), não em código TS.
 - `env`: nenhuma. O módulo não tem `tag.config.ts` nem lê `process.env`.
 
 ## Parte web

@@ -62,6 +62,13 @@ tabelas Drizzle em `api/infrastructure/tables/`: `attachment.table.ts`,
   `TOTAL_BYTES`; `ATTACHMENT_REPORT_MAX_BYTES` foi descartada. Produtos que precisarem de um
   perfil próprio estendem `PRODUCT_UPLOAD_PROFILES` em `api/domain/upload/product-upload-profiles.ts`
   (local a esta entrada — antes vivia no kernel, em `kernel/upload/**`).
+- **AD-025 — os e2e desta entrada seguem aqui.** `attachment-delete.e2e-spec.ts` e
+  `attachment-download.e2e-spec.ts` semeiam usuário e fazem login por `/v1/auth/login` para
+  chegar às rotas autenticadas de anexo. É aresta `attachment → identity`, já declarada em
+  `dependsOn` — e o e2e cruzado mora na entrada a jusante do DAG, em quem depende. Ambos passaram
+  a importar `seedUser` (e `allowAllRateLimiter`, no de delete) de `identity/api/testing/`, e não
+  mais de um harness compartilhado em `apps/api/test/setup/`, que não pode conhecer token de
+  entrada. Nenhum ciclo: `identity` não importa `attachment`.
 
 ## Paridade
 

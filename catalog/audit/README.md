@@ -121,6 +121,14 @@ Fora do HTTP, a entrada exporta duas facades para outros módulos:
   chamadas `SELECT audit.attach(...)` específicas de identity/tag não vieram
   junto — são wiring de cada módulo dono de tabela, não da entrada `audit`.
 
+**AD-025 — os e2e desta entrada seguem aqui.** `api/__e2e__/audit.e2e-spec.ts` e
+`audit-product-extension.e2e-spec.ts` semeiam usuário e fazem login por `/v1/auth/login` para
+exercitar a trilha com ator real. Isso é aresta `audit → identity`, já declarada em
+`dependsOn` — e o e2e cruzado mora na entrada a jusante do DAG, ou seja em quem depende. Os
+dois passaram a importar `seedUser` e `allowAllRateLimiter` de `identity/api/testing/`, e não
+mais de um harness compartilhado em `apps/api/test/setup/` (que não pode conhecer token de
+entrada). Nenhum ciclo: `identity` não importa `audit`.
+
 ## Paridade
 
 `parity/contract.parity.spec.ts` chama `expectContractSubset` contra o

@@ -5,9 +5,10 @@ import { AuditRegistry } from "../application/services/audit-registry"
 import { AuditModule } from "../audit.module"
 import { RATE_LIMITER } from "../../../../src/modules/identity/domain/ports/rate-limiter"
 
-import { allowAllRateLimiter, createE2eApp } from "../../../../test/setup/app-factory"
+import { allowAllRateLimiter } from "../../../../src/modules/identity/testing/allow-all-rate-limiter"
+import { seedUser } from "../../../../src/modules/identity/testing/seed-user"
+import { createE2eApp } from "../../../../test/setup/app-factory"
 import { setCookies } from "../../../../test/setup/cookies"
-import { seedUser } from "../../../../test/setup/seed-user"
 import {
   createTestPool,
   seedEmail,

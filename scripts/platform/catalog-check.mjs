@@ -1,5 +1,5 @@
 import path from "node:path";
-import { mkdtempSync } from "node:fs";
+import { existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { run as runCliCommand } from "./cli.mjs";
@@ -7,6 +7,7 @@ import { EXIT_CODES } from "./lib/exit-codes.mjs";
 import { CyclicDependencyError } from "./lib/plan.mjs";
 import { CatalogRootMissingError, UnknownEntryError, resolveInstallOrder } from "./lib/catalog-graph.mjs";
 import { installChild, renderChild } from "./lib/render-child.mjs";
+import { readLatestChangelogVersion, writeSimulatedKernelVersion } from "./lib/kernel-version.mjs";
 
 function defaultRun(command, args = [], options = {}) {
   const result = spawnSync(command, args, { encoding: "utf8", stdio: "inherit", ...options });
@@ -21,6 +22,16 @@ export function parseEntries(argv) {
   return argv.filter((arg) => !arg.startsWith("-"));
 }
 
+export function parseKernelVersion(argv) {
+  const index = argv.indexOf("--kernel-version");
+  return index === -1 ? undefined : argv[index + 1];
+}
+
+function stripKernelVersionFlag(argv) {
+  const index = argv.indexOf("--kernel-version");
+  return index === -1 ? argv : [...argv.slice(0, index), ...argv.slice(index + 2)];
+}
+
 function entryLabel(entry) {
   return entry.manifest.variant ? `${entry.name}/${entry.manifest.variant}` : entry.name;
 }
@@ -30,6 +41,7 @@ export async function runCatalogCheck({
   repoRoot = process.cwd(),
   catalogRoot = path.join(repoRoot, "catalog"),
   scratchDir,
+  kernelVersion,
   run = defaultRun,
   runCli = runCliCommand,
   log = (line) => process.stdout.write(`${line}\n`),
@@ -62,6 +74,22 @@ export async function runCatalogCheck({
   if (renderResult.status !== 0) {
     log(`catalog:check — falha ao renderizar o child (copier saiu com código ${renderResult.status})`);
     return EXIT_CODES.CATALOG_UNREACHABLE;
+  }
+
+  const answersPath = path.join(childDir, ".copier-answers.yml");
+  if (existsSync(answersPath)) {
+    let simulatedVersion;
+    try {
+      simulatedVersion =
+        kernelVersion ?? readLatestChangelogVersion(path.join(repoRoot, "docs/dev/template-changelog.md"));
+    } catch (err) {
+      log(`catalog:check — não foi possível determinar a versão do kernel a simular: ${err.message}`);
+      return EXIT_CODES.USAGE_ERROR;
+    }
+    log(
+      `catalog:check — simulando o kernel na versão ${simulatedVersion} (ainda não tagueada no repositório real; a simulação vale só para o child renderizado neste gate, que precede o tag)`,
+    );
+    writeSimulatedKernelVersion({ answersPath, kernelVersion: simulatedVersion });
   }
 
   log("catalog:check — instalando dependências do child (pnpm install)");
@@ -102,7 +130,9 @@ export async function runCatalogCheck({
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const entries = parseEntries(process.argv.slice(2));
-  const exitCode = await runCatalogCheck({ entries });
+  const argv = process.argv.slice(2);
+  const kernelVersion = parseKernelVersion(argv);
+  const entries = parseEntries(stripKernelVersionFlag(argv));
+  const exitCode = await runCatalogCheck({ entries, kernelVersion });
   process.exit(exitCode ?? EXIT_CODES.OK);
 }

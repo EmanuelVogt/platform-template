@@ -1,12 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { parse as parseYaml } from "yaml";
 import { EXIT_CODES } from "../lib/exit-codes.mjs";
 import { CyclicDependencyError } from "../lib/plan.mjs";
 import { CatalogRootMissingError, UnknownEntryError, resolveInstallOrder } from "../lib/catalog-graph.mjs";
-import { parseEntries, runCatalogCheck } from "../catalog-check.mjs";
+import { parseEntries, parseKernelVersion, runCatalogCheck } from "../catalog-check.mjs";
 
 function manifest({ name, variant, dependsOn }) {
   return {
@@ -299,6 +300,96 @@ test("runCatalogCheck attributes a failing entry, propagates its exit code and s
     assert.ok(logs.some((line) => line.includes('"audit"') && line.includes("7")));
   } finally {
     cleanup(catalogRoot);
+  }
+});
+
+test("parseKernelVersion extracts the --kernel-version value and leaves entries alone", () => {
+  assert.equal(parseKernelVersion(["--kernel-version", "1.0.0", "audit"]), "1.0.0");
+  assert.equal(parseKernelVersion(["audit"]), undefined);
+});
+
+function stubRunWithFakeCopier(overrides = {}) {
+  const calls = [];
+  const fn = (command, args = [], options = {}) => {
+    calls.push({ command, args, options });
+    if (command === "copier") {
+      const targetDir = args.at(-1);
+      writeFileSync(
+        path.join(targetDir, ".copier-answers.yml"),
+        "_src_path: .\n_commit: 0.2.0-90-g450f277\nproject_name: Demo\n",
+      );
+    }
+    const key = [command, ...args].join(" ");
+    const match = Object.entries(overrides).find(([pattern]) => key.startsWith(pattern));
+    return match ? match[1] : { status: 0, stdout: "", stderr: "" };
+  };
+  fn.calls = calls;
+  return fn;
+}
+
+test("runCatalogCheck simulates the pre-tag kernel version from the changelog by default", async () => {
+  const catalogRoot = withTmpCatalog(buildRealGraphCatalog);
+  const repoRoot = mkdtempSync(path.join(tmpdir(), "catalog-check-repo-"));
+  const scratchDir = mkdtempSync(path.join(tmpdir(), "catalog-check-scratch-"));
+  mkdirSync(path.join(repoRoot, "docs", "dev"), { recursive: true });
+  writeFileSync(
+    path.join(repoRoot, "docs", "dev", "template-changelog.md"),
+    "# Changelog\n\n## v1.0.0\n\ntexto\n",
+  );
+  const run = stubRunWithFakeCopier();
+  const logs = [];
+  try {
+    const code = await runCatalogCheck({
+      entries: ["notification"],
+      repoRoot,
+      catalogRoot,
+      scratchDir,
+      run,
+      runCli: stubRunCli(),
+      log: (line) => logs.push(line),
+    });
+    assert.equal(code, EXIT_CODES.OK);
+    const answers = parseYaml(readFileSync(path.join(scratchDir, ".copier-answers.yml"), "utf8"));
+    assert.equal(answers._commit, "v1.0.0");
+    assert.equal(answers.project_name, "Demo", "outras respostas do copier seguem intactas");
+    assert.ok(
+      logs.some((line) => line.includes("simulando o kernel na versão 1.0.0") && line.includes("ainda não")),
+      "precisa anunciar em pt-BR que a versão simulada não está tagueada de verdade",
+    );
+    assert.ok(
+      run.calls.every((call) => !(call.command === "git" && call.args.includes("tag"))),
+      "o gate nunca deve criar tag alguma, nem no repositório real nem em clone algum",
+    );
+  } finally {
+    cleanup(catalogRoot);
+    rmSync(repoRoot, { recursive: true, force: true });
+    rmSync(scratchDir, { recursive: true, force: true });
+  }
+});
+
+test("runCatalogCheck honors an explicit kernelVersion override instead of the changelog", async () => {
+  const catalogRoot = withTmpCatalog(buildRealGraphCatalog);
+  const scratchDir = mkdtempSync(path.join(tmpdir(), "catalog-check-scratch-"));
+  const run = stubRunWithFakeCopier();
+  const logs = [];
+  try {
+    const code = await runCatalogCheck({
+      entries: ["notification"],
+      repoRoot: "/repo-sem-changelog-real",
+      catalogRoot,
+      scratchDir,
+      kernelVersion: "9.9.9",
+      run,
+      runCli: stubRunCli(),
+      log: (line) => logs.push(line),
+    });
+    assert.equal(code, EXIT_CODES.OK);
+    const answers = parseYaml(readFileSync(path.join(scratchDir, ".copier-answers.yml"), "utf8"));
+    assert.equal(answers._commit, "v9.9.9");
+    assert.ok(logs.some((line) => line.includes("simulando o kernel na versão 9.9.9")));
+  } finally {
+    cleanup(catalogRoot);
+    rmSync(scratchDir, { recursive: true, force: true });
   }
 });
 

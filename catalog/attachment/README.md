@@ -18,15 +18,18 @@ consumo em processo por outras entradas do catálogo: `upload`, `delete`, `confi
 `openForDownload`, `exists`, `describeByIds` e `listAccessLog(attachmentId)`. Esse último método
 é o ponto de consulta ao log de acesso usado pela entrada `audit`.
 
-O `AttachmentModule` é `@Global()` e liga a porta `PROFILE_IMAGE_STORE` declarada pela entrada
-`identity` (`AttachmentProfileImageStore`, em `api/adapters/`, sobre a própria `AttachmentFacade`).
-É assim que a identidade guarda avatar sem importar este módulo: a aresta corre só de `attachment`
-para `identity`. Sem esta entrada instalada, a identidade sobe igual e apenas as rotas de avatar
-respondem `501`.
+O `AttachmentModule` é `@Global()` e liga a porta `PROFILE_IMAGE_STORE` do kernel
+(`AttachmentProfileImageStore`, em `api/adapters/`, sobre a própria `AttachmentFacade`). O token e a
+interface moram no kernel (AD-024), não na entrada consumidora: é assim que a identidade guarda
+avatar sem que nenhuma das duas entradas importe a outra por causa da porta. Sem esta entrada
+instalada, a identidade sobe igual e apenas as rotas de avatar respondem `501`.
 
 ## Portas do kernel consumidas
 
 - `shared/kernel/access/decorators` (`SelfService`, `OptionalAuth`)
+- `shared/kernel/profile-image/profile-image-store.port` (`PROFILE_IMAGE_STORE`,
+  `ProfileImageStore`) — esta entrada é o **provedor**: liga o token com
+  `AttachmentProfileImageStore`
 - `shared/kernel/http/content-disposition`
 - `shared/kernel/context/request-context`
 - `shared/kernel/errors/domain.error`
@@ -81,8 +84,9 @@ no jest do app filho:
 - `dependsOn`: `identity` (`>=1.0.0 <2.0.0`) — `list-attachment-access-log.use-case.ts` injeta
   `UserDirectoryFacade` (de `modules/identity/api/facades/user-directory.facade`, montada
   globalmente pelo `IdentityModule`) para resolver o nome do ator de cada entrada do log. Esta
-  entrada também liga `PROFILE_IMAGE_STORE`, a porta de imagem de perfil que `identity` declara
-  (§ Contrato). `identity` tem `dependsOn: []`, então não há ciclo: só `attachment → identity`.
+  entrada também liga `PROFILE_IMAGE_STORE`, a porta de imagem de perfil que mora no kernel e
+  `identity` consome (§ Contrato) — ligar a porta não cria aresta para `identity`. `identity` tem
+  `dependsOn: []`, então não há ciclo: só `attachment → identity`.
 - `env` (`module.json`): `ATTACHMENT_MAX_UPLOAD_BYTES`, `ATTACHMENT_ACCESS_LOG_RETENTION_DAYS`,
   `ATTACHMENT_MULTI_MAX_FILE_BYTES`, `ATTACHMENT_MULTI_MAX_TOTAL_BYTES`.
 

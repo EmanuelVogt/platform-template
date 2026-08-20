@@ -7,14 +7,14 @@ import {
   type AppLogger,
   LoggerFactory,
 } from "../../../../../shared/kernel/logging/logger.factory"
-import { Traced } from "../../../../../shared/kernel/tracing/traced.decorator"
-import { Transactional } from "../../../../../shared/kernel/transactional/transactional.decorator"
-import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
 import {
   PROFILE_IMAGE_STORE,
   type ProfileImageStore,
-  requireProfileImageStore,
-} from "../../../domain/ports/profile-image-store"
+} from "../../../../../shared/kernel/profile-image/profile-image-store.port"
+import { Traced } from "../../../../../shared/kernel/tracing/traced.decorator"
+import { Transactional } from "../../../../../shared/kernel/transactional/transactional.decorator"
+import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
+import { requireProfileImageStore } from "../../../domain/ports/profile-image-store"
 import {
   USER_REPOSITORY,
   type UserRepository,

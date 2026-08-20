@@ -53,9 +53,9 @@ Facades **exportadas** para outras entradas: `UserDirectoryFacade` (nome/e-mail/
 `UsageAccessFacade` (checagem de uso antes de apagar) e `ProfessionalDirectoryFacade` (usuários
 que atendem cliente). `IdentityModule` é `global: true` e exporta o token `ACCESS_POLICY`.
 
-Porta **declarada** pela entrada e ligada por quem quiser: `PROFILE_IMAGE_STORE`
-(`domain/ports/profile-image-store`), com `upload`, `delete` e `exists` para as imagens de perfil.
-É opcional e resolvida com `@Optional()`: sem provider registrado, `uploadAvatar`,
+Porta **consumida** pela entrada e ligada por quem quiser: `PROFILE_IMAGE_STORE`
+(`shared/kernel/profile-image/profile-image-store.port`), com `upload`, `delete` e `exists` para as
+imagens de perfil. É opcional e resolvida com `@Optional()`: sem provider registrado, `uploadAvatar`,
 `uploadAccessLinkAvatar` e `setPassword` **quando** recebe `avatarAttachmentId` respondem `501`
 com `type` `.../auth/profile-image-store-missing`; login, sessão, administração de usuários e o
 `setPassword` sem avatar continuam funcionando.
@@ -68,6 +68,8 @@ Todo evento sai pelo outbox do kernel (`notification.requested`, consumido pela 
 | Porta / adapter do kernel | Uso na entrada |
 | --- | --- |
 | `access/access-policy.port` (`ACCESS_POLICY`, `AccessRequirement`) | `IdentityAccessPolicy` implementa e o módulo liga o token |
+| `profile-image/profile-image-store.port` (`PROFILE_IMAGE_STORE`, `ProfileImageStore`) | `uploadAvatar`, `uploadAccessLinkAvatar` e `setPassword` resolvem com `@Optional()`; quem liga é outra entrada |
+| `audit-trail/audit-trail-purger.port` (`AUDIT_TRAIL_PURGER`, `AuditTrailPurger`) | `purgeUsers` resolve com `@Optional()`; sem provider a purga da trilha é no-op |
 | `access/decorators` (`@Public`, `@SelfService`, `@RequirePermission`, `@MachineToMachine`) | metadata de acesso das 34 rotas |
 | `context/request-context` (`setActor`, `setExtension`) | `AuthMiddleware` publica `Actor` + `IDENTITY_SESSION` / `IDENTITY_ACCESS` |
 | `clock/clock`, `clock/bucket-sql` | TTLs de sessão/token e janelas de rate limit |
@@ -77,12 +79,9 @@ Todo evento sai pelo outbox do kernel (`notification.requested`, consumido pela 
 | `errors/forbidden.error`, `logging/logger.factory`, `tracing/traced.decorator`, `scheduling/maintenance-job.decorator` | erros RFC 7807, log, tracing e jobs de manutenção |
 | `infra/database/drizzle.provider`, `infra/redis/redis.provider` | repositórios Drizzle e rate limiter em Redis |
 
-Acoplamentos que **não** são porta do kernel e precisam de atenção ao instalar: a entrada ainda
-importa `shared/kernel/access/{permission.types,define-permission-catalog,product-permission-catalogs,access-profile.types}`
-(catálogo de perfis/permissões) e `shared/kernel/audit/audit-trail.repository` (em
-`purge-users`). Os dois moram no kernel v0.2 e a v1 os move — o primeiro para esta entrada, o
-segundo para a entrada `audit`. Enquanto a mudança não chega, um child kernel-only precisa das
-duas peças presentes.
+Os dois acoplamentos de kernel v0.2 que a v1 tinha de desfazer estão desfeitos: o catálogo de
+perfis/permissões voltou para `api/domain/access/` desta entrada e o purge da trilha em
+`purgeUsers` virou a porta `AUDIT_TRAIL_PURGER`, ligada pela entrada `audit`.
 
 ## Dados
 
@@ -218,16 +217,20 @@ operações de tags `Auth`, `Session`, `Device`, `Admin` e `Access` e grave em
 
 A antiga aresta para `attachment` virou porta: `identity.module.ts` não importa mais o
 `AttachmentModule` e os três casos de uso (`upload-avatar`, `upload-access-link-avatar` e
-`set-password`) resolvem `PROFILE_IMAGE_STORE` com `@Optional()` (§ Contrato). Quem liga a porta
-hoje é a entrada `attachment`, que continua declarando `dependsOn: identity` (usa
-`UserDirectoryFacade`) — a aresta agora tem um sentido só e o grafo de instalação é acíclico.
+`set-password`) resolvem `PROFILE_IMAGE_STORE` com `@Optional()` (§ Contrato). O token e a
+interface moram no kernel (AD-024), não nesta entrada: um token declarado dentro do consumidor
+obrigaria o provedor a importar o consumidor, que é exatamente a aresta que a porta existe para
+cortar. Quem liga a porta hoje é a entrada `attachment`, que continua declarando
+`dependsOn: identity` (usa `UserDirectoryFacade`) — a aresta agora tem um sentido só e o grafo de
+instalação é acíclico.
 
 Sem a entrada `attachment` (ou qualquer outro provider de `PROFILE_IMAGE_STORE`) o
 `IdentityModule` resolve normalmente no boot; só as operações de imagem de perfil respondem `501`.
 
 A entrada `audit` **não** é dependência: `migrations/custom/02_audit_attach.sql` é guardado e não
 faz nada quando `audit.attach` não existe (§ Dados). O purge LGPD da trilha em `purgeUsers` também
-virou porta — `AUDIT_TRAIL_PURGER` (`api/domain/ports/audit-trail-purger.ts`), resolvida com
+virou porta — `AUDIT_TRAIL_PURGER` (`shared/kernel/audit-trail/audit-trail-purger.port.ts`, no
+kernel pela AD-024), resolvida com
 `@Optional()`. Quem liga é a entrada `audit`; sem provider a purga da trilha é no-op, e não `501`
 como em `PROFILE_IMAGE_STORE`, porque sem a entrada `audit` não existe trilha guardando o PII do
 titular — o hard delete do usuário já é completo.

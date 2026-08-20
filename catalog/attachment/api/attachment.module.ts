@@ -1,6 +1,6 @@
 import { Global, Module } from "@nestjs/common"
 
-import { PROFILE_IMAGE_STORE } from "../identity/domain/ports/profile-image-store"
+import { PROFILE_IMAGE_STORE } from "../../shared/kernel/profile-image/profile-image-store.port"
 
 import { AttachmentProfileImageStore } from "./api/adapters/profile-image-store.adapter"
 import { CONTROLLERS } from "./api/controllers"

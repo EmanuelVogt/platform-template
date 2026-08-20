@@ -1,14 +1,14 @@
 import { Inject, Optional } from "@nestjs/common"
 
+import {
+  AUDIT_TRAIL_PURGER,
+  type AuditTrailPurger,
+} from "../../../../../shared/kernel/audit-trail/audit-trail-purger.port"
 import { RequestContext } from "../../../../../shared/kernel/context/request-context"
 import { Traced } from "../../../../../shared/kernel/tracing/traced.decorator"
 import { Transactional } from "../../../../../shared/kernel/transactional/transactional.decorator"
 import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
 import { UserNotInTrashError } from "../../../domain/errors"
-import {
-  AUDIT_TRAIL_PURGER,
-  type AuditTrailPurger,
-} from "../../../domain/ports/audit-trail-purger"
 import {
   AUTH_EVENT_REPOSITORY,
   type AuthEventRepository,

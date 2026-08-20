@@ -3,6 +3,10 @@ import { Inject, Optional } from "@nestjs/common"
 import { CLOCK, type Clock } from "../../../../../shared/kernel/clock/clock"
 import { RequestContext } from "../../../../../shared/kernel/context/request-context"
 import { OutboxPublisher } from "../../../../../shared/kernel/outbox/outbox.publisher"
+import {
+  PROFILE_IMAGE_STORE,
+  type ProfileImageStore,
+} from "../../../../../shared/kernel/profile-image/profile-image-store.port"
 import { Traced } from "../../../../../shared/kernel/tracing/traced.decorator"
 import { Transactional } from "../../../../../shared/kernel/transactional/transactional.decorator"
 import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
@@ -16,11 +20,7 @@ import {
 import { BREACH_CHECK, type BreachCheck } from "../../../domain/ports/breach-check"
 import { PASSWORD_HASHER, type PasswordHasher } from "../../../domain/ports/password-hasher"
 import { PASSWORD_STRENGTH, type PasswordStrength } from "../../../domain/ports/password-strength"
-import {
-  PROFILE_IMAGE_STORE,
-  type ProfileImageStore,
-  requireProfileImageStore,
-} from "../../../domain/ports/profile-image-store"
+import { requireProfileImageStore } from "../../../domain/ports/profile-image-store"
 import { TOKEN_GENERATOR, type TokenGenerator } from "../../../domain/ports/token-generator"
 import { USER_REPOSITORY, type UserRepository } from "../../../domain/ports/user.repository"
 import {

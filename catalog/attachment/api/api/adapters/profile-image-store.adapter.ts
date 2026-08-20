@@ -5,7 +5,7 @@ import { AttachmentFacade } from "../facades/attachment.facade"
 import type {
   ProfileImageStore,
   ProfileImageUpload,
-} from "../../../identity/domain/ports/profile-image-store"
+} from "../../../../shared/kernel/profile-image/profile-image-store.port"
 
 @Injectable()
 export class AttachmentProfileImageStore implements ProfileImageStore {

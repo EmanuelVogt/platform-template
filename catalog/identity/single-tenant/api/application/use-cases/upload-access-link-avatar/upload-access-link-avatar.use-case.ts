@@ -1,14 +1,14 @@
 import { Inject, Optional } from "@nestjs/common"
 
 import { CLOCK, type Clock } from "../../../../../shared/kernel/clock/clock"
-import { Traced } from "../../../../../shared/kernel/tracing/traced.decorator"
-import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
-import { InvalidAccessLinkError } from "../../../domain/errors"
 import {
   PROFILE_IMAGE_STORE,
   type ProfileImageStore,
-  requireProfileImageStore,
-} from "../../../domain/ports/profile-image-store"
+} from "../../../../../shared/kernel/profile-image/profile-image-store.port"
+import { Traced } from "../../../../../shared/kernel/tracing/traced.decorator"
+import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
+import { InvalidAccessLinkError } from "../../../domain/errors"
+import { requireProfileImageStore } from "../../../domain/ports/profile-image-store"
 import { TOKEN_GENERATOR, type TokenGenerator } from "../../../domain/ports/token-generator"
 import { USER_REPOSITORY, type UserRepository } from "../../../domain/ports/user.repository"
 import {

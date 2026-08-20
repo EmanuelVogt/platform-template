@@ -148,7 +148,7 @@ módulos donos dessas tabelas chamarem `audit.attach(...)`.
 
 ## Dependências
 
-- `identity` (`^1.0.0`) — resolução de nome do ator
+- `identity` (`>=1.0.0 <2.0.0`) — resolução de nome do ator
   (`UserDirectoryFacade`) e catálogo de permissões
   (`permission-catalog.facade`, chaves `AUDIT_PERMISSION_KEYS`/
   `FULL_AUDIT_PERMISSION`).

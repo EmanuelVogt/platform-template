@@ -185,7 +185,7 @@ token de entrada.
 **Consequência**: `notification` volta a ser raiz limpa do DAG (nenhum arquivo seu, de produção
 ou teste, importa outra entrada) e o grafo fica acíclico incluindo testes. A suíte e2e desta
 entrada pressupõe `notification` instalado — o que já era verdade pelo `fakeMailer` e é
-coerente com `dependsOn: notification`, a ser declarado no `module.json` (T22l).
+coerente com o `dependsOn: notification` declarado no `module.json` (T22l).
 
 ## Paridade
 
@@ -235,9 +235,9 @@ operações de tags `Auth`, `Session`, `Device`, `Admin` e `Access` e grave em
 
 ## Dependências
 
-`dependsOn: []` hoje no `module.json`, mas a entrada **não** instala sozinha num filho só com o
-kernel: ela importa `notification` em produção e em teste (ver mais abaixo e § Decisões, AD-025).
-Declarar `notification` é trabalho de T22l.
+`dependsOn: [{ name: "notification", range: ">=1.0.0 <2.0.0" }]` no `module.json`: a entrada
+**não** instala sozinha num filho só com o kernel — ela importa `notification` em produção e em
+teste (ver mais abaixo e § Decisões, AD-025).
 
 A antiga aresta para `attachment` virou porta: `identity.module.ts` não importa mais o
 `AttachmentModule` e os três casos de uso (`upload-avatar`, `upload-access-link-avatar` e
@@ -259,7 +259,7 @@ kernel pela AD-024), resolvida com
 como em `PROFILE_IMAGE_STORE`, porque sem a entrada `audit` não existe trilha guardando o PII do
 titular — o hard delete do usuário já é completo.
 
-A entrada `notification` **é** dependência, e o `module.json` ainda não diz isso (T22l corrige).
+A entrada `notification` **é** dependência, declarada no `module.json`.
 Dez casos de uso de produção importam `NotificationRequested` de `modules/notification`, o
 `api/testing/fake-mailer.ts` importa a porta `Mailer`, e os quatro e2e cruzados que chegaram por
 AD-025 importam `MAILER` e `DeliveryDispatcher`. Sob AD-025 a aresta é declarada, não invertida:

@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Autenticação e autorização de tenant único: login por cookie de sessão, dispositivos, tokens de e-mail/senha, perfis de acesso e catálogo de permissões. Liga a porta ACCESS_POLICY do kernel.",
   "kernelRange": ">=1.0.0 <2.0.0",
-  "dependsOn": [],
+  "dependsOn": [{ "name": "notification", "range": ">=1.0.0 <2.0.0" }],
   "apiModule": { "export": "IdentityModule", "path": "modules/identity/identity.module" },
   "schemaExports": [
     "modules/identity/infrastructure/tables/user.table",

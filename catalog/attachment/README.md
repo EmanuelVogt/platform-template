@@ -92,8 +92,9 @@ no jest do app filho:
   `UserDirectoryFacade` (de `modules/identity/api/facades/user-directory.facade`, montada
   globalmente pelo `IdentityModule`) para resolver o nome do ator de cada entrada do log. Esta
   entrada também liga `PROFILE_IMAGE_STORE`, a porta de imagem de perfil que mora no kernel e
-  `identity` consome (§ Contrato) — ligar a porta não cria aresta para `identity`. `identity` tem
-  `dependsOn: []`, então não há ciclo: só `attachment → identity`.
+  `identity` consome (§ Contrato) — ligar a porta não cria aresta para `identity`. `identity` declara
+  `dependsOn: notification`, não `attachment`, então não há ciclo: só `attachment → identity →
+  notification`.
 - `env` (`module.json`): `ATTACHMENT_MAX_UPLOAD_BYTES`, `ATTACHMENT_ACCESS_LOG_RETENTION_DAYS`,
   `ATTACHMENT_MULTI_MAX_FILE_BYTES`, `ATTACHMENT_MULTI_MAX_TOTAL_BYTES`.
 

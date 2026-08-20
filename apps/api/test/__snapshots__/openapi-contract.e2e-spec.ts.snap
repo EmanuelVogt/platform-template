@@ -1,0 +1,8 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`contrato OpenAPI do kernel expõe só as operações do kernel-only tree 1`] = `
+Array [
+  "GET /health :: liveness",
+  "GET /ready :: readiness",
+]
+`;

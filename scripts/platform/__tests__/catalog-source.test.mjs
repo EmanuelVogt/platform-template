@@ -54,6 +54,35 @@ test("defaultCatalogRef retorna undefined quando o arquivo não existe", () => {
   assert.equal(defaultCatalogRef(path.join(tmpdir(), "nao-existe-copier-answers.yml")), undefined);
 });
 
+test("defaultCatalogRef desce em catalog/ quando _src_path é um caminho local (não git)", () => {
+  const repoRoot = mkdtempSync(path.join(tmpdir(), "template-repo-"));
+  const dir = mkdtempSync(path.join(tmpdir(), "copier-answers-local-"));
+  const answersPath = path.join(dir, ".copier-answers.yml");
+  writeFileSync(answersPath, `_src_path: ${repoRoot}\n_commit: v0.2.0-87-g48e6855\n`, "utf8");
+
+  assert.equal(defaultCatalogRef(answersPath), `${path.join(repoRoot, "catalog")}#v0.2.0-87-g48e6855`);
+});
+
+test("resolveCatalog resolve a fonte default de um _src_path local (raiz do template) até catalog/", () => {
+  const repoRoot = mkdtempSync(path.join(tmpdir(), "template-repo-"));
+  const catalogDir = path.join(repoRoot, "catalog");
+  mkdirSync(catalogDir, { recursive: true });
+  const answersDir = mkdtempSync(path.join(tmpdir(), "child-"));
+  writeFileSync(
+    path.join(answersDir, ".copier-answers.yml"),
+    `_src_path: ${repoRoot}\n_commit: v0.2.0-87-g48e6855\n`,
+    "utf8",
+  );
+
+  const result = resolveCatalog(undefined, { copierAnswersPath: path.join(answersDir, ".copier-answers.yml") });
+
+  assert.deepEqual(result, {
+    kind: "local",
+    root: catalogDir,
+    ref: `${catalogDir}#v0.2.0-87-g48e6855`,
+  });
+});
+
 test("resolveCatalog clona via git sparse-checkout um repositório bare local e resolve a raiz catalog/", () => {
   const bareDir = makeBareOriginWithCatalog();
   const cacheRoot = mkdtempSync(path.join(tmpdir(), "catalog-cache-"));

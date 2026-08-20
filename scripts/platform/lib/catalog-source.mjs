@@ -34,7 +34,12 @@ export function defaultCatalogRef(copierAnswersPath) {
   if (!existsSync(copierAnswersPath)) return undefined;
   const answers = parseYaml(readFileSync(copierAnswersPath, "utf8")) ?? {};
   if (!answers._src_path) return undefined;
-  return answers._commit ? `${answers._src_path}#${answers._commit}` : answers._src_path;
+  // `_src_path` do copier é a raiz do template (repo inteiro), não a pasta `catalog/`.
+  // Para uma fonte git, resolveCatalog já desce em `catalog/` após o clone (sparse-checkout);
+  // para uma fonte local, precisamos descer aqui — resolveCatalog trata o caminho local
+  // recebido como a raiz do catálogo em si (mesma convenção de `--catalog-ref` explícito).
+  const srcPath = isGitRef(answers._src_path) ? answers._src_path : path.join(answers._src_path, "catalog");
+  return answers._commit ? `${srcPath}#${answers._commit}` : srcPath;
 }
 
 export function resolveCatalog(

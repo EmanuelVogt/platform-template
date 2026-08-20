@@ -15,8 +15,16 @@ describe("notification — fonte de template registrada (AD-007)", () => {
   })
 
   it("fonte registrada tem a forma { type, catalog, email? }", () => {
+    // SPEC_DEVIATION: chaves aceitas como subconjunto de ["catalog","email","type"],
+    // não mais um toEqual fixo com "email" obrigatório.
+    // Reason: o próprio nome do teste já marca "email?" como opcional, e o base-set
+    // real tem fontes system-only sem binding de e-mail — device_revoked e password_set
+    // têm channels: ["system"] em notification-catalog.ts (sem "email" na lista de
+    // canais) —, então a asserção anterior contradizia o nome do teste e o base-set.
     for (const source of BASE_TEMPLATE_SOURCES) {
-      expect(Object.keys(source).sort()).toEqual(["catalog", "email", "type"])
+      const keys = Object.keys(source).sort()
+      expect(keys).toEqual(expect.arrayContaining(["catalog", "type"]))
+      expect(keys.every((key) => ["catalog", "email", "type"].includes(key))).toBe(true)
       if (source.email) {
         expect(typeof source.email.template).toBe("string")
         expect(typeof source.email.subject).toBe("function")

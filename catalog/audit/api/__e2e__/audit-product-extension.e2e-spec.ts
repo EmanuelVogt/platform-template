@@ -1,19 +1,19 @@
 import { Injectable, Module } from "@nestjs/common"
 import request from "supertest"
 
-import { AuditRegistry } from "../src/modules/audit/application/services/audit-registry"
-import { AuditModule } from "../src/modules/audit/audit.module"
-import { RATE_LIMITER } from "../src/modules/identity/domain/ports/rate-limiter"
+import { AuditRegistry } from "../application/services/audit-registry"
+import { AuditModule } from "../audit.module"
+import { RATE_LIMITER } from "../../../../src/modules/identity/domain/ports/rate-limiter"
 
-import { allowAllRateLimiter, createE2eApp } from "./setup/app-factory"
-import { setCookies } from "./setup/cookies"
-import { seedUser } from "./setup/seed-user"
+import { allowAllRateLimiter, createE2eApp } from "../../../../test/setup/app-factory"
+import { setCookies } from "../../../../test/setup/cookies"
+import { seedUser } from "../../../../test/setup/seed-user"
 import {
   createTestPool,
   seedEmail,
   truncateIdentity,
   truncateKernel,
-} from "./setup/test-db"
+} from "../../../../test/setup/test-db"
 
 import type { INestApplication, OnModuleInit } from "@nestjs/common"
 import type { Pool } from "pg"

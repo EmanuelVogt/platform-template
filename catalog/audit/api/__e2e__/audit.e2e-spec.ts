@@ -1,16 +1,16 @@
 import request from "supertest"
 
-import { RATE_LIMITER } from "../../src/modules/identity/domain/ports/rate-limiter"
-import { allowAllRateLimiter, createE2eApp } from "../setup/app-factory"
-import { setCookies } from "../setup/cookies"
-import { seedUser } from "../setup/seed-user"
+import { RATE_LIMITER } from "../../../../src/modules/identity/domain/ports/rate-limiter"
+import { allowAllRateLimiter, createE2eApp } from "../../../../test/setup/app-factory"
+import { setCookies } from "../../../../test/setup/cookies"
+import { seedUser } from "../../../../test/setup/seed-user"
 import {
   createTestPool,
   seedEmail,
   truncateIdentity,
   truncateKernel,
   truncateTag,
-} from "../setup/test-db"
+} from "../../../../test/setup/test-db"
 
 import type { INestApplication } from "@nestjs/common"
 

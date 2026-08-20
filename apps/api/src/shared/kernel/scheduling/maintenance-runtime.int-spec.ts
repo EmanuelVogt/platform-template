@@ -199,16 +199,12 @@ describe("MaintenanceRuntime (integração)", () => {
     await Promise.all([aInside.promise, bInside.promise])
 
     expect(clients.liveCount()).toBe(2)
-    const holdersA = await advisoryHolders(db, 4)
-    const holdersB = await advisoryHolders(db, 5)
+    const holdersA = await advisoryHolders(db, 1)
+    const holdersB = await advisoryHolders(db, 2)
     expect(holdersA).toHaveLength(1)
     expect(holdersB).toHaveLength(1)
-    expect(holdersA[0]?.applicationName).toBe(
-      "api:job:email-change.revert"
-    )
-    expect(holdersB[0]?.applicationName).toBe(
-      "api:job:auth-events.purge"
-    )
+    expect(holdersA[0]?.applicationName).toBe("api:job:outbox.purge")
+    expect(holdersB[0]?.applicationName).toBe("api:job:idempotency.purge")
     expect(holdersA[0]?.pid).not.toBe(holdersB[0]?.pid)
 
     release.resolve()
@@ -232,7 +228,7 @@ describe("MaintenanceRuntime (integração)", () => {
     const last = runtime.lastRuns().find((r) => r.name === "outbox.purge")
     expect(last?.outcome).toBe("failed")
     expect(last?.error).toBe("estouro no corpo")
-    expect(await advisoryHolders(db, 6)).toEqual([])
+    expect(await advisoryHolders(db, 1)).toEqual([])
     await waitUntil(
       () => clients.liveCount() === 0,
       "client dedicado do job que falhou encerrar"
@@ -250,7 +246,7 @@ describe("MaintenanceRuntime (integração)", () => {
         // Só o unlock explícito zera os holders ANTES do end: a queda da sessão
         // também solta o lock, mas aí já é tarde para observar a diferença.
         client.end = async (): Promise<void> => {
-          holdersAtEnd = await advisoryHolders(db, 8)
+          holdersAtEnd = await advisoryHolders(db, 2)
           await realEnd()
         }
         return client
@@ -259,7 +255,7 @@ describe("MaintenanceRuntime (integração)", () => {
     try {
       let holdersDuring: LockHolder[] = []
       await runtime.run("idempotency.purge", async () => {
-        holdersDuring = await advisoryHolders(db, 8)
+        holdersDuring = await advisoryHolders(db, 2)
         throw new Error("estouro antes do unlock")
       })
 
@@ -272,10 +268,25 @@ describe("MaintenanceRuntime (integração)", () => {
   })
 
   describe("disparo manual (tryStartDetached)", () => {
+    // Job sintético e livre de qualquer estado anterior: os dois jobs reais do
+    // kernel já rodaram nos blocos acima e carregam outcome no runtime
+    // compartilhado, o que invalidaria a checagem de "ainda sem outcome"
+    // logo depois do disparo.
+    const detachedJob = "detached-probe"
+    const detachedLockId = 6
+
+    beforeAll(() => {
+      registerMaintenanceJob({
+        name: detachedJob,
+        cron: "0 0 * * *",
+        lockId: detachedLockId,
+      })
+    })
+
     it("devolve false com o lock tomado e não roda o corpo", async () => {
       const holder = await clients.create("teste:holder-manual")
       try {
-        expect(await tryAdvisorySessionLock(holder, 6)).toBe(true)
+        expect(await tryAdvisorySessionLock(holder, 1)).toBe(true)
 
         let bodyRan = false
         const started = await runtime.tryStartDetached(
@@ -293,7 +304,7 @@ describe("MaintenanceRuntime (integração)", () => {
           "só o holder do teste seguir vivo"
         )
       } finally {
-        await advisorySessionUnlock(holder, 6)
+        await advisorySessionUnlock(holder, 1)
         await holder.end()
       }
     })
@@ -302,7 +313,7 @@ describe("MaintenanceRuntime (integração)", () => {
       const inside = deferred()
       const release = deferred()
 
-      const started = await runtime.tryStartDetached("outbox.purge", async () => {
+      const started = await runtime.tryStartDetached(detachedJob, async () => {
         inside.resolve()
         await release.promise
       })
@@ -310,21 +321,21 @@ describe("MaintenanceRuntime (integração)", () => {
       expect(started).toBe(true)
       await inside.promise
       // Corpo ainda rodando depois de tryStartDetached ter devolvido.
-      expect(outcomeOf(runtime, "outbox.purge")).toBeUndefined()
+      expect(outcomeOf(runtime, detachedJob)).toBeUndefined()
       expect(clients.liveCount()).toBe(1)
-      const holders = await advisoryHolders(db, 7)
-      expect(holders[0]?.applicationName).toBe("api:job:attachment-access-log.purge")
+      const holders = await advisoryHolders(db, detachedLockId)
+      expect(holders[0]?.applicationName).toBe(`api:job:${detachedJob}`)
 
       release.resolve()
       await waitUntil(
-        () => outcomeOf(runtime, "outbox.purge") === "completed",
+        () => outcomeOf(runtime, detachedJob) === "completed",
         "job destacado completar"
       )
       await waitUntil(
         () => clients.liveCount() === 0,
         "client dedicado do job destacado encerrar"
       )
-      expect(await advisoryHolders(db, 7)).toEqual([])
+      expect(await advisoryHolders(db, detachedLockId)).toEqual([])
     })
   })
 
@@ -358,7 +369,7 @@ describe("MaintenanceRuntime (integração)", () => {
     it("é skipped quando o lock session-scoped já está tomado por outra sessão", async () => {
       const holder = await pool.connect()
       try {
-        expect(await tryAdvisorySessionLock(holder, 4)).toBe(true)
+        expect(await tryAdvisorySessionLock(holder, 1)).toBe(true)
 
         let bodyRan = false
         await runtime.run("outbox.purge", async () => {
@@ -371,7 +382,7 @@ describe("MaintenanceRuntime (integração)", () => {
             ?.outcome
         ).toBe("skipped")
       } finally {
-        await advisorySessionUnlock(holder, 4)
+        await advisorySessionUnlock(holder, 1)
         holder.release()
       }
     })
@@ -510,7 +521,7 @@ describe("job.skipped não toca o pool de aplicação (integração)", () => {
   it("lock já tomado por outra sessão: skipped sem pedir conexão ao pool", async () => {
     const holder = await clients.create("teste:holder-esfomeado")
     try {
-      expect(await tryAdvisorySessionLock(holder, 7)).toBe(true)
+      expect(await tryAdvisorySessionLock(holder, 1)).toBe(true)
       const before = poolSnapshot(starved)
       expect(before).toEqual({ total: 1, idle: 0, waiting: 0 })
 
@@ -523,7 +534,7 @@ describe("job.skipped não toca o pool de aplicação (integração)", () => {
       expect(outcomeOf(runtime, "outbox.purge")).toBe("skipped")
       expect(poolSnapshot(starved)).toEqual(before)
     } finally {
-      await advisorySessionUnlock(holder, 7)
+      await advisorySessionUnlock(holder, 1)
       await holder.end()
     }
   })

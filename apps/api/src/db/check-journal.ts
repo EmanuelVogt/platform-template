@@ -16,10 +16,15 @@ const JOURNAL_PATH = join(MIGRATIONS_DIR, "meta", "_journal.json")
 // Passo entre `when` consecutivos, seguindo o padrão das entradas recentes.
 const WHEN_STEP = 10_000_000
 
-type JournalEntry = {
+export type JournalEntry = {
   readonly idx: number
   readonly when: number
   readonly tag: string
+}
+
+type BaselineReset = {
+  readonly newBaseline: string
+  readonly droppedTags: readonly string[]
 }
 
 function toEntry(value: unknown, position: number): JournalEntry {
@@ -33,7 +38,7 @@ function toEntry(value: unknown, position: number): JournalEntry {
   return { idx, when, tag }
 }
 
-function parseJournal(raw: string): JournalEntry[] {
+export function parseJournal(raw: string): JournalEntry[] {
   const data: unknown = JSON.parse(raw)
   if (typeof data !== "object" || data === null) {
     throw new Error("journal não é um objeto")
@@ -104,22 +109,64 @@ function checkWhenOrdering(entries: JournalEntry[], problems: string[]): void {
   }
 }
 
+// A regra contra a base pressupõe continuidade — o branch acrescenta a uma cadeia
+// que os ambientes já rodaram. Num reset de baseline declarado a cadeia recomeça
+// (o produto adota a nova base com `pnpm platform module adopt` em vez de migrar
+// por cima), então não existe ambiente migrado cuja ordem pudesse ser violada.
+// Os três sinais só coexistem num reset: baseline nova no idx 0, baseline da base
+// sumida do branch, e cadeia publicada encolhida além dela. O terceiro é o que
+// barra um mero renomeio da baseline, que satisfaz os dois primeiros sem recriar
+// a base do zero.
+export function detectBaselineReset(
+  entries: readonly JournalEntry[],
+  base: readonly JournalEntry[],
+): BaselineReset | null {
+  const branchBaseline = entries.find((entry) => entry.idx === 0)
+  const baseBaseline = base.find((entry) => entry.idx === 0)
+  if (branchBaseline === undefined || baseBaseline === undefined) return null
+
+  const branchTags = new Set(entries.map((entry) => entry.tag))
+  const baseTags = new Set(base.map((entry) => entry.tag))
+  if (baseTags.has(branchBaseline.tag)) return null
+  if (branchTags.has(baseBaseline.tag)) return null
+
+  const droppedTags = base.filter((entry) => !branchTags.has(entry.tag)).map((entry) => entry.tag)
+  const droppedBeyondBaseline = droppedTags.filter((tag) => tag !== baseBaseline.tag)
+  if (droppedBeyondBaseline.length === 0) return null
+
+  return { newBaseline: branchBaseline.tag, droppedTags }
+}
+
 // A checagem decisiva: migration nova precisa vir depois de tudo que já foi
 // publicado, senão nasce no passado dos ambientes que já rodaram a base.
-function checkAgainstBase(entries: JournalEntry[], base: JournalEntry[], problems: string[]): void {
+export function checkAgainstBase(
+  entries: JournalEntry[],
+  base: JournalEntry[],
+  problems: string[],
+  warnings: string[],
+): void {
   const baseTags = new Set(base.map((entry) => entry.tag))
   const baseMaxWhen = Math.max(...base.map((entry) => entry.when))
   const added = entries.filter((entry) => !baseTags.has(entry.tag))
+  const reset = detectBaselineReset(entries, base)
   let suggestion = baseMaxWhen
 
-  for (const entry of added) {
-    if (entry.when <= baseMaxWhen) {
-      suggestion += WHEN_STEP
-      problems.push(
-        `${entry.tag}: when ${entry.when} não passa do último de ${BASE_REF} (${baseMaxWhen}). ` +
-          `A migration nasceria no passado e seria ignorada para sempre nos ambientes já migrados. Use when ${suggestion}.`,
-      )
+  if (reset === null) {
+    for (const entry of added) {
+      if (entry.when <= baseMaxWhen) {
+        suggestion += WHEN_STEP
+        problems.push(
+          `${entry.tag}: when ${entry.when} não passa do último de ${BASE_REF} (${baseMaxWhen}). ` +
+            `A migration nasceria no passado e seria ignorada para sempre nos ambientes já migrados. Use when ${suggestion}.`,
+        )
+      }
     }
+  } else {
+    warnings.push(
+      `reset de baseline detectado: ${reset.newBaseline} substitui a baseline de ${BASE_REF} e ` +
+        `${reset.droppedTags.length} entrada(s) publicada(s) sumiram (${reset.droppedTags.join(", ")}). ` +
+        `A cadeia publicada recomeça em vez de continuar, então a regra de ordem contra ${BASE_REF} não se aplica e foi pulada.`,
+    )
   }
 
   const baseDuplicateIdx = new Set<number>()
@@ -151,7 +198,7 @@ function main(): void {
   if (base === null) {
     warnings.push(`${BASE_REF} não encontrado — a checagem contra a base foi pulada (rode \`git fetch\`)`)
   } else {
-    checkAgainstBase(entries, base, problems)
+    checkAgainstBase(entries, base, problems, warnings)
   }
 
   for (const warning of warnings) {
@@ -170,4 +217,7 @@ function main(): void {
   console.info(`[migrations] journal ok — ${entries.length} migrations em ordem`)
 }
 
-main()
+// Só executa quando rodado direto (ts-node), não quando importado por teste.
+if (require.main === module) {
+  main()
+}

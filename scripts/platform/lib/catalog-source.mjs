@@ -13,12 +13,21 @@ export class CatalogUnreachableError extends Error {
   }
 }
 
-function isGitRef(ref) {
-  return /^(git@|https?:\/\/|gh:|file:\/\/)/.test(ref) || ref.endsWith(".git");
+export function isGitRef(source) {
+  return /^(git@|https?:\/\/|gh:|file:\/\/)/.test(source) || source.endsWith(".git");
 }
 
 function hashRef(ref) {
   return createHash("sha1").update(ref).digest("hex").slice(0, 12);
+}
+
+// Uma fonte pode vir como "<source>#<ref>" (ex.: _src_path + _commit do copier).
+// O split é na PRIMEIRA "#": uma fonte local cujo próprio nome contenha "#" não é suportada
+// e será truncada nesse caractere.
+export function splitCatalogRef(ref) {
+  const hashIndex = ref.indexOf("#");
+  if (hashIndex === -1) return { source: ref, gitRef: undefined };
+  return { source: ref.slice(0, hashIndex), gitRef: ref.slice(hashIndex + 1) };
 }
 
 export function defaultCatalogRef(copierAnswersPath) {
@@ -40,14 +49,18 @@ export function resolveCatalog(
     );
   }
 
-  if (!isGitRef(resolvedRef)) {
-    if (!existsSync(resolvedRef) || !statSync(resolvedRef).isDirectory()) {
-      throw new CatalogUnreachableError(resolvedRef, "diretório local não encontrado");
+  const { source, gitRef } = splitCatalogRef(resolvedRef);
+
+  if (!isGitRef(source)) {
+    // Fonte local: o sufixo "#<ref>", se houver, é ignorado na resolução do diretório —
+    // um checkout local não tem semântica de "ref" nesta ferramenta. O valor completo
+    // (com ref) continua preservado em `ref` para fins de registro (ex.: lock file).
+    if (!existsSync(source) || !statSync(source).isDirectory()) {
+      throw new CatalogUnreachableError(source, "diretório local não encontrado");
     }
-    return { kind: "local", root: resolvedRef, ref: resolvedRef };
+    return { kind: "local", root: source, ref: resolvedRef };
   }
 
-  const [url, gitRefName] = resolvedRef.split("#");
   const dest = path.join(cacheRoot, hashRef(resolvedRef));
 
   try {
@@ -59,8 +72,8 @@ export function resolveCatalog(
         "1",
         "--filter=blob:none",
         "--sparse",
-        ...(gitRefName ? ["--branch", gitRefName] : []),
-        url,
+        ...(gitRef ? ["--branch", gitRef] : []),
+        source,
         dest,
       ],
       { stdio: "pipe" },

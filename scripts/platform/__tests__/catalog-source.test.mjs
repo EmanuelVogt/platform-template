@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { CatalogUnreachableError, defaultCatalogRef, resolveCatalog } from "../lib/catalog-source.mjs";
+import { CatalogUnreachableError, defaultCatalogRef, isGitRef, resolveCatalog, splitCatalogRef } from "../lib/catalog-source.mjs";
 
 function git(args, cwd) {
   execFileSync("git", args, { cwd, stdio: "pipe" });
@@ -62,4 +62,41 @@ test("resolveCatalog clona via git sparse-checkout um repositório bare local e 
 
   assert.equal(result.kind, "git");
   assert.ok(existsSync(path.join(result.root, "alpha", "module.json")));
+});
+
+test("resolveCatalog resolve um caminho local com sufixo #<ref> para o diretório antes do #", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "catalog-local-ref-"));
+  const withRef = `${dir}#v0.2.0-87-g48e6855`;
+
+  const result = resolveCatalog(withRef);
+
+  assert.deepEqual(result, { kind: "local", root: dir, ref: withRef });
+});
+
+test("splitCatalogRef separa um caminho local puro (sem #)", () => {
+  const dir = "/tmp/algum-diretorio";
+  assert.deepEqual(splitCatalogRef(dir), { source: dir, gitRef: undefined });
+  assert.equal(isGitRef(dir), false);
+});
+
+test("splitCatalogRef separa um caminho local#<ref> em (source, gitRef)", () => {
+  const dir = "/tmp/algum-diretorio";
+  assert.deepEqual(splitCatalogRef(`${dir}#v1.2.3`), { source: dir, gitRef: "v1.2.3" });
+  assert.equal(isGitRef(dir), false);
+});
+
+test("splitCatalogRef separa uma fonte gh:owner/repo (sem #) e isGitRef reconhece como git", () => {
+  const source = "gh:owner/repo";
+  assert.deepEqual(splitCatalogRef(source), { source, gitRef: undefined });
+  assert.equal(isGitRef(source), true);
+});
+
+test("splitCatalogRef separa gh:owner/repo#<ref> em (source, gitRef) e isGitRef reconhece como git", () => {
+  const result = splitCatalogRef("gh:owner/repo#v2.0.0");
+  assert.deepEqual(result, { source: "gh:owner/repo", gitRef: "v2.0.0" });
+  assert.equal(isGitRef(result.source), true);
+});
+
+test("splitCatalogRef corta na PRIMEIRA # quando a própria fonte contém #", () => {
+  assert.deepEqual(splitCatalogRef("/tmp/weird#dir#v1"), { source: "/tmp/weird", gitRef: "dir#v1" });
 });

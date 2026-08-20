@@ -57,6 +57,9 @@ Para manter as entradas portáveis entre apps filhos com stacks web diferentes (
 - **`web/react/**`**: além dos imports de `web/core`, também `react` e
   `@tanstack/react-query`. Só hooks e opções de react-query — nunca componentes, páginas ou
   roteadores.
+- **Exceção nos arquivos de teste** (`*.test.ts(x)`): `web/core` soma `vitest`; `web/react`
+  soma `vitest` + `@testing-library/react` (para `renderHook`) — o resto da lista continua
+  proibido mesmo em teste.
 - Qualquer outro import (`@tanstack/react-router`, `next/*`, bibliotecas de componentes) falha
   no `catalog-lint`. Integração de UI/roteador é responsabilidade do app filho, documentada
   como receita na seção `## Parte web` do README da entrada.

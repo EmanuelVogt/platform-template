@@ -372,6 +372,12 @@ Wave 6:    [C21: T28]
 **Done when**: every production cross-entry edge in the inventory (note 51) appears in the importing entry's `dependsOn`; `pnpm catalog:lint` exits 0; `resolveDeps` topo-sorts the five entries without a cycle.
 **Tests**: `catalog:lint` + the `resolveDeps` unit tests · **Gate**: `pnpm catalog:lint` + `pnpm test:scripts` · **Commit**: `fix(catalog): dependsOn declara as arestas reais entre entradas`
 
+### T22n: Refresh the kernel OpenAPI contract snapshot
+**What**: the first-ever `pnpm --filter api test:e2e` run (at `b16e1ec`) failed one test — `apps/api/test/openapi-contract.e2e-spec.ts:25`, `expect(operations).toMatchSnapshot()`. The diff is a jest snapshot-serializer format change only (`Array [` → `[`); the two operations are byte-identical in meaning. Regenerate that one snapshot after **confirming** the operation set is still exactly `GET /health :: liveness` + `GET /ready :: readiness` — blindly running `-u` on a contract snapshot is how a real regression gets laundered into a format fix.
+**Touches**: `apps/api/test/__snapshots__/openapi-contract.e2e-spec.ts.snap` · **Depends on**: T22e · **Requirement**: CTR-01
+**Done when**: `pnpm --filter api test:e2e` exits 0, 8 passed / 8.
+**Tests**: e2e · **Gate**: `pnpm --filter api test:e2e` + `typecheck` + `lint` · **Commit**: `test(api): atualiza snapshot do contrato do kernel`
+
 ---
 
 ## Requirement Coverage
@@ -739,6 +745,27 @@ Four root causes: (a) `apps/api/test/setup/seed-user.ts` does not exist; (b) `ap
 52. **Rate limiting is identity's, not the kernel's.** `RATE_LIMITER` is declared at `catalog/identity/single-tenant/api/domain/ports/rate-limiter` and the guard at `…/api/api/guards/rate-limit.guard.ts`. The pre-dispatch assumption that `allowAllRateLimiter` belonged in the kernel harness `app-factory.ts` was **wrong** — putting it there would make the kernel test harness import an entry token, the exact violation being fixed. T22m must find another seam.
 53. **`api/api/` nesting inside every entry is intentional, not a restore artefact.** `catalog/<entry>/api/` is the install root; the inner `api/` is the HTTP layer (`controllers`, `contracts`, `facades`). All five entries share it. Nothing to fix.
 54. **`apps/api/src/modules/` still exists and holds exactly one file** — `module-boundaries.spec.ts`. The cutover deleted the module trees but kept the boundary spec there. Payloads that call the directory non-existent are wrong.
+
+### Wave 4d — DONE (C27 / T22m exclusive, then C28 / T22l). Build gate PASS 10/10, **and int + e2e ran for the first time**.
+
+| Task | Cluster | Commit | Result |
+| --- | --- | --- | --- |
+| T22m | C27 | `e805f03` | `allowAllRateLimiter` created in identity's testing layer — it had never existed anywhere; identity's own `verify-email.e2e-spec.ts` rewired |
+| T22m | C27 | `f0e7c26` | audit ×2, attachment ×2, tag ×1 import `seedUser`/`allowAllRateLimiter` from identity's testing layer along a declared edge; `catalog/tag/module.json` gains `dependsOn: identity` |
+| T22m | C27 | `5ef5e9e` | 4 cross-entry e2e moved verbatim into identity (**AD-026**); `notifications-product-extension` keeps its home, its `RATE_LIMITER` override dropped as dead weight; the `fake-mailer` `SPEC_DEVIATION` replaced by a note stating the edge is legal under AD-025 |
+| T22l | C28 | `b16e1ec` | `dependsOn` declares the real edges; range syntax normalised to `">=1.0.0 <2.0.0"` to match every entry's `kernelRange`; three README/manifest contradictions fixed |
+
+**Build gate (per package, all exit 0):** api typecheck · lint · test **299 passed / 42 suites** · web typecheck · lint · test **68 passed / 24 files** · `test:scripts` 100/100 · `catalog:lint` · **`catalog:typecheck` 0 errors (was 16)** · `db:check:journal` ok. Tree clean at `b16e1ec`.
+
+**The first int + e2e run in this repo's history.** Docker turned out to be available on the host (daemon 29.6.1, `postgres_dev` live; the suites provision their own testcontainers through `apps/api/test/setup/docker-runtime.ts`), so the assumption carried since wave 2 — "no Postgres/Docker in any worker env" — was true only of the sandboxes, never of the machine. Results at `b16e1ec`:
+- `pnpm --filter api test:int` → **exit 1**, Suites 1 failed / 7 passed / 8, Tests **10 failed / 95 passed / 105**. All 10 in `maintenance-runtime.int-spec.ts`, at lines 204, 233, 266, 291, 310, 351, 387, 454, 471, 522. Failure shapes: `expected "failed", received "skipped"` and `toHaveLength 1 → 0`, i.e. the job bodies never ran. **Exactly what note 33 predicted** → T22h.
+- `pnpm --filter api test:e2e` → **exit 1**, Suites 1 failed / 2 passed / 3, Tests **1 failed / 7 passed / 8**. `openapi-contract.e2e-spec.ts:25` snapshot, diff `Array [` → `[`, content identical → new task **T22n**.
+
+**Carry-forward from wave 4d:**
+
+55. **Note 9 is closed for the kernel suites, and only for those.** int and e2e now demonstrably run on this machine, and 102 of 113 assertions pass with both failures diagnosed and assigned. What is still unproven is the entire catalog test surface — see note 50, which is now the headline risk of the feature. The Verifier must run int + e2e (they work) **and** `pnpm catalog:check` (T28), and must not treat a green kernel suite as evidence about the entries.
+56. **Cross-entry e2e placement is now a rule, not a judgement call** — AD-026. The rule is directional: downstream in the `dependsOn` DAG. It also means an entry's e2e count is not a measure of its own coverage: identity now carries 21 e2e, four of which primarily exercise notification.
+57. **The kernel test harness still knows entry schema names.** `apps/api/test/setup/test-db.ts` exports `truncateIdentity` / `truncateTag` / `truncateAttachment` — kernel-side code naming three entries. T22m found it and correctly left it alone: it is `test-suite-refactor`'s AD-021 harness-layering work (note 44), not a v1 regression. Flag to the Verifier so it is not read as one.
 
 ---
 

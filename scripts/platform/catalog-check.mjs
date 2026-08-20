@@ -97,23 +97,28 @@ function entryLabel(entry) {
 
 // Placeholders inertes para o passo "contract" (só monta o grafo Nest, nunca
 // abre conexão) — o child renderizado não carrega o .env real do produto.
-// Nunca sobrescrevem um valor já presente no ambiente do processo.
+// Nunca sobrescrevem um valor já presente no ambiente do processo. R2_* cobre
+// a validação Zod síncrona do storage (storage.config.ts), que é fail-fast
+// mas não abre conexão — sem esses defaults o passo falha (não trava) por
+// falta de env, mesmo com Redis/Postgres resolvidos.
 const CONTRACT_ENV_DEFAULTS = {
   DATABASE_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder",
   REDIS_URL: "redis://localhost:6379",
   WEB_ORIGIN: "http://localhost:3000",
+  R2_ACCOUNT_ID: "placeholder",
+  R2_ACCESS_KEY_ID: "placeholder",
+  R2_SECRET_ACCESS_KEY: "placeholder",
+  R2_BUCKET: "placeholder",
+  R2_ENDPOINT: "https://placeholder.r2.example.com",
 };
 
 function withContractEnv(run) {
   return (command, args = [], options = {}) => {
     if (command !== "pnpm" || args[0] !== "contract") return run(command, args, options);
-    const env = {
-      ...process.env,
-      DATABASE_URL: process.env.DATABASE_URL ?? CONTRACT_ENV_DEFAULTS.DATABASE_URL,
-      REDIS_URL: process.env.REDIS_URL ?? CONTRACT_ENV_DEFAULTS.REDIS_URL,
-      WEB_ORIGIN: process.env.WEB_ORIGIN ?? CONTRACT_ENV_DEFAULTS.WEB_ORIGIN,
-      ...options.env,
-    };
+    const defaults = Object.fromEntries(
+      Object.entries(CONTRACT_ENV_DEFAULTS).map(([key, value]) => [key, process.env[key] ?? value]),
+    );
+    const env = { ...process.env, ...defaults, ...options.env };
     return run(command, args, { ...options, env });
   };
 }

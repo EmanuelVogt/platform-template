@@ -200,18 +200,13 @@ test("runCatalogCheck happy path renders, installs, adds every entry in order (w
   }
 });
 
-test("runCatalogCheck gives the child's pnpm contract step placeholder DATABASE_URL/REDIS_URL/WEB_ORIGIN, without touching other commands", async () => {
+test("runCatalogCheck gives the child's pnpm contract step placeholder DATABASE_URL/REDIS_URL/WEB_ORIGIN/R2_*, without touching other commands", async () => {
   const catalogRoot = withTmpCatalog(buildRealGraphCatalog);
   const run = stubRun();
   const runCli = stubRunCli();
-  const savedEnv = {
-    DATABASE_URL: process.env.DATABASE_URL,
-    REDIS_URL: process.env.REDIS_URL,
-    WEB_ORIGIN: process.env.WEB_ORIGIN,
-  };
-  delete process.env.DATABASE_URL;
-  delete process.env.REDIS_URL;
-  delete process.env.WEB_ORIGIN;
+  const envKeys = ["DATABASE_URL", "REDIS_URL", "WEB_ORIGIN", "R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET", "R2_ENDPOINT"];
+  const savedEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
+  for (const key of envKeys) delete process.env[key];
   try {
     await runCatalogCheck({
       entries: ["notification"],
@@ -231,6 +226,11 @@ test("runCatalogCheck gives the child's pnpm contract step placeholder DATABASE_
     assert.equal(contractCall.options.env.DATABASE_URL, "postgresql://placeholder:placeholder@localhost:5432/placeholder");
     assert.equal(contractCall.options.env.REDIS_URL, "redis://localhost:6379");
     assert.equal(contractCall.options.env.WEB_ORIGIN, "http://localhost:3000");
+    assert.equal(contractCall.options.env.R2_ACCOUNT_ID, "placeholder");
+    assert.equal(contractCall.options.env.R2_ACCESS_KEY_ID, "placeholder");
+    assert.equal(contractCall.options.env.R2_SECRET_ACCESS_KEY, "placeholder");
+    assert.equal(contractCall.options.env.R2_BUCKET, "placeholder");
+    assert.equal(contractCall.options.env.R2_ENDPOINT, "https://placeholder.r2.example.com");
 
     wrappedRun("pnpm", ["check"], { cwd: "/scratch/child" });
     const otherCall = run.calls.find((call) => call.command === "pnpm" && call.args[0] === "check");

@@ -1,13 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { EXIT_CODES } from "../lib/exit-codes.mjs";
 import { CyclicDependencyError } from "../lib/plan.mjs";
 import { CatalogRootMissingError, UnknownEntryError, resolveInstallOrder } from "../lib/catalog-graph.mjs";
-import { parseEntries, parseKernelVersion, runCatalogCheck } from "../catalog-check.mjs";
+import { parseEntries, parseKeep, parseKernelVersion, runCatalogCheck } from "../catalog-check.mjs";
 
 function manifest({ name, variant, dependsOn }) {
   return {
@@ -469,5 +469,140 @@ test("runCatalogCheck maps a final 'pnpm test' failure to TEST_FAILURE", async (
     assert.equal(code, EXIT_CODES.TEST_FAILURE);
   } finally {
     cleanup(catalogRoot);
+  }
+});
+
+test("parseKeep detects the --keep flag anywhere in argv", () => {
+  assert.equal(parseKeep(["--keep", "audit"]), true);
+  assert.equal(parseKeep(["audit", "--keep"]), true);
+  assert.equal(parseKeep(["audit"]), false);
+});
+
+test("runCatalogCheck maps a render (copier) timeout to TEST_FAILURE and names the step", async () => {
+  const catalogRoot = withTmpCatalog(buildRealGraphCatalog);
+  const run = stubRun({ copier: { status: null, stdout: "", stderr: "", timedOut: true } });
+  const logs = [];
+  try {
+    const code = await runCatalogCheck({
+      entries: ["notification"],
+      catalogRoot,
+      scratchDir: "/scratch/child",
+      run,
+      runCli: stubRunCli(),
+      log: (line) => logs.push(line),
+    });
+    assert.equal(code, EXIT_CODES.TEST_FAILURE);
+    assert.ok(logs.some((line) => line.includes('"render (copier)"') && line.includes("tempo limite")));
+  } finally {
+    cleanup(catalogRoot);
+  }
+});
+
+test("runCatalogCheck maps a final 'pnpm check' timeout to TEST_FAILURE and names the step", async () => {
+  const catalogRoot = withTmpCatalog(buildRealGraphCatalog);
+  const run = stubRun({ "pnpm check": { status: null, stdout: "", stderr: "", timedOut: true } });
+  const logs = [];
+  try {
+    const code = await runCatalogCheck({
+      entries: ["notification"],
+      catalogRoot,
+      run,
+      runCli: stubRunCli(),
+      log: (line) => logs.push(line),
+    });
+    assert.equal(code, EXIT_CODES.TEST_FAILURE);
+    assert.ok(logs.some((line) => line.includes('"pnpm check"') && line.includes("tempo limite")));
+  } finally {
+    cleanup(catalogRoot);
+  }
+});
+
+function stubRunCliCallingContract(entryName) {
+  const calls = [];
+  const fn = async (args, deps) => {
+    calls.push({ args, deps });
+    if (args[2] !== entryName) return EXIT_CODES.OK;
+    const result = deps.run("pnpm", ["contract"], { cwd: deps.cwd });
+    return result.status === 0 ? EXIT_CODES.OK : EXIT_CODES.TEST_FAILURE;
+  };
+  fn.calls = calls;
+  return fn;
+}
+
+test("runCatalogCheck names the 'contract' sub-step and the failing entry when 'pnpm contract' hangs inside module add", async () => {
+  const catalogRoot = withTmpCatalog(buildRealGraphCatalog);
+  const run = stubRun({ "pnpm contract": { status: null, stdout: "", stderr: "", timedOut: true } });
+  const runCli = stubRunCliCallingContract("notification");
+  const logs = [];
+  try {
+    const code = await runCatalogCheck({
+      entries: ["notification"],
+      catalogRoot,
+      scratchDir: "/scratch/child",
+      run,
+      runCli,
+      log: (line) => logs.push(line),
+    });
+    assert.equal(code, EXIT_CODES.TEST_FAILURE);
+    assert.ok(
+      logs.some((line) => line.includes('"contract"') && line.includes("notification") && line.includes("tempo limite")),
+    );
+  } finally {
+    cleanup(catalogRoot);
+  }
+});
+
+test("runCatalogCheck removes the scratch dir it created once the run finishes", async () => {
+  const catalogRoot = withTmpCatalog(buildRealGraphCatalog);
+  const repoRoot = mkdtempSync(path.join(tmpdir(), "catalog-check-repo-"));
+  mkdirSync(path.join(repoRoot, "docs", "dev"), { recursive: true });
+  writeFileSync(path.join(repoRoot, "docs", "dev", "template-changelog.md"), "# Changelog\n\n## v1.0.0\n\ntexto\n");
+  const run = stubRunWithFakeCopier();
+  const logs = [];
+  try {
+    const code = await runCatalogCheck({
+      entries: ["notification"],
+      repoRoot,
+      catalogRoot,
+      run,
+      runCli: stubRunCli(),
+      log: (line) => logs.push(line),
+    });
+    assert.equal(code, EXIT_CODES.OK);
+    const renderLog = logs.find((line) => line.includes("renderizando child kernel-only em"));
+    const childDir = renderLog.slice(renderLog.indexOf("em ") + 3);
+    assert.ok(!existsSync(childDir), "diretório temporário próprio deve ser removido ao final");
+  } finally {
+    cleanup(catalogRoot);
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test("runCatalogCheck keeps the scratch dir it created when keep:true is passed", async () => {
+  const catalogRoot = withTmpCatalog(buildRealGraphCatalog);
+  const repoRoot = mkdtempSync(path.join(tmpdir(), "catalog-check-repo-"));
+  mkdirSync(path.join(repoRoot, "docs", "dev"), { recursive: true });
+  writeFileSync(path.join(repoRoot, "docs", "dev", "template-changelog.md"), "# Changelog\n\n## v1.0.0\n\ntexto\n");
+  const run = stubRunWithFakeCopier();
+  const logs = [];
+  let childDir;
+  try {
+    const code = await runCatalogCheck({
+      entries: ["notification"],
+      repoRoot,
+      catalogRoot,
+      run,
+      runCli: stubRunCli(),
+      keep: true,
+      log: (line) => logs.push(line),
+    });
+    assert.equal(code, EXIT_CODES.OK);
+    const renderLog = logs.find((line) => line.includes("renderizando child kernel-only em"));
+    childDir = renderLog.slice(renderLog.indexOf("em ") + 3);
+    assert.ok(existsSync(childDir), "com keep:true o diretório temporário deve sobreviver ao run");
+  } finally {
+    cleanup(catalogRoot);
+    rmSync(repoRoot, { recursive: true, force: true });
+    if (childDir) rmSync(childDir, { recursive: true, force: true });
   }
 });

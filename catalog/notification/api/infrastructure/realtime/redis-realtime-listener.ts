@@ -31,14 +31,22 @@ export class RedisRealtimeListener
     this.log = loggerFactory.forModule("RedisRealtimeListener")
   }
 
-  async onModuleInit(): Promise<void> {
+  onModuleInit(): void {
     this.subscriber.on("error", (err: Error) => {
       this.log.warn("notifications.subscriber_error", { err: err.message })
     })
     this.subscriber.on("message", (_channel: string, recipientId: string) => {
       this.registry.notifyNew(recipientId)
     })
-    await this.subscriber.subscribe(NOTIF_REALTIME_CHANNEL)
+    // Não aguarda: com o client lazy, a 1ª chamada de comando é quem abre o
+    // socket. Aguardar aqui bloquearia o boot do Nest (NestFactory.create)
+    // até a inscrição confirmar — travando ferramentas que só montam o grafo
+    // (ex.: export de OpenAPI) contra um Redis inalcançável. O .catch evita
+    // unhandled rejection se a inscrição falhar; erro já vai pro log via
+    // listener "error" acima.
+    this.subscriber.subscribe(NOTIF_REALTIME_CHANNEL).catch((err: Error) => {
+      this.log.warn("notifications.subscribe_failed", { err: err.message })
+    })
   }
 
   async onApplicationShutdown(): Promise<void> {

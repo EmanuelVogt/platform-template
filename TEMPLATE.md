@@ -13,7 +13,7 @@ existem só no repositório do template (excluídos no `copier.yml`); o produto 
 
 ```
 pipx install copier              # ou uv tool install copier
-copier copy gh:EmanuelVogt/platform-template ./meu-produto
+copier copy --trust gh:EmanuelVogt/platform-template ./meu-produto
 ```
 
 ## Publicar uma versão

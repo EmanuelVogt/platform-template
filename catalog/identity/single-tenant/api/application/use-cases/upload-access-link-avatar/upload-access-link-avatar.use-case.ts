@@ -5,6 +5,7 @@ import {
   PROFILE_IMAGE_STORE,
   type ProfileImageStore,
 } from "../../../../../shared/kernel/profile-image/profile-image-store.port"
+import { NonTransactional } from "../../../../../shared/kernel/transactional/transactional.decorator"
 import { Traced } from "../../../../../shared/kernel/tracing/traced.decorator"
 import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
 import { InvalidAccessLinkError } from "../../../domain/errors"
@@ -37,6 +38,7 @@ export class UploadAccessLinkAvatarUseCase
   // Upload pré-auth token-scoped: resolve o user pending dono do token (SEM
   // consumir) e sobe o avatar com ownerUserId = esse user. NÃO muta o user.
   // Magic-bytes/tamanho/allowlist são revalidados no provider da porta.
+  @NonTransactional("io externo: upload de imagem no provider de perfil")
   @Traced({ name: "identity.uploadAccessLinkAvatar" })
   async execute(
     input: UploadAccessLinkAvatarInput,

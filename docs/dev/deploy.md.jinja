@@ -40,18 +40,6 @@ o runner. Expõe a porta **3000**, entra por `tini` → `docker-entrypoint.sh` e
 > cache quando a URL muda). Trocar a URL da API exige **rebuild do front** — mudar a
 > variável e reiniciar o container não tem efeito nenhum.
 
-> **Os builds do `web` e do `api` de dev precisam do token do registry privado do
-> Bryntum.** `@bryntum/scheduler` é licenciado; sem credencial o `pnpm install` do
-> Dockerfile falha. Vale para `apps/web/Dockerfile` e `apps/api/Dockerfile.dev` —
-> este instala o workspace inteiro, então arrasta as deps do `web`. O
-> `apps/api/Dockerfile` de **prod** está livre: o `turbo prune` corta o `web` fora.
-> O token entra como secret do BuildKit
-> (`--secret id=bryntum_npm_token,env=BRYNTUM_NPM_TOKEN`) e, para runner que não
-> suporta secret, como build arg `BRYNTUM_NPM_TOKEN`. Nos dois casos o Dockerfile
-> apaga o `~/.npmrc` no mesmo `RUN`, então o token não fica em layer. No CI o mesmo
-> valor vem do secret `BRYNTUM_NPM_TOKEN` do repositório. Como gerar o token: ver
-> [`ambiente-local.md`](./ambiente-local.md#registry-privado-do-bryntum).
-
 ## O que roda no boot da API
 
 `docker-entrypoint.sh` executa três passos condicionais antes de subir o app:

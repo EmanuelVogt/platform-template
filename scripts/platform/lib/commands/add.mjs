@@ -231,7 +231,7 @@ export async function addCommand({ name, options, cwd = process.cwd(), run = def
     const targetWebRoot = path.join(cwd, webRootFor(name, options));
     const webCopied = targetPlan.files.some((file) => file.to.startsWith(targetWebRoot));
     if (webCopied) {
-      const webResult = run("pnpm", ["--filter", "web", "vitest", "run", `entities/${name}`], { cwd });
+      const webResult = run("pnpm", ["--filter", "web", "test", "--", `entities/${name}`], { cwd });
       if (webResult.status !== 0) {
         process.stderr.write(`testes web falharam — arquivos mantidos, use --rollback\n`);
         return EXIT_CODES.TEST_FAILURE;

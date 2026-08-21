@@ -9,7 +9,7 @@
     "modules/tag/infrastructure/tables/tag.schema",
     "modules/tag/infrastructure/tables/tag.table"
   ],
-  "customMigrations": ["migrations/custom/01_audit_attach_tags.sql"],
+  "customMigrations": ["01_audit_attach_tags.sql"],
   "env": [],
   "absorbs": []
 }

@@ -62,14 +62,16 @@ test("parseSchemaList trims and drops blank lines from psql -tAc output", () => 
   assert.deepEqual(parseSchemaList("\n\n"), []);
 });
 
-test("schemasMatchExpected accepts exactly _kernel + drizzle regardless of order", () => {
+test("schemasMatchExpected accepts _kernel + drizzle regardless of order, and tolerates Postgres's own public schema", () => {
   assert.equal(schemasMatchExpected(["_kernel", "drizzle"]), true);
   assert.equal(schemasMatchExpected(["drizzle", "_kernel"]), true);
+  assert.equal(schemasMatchExpected(["_kernel", "drizzle", "public"]), true);
+  assert.equal(schemasMatchExpected(["public", "drizzle", "_kernel"]), true);
 });
 
-test("schemasMatchExpected rejects a missing or an extra schema", () => {
+test("schemasMatchExpected rejects a missing required schema or a schema outside _kernel/drizzle/public", () => {
   assert.equal(schemasMatchExpected(["_kernel"]), false);
-  assert.equal(schemasMatchExpected(["_kernel", "drizzle", "public"]), false);
+  assert.equal(schemasMatchExpected(["_kernel", "drizzle", "identity"]), false);
   assert.equal(schemasMatchExpected([]), false);
 });
 
@@ -150,13 +152,13 @@ test("runTemplateSmoke returns MIGRATION_FAILURE when db:migrate fails on the ch
   assert.equal(code, EXIT_CODES.MIGRATION_FAILURE);
 });
 
-test("runTemplateSmoke returns MIGRATION_FAILURE when the migrated schemas are not exactly _kernel + drizzle", async () => {
+test("runTemplateSmoke returns MIGRATION_FAILURE when the migrated schemas include one outside _kernel/drizzle/public", async () => {
   const run = stubRun({
     "docker run": { status: 0, stdout: "cid123\n", stderr: "" },
     "docker exec cid123 pg_isready": { status: 0, stdout: "", stderr: "" },
     "docker port cid123": { status: 0, stdout: "0.0.0.0:32000\n", stderr: "" },
     "pnpm --filter api run db:migrate": { status: 0, stdout: "", stderr: "" },
-    "docker exec cid123 psql": { status: 0, stdout: "_kernel\ndrizzle\npublic\n", stderr: "" },
+    "docker exec cid123 psql": { status: 0, stdout: "_kernel\ndrizzle\nidentity\n", stderr: "" },
   });
   const code = await runTemplateSmoke({
     scratchDir: "/tmp/template-smoke-test-schema-mismatch",
@@ -167,6 +169,27 @@ test("runTemplateSmoke returns MIGRATION_FAILURE when the migrated schemas are n
     log: noopLog,
   });
   assert.equal(code, EXIT_CODES.MIGRATION_FAILURE);
+});
+
+test("runTemplateSmoke does not fail on schema check when Postgres's own public schema is present", async () => {
+  const run = stubRun({
+    "docker run": { status: 0, stdout: "cid123\n", stderr: "" },
+    "docker exec cid123 pg_isready": { status: 0, stdout: "", stderr: "" },
+    "docker port cid123": { status: 0, stdout: "0.0.0.0:32000\n", stderr: "" },
+    "pnpm --filter api run db:migrate": { status: 0, stdout: "", stderr: "" },
+    "docker exec cid123 psql": { status: 0, stdout: "_kernel\ndrizzle\npublic\n", stderr: "" },
+  });
+  const code = await runTemplateSmoke({
+    scratchDir: "/tmp/template-smoke-test-schema-public-ok",
+    run,
+    renderChildFn: () => ({ status: 0, stdout: "", stderr: "" }),
+    installChildFn: () => ({ status: 0, stdout: "", stderr: "" }),
+    spawnProcess: () => ({ kill: () => {} }),
+    fetchImpl: async () => ({ status: 503 }),
+    sleep: immediateSleep,
+    log: noopLog,
+  });
+  assert.notEqual(code, EXIT_CODES.MIGRATION_FAILURE);
 });
 
 test("runTemplateSmoke returns TEST_FAILURE when GET /health never answers 200", async () => {

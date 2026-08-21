@@ -8,6 +8,7 @@ import { EXIT_CODES } from "./platform/lib/exit-codes.mjs";
 import { installChild, renderChild } from "./platform/lib/render-child.mjs";
 
 const EXPECTED_SCHEMAS = ["_kernel", "drizzle"];
+const ALLOWED_EXTRA_SCHEMAS = ["public"];
 const HEALTH_PORT = "3222";
 
 export function parseArgs(argv) {
@@ -35,7 +36,7 @@ export function helpText() {
 export function planSteps() {
   return [
     "pnpm check && pnpm test no child",
-    "db:migrate num Postgres efêmero — só os schemas _kernel e drizzle podem existir",
+    "db:migrate num Postgres efêmero — só _kernel, drizzle e o public do Postgres podem existir",
     "GET /health no child retorna 200",
     "RULE C (module-boundaries.spec.ts) passa no child",
   ];
@@ -48,12 +49,15 @@ export function parseSchemaList(stdout) {
     .filter((line) => line.length > 0);
 }
 
-export function schemasMatchExpected(actualSchemas, expected = EXPECTED_SCHEMAS) {
+export function schemasMatchExpected(actualSchemas, expected = EXPECTED_SCHEMAS, allowedExtra = ALLOWED_EXTRA_SCHEMAS) {
   const actual = new Set(actualSchemas);
   const wanted = new Set(expected);
-  if (actual.size !== wanted.size) return false;
+  const allowed = new Set([...wanted, ...allowedExtra]);
   for (const name of wanted) {
     if (!actual.has(name)) return false;
+  }
+  for (const name of actual) {
+    if (!allowed.has(name)) return false;
   }
   return true;
 }
@@ -157,7 +161,7 @@ async function checkMigrateAndSchema({ childDir, run, sleep, log }) {
     const actualSchemas = parseSchemaList(schemaResult.stdout);
     if (!schemasMatchExpected(actualSchemas)) {
       log(
-        `template:smoke — schemas após "db:migrate" divergem do esperado: encontrados [${actualSchemas.join(", ")}], esperado [${EXPECTED_SCHEMAS.join(", ")}]`,
+        `template:smoke — schemas após "db:migrate" divergem do esperado: encontrados [${actualSchemas.join(", ")}], obrigatórios [${EXPECTED_SCHEMAS.join(", ")}], extras permitidos [${ALLOWED_EXTRA_SCHEMAS.join(", ")}]`,
       );
       return EXIT_CODES.MIGRATION_FAILURE;
     }

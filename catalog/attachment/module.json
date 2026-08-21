@@ -6,7 +6,6 @@
   "dependsOn": [{ "name": "identity", "range": ">=1.0.0 <2.0.0" }],
   "apiModule": { "export": "AttachmentModule", "path": "modules/attachment/attachment.module" },
   "schemaExports": [
-    "modules/attachment/infrastructure/tables/attachment.schema",
     "modules/attachment/infrastructure/tables/attachment.table",
     "modules/attachment/infrastructure/tables/attachment-acl.table",
     "modules/attachment/infrastructure/tables/attachment-access-log.table"

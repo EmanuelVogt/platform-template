@@ -29,7 +29,7 @@ describe("notification — Mailer é transporte puro (AD-008)", () => {
     })
 
     expect(entries).toHaveLength(1)
-    expect(entries[0].meta).toEqual({
+    expect(entries[0]!.meta).toEqual({
       to: "destinatario@example.com",
       subject: "assunto",
       idempotencyKey: "delivery-1",

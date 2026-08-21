@@ -5,9 +5,13 @@ import type { EventEnvelope } from "../events/domain-event.base"
 function envelope(over: Partial<EventEnvelope> = {}): EventEnvelope {
   return {
     eventId: "evt-1",
-    eventType: "test.event",
+    eventName: "test.event",
+    eventVersion: 1,
     occurredAt: new Date().toISOString(),
+    aggregateId: "agg-1",
+    aggregateType: "test",
     correlationId: "corr-1",
+    causationId: null,
     traceparent: "00-abc123-def456-01",
     tenantId: "tenant-1",
     payload: {},

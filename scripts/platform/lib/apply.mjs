@@ -82,7 +82,13 @@ function renderPlatformModules(entries) {
     return `${header}\nexport const PLATFORM_MODULES = [] as const;\n`;
   }
 
-  const imports = withApi
+  // `import-x/order` classifica o import type de "@nestjs/common" no grupo "type" (o último
+  // dos grupos configurados), então os imports sibling (`./modules/...`) vêm antes dele,
+  // alfabetizados, com uma linha em branco separando os dois grupos.
+  const sortedByPath = [...withApi].sort((a, b) =>
+    a.apiModule.path.localeCompare(b.apiModule.path, undefined, { sensitivity: "base" }),
+  );
+  const imports = sortedByPath
     .map((entry) => `import { ${entry.apiModule.export} } from "./${entry.apiModule.path}";`)
     .join("\n");
   const list = withApi.map((entry) => `resolvePlatformModule(${entry.apiModule.export})`).join(", ");
@@ -94,7 +100,8 @@ function renderPlatformModules(entries) {
     '  return typeof mod.forRoot === "function" ? mod.forRoot() : mod;\n' +
     "}";
   return (
-    `${header}import type { DynamicModule, Type } from "@nestjs/common";\n${imports}\n\n` +
+    `${header}${imports}\n\n` +
+    `import type { DynamicModule, Type } from "@nestjs/common";\n\n` +
     `${resolver}\n\nexport const PLATFORM_MODULES = [${list}] as const;\n`
   );
 }

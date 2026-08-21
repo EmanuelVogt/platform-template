@@ -114,6 +114,44 @@ test("writeRegistry chama resolvePlatformModule para cada entrada, cobrindo mód
   );
 });
 
+test("writeRegistry emite imports em ordem alfabética antes do import type, satisfazendo import-x/order", () => {
+  const child = makeChild();
+  const platformModulesPath = path.join(child, "apps/api/src/platform-modules.ts");
+  const platformSchemaPath = path.join(child, "apps/api/src/db/platform-schema.ts");
+  const entries = [
+    {
+      name: "notification",
+      apiModule: { export: "NotificationModule", path: "modules/notification/notification.module" },
+      schemaExports: [],
+    },
+    {
+      name: "attachment",
+      apiModule: { export: "AttachmentModule", path: "modules/attachment/attachment.module" },
+      schemaExports: [],
+    },
+    {
+      name: "identity",
+      apiModule: { export: "IdentityModule", path: "modules/identity/identity.module" },
+      schemaExports: [],
+    },
+  ];
+
+  writeRegistry({ entries, platformModulesPath, platformSchemaPath });
+  const lines = readFileSync(platformModulesPath, "utf8").split("\n");
+
+  assert.equal(lines[0], "// gerado por `pnpm platform module` — não edite à mão");
+  assert.equal(lines[1], 'import { AttachmentModule } from "./modules/attachment/attachment.module";');
+  assert.equal(lines[2], 'import { IdentityModule } from "./modules/identity/identity.module";');
+  assert.equal(lines[3], 'import { NotificationModule } from "./modules/notification/notification.module";');
+  assert.equal(lines[4], "");
+  assert.equal(lines[5], 'import type { DynamicModule, Type } from "@nestjs/common";');
+  assert.equal(lines[6], "");
+  assert.equal(
+    lines.at(-2),
+    'export const PLATFORM_MODULES = [resolvePlatformModule(NotificationModule), resolvePlatformModule(AttachmentModule), resolvePlatformModule(IdentityModule)] as const;',
+  );
+});
+
 test("writeLock calcula sha256 de cada arquivo copiado e persiste no lock", () => {
   const child = makeChild();
   const lockPath = path.join(child, ".platform-modules.lock");

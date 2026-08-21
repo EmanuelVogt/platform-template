@@ -1,8 +1,5 @@
 import request from "supertest"
 
-import { RATE_LIMITER } from "../../../../src/modules/identity/domain/ports/rate-limiter"
-import { allowAllRateLimiter } from "../../../../src/modules/identity/testing/allow-all-rate-limiter"
-import { seedUser } from "../../../../src/modules/identity/testing/seed-user"
 import { createE2eApp } from "../../../../test/setup/app-factory"
 import { setCookies } from "../../../../test/setup/cookies"
 import {
@@ -12,6 +9,9 @@ import {
   truncateKernel,
   truncateTag,
 } from "../../../../test/setup/test-db"
+import { RATE_LIMITER } from "../../identity/domain/ports/rate-limiter"
+import { allowAllRateLimiter } from "../../identity/testing/allow-all-rate-limiter"
+import { seedUser } from "../../identity/testing/seed-user"
 
 import type { INestApplication } from "@nestjs/common"
 

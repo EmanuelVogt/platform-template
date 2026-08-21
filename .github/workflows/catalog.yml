@@ -74,6 +74,7 @@ jobs:
           node-version-file: ".nvmrc"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pipx install copier
       - run: pnpm catalog:check ${{ matrix.entry }}
 
   smoke:
@@ -87,4 +88,5 @@ jobs:
           node-version-file: ".nvmrc"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pipx install copier
       - run: pnpm template:smoke

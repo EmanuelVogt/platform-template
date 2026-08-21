@@ -121,3 +121,20 @@ test("generateForModule gera uma migração --custom por entrada de customMigrat
   );
   assert.equal(readFileSync(generatedFile, "utf8"), shippedSql);
 });
+
+test("generateForModule lança MigrationFailureError tipada (exit 9) quando o SQL custom da entrada não existe, em vez de propagar ENOENT cru", () => {
+  const child = makeChild(3);
+  const { run } = makeStubRun();
+  const catalogEntryRoot = path.join(FIXTURES_ROOT, "delta");
+  const manifest = { name: "delta", customMigrations: ["99_arquivo_inexistente.sql"] };
+
+  assert.throws(
+    () => generateForModule(child, manifest, { catalogEntryRoot, run }),
+    (err) => {
+      assert.ok(err instanceof MigrationFailureError);
+      assert.equal(err.exitCode, EXIT_CODES.MIGRATION_FAILURE);
+      assert.match(err.message, /99_arquivo_inexistente\.sql/);
+      return true;
+    },
+  );
+});

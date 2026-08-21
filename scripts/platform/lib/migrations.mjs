@@ -71,7 +71,16 @@ export function generateForModule(child, manifest, { catalogEntryRoot, run = def
     );
 
     const generatedFileName = `${paddedIndex(startIdx + 1 + i)}_${customName}.sql`;
-    const shippedSql = readFileSync(path.join(catalogEntryRoot, "migrations/custom", fileName), "utf8");
+    const sourcePath = path.join(catalogEntryRoot, "migrations/custom", fileName);
+    let shippedSql;
+    try {
+      shippedSql = readFileSync(sourcePath, "utf8");
+    } catch (err) {
+      throw new MigrationFailureError(
+        `custom:${fileName}`,
+        `SQL custom não encontrado em ${sourcePath}: ${err.message}`,
+      );
+    }
     const destPath = path.join(migrationsDir(child), generatedFileName);
     mkdirSync(path.dirname(destPath), { recursive: true });
     writeFileSync(destPath, shippedSql, "utf8");

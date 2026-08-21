@@ -1,11 +1,12 @@
-import { Controller, Req, Sse } from "@nestjs/common"
+import { Controller, Inject, Req, Sse } from "@nestjs/common"
 import { ApiExcludeEndpoint, ApiTags } from "@nestjs/swagger"
 
 import { SelfService } from "../../../../../shared/kernel/access/decorators"
 import { RequestContext } from "../../../../../shared/kernel/context/request-context"
 import { requireRecipient } from "../../../application/require-recipient"
-import { SseConnectionRegistry } from "../../../infrastructure/realtime/sse-connection-registry"
+import { CONNECTION_REGISTRY } from "../../../domain/ports/connection-registry.port"
 
+import type { ConnectionRegistryPort } from "../../../domain/ports/connection-registry.port"
 import type { MessageEvent } from "@nestjs/common"
 import type { Request } from "express"
 import type { Observable } from "rxjs"
@@ -14,7 +15,7 @@ import type { Observable } from "rxjs"
 @Controller("notifications")
 export class SseController {
   constructor(
-    private readonly registry: SseConnectionRegistry,
+    @Inject(CONNECTION_REGISTRY) private readonly registry: ConnectionRegistryPort,
     private readonly ctx: RequestContext
   ) {}
 

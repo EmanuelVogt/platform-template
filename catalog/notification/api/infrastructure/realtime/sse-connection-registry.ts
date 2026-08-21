@@ -6,20 +6,17 @@ import {
 } from "@nestjs/common"
 import { Subject } from "rxjs"
 
-import type { Observable } from "rxjs"
+import type { ConnectionRegistryPort, SseConnection } from "../../domain/ports/connection-registry.port"
 
 const MAX_CONNECTIONS_PER_USER = 5
 const HEARTBEAT_INTERVAL_MS = 25_000
 
-export type SseConnection = {
-  stream: Observable<MessageEvent>
-  close(): void
-}
+export type { SseConnection }
 
 /** Conexões SSE em memória, por recipient. Process-local: o fan-out cross-instância é o Redis. */
 @Injectable()
 export class SseConnectionRegistry
-  implements OnModuleInit, OnApplicationShutdown
+  implements OnModuleInit, OnApplicationShutdown, ConnectionRegistryPort
 {
   private readonly conns = new Map<string, Subject<MessageEvent>[]>()
   private heartbeat: ReturnType<typeof setInterval> | null = null

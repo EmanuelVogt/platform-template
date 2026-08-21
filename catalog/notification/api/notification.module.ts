@@ -13,6 +13,7 @@ import { MarkAllReadUseCase } from "./application/use-cases/mark-all-read/mark-a
 import { MarkAllSeenUseCase } from "./application/use-cases/mark-all-seen/mark-all-seen.use-case"
 import { MarkReadUseCase } from "./application/use-cases/mark-read/mark-read.use-case"
 import { EMAIL_CHANNEL } from "./domain/ports/channel.port"
+import { CONNECTION_REGISTRY } from "./domain/ports/connection-registry.port"
 import { DELIVERY_REPOSITORY } from "./domain/ports/delivery.repository.port"
 import { MAILER } from "./domain/ports/mailer"
 import { NOTIFICATION_TEMPLATE_SOURCES } from "./domain/ports/notification-template-source.port"
@@ -63,6 +64,7 @@ import type { NotificationConfig } from "./notification.config"
     MarkReadUseCase,
     ArchiveNotificationUseCase,
     SseConnectionRegistry,
+    { provide: CONNECTION_REGISTRY, useExisting: SseConnectionRegistry },
     RedisRealtimeListener,
     { provide: NOTIF_REDIS_SUBSCRIBER, useFactory: createNotifSubscriber },
     { provide: REALTIME_PUBLISHER, useClass: RedisRealtimePublisher },

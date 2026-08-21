@@ -3,7 +3,7 @@ import { Subject } from "rxjs"
 import { SseController } from "./sse.controller"
 
 import type { RequestContext } from "../../../../../shared/kernel/context/request-context"
-import type { SseConnectionRegistry } from "../../../infrastructure/realtime/sse-connection-registry"
+import type { ConnectionRegistryPort } from "../../../domain/ports/connection-registry.port"
 import type { MessageEvent } from "@nestjs/common"
 import type { Request } from "express"
 
@@ -12,7 +12,7 @@ describe("SseController", () => {
     const subject = new Subject<MessageEvent>()
     const close = jest.fn()
     const register = jest.fn().mockReturnValue({ stream: subject.asObservable(), close })
-    const registry = { register } as unknown as SseConnectionRegistry
+    const registry = { register } as unknown as ConnectionRegistryPort
     const ctx = { getActor: () => ({ id: "u1", kind: "user" }) } as unknown as RequestContext
 
     const handlers = new Map<string, () => void>()
@@ -29,7 +29,7 @@ describe("SseController", () => {
   })
 
   it("sem userId no contexto → lança (rota exige sessão)", () => {
-    const registry = { register: jest.fn() } as unknown as SseConnectionRegistry
+    const registry = { register: jest.fn() } as unknown as ConnectionRegistryPort
     const ctx = { getActor: () => null } as unknown as RequestContext
     const req = { on: jest.fn() } as unknown as Request
     expect(() => new SseController(registry, ctx).stream(req)).toThrow()

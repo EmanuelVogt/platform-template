@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 
 import { can } from "../core/permissions"
+
 import { sessionQueryOptions } from "./session.queries"
 
 import type { PermissionKey } from "../core/permissions"

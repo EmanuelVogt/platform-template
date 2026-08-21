@@ -4,8 +4,8 @@ import { AuditRegistry } from "../services/audit-registry"
 import { ListAuditEntriesUseCase } from "./list-audit-entries.use-case"
 
 import type { PaginatedResult } from "../../../../shared/kernel/listing/paginated"
-import type { UserDirectoryFacade } from "../../../identity/api/facades/user-directory.facade"
 import type { IdentityAccess } from "../../../identity/api/facades/identity-access.facade"
+import type { UserDirectoryFacade } from "../../../identity/api/facades/user-directory.facade"
 import type {
   AuditEntryReadRow,
   AuditRepository,

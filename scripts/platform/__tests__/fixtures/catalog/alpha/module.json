@@ -1,0 +1,6 @@
+{
+  "name": "alpha",
+  "version": "1.0.0",
+  "kernelRange": ">=1.0.0 <2.0.0",
+  "apiModule": { "export": "AlphaModule", "path": "modules/alpha/alpha.module" }
+}

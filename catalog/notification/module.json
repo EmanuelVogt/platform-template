@@ -1,0 +1,40 @@
+{
+  "name": "notification",
+  "version": "1.0.0",
+  "description": "Feed de notificações (listar, marcar lida/vista, arquivar, stream SSE) e entrega por e-mail via canal e mailer transport-only.",
+  "kernelRange": ">=1.0.0 <2.0.0",
+  "dependsOn": [],
+  "apiModule": { "export": "NotificationModule", "path": "modules/notification/notification.module" },
+  "schemaExports": [
+    "modules/notification/infrastructure/tables/notification.table",
+    "modules/notification/infrastructure/tables/notification-delivery.table"
+  ],
+  "customMigrations": [],
+  "env": [
+    {
+      "name": "MAIL_TRANSPORT",
+      "example": "log",
+      "required": false,
+      "doc": "Transporte do mailer: \"log\" (dev, registra o e-mail no logger) ou \"resend\" (produção)."
+    },
+    {
+      "name": "RESEND_API_KEY",
+      "example": "re_xxxxxxxx",
+      "required": false,
+      "doc": "Chave da API Resend — exigida quando MAIL_TRANSPORT=resend."
+    },
+    {
+      "name": "MAIL_FROM",
+      "example": "no-reply@example.com",
+      "required": false,
+      "doc": "Remetente dos e-mails — exigido quando MAIL_TRANSPORT=resend."
+    },
+    {
+      "name": "DELIVERY_MAX_ATTEMPTS",
+      "example": "8",
+      "required": false,
+      "doc": "Número máximo de tentativas de entrega de uma notificação antes de desistir."
+    }
+  ],
+  "absorbs": []
+}

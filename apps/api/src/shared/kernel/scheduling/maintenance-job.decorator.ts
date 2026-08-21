@@ -1,29 +1,22 @@
 import { Cron } from "@nestjs/schedule"
 
+import { maintenanceRegistry, type MaintenanceJobName } from "./maintenance-registry"
 import { getActiveMaintenanceRuntime } from "./maintenance-runtime"
-import {
-  MAINTENANCE_SCHEDULE,
-  type MaintenanceJobName,
-  type MaintenanceJobSpec,
-} from "./maintenance-schedule"
 
 type AsyncJob = (...args: unknown[]) => Promise<void>
 
 /**
  * Marca um método como job de manutenção. Horário e advisory lock vêm do
- * registro central `MAINTENANCE_SCHEDULE` pela `name`. O método roda dentro do
- * envelope do `MaintenanceRuntime` (contexto + tx + lock + isolamento),
- * alcançado por registry estático — mesmo idioma do `@Transactional`. Sem
- * runtime registrado (ex.: unit test sem DI) executa o corpo direto.
+ * `MaintenanceRegistry` pela `name`, que precisa ter sido registrada antes
+ * desta classe ser avaliada. O método roda dentro do envelope do
+ * `MaintenanceRuntime` (contexto + tx + lock + isolamento), alcançado por
+ * registry estático — mesmo idioma do `@Transactional`. Sem runtime registrado
+ * (ex.: unit test sem DI) executa o corpo direto.
  */
 export function MaintenanceJob(name: MaintenanceJobName): MethodDecorator {
-  // `as const satisfies` no registro omite chaves opcionais ausentes; o cast
-  // recupera `timeZone?` do contrato MaintenanceJobSpec.
-  const spec = MAINTENANCE_SCHEDULE[name] as MaintenanceJobSpec
+  const spec = maintenanceRegistry.require(name)
   const cronOptions =
-    spec.timeZone === undefined
-      ? { name }
-      : { name, timeZone: spec.timeZone }
+    spec.timeZone === undefined ? { name } : { name, timeZone: spec.timeZone }
   return (target, propertyKey, descriptor: PropertyDescriptor): void => {
     const original = descriptor.value as AsyncJob
     descriptor.value = function (

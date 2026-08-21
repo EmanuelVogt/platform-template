@@ -21,11 +21,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   }
 })
 
-vi.mock("@/entities/session/api/session.queries", () => ({
-  useSession: () => ({ data: undefined }),
-}))
-
-describe("AppProviders AuthBootstrap", () => {
+describe("AppProviders CrossTabLogout", () => {
   it("limpa cache e navega para login em logout cross-tab", async () => {
     const clearSpy = vi.spyOn(queryClient, "clear")
     render(<AppProviders />)

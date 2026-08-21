@@ -1,0 +1,2263 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/v1/admin/permission-templates/{id}": {
+      "delete": {
+        "operationId": "deletePermissionTemplate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Admin"
+        ]
+      },
+      "get": {
+        "operationId": "getPermissionTemplate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionTemplateResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Admin"
+        ]
+      },
+      "put": {
+        "operationId": "updatePermissionTemplate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Chave única gerada pelo cliente por tentativa (ex.: UUID v4). Reenviar a mesma chave com o mesmo payload devolve a resposta original (replay) por até 1h, sem repetir o efeito — seguro pra retry após timeout. Mesma chave com payload diferente retorna 422. Sem o header, o request executa normalmente, sem dedup.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PermissionTemplateBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionTemplateResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/users/{id}": {
+      "delete": {
+        "operationId": "deleteUser",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Admin"
+        ]
+      },
+      "put": {
+        "operationId": "updateUser",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Chave única gerada pelo cliente por tentativa (ex.: UUID v4). Reenviar a mesma chave com o mesmo payload devolve a resposta original (replay) por até 1h, sem repetir o efeito — seguro pra retry após timeout. Mesma chave com payload diferente retorna 422. Sem o header, o request executa normalmente, sem dedup.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/auth/devices": {
+      "delete": {
+        "operationId": "revokeOtherDevices",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Device"
+        ]
+      },
+      "get": {
+        "operationId": "listDevices",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Device"
+        ]
+      }
+    },
+    "/v1/auth/devices/{id}": {
+      "delete": {
+        "operationId": "revokeDevice",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Device"
+        ]
+      }
+    },
+    "/v1/access-catalog": {
+      "get": {
+        "operationId": "getAccessCatalog",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessCatalogResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Access"
+        ]
+      }
+    },
+    "/v1/admin/permission-templates": {
+      "get": {
+        "operationId": "listPermissionTemplates",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListPermissionTemplatesResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Admin"
+        ]
+      },
+      "post": {
+        "operationId": "createPermissionTemplate",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Chave única gerada pelo cliente por tentativa (ex.: UUID v4). Reenviar a mesma chave com o mesmo payload devolve a resposta original (replay) por até 1h, sem repetir o efeito — seguro pra retry após timeout. Mesma chave com payload diferente retorna 422. Sem o header, o request executa normalmente, sem dedup.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PermissionTemplateBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionTemplateResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/users": {
+      "get": {
+        "operationId": "listUsers",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "name",
+                "email",
+                "createdAt",
+                "deletedAt"
+              ]
+            }
+          },
+          {
+            "name": "emailVerified",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "active"
+              ]
+            }
+          },
+          {
+            "name": "deleted",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListUsersResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Admin"
+        ]
+      },
+      "post": {
+        "operationId": "createUser",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Chave única gerada pelo cliente por tentativa (ex.: UUID v4). Reenviar a mesma chave com o mesmo payload devolve a resposta original (replay) por até 1h, sem repetir o efeito — seguro pra retry após timeout. Mesma chave com payload diferente retorna 422. Sem o header, o request executa normalmente, sem dedup.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/auth/access-history": {
+      "get": {
+        "operationId": "accessHistory",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessHistoryListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Session"
+        ]
+      }
+    },
+    "/v1/auth/access-link": {
+      "get": {
+        "operationId": "validateAccessLink",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessLinkInfoDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Auth"
+        ],
+        "security": []
+      }
+    },
+    "/v1/auth/email-change": {
+      "get": {
+        "operationId": "validateEmailChange",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailChangeInfoDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Auth"
+        ],
+        "security": []
+      }
+    },
+    "/v1/auth/session": {
+      "get": {
+        "operationId": "getSession",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentUserResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Session"
+        ]
+      }
+    },
+    "/v1/auth/profile": {
+      "patch": {
+        "operationId": "updateMyProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMyProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Session"
+        ]
+      }
+    },
+    "/v1/admin/users/purge": {
+      "post": {
+        "operationId": "purgeUsers",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrashUserIdsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurgeUsersResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/users/restore": {
+      "post": {
+        "operationId": "restoreUsers",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrashUserIdsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreUsersResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/admin/users/{id}/resend-access-link": {
+      "post": {
+        "operationId": "resendAccessLink",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/v1/auth/access-link/avatar": {
+      "post": {
+        "operationId": "uploadAccessLinkAvatar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "token": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file",
+                  "token"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessLinkAvatarUploadResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Auth"
+        ],
+        "security": []
+      }
+    },
+    "/v1/auth/access-link/cancel": {
+      "post": {
+        "operationId": "cancelAccessLink",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelAccessLinkDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ],
+        "security": []
+      }
+    },
+    "/v1/auth/avatar": {
+      "post": {
+        "operationId": "uploadAvatar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvatarUploadResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Session"
+        ]
+      }
+    },
+    "/v1/auth/change-email": {
+      "post": {
+        "operationId": "requestEmailChange",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeEmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Session"
+        ]
+      }
+    },
+    "/v1/auth/change-password": {
+      "post": {
+        "operationId": "changePassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Session"
+        ]
+      }
+    },
+    "/v1/auth/confirm-email-change": {
+      "post": {
+        "operationId": "confirmEmailChange",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmEmailChangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentUserResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Auth"
+        ],
+        "security": []
+      }
+    },
+    "/v1/auth/forgot-password": {
+      "post": {
+        "operationId": "forgotPassword",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Chave única gerada pelo cliente por tentativa (ex.: UUID v4). Reenviar a mesma chave com o mesmo payload devolve a resposta original (replay) por até 1h, sem repetir o efeito — seguro pra retry após timeout. Mesma chave com payload diferente retorna 422. Sem o header, o request executa normalmente, sem dedup.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ],
+        "security": []
+      }
+    },
+    "/v1/auth/login": {
+      "post": {
+        "operationId": "login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentUserResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Auth"
+        ],
+        "security": []
+      }
+    },
+    "/v1/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Session"
+        ]
+      }
+    },
+    "/v1/auth/resend-verification": {
+      "post": {
+        "operationId": "resendVerification",
+        "parameters": [],
+        "responses": {
+          "202": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Session"
+        ]
+      }
+    },
+    "/v1/auth/reset-password": {
+      "post": {
+        "operationId": "resetPassword",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Chave única gerada pelo cliente por tentativa (ex.: UUID v4). Reenviar a mesma chave com o mesmo payload devolve a resposta original (replay) por até 1h, sem repetir o efeito — seguro pra retry após timeout. Mesma chave com payload diferente retorna 422. Sem o header, o request executa normalmente, sem dedup.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ],
+        "security": []
+      }
+    },
+    "/v1/auth/set-password": {
+      "post": {
+        "operationId": "setPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentUserResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Auth"
+        ],
+        "security": []
+      }
+    },
+    "/v1/auth/verify-email": {
+      "post": {
+        "operationId": "verifyEmail",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ],
+        "security": []
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AccessCatalogResponseDto": {
+        "type": "object",
+        "properties": {
+          "modules": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "features": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "key": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "permissions": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "key": {
+                              "type": "string",
+                              "enum": [
+                                "admin.users.read",
+                                "admin.users.create",
+                                "admin.users.update",
+                                "admin.users.delete",
+                                "admin.users.trash.read",
+                                "admin.users.trash.restore",
+                                "admin.users.trash.purge",
+                                "admin.users.access_link.resend",
+                                "admin.users.audit.read",
+                                "admin.permission_templates.read",
+                                "admin.permission_templates.create",
+                                "admin.permission_templates.update",
+                                "admin.permission_templates.delete",
+                                "admin.permission_templates.audit.read",
+                                "admin.tags.read",
+                                "admin.tags.create",
+                                "admin.tags.update",
+                                "admin.tags.delete",
+                                "admin.tags.trash.read",
+                                "admin.tags.trash.restore",
+                                "admin.tags.trash.purge",
+                                "admin.tags.audit.read",
+                                "admin.audit.read",
+                                "admin.usage.read"
+                              ]
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "requires": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "admin.users.read",
+                                  "admin.users.create",
+                                  "admin.users.update",
+                                  "admin.users.delete",
+                                  "admin.users.trash.read",
+                                  "admin.users.trash.restore",
+                                  "admin.users.trash.purge",
+                                  "admin.users.access_link.resend",
+                                  "admin.users.audit.read",
+                                  "admin.permission_templates.read",
+                                  "admin.permission_templates.create",
+                                  "admin.permission_templates.update",
+                                  "admin.permission_templates.delete",
+                                  "admin.permission_templates.audit.read",
+                                  "admin.tags.read",
+                                  "admin.tags.create",
+                                  "admin.tags.update",
+                                  "admin.tags.delete",
+                                  "admin.tags.trash.read",
+                                  "admin.tags.trash.restore",
+                                  "admin.tags.trash.purge",
+                                  "admin.tags.audit.read",
+                                  "admin.audit.read",
+                                  "admin.usage.read"
+                                ]
+                              }
+                            }
+                          },
+                          "required": [
+                            "key",
+                            "label",
+                            "requires"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "key",
+                      "label",
+                      "permissions"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "key",
+                "label",
+                "features"
+              ]
+            }
+          },
+          "profiles": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "assignable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "key",
+                "label",
+                "assignable"
+              ]
+            }
+          }
+        },
+        "required": [
+          "modules",
+          "profiles"
+        ]
+      },
+      "AccessHistoryListResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "eventType": {
+                  "type": "string",
+                  "enum": [
+                    "login_success",
+                    "login_failed",
+                    "logout",
+                    "session_revoked",
+                    "sessions_revoked_all",
+                    "session_ip_changed",
+                    "password_changed",
+                    "password_reset_completed",
+                    "account_locked",
+                    "account_unlocked",
+                    "email_changed",
+                    "email_verified",
+                    "device_revoked"
+                  ]
+                },
+                "ipAddress": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "userAgent": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "eventType",
+                "ipAddress",
+                "userAgent",
+                "createdAt"
+              ]
+            }
+          },
+          "page": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "page": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "pageSize": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "total",
+              "page",
+              "pageSize",
+              "totalPages"
+            ]
+          }
+        },
+        "required": [
+          "data",
+          "page"
+        ]
+      },
+      "AccessLinkAvatarUploadResponseDto": {
+        "type": "object",
+        "properties": {
+          "attachmentId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "attachmentId"
+        ]
+      },
+      "AccessLinkInfoDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "avatarAttachmentId": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "avatarAttachmentId"
+        ]
+      },
+      "AvatarUploadResponseDto": {
+        "type": "object",
+        "properties": {
+          "avatarAttachmentId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "avatarAttachmentId"
+        ]
+      },
+      "CancelAccessLinkDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "ChangeEmailDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "newEmail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newEmail"
+        ]
+      },
+      "ChangePasswordDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ]
+      },
+      "ConfirmEmailChangeDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "CreateUserDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "email": {
+            "type": "string"
+          },
+          "accessProfile": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "professional"
+            ]
+          },
+          "servesClients": {
+            "default": false,
+            "type": "boolean"
+          },
+          "permissions": {
+            "maxItems": 24,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "admin.users.read",
+                "admin.users.create",
+                "admin.users.update",
+                "admin.users.delete",
+                "admin.users.trash.read",
+                "admin.users.trash.restore",
+                "admin.users.trash.purge",
+                "admin.users.access_link.resend",
+                "admin.users.audit.read",
+                "admin.permission_templates.read",
+                "admin.permission_templates.create",
+                "admin.permission_templates.update",
+                "admin.permission_templates.delete",
+                "admin.permission_templates.audit.read",
+                "admin.tags.read",
+                "admin.tags.create",
+                "admin.tags.update",
+                "admin.tags.delete",
+                "admin.tags.trash.read",
+                "admin.tags.trash.restore",
+                "admin.tags.trash.purge",
+                "admin.tags.audit.read",
+                "admin.audit.read",
+                "admin.usage.read"
+              ]
+            }
+          },
+          "areaIds": {
+            "default": [],
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "serviceIds": {
+            "default": [],
+            "maxItems": 2000,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "schedulingAreaIds": {
+            "default": [],
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "accessProfile",
+          "permissions"
+        ]
+      },
+      "CurrentUserResponseDto": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "emailVerified": {
+                "type": "boolean"
+              },
+              "pendingEmail": {
+                "type": "string",
+                "nullable": true
+              },
+              "accessProfile": {
+                "type": "string",
+                "enum": [
+                  "master",
+                  "admin",
+                  "professional"
+                ]
+              },
+              "permissions": {
+                "maxItems": 24,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "admin.users.read",
+                    "admin.users.create",
+                    "admin.users.update",
+                    "admin.users.delete",
+                    "admin.users.trash.read",
+                    "admin.users.trash.restore",
+                    "admin.users.trash.purge",
+                    "admin.users.access_link.resend",
+                    "admin.users.audit.read",
+                    "admin.permission_templates.read",
+                    "admin.permission_templates.create",
+                    "admin.permission_templates.update",
+                    "admin.permission_templates.delete",
+                    "admin.permission_templates.audit.read",
+                    "admin.tags.read",
+                    "admin.tags.create",
+                    "admin.tags.update",
+                    "admin.tags.delete",
+                    "admin.tags.trash.read",
+                    "admin.tags.trash.restore",
+                    "admin.tags.trash.purge",
+                    "admin.tags.audit.read",
+                    "admin.audit.read",
+                    "admin.usage.read"
+                  ]
+                }
+              },
+              "avatarAttachmentId": {
+                "type": "string",
+                "nullable": true
+              },
+              "birthDate": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "email",
+              "emailVerified",
+              "pendingEmail",
+              "accessProfile",
+              "permissions",
+              "avatarAttachmentId",
+              "birthDate"
+            ]
+          }
+        },
+        "required": [
+          "user"
+        ]
+      },
+      "DeviceListResponseDto": {
+        "type": "object",
+        "properties": {
+          "devices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "ipAddress": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "userAgent": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "firstSeenAt": {
+                  "type": "string"
+                },
+                "lastSeenAt": {
+                  "type": "string"
+                },
+                "activeSessionCount": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "current": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "ipAddress",
+                "userAgent",
+                "firstSeenAt",
+                "lastSeenAt",
+                "activeSessionCount",
+                "current"
+              ]
+            }
+          }
+        },
+        "required": [
+          "devices"
+        ]
+      },
+      "EmailChangeInfoDto": {
+        "type": "object",
+        "properties": {
+          "newEmail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "newEmail"
+        ]
+      },
+      "ForgotPasswordDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "ListPermissionTemplatesResponseDto": {
+        "type": "object",
+        "properties": {
+          "templates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "permissions": {
+                  "maxItems": 24,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "admin.users.read",
+                      "admin.users.create",
+                      "admin.users.update",
+                      "admin.users.delete",
+                      "admin.users.trash.read",
+                      "admin.users.trash.restore",
+                      "admin.users.trash.purge",
+                      "admin.users.access_link.resend",
+                      "admin.users.audit.read",
+                      "admin.permission_templates.read",
+                      "admin.permission_templates.create",
+                      "admin.permission_templates.update",
+                      "admin.permission_templates.delete",
+                      "admin.permission_templates.audit.read",
+                      "admin.tags.read",
+                      "admin.tags.create",
+                      "admin.tags.update",
+                      "admin.tags.delete",
+                      "admin.tags.trash.read",
+                      "admin.tags.trash.restore",
+                      "admin.tags.trash.purge",
+                      "admin.tags.audit.read",
+                      "admin.audit.read",
+                      "admin.usage.read"
+                    ]
+                  }
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "description",
+                "permissions",
+                "createdAt",
+                "updatedAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "templates"
+        ]
+      },
+      "ListUsersResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "emailVerified": {
+                  "type": "boolean"
+                },
+                "accessProfile": {
+                  "type": "string",
+                  "enum": [
+                    "master",
+                    "admin",
+                    "professional"
+                  ]
+                },
+                "servesClients": {
+                  "type": "boolean"
+                },
+                "permissions": {
+                  "maxItems": 24,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "admin.users.read",
+                      "admin.users.create",
+                      "admin.users.update",
+                      "admin.users.delete",
+                      "admin.users.trash.read",
+                      "admin.users.trash.restore",
+                      "admin.users.trash.purge",
+                      "admin.users.access_link.resend",
+                      "admin.users.audit.read",
+                      "admin.permission_templates.read",
+                      "admin.permission_templates.create",
+                      "admin.permission_templates.update",
+                      "admin.permission_templates.delete",
+                      "admin.permission_templates.audit.read",
+                      "admin.tags.read",
+                      "admin.tags.create",
+                      "admin.tags.update",
+                      "admin.tags.delete",
+                      "admin.tags.trash.read",
+                      "admin.tags.trash.restore",
+                      "admin.tags.trash.purge",
+                      "admin.tags.audit.read",
+                      "admin.audit.read",
+                      "admin.usage.read"
+                    ]
+                  }
+                },
+                "areaIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "serviceIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "schedulingAreaIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "avatarAttachmentId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "active"
+                  ]
+                },
+                "accessLinkExpiresAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "accessLinkExpired": {
+                  "type": "boolean"
+                },
+                "deletedAt": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "email",
+                "emailVerified",
+                "accessProfile",
+                "servesClients",
+                "permissions",
+                "areaIds",
+                "serviceIds",
+                "schedulingAreaIds",
+                "avatarAttachmentId",
+                "createdAt",
+                "status",
+                "accessLinkExpiresAt",
+                "accessLinkExpired",
+                "deletedAt"
+              ]
+            }
+          },
+          "page": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "page": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "pageSize": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "total",
+              "page",
+              "pageSize",
+              "totalPages"
+            ]
+          }
+        },
+        "required": [
+          "data",
+          "page"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "rememberMe": {
+            "default": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "PermissionTemplateBodyDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 280,
+            "default": null,
+            "nullable": true
+          },
+          "permissions": {
+            "maxItems": 24,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "admin.users.read",
+                "admin.users.create",
+                "admin.users.update",
+                "admin.users.delete",
+                "admin.users.trash.read",
+                "admin.users.trash.restore",
+                "admin.users.trash.purge",
+                "admin.users.access_link.resend",
+                "admin.users.audit.read",
+                "admin.permission_templates.read",
+                "admin.permission_templates.create",
+                "admin.permission_templates.update",
+                "admin.permission_templates.delete",
+                "admin.permission_templates.audit.read",
+                "admin.tags.read",
+                "admin.tags.create",
+                "admin.tags.update",
+                "admin.tags.delete",
+                "admin.tags.trash.read",
+                "admin.tags.trash.restore",
+                "admin.tags.trash.purge",
+                "admin.tags.audit.read",
+                "admin.audit.read",
+                "admin.usage.read"
+              ]
+            }
+          }
+        },
+        "required": [
+          "name",
+          "permissions"
+        ]
+      },
+      "PermissionTemplateResponseDto": {
+        "type": "object",
+        "properties": {
+          "template": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string",
+                "nullable": true
+              },
+              "permissions": {
+                "maxItems": 24,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "admin.users.read",
+                    "admin.users.create",
+                    "admin.users.update",
+                    "admin.users.delete",
+                    "admin.users.trash.read",
+                    "admin.users.trash.restore",
+                    "admin.users.trash.purge",
+                    "admin.users.access_link.resend",
+                    "admin.users.audit.read",
+                    "admin.permission_templates.read",
+                    "admin.permission_templates.create",
+                    "admin.permission_templates.update",
+                    "admin.permission_templates.delete",
+                    "admin.permission_templates.audit.read",
+                    "admin.tags.read",
+                    "admin.tags.create",
+                    "admin.tags.update",
+                    "admin.tags.delete",
+                    "admin.tags.trash.read",
+                    "admin.tags.trash.restore",
+                    "admin.tags.trash.purge",
+                    "admin.tags.audit.read",
+                    "admin.audit.read",
+                    "admin.usage.read"
+                  ]
+                }
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "description",
+              "permissions",
+              "createdAt",
+              "updatedAt"
+            ]
+          }
+        },
+        "required": [
+          "template"
+        ]
+      },
+      "PurgeUsersResponseDto": {
+        "type": "object",
+        "properties": {
+          "purged": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "purged"
+        ]
+      },
+      "ResetPasswordDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "token",
+          "password"
+        ]
+      },
+      "RestoreUsersResponseDto": {
+        "type": "object",
+        "properties": {
+          "restored": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "restored"
+        ]
+      },
+      "SetPasswordDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "birthDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "avatarAttachmentId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "password",
+          "name",
+          "birthDate"
+        ]
+      },
+      "TrashUserIdsDto": {
+        "type": "object",
+        "properties": {
+          "userIds": {
+            "minItems": 1,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "userIds"
+        ]
+      },
+      "UpdateMyProfileDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "birthDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateUserDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "accessProfile": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "professional"
+            ]
+          },
+          "servesClients": {
+            "default": false,
+            "type": "boolean"
+          },
+          "permissions": {
+            "maxItems": 24,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "admin.users.read",
+                "admin.users.create",
+                "admin.users.update",
+                "admin.users.delete",
+                "admin.users.trash.read",
+                "admin.users.trash.restore",
+                "admin.users.trash.purge",
+                "admin.users.access_link.resend",
+                "admin.users.audit.read",
+                "admin.permission_templates.read",
+                "admin.permission_templates.create",
+                "admin.permission_templates.update",
+                "admin.permission_templates.delete",
+                "admin.permission_templates.audit.read",
+                "admin.tags.read",
+                "admin.tags.create",
+                "admin.tags.update",
+                "admin.tags.delete",
+                "admin.tags.trash.read",
+                "admin.tags.trash.restore",
+                "admin.tags.trash.purge",
+                "admin.tags.audit.read",
+                "admin.audit.read",
+                "admin.usage.read"
+              ]
+            }
+          },
+          "areaIds": {
+            "default": [],
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "serviceIds": {
+            "default": [],
+            "maxItems": 2000,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "schedulingAreaIds": {
+            "default": [],
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "name",
+          "accessProfile",
+          "permissions"
+        ]
+      },
+      "VerifyEmailDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "token"
+        ]
+      }
+    }
+  }
+}

@@ -2,8 +2,9 @@ import { ModulesContainer } from "@nestjs/core"
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger"
 import { cleanupOpenApiDoc } from "nestjs-zod"
 
-import { IS_PUBLIC_KEY } from "../shared/kernel/access/decorators"
+import { ACCESS_REQUIREMENT } from "../shared/kernel/access/decorators"
 
+import type { AccessRequirement } from "../shared/kernel/access/access-policy.port"
 import type { INestApplication } from "@nestjs/common"
 import type { OpenAPIObject } from "@nestjs/swagger"
 
@@ -56,9 +57,10 @@ function buildOpenApiConfig(): Omit<OpenAPIObject, "paths"> {
 }
 
 /**
- * operationIds dos handlers @Public — mesma metadata que o AuthGuard lê, então
- * doc e runtime não dessincronizam. Depende de todo handler ter
- * @ApiOperation({ operationId }) (invariante já exigida pelo Kubb).
+ * operationIds dos handlers com requisito `{ kind: "public" }` — mesma
+ * metadata que o AccessGuard lê, então doc e runtime não dessincronizam.
+ * Depende de todo handler ter @ApiOperation({ operationId }) (invariante já
+ * exigida pelo Kubb).
  */
 function collectPublicOperationIds(app: INestApplication): Set<string> {
   const ids = new Set<string>()
@@ -71,10 +73,14 @@ function collectPublicOperationIds(app: INestApplication): Set<string> {
       for (const name of Object.getOwnPropertyNames(proto)) {
         const handler = (proto as Record<string, unknown>)[name]
         if (name === "constructor" || typeof handler !== "function") continue
-        const isPublic =
-          (Reflect.getMetadata(IS_PUBLIC_KEY, handler) as unknown) === true ||
-          (Reflect.getMetadata(IS_PUBLIC_KEY, metatype) as unknown) === true
-        if (!isPublic) continue
+        const requirement =
+          (Reflect.getMetadata(ACCESS_REQUIREMENT, handler) as
+            | AccessRequirement
+            | undefined) ??
+          (Reflect.getMetadata(ACCESS_REQUIREMENT, metatype) as
+            | AccessRequirement
+            | undefined)
+        if (requirement?.kind !== "public") continue
         const op = Reflect.getMetadata(API_OPERATION_METADATA, handler) as
           | { operationId?: string }
           | undefined

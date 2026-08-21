@@ -1,1 +1,0 @@
-{"type":"object","properties":{"purged":{"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991}},"required":["purged"],"x-readme-ref-name":"PurgeTagsResponseDto"}

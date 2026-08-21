@@ -48,8 +48,8 @@ const envSchema = z
     OTEL_EXPORTER_OTLP_ENDPOINT: z.union([z.url(), z.literal("")]).optional(),
 
     // --- rede / proxy (consumido pelo app shell: CORS, trust proxy) ---
-    // Auth (cookie, sessão, argon2, lockout, csrf, rate-limit) mora em
-    // modules/identity/identity.config.ts — cada módulo declara o que consome.
+    // Cada módulo declara num config próprio o que ele consome; aqui só entra
+    // o que a casca do template lê.
     WEB_ORIGIN: z.url(),
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(1),
   })

@@ -1,13 +1,10 @@
 import "reflect-metadata"
 
 import {
-  IS_OPTIONAL_AUTH_KEY,
-  IS_PUBLIC_KEY,
-  IS_SELF_SERVICE_KEY,
+  ACCESS_REQUIREMENT,
+  Authenticated,
   OptionalAuth,
   Public,
-  REQUIRE_ANY_PERMISSION_KEY,
-  REQUIRE_PERMISSION_KEY,
   RequireAnyPermission,
   RequirePermission,
   SelfService,
@@ -27,6 +24,11 @@ describe("decorators de acesso", () => {
       return
     }
 
+    @Authenticated()
+    authenticatedRoute(): void {
+      return
+    }
+
     @OptionalAuth()
     optionalRoute(): void {
       return
@@ -37,51 +39,75 @@ describe("decorators de acesso", () => {
       return
     }
 
-    @RequirePermission("admin.users.read", "admin.users.create")
+    @RequirePermission("admin.users.read")
     permissionRoute(): void {
+      return
+    }
+
+    undecoratedRoute(): void {
       return
     }
   }
 
-  it("@Public grava true na metadata", () => {
-    expect(
-      Reflect.getMetadata(
-        IS_PUBLIC_KEY,
-        handlerOf(Fixture.prototype, "publicRoute")
-      )
-    ).toBe(true)
-  })
+  describe("requisito de acesso do kernel", () => {
+    it("@Public grava { kind: public }", () => {
+      expect(
+        Reflect.getMetadata(
+          ACCESS_REQUIREMENT,
+          handlerOf(Fixture.prototype, "publicRoute")
+        )
+      ).toEqual({ kind: "public" })
+    })
 
-  it("@OptionalAuth grava true na metadata", () => {
-    expect(
-      Reflect.getMetadata(
-        IS_OPTIONAL_AUTH_KEY,
-        handlerOf(Fixture.prototype, "optionalRoute")
-      )
-    ).toBe(true)
-  })
+    it("@Authenticated grava { kind: authenticated }", () => {
+      expect(
+        Reflect.getMetadata(
+          ACCESS_REQUIREMENT,
+          handlerOf(Fixture.prototype, "authenticatedRoute")
+        )
+      ).toEqual({ kind: "authenticated" })
+    })
 
-  it("@SelfService grava true na metadata", () => {
-    expect(
-      Reflect.getMetadata(
-        IS_SELF_SERVICE_KEY,
-        handlerOf(Fixture.prototype, "selfRoute")
-      )
-    ).toBe(true)
-  })
+    it("@RequirePermission grava { kind: permission, key }", () => {
+      expect(
+        Reflect.getMetadata(
+          ACCESS_REQUIREMENT,
+          handlerOf(Fixture.prototype, "permissionRoute")
+        )
+      ).toEqual({ kind: "permission", key: "admin.users.read" })
+    })
 
-  it("@RequirePermission grava o array de chaves", () => {
-    expect(
-      Reflect.getMetadata(
-        REQUIRE_PERMISSION_KEY,
-        handlerOf(Fixture.prototype, "permissionRoute")
-      )
-    ).toEqual(["admin.users.read", "admin.users.create"])
+    it("@OptionalAuth grava { kind: public } — anônimo chega no handler", () => {
+      expect(
+        Reflect.getMetadata(
+          ACCESS_REQUIREMENT,
+          handlerOf(Fixture.prototype, "optionalRoute")
+        )
+      ).toEqual({ kind: "public" })
+    })
+
+    it("@SelfService grava { kind: authenticated }", () => {
+      expect(
+        Reflect.getMetadata(
+          ACCESS_REQUIREMENT,
+          handlerOf(Fixture.prototype, "selfRoute")
+        )
+      ).toEqual({ kind: "authenticated" })
+    })
+
+    it("handler sem decorator não tem requisito — o guard decide o default", () => {
+      expect(
+        Reflect.getMetadata(
+          ACCESS_REQUIREMENT,
+          handlerOf(Fixture.prototype, "undecoratedRoute")
+        )
+      ).toBeUndefined()
+    })
   })
 })
 
 describe("RequireAnyPermission", () => {
-  it("grava as chaves no metadata access:requireAnyPermission", () => {
+  it("grava { kind: anyPermission, keys } no requisito do kernel", () => {
     class T {
       @RequireAnyPermission([
         "admin.users.audit.read",
@@ -92,8 +118,11 @@ describe("RequireAnyPermission", () => {
       }
     }
     expect(
-      Reflect.getMetadata(REQUIRE_ANY_PERMISSION_KEY, handlerOf(T.prototype, "h"))
-    ).toEqual(["admin.users.audit.read", "admin.tags.audit.read"])
+      Reflect.getMetadata(ACCESS_REQUIREMENT, handlerOf(T.prototype, "h"))
+    ).toEqual({
+      kind: "anyPermission",
+      keys: ["admin.users.audit.read", "admin.tags.audit.read"],
+    })
   })
 
   it("lista vazia lança na definição", () => {

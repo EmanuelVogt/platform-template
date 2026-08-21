@@ -28,12 +28,16 @@ apps/api/src/
 │   ├── kernel/              19 pastas — infraestrutura de arquitetura (abaixo)
 │   ├── infra/               database, redis, storage
 │   └── config/              env.ts (Zod das env globais) + load-dotenv
-├── modules/                 18 módulos de domínio (estrutura abaixo)
+├── modules/                 entradas do catálogo instaladas (`module add`) + módulos de
+│                            negócio do produto (estrutura abaixo); no template puro só
+│                            `module-boundaries.spec.ts`
+├── platform-modules.ts      gerado do `.platform-modules.lock` — `PLATFORM_MODULES` (abaixo)
 ├── db/                      scripts de operação: migrate, check-journal, outbox-replay
-├── seeds/                   seed master/demo (script ts-node; escreve em tabela de módulo)
+├── seeds/                   seed master/demo (script ts-node; escreve em tabela de entrada/módulo)
 ├── openapi/                 export-openapi + openapi-config + 4 specs de conformidade
 ├── legacy-import/           backfills + sync contínuo do legado (runtime, ADR 0044/0052)
-└── docs/                    proteção da página /docs (login fora do pipeline de guards)
+└── docs/                    monta `/docs` (Scalar sobre o `openapi.json`); sem autenticação, sem
+                             depender de módulo (ver receita de login em `docs/dev/template.md`)
 ```
 
 Três regimes convivem em `src/` e têm regras diferentes:
@@ -75,12 +79,47 @@ Raiz: `kernel.schema.ts` (`pgSchema("_kernel")`) e `shared-kernel.module.ts` (ag
 
 `shared/infra/`: `database/` (provider drizzle + `schema.ts` agregador; tokens `DRIZZLE`/`PG_POOL` **privados ao kernel** — módulo de negócio nunca injeta, só via `TransactionManager.getExecutor()`/`outsideTransaction()`; `DedicatedClientFactory` cria `pg.Client` avulso, fora do pool, para infra de longa duração — ADR 0089), `redis/` (`REDIS_CLIENT`), `storage/` (`ObjectStoragePort` + adapter R2, token `OBJECT_STORAGE`). `shared/config/`: schema Zod das env globais, validado no boot.
 
-## Módulo de domínio
+## Portas do kernel
+
+Onde uma entrada do catálogo precisa de algo que outra entrada implementa e um ciclo de
+dependência apareceria, o kernel hospeda o par token+interface ao lado do conceito — nunca
+numa árvore `ports/` separada:
+
+| Porta | Onde | O que declara |
+| --- | --- | --- |
+| `ACCESS_POLICY` | `shared/kernel/access/access-policy.port.ts` | `AccessPolicy.can(actor, requirement)` — o `AccessGuard` global (ver `access/`, acima) resolve essa porta; sem provider ligado, toda rota não-pública responde 403 `access-policy-missing` |
+| `PROFILE_IMAGE_STORE` | `shared/kernel/profile-image/profile-image-store.port.ts` | porta de imagem de perfil entre entradas |
+| `AUDIT_TRAIL_PURGER` | `shared/kernel/audit-trail/audit-trail-purger.port.ts` | porta de purga da trilha de auditoria entre entradas |
+
+Toda outra aresta entre entradas é declarada em `dependsOn` (`module.json` da entrada),
+sem porta — porta existe só onde há ciclo.
+
+**Ator e extensions no `RequestContext`** (`shared/kernel/context/request-context.ts`):
+`setActor(actor: Actor)`/`getActor(): Actor | null` (um `setActor` por requisição; segunda
+chamada lança) e `setExtension<T>(key: symbol, value: T)`/`getExtension<T>(key: symbol):
+T | undefined` — bag chaveado por symbol onde cada entrada guarda o que só ela precisa (ex.:
+o conjunto de permissões resolvido) sem o kernel conhecer a forma do dado. No contexto de
+job, o campo vira `actorId: string | null` (não o ator inteiro).
+
+## Entrada do catálogo (anatomia)
+
+Uma entrada do catálogo instalada (`module add`) ou um módulo de negócio do produto vivem
+lado a lado em `apps/api/src/modules/`, com o mesmo layout de camadas abaixo. O
+`<entry>.module.ts` de cada entrada instalada é o símbolo importado por
+`apps/api/src/platform-modules.ts` — o registro **gerado** a partir do
+`.platform-modules.lock` que substitui a lista manual de módulos de plataforma no
+`AppModule` (`imports: [...kernelModules, ...PLATFORM_MODULES, ...productModules]`); nunca
+editado à mão, regenerado a cada `module add`/`module adopt`. **Comunicação entre entradas
+é só facade (síncrono) ou evento via outbox (assíncrono)** — mesma regra do Princípio 6,
+agora também o único jeito de uma entrada declarar `dependsOn` outra; import direto de
+`domain/`/`infrastructure/` de outra entrada reprova a trava de fronteira (RULE C,
+`module-boundaries.spec.ts` — vocabulário de uma entrada só existe dentro dela mesma e em
+`docs/catalog/**`).
 
 ```
-modules/<module>/
-├── <module>.module.ts             providers + exports (só facades)
-├── <module>.config.ts             Zod das env vars do módulo; validado no boot
+modules/<entry>/
+├── <entry>.module.ts              providers + exports (só facades)
+├── <entry>.config.ts              Zod das env vars da entrada/módulo; validado no boot
 ├── api/
 │   ├── controllers/               1 controller por rota; módulo grande agrupa por
 │   │   └── <contexto>/            contexto, com CONTROLLERS[] por contexto/topo
@@ -112,11 +151,11 @@ modules/<module>/
 
 Pastas só existem quando há conteúdo — sem pasta vazia.
 
-**Dois layouts de use case convivem (decisão AD-012).** O padrão é `application/use-cases/<action>/`; 7 módulos (accommodation, credit, discount, product, reservation, audit, usage) usam `application/<agregado>/<action>.use-case.ts`, herdado de antes da convenção. Regra: **módulo novo nasce com `use-cases/`; módulo existente segue o layout local** — migrar os ~83 arquivos não paga o conflito com branches em voo. Trava nova que varra use case precisa cobrir os dois globs (o `transactional-coverage` já cobre).
+**Dois layouts de use case convivem (decisão AD-012).** O padrão é `application/use-cases/<action>/`; um conjunto de módulos herdado de antes da convenção usa `application/<agregado>/<action>.use-case.ts`. Regra: **módulo/entrada novo nasce com `use-cases/`; módulo existente segue o layout local** — migrar os arquivos legados não paga o conflito com branches em voo. Trava nova que varra use case precisa cobrir os dois globs (o `transactional-coverage` já cobre).
 
-**Arquivos soltos na raiz de `application/` são uma categoria nomeada:** *guard de orquestração cross-module* — recebe a facade de outro módulo, pergunta um fato e lança erro de domínio (`assignment-guards`, `room-links`, `detach-authorization`, `require-auth`, `require-caller`…). É legítimo. O que **não** fica ali: regra pura sem I/O (vai para `domain/` — entidade, `engine/` ou arquivo de domínio) e serviço `@Injectable` reutilizável (vai para `services/`, ADR 0026). Helper privado de um use case mora na pasta da ação; quando um segundo use case precisa dele, gradua para `services/`.
+**Arquivos soltos na raiz de `application/` são uma categoria nomeada:** *guard de orquestração cross-module* — recebe a facade de outro módulo/entrada, pergunta um fato e lança erro de domínio. É legítimo. O que **não** fica ali: regra pura sem I/O (vai para `domain/` — entidade, `engine/` ou arquivo de domínio) e serviço `@Injectable` reutilizável (vai para `services/`, ADR 0026). Helper privado de um use case mora na pasta da ação; quando um segundo use case precisa dele, gradua para `services/`.
 
-**Módulos Nest secundários (leaf, padrão OHS).** Ciclo entre módulos não se resolve com `forwardRef` — extrai-se um módulo-folha que os dois lados importam: `product-catalog`, `space-catalog`, `scheduling-agenda`, `scheduling-rules`, `guest-agenda`, `identity/professional-assignment`. O leaf declara o binding único dos repositórios e exporta a facade; os tokens de `PORTS` exportados existem para o módulo pai injetar o mesmo binding — **não** são convite para injeção alheia (a trava de fronteira barra o import do port). Inversão por registry (scheduling registra renderer no report) é exceção da ADR 0067.
+**Módulos Nest secundários (leaf, padrão OHS).** Ciclo entre módulos não se resolve com `forwardRef` — extrai-se um módulo-folha que os dois lados importam. O leaf declara o binding único dos repositórios e exporta a facade; os tokens de `PORTS` exportados existem para o módulo pai injetar o mesmo binding — **não** são convite para injeção alheia (a trava de fronteira barra o import do port). Inversão por registry é uma exceção documentada por ADR quando ocorrer.
 
 ## Camadas
 
@@ -357,7 +396,13 @@ Evento tem custo (debug, ordenação, versionamento) — não crie "para o caso 
 A arquitetura parte a codebase em duas regiões — **kernel** (`shared/kernel/` + `shared/infra/`) e **produto** (`modules/`) — com regras de importação rígidas:
 
 - **RULE A** — `shared/**` nunca importa `modules/**` (imports de tipo inclusos). O kernel não conhece o negócio.
-- **RULE B** — módulos da **base-set** (`identity`, `audit`, `attachment`, `tag`, `notification`, `coexistence`) importam apenas a superfície pública de módulos vizinhos (`api/facades/` ou `api/events/`) + `shared/**`. Qualquer outro módulo é isolado no seu domínio.
+- **RULE C** — o vocabulário de uma entrada do catálogo não sobrevive na casca do template
+  (`shared/**`, `app.module.ts`, `db/schema.ts`, `apps/web/src/app/**`, `apps/web/src/shared/**`):
+  nem em código, nem em comentário, nem em string. Lista fechada de 16 tokens proibidos:
+  `identity`, `IdentityModule`, `accessProfile`, `access_profile`, `AccessProfile`,
+  `PermissionsGuard`, `permissionCatalog`, `uploadProfile`, `UploadProfile`, `auditTrail`,
+  `audit_trail`, `AuditRegistry`, `NotificationModule`, `notification_`, `TagModule`,
+  `tag.` (prefixo de schema).
 
 Ambas são automaticamente **verificadas por `apps/api/src/modules/module-boundaries.spec.ts`**; uma violação quebra a build.
 
@@ -453,7 +498,15 @@ TTL default 24h; cleanup nightly. **Onde aplicar:** rota mutável com efeito ext
 
 ## Background jobs
 
-Job de manutenção usa o runtime do kernel: `@MaintenanceJob("<name>")` + entrada em `maintenance-schedule.ts` com cron e **`lockId` único** (advisory lock; colisão de lockId silencia um job para sempre — unicidade testada, compartilhamento só declarado no spec). O `MaintenanceRuntime` abre o `RequestContext` do job e toma o lock de **sessão** num `pg.Client` dedicado (fora do pool de aplicação, via `DedicatedClientFactory`). O envelope **não** abre transação por padrão — o corpo roda em autocommit; só `atomic: true` no schedule abre uma transação do pool, **depois** do lock (nenhum job declara `atomic: true` hoje). ADR 0089.
+Job de manutenção usa o runtime do kernel: `@MaintenanceJob("<name>")` decora a classe e
+`registerMaintenanceJob(...)` **no topo do arquivo do próprio job** registra nome, cron e
+**`lockId` único** no registry de processo (não existe mais um arquivo central de
+schedule; nome duplicado ou colisão de `lockId` lança no boot — unicidade testada,
+compartilhamento só declarado no spec). O `MaintenanceRuntime` abre o `RequestContext` do
+job e toma o lock de **sessão** num `pg.Client` dedicado (fora do pool de aplicação, via
+`DedicatedClientFactory`). O envelope **não** abre transação por padrão — o corpo roda em
+autocommit; só `atomic: true` na própria chamada de `registerMaintenanceJob` abre uma
+transação do pool, **depois** do lock (nenhum job declara `atomic: true` hoje). ADR 0089.
 
 Fila persistente de negócio: a **geração de agendas em lote** tem dispatcher próprio com três tabelas no scheduling (ADR 0066) — slot ativo único por constraint, lease fenced (`WHERE lease_token = ?`), relógio do Postgres, contador por `COUNT`. **É exceção local**: um segundo caso assíncrono reabre a discussão de fila de verdade (BullMQ/pg-boss), não copia este dispatcher. O delivery do notification (ADR 0025) é o molde de fila de IO externo com estado por envio.
 
@@ -636,7 +689,7 @@ Reagir a evento externo?             → application/event-handlers/external/<ev
 Reagir a evento próprio (saga)?      → application/event-handlers/internal/<event>.handler.ts
 Mapeamento de resposta?              → application/views.ts (mapper @Injectable só com DI)
 Serviço reutilizável de application? → application/services/ (ADR 0026)
-Job de manutenção do módulo?         → application/jobs/<name>.job.ts + entrada no maintenance-schedule (lockId único)
+Job de manutenção do módulo?         → application/jobs/<name>.job.ts + registerMaintenanceJob(...) no topo do arquivo (lockId único)
 Validar input/output HTTP?           → api/contracts/<resource>.contract.ts
 Regra de negócio pura?               → domain/ (entidade, engine/, arquivo de domínio)
 Value object?                        → domain/value-objects/<vo>.ts

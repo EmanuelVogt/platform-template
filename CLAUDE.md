@@ -5,9 +5,14 @@ Você está no repositório do TEMPLATE, não num produto. Leia `TEMPLATE.md` e
 produto): `docs/code-quality.md`, `docs/back/back-arch.md`, `docs/front/front-arch.md`,
 `docs/test/testing.md`, `docs/agents/*`.
 
+O template distribui **só o kernel** — módulos são entradas versionadas em `catalog/`
+(fora do copier), instaladas no produto via `pnpm platform module add`.
+
 Regras específicas daqui:
 - Nada de produto entra: sem domínio de negócio, marca, domínio DNS ou repositório real
   fora dos placeholders Jinja (`{{ project_name }}`, `{{ github_org }}`, `{{ root_domain }}`…).
 - Só docs e manifests levam `.jinja`. Código-fonte lê configuração/env.
-- Kernel nunca importa módulo; base-set nunca importa produto (`module-boundaries.spec.ts`).
+- Kernel nunca importa entrada do catálogo; entradas não se importam entre si fora de
+  `dependsOn` (`module-boundaries.spec.ts`, RULE C).
+- Correção em `catalog/**` sem advisory correspondente não é aceita (hook de commit-msg).
 - Mudança que o produto deve receber = tag semver.

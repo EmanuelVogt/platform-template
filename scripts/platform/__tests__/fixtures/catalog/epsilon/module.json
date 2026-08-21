@@ -1,0 +1,9 @@
+{
+  "name": "epsilon",
+  "version": "1.0.0",
+  "kernelRange": ">=1.0.0 <2.0.0",
+  "apiModule": { "export": "EpsilonModule", "path": "modules/epsilon/epsilon.module" },
+  "env": [
+    { "name": "EPSILON_SECRET", "example": "troque-me", "required": true, "doc": "segredo de teste" }
+  ]
+}

@@ -9,11 +9,10 @@ import { queryClient } from "@/app/query-client"
 import { productRoutes } from "./product-routes"
 import { RoutePending } from "./route-pending"
 import {
-  authenticatedLayoutRoute,
+  appLayoutRoute,
   ErrorPage,
   indexRoute,
   inicioRoute,
-  loginRoute,
   NotFoundPage,
   rootRoute,
 } from "./shell"
@@ -23,8 +22,7 @@ import type { RouterHistory } from "@tanstack/react-router"
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
-  loginRoute,
-  authenticatedLayoutRoute.addChildren([inicioRoute, ...productRoutes]),
+  appLayoutRoute.addChildren([inicioRoute, ...productRoutes]),
 ])
 
 // CSV deliberado p/ arrays (`layers=a,b,c` em vez de JSON): o parseSearch default

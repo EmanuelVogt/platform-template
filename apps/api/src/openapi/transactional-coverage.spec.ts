@@ -3,26 +3,19 @@ import { join, sep } from "node:path"
 
 const MODULES_DIR = join(__dirname, "..", "modules")
 
-// Exceções conscientes: use cases que legitimamente não abrem tx própria.
-// - upload-access-link-avatar: delega a persistência ao AttachmentFacade (tx dele).
-// - notification list-notifications: leitura pura sem @ReadOnly
-//   (aceito por ora; retrofit de @ReadOnly seria refactor de escopo próprio).
-// - get-attachment-for-download: busca o objeto no storage (IO externo) antes de
-//   devolver o stream — IO externo nunca dentro de @Transactional (Regra de Ouro
-//   17 do back-arch). Tx aqui ainda somava um segundo efeito: a trilha de acesso
-//   commita na conexão raiz, então cada download segurava uma conexão e pedia
-//   outra ao mesmo pool — DATABASE_POOL_MAX downloads simultâneos travavam o pool.
-const ALLOWLIST = new Set([
-  "identity/application/use-cases/upload-access-link-avatar/upload-access-link-avatar.use-case.ts",
-  "notification/application/use-cases/list-notifications/list-notifications.use-case.ts",
-  "attachment/application/use-cases/get-attachment-for-download/get-attachment-for-download.use-case.ts",
-])
+// Exceções conscientes: use cases que legitimamente não abrem tx própria. Cada
+// entrada do catálogo carrega as suas na própria cópia deste guard.
+const ALLOWLIST = new Set<string>([])
 
 
 // Não aceita `.run(` genérico de propósito: `ctx.run(`/`als.run(` não provam
 // transação nenhuma. Nenhum use case depende dessa fresta hoje — ela é um
 // buraco aberto esperando alguém pisar, não uma isenção em uso.
-const TX_MARKER = /@Transactional\(|@ReadOnly\(|txManager\.run\(|txm\.run\(/
+// `@NonTransactional("motivo")` é a isenção que a entrada declara no próprio
+// use case — o kernel não pode listar caminho de módulo na allowlist acima. Só
+// vale com motivo literal: `@NonTransactional()` continua reprovando.
+const TX_MARKER =
+  /@Transactional\(|@ReadOnly\(|@NonTransactional\(\s*"[^"]+"\s*\)|txManager\.run\(|txm\.run\(/
 
 function useCaseFiles(): string[] {
   return readdirSync(MODULES_DIR, { recursive: true, encoding: "utf8" })
@@ -41,10 +34,6 @@ function hasTxMarker(relPath: string): boolean {
 
 describe("transactional-coverage — todo use case declara participação em tx", () => {
   const files = useCaseFiles()
-
-  it("varredura encontra use cases (sanidade do glob)", () => {
-    expect(files.length).toBeGreaterThan(0)
-  })
 
   it("nenhum use case fora da allowlist sem @Transactional/@ReadOnly/txm.run", () => {
     const offenders = files
@@ -75,6 +64,14 @@ describe("transactional-coverage — todo use case declara participação em tx"
       expect(TX_MARKER.test("  @ReadOnly()")).toBe(true)
       expect(TX_MARKER.test("await this.txManager.run(() => fn())")).toBe(true)
       expect(TX_MARKER.test("await this.txm.run(() => fn())")).toBe(true)
+    })
+
+    it("aceita @NonTransactional com motivo e recusa a isenção muda", () => {
+      expect(
+        TX_MARKER.test('  @NonTransactional("io externo: stream do storage")')
+      ).toBe(true)
+      expect(TX_MARKER.test("  @NonTransactional()")).toBe(false)
+      expect(TX_MARKER.test('  @NonTransactional("")')).toBe(false)
     })
 
     it("arquivo sem marcador nenhum segue reprovando", () => {

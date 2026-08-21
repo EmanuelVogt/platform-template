@@ -51,8 +51,11 @@ export class AppLogger {
       correlationId: c?.correlationId,
       causationId: c?.causationId,
       tenantId: c?.tenantId,
-      userId: c?.userId,
-      sessionId: c?.sessionId,
+      userId: c?.actor?.id ?? null,
+      // SPEC_DEVIATION: sessionId removido do log.
+      // Reason: o campo saiu do store junto com a superfície transicional
+      // (AD-017); o kernel não enxerga a extension de sessão do módulo que a
+      // grava, então não há fonte kernel-safe para recompô-lo.
       ...extra,
     }
   }

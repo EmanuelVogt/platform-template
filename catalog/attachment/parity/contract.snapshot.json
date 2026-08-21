@@ -1,0 +1,113 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/v1/attachments/uploads": {
+      "post": {
+        "description": "Recebe os anexos e repassa ao storage enquanto o corpo chega. O lote é tudo ou nada: se um arquivo estoura a cota, nenhum anexo é registrado. Os ids voltam na ordem dos arquivos enviados.",
+        "operationId": "uploadAttachments",
+        "parameters": [
+          {
+            "name": "profile",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "document",
+                "image",
+                "multi"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    }
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadAttachmentsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Attachment"
+        ]
+      }
+    },
+    "/v1/attachments/{id}": {
+      "get": {
+        "operationId": "downloadAttachment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Attachment"
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "UploadAttachmentsResponseDto": {
+        "type": "object",
+        "properties": {
+          "uploads": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "attachmentId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "attachmentId"
+              ]
+            }
+          }
+        },
+        "required": [
+          "uploads"
+        ]
+      }
+    }
+  }
+}

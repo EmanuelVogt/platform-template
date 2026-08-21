@@ -11,7 +11,10 @@ import { buildOpenApiDocument } from "./openapi-config"
 
 async function exportOpenApi(): Promise<void> {
   loadDotenvForDev()
-  const app = await NestFactory.create(AppModule, { logger: false })
+  const app = await NestFactory.create(AppModule, {
+    logger: false,
+    abortOnError: false,
+  })
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
 
   const document = buildOpenApiDocument(app)
@@ -24,7 +27,7 @@ async function exportOpenApi(): Promise<void> {
 
 void exportOpenApi().catch((err: unknown) => {
   console.error(
-    `[contract] export falhou: ${err instanceof Error ? err.stack : String(err)}`
+    `[contract] export falhou: ${err instanceof Error ? err.message : String(err)}`
   )
   process.exitCode = 1
 })

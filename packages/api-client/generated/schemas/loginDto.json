@@ -1,1 +1,0 @@
-{"type":"object","properties":{"email":{"type":"string"},"password":{"type":"string","minLength":1,"maxLength":256},"rememberMe":{"default":true,"type":"boolean"}},"required":["email","password"],"x-readme-ref-name":"LoginDto"}

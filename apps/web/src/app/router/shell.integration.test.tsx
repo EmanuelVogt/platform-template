@@ -1,60 +1,34 @@
-import { QueryClient } from "@tanstack/react-query"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 
-import {
-  authenticatedLayoutRoute,
-  indexRoute,
-  loginRoute,
-  rootRoute,
-} from "./shell"
-
-const { sessionFetch } = vi.hoisted(() => ({ sessionFetch: vi.fn() }))
-
-vi.mock("@platform/api-client/hooks/useGetSession", () => ({
-  getSession: sessionFetch,
-}))
-
-function makeClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false } } })
-}
+import { appLayoutRoute, indexRoute, inicioRoute, rootRoute } from "./shell"
 
 describe("shell route loaders", () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it("indexRoute beforeLoad delega resolveRootRedirect", async () => {
-    sessionFetch.mockRejectedValue(new Error("401"))
+  it("indexRoute redireciona a raiz para o início", () => {
     const loader = indexRoute.options.beforeLoad
-    await expect(
-      loader?.({ context: { queryClient: makeClient() } } as never),
-    ).rejects.toBeDefined()
+    let thrown: unknown
+    try {
+      loader?.({} as never)
+    } catch (error) {
+      thrown = error
+    }
+    expect((thrown as { options?: { to?: string } } | undefined)?.options?.to).toBe(
+      "/inicio"
+    )
   })
 
-  it("loginRoute beforeLoad delega requireAnon", async () => {
-    sessionFetch.mockRejectedValue(new Error("401"))
-    const loader = loginRoute.options.beforeLoad
-    await expect(
-      loader?.({ context: { queryClient: makeClient() } } as never),
-    ).resolves.toBeUndefined()
+  it("o layout da área logada sobe sem guard — o template não exige sessão", () => {
+    expect(appLayoutRoute.options.beforeLoad).toBeUndefined()
   })
 
-  it("authenticatedLayoutRoute beforeLoad delega requireAccess", async () => {
-    sessionFetch.mockResolvedValue({
-      user: {
-        id: "u1",
-        permissions: ["produto.exemplo.read"],
-        accessProfile: "admin",
-      },
+  it("o vocabulário de acesso das rotas do template é public/authenticated", () => {
+    expect(rootRoute.options.staticData.access).toEqual({ kind: "public" })
+    expect(indexRoute.options.staticData.access).toEqual({ kind: "public" })
+    expect(appLayoutRoute.options.staticData.access).toEqual({
+      kind: "authenticated",
     })
-    const loader = authenticatedLayoutRoute.options.beforeLoad
-    await expect(
-      loader?.({
-        context: { queryClient: makeClient() },
-        location: { pathname: "/inicio" },
-        matches: [{ staticData: { access: { kind: "self" } } }],
-      } as never),
-    ).resolves.toBeUndefined()
+    expect(inicioRoute.options.staticData.access).toEqual({
+      kind: "authenticated",
+    })
   })
 
   it("rootRoute component está definido", () => {

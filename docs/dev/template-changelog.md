@@ -4,6 +4,68 @@ Verdade da versão = tag git + esta entrada (AD-006); `package.json` não é inc
 no release. Cada versão lista as mudanças quebra-contrato e os passos para o filho
 aplicar no `copier update`.
 
+## v1.0.0
+
+O template passa a distribuir só o kernel; os módulos que antes vinham no copier viram
+entradas versionadas do catálogo (`catalog/<entry>[/<variant>]/`, fora do template
+renderizado), instaladas com `pnpm platform module add` — ver
+[`template.md`](template.md#catálogo-de-módulos).
+
+### Breaking changes
+
+1. **Kernel-only; módulos viram entradas de catálogo (AD-013).** Slot files
+   (perfis de acesso, catálogos de permissão, perfis de upload) foram retirados —
+   AD-001 aposentado. Extensão agora é `dependsOn` entre entradas ou uma porta do kernel,
+   nunca mais um slot editado pelo produto.
+2. **Seam de acesso do kernel muda de forma.** `ACCESS_REQUIREMENT` (metadata
+   `{ kind: "public" | "authenticated" | "permission", key? }`) é a única fonte lida pelo
+   guard de acesso do kernel; as chaves antigas de metadata de acesso saem de circulação.
+   `SelfService()`/`OptionalAuth()` passam a escrever `ACCESS_REQUIREMENT` diretamente.
+   `IS_MACHINE_TO_MACHINE_KEY` sobrevive — é opt-out de CSRF, não requisito de acesso.
+   Guard ou decorator próprio do produto que lia as chaves antigas quebra. No web, o tipo
+   `RouteAccess` (`apps/web/src/shared/config/route-access.types.ts`) muda de forma:
+   `{ kind: "public" } | { kind: "authenticated" } | { kind: "permission"; key: string }` —
+   a variante `self` vira `authenticated` e `permission` ganha `key: string`. Produto que
+   consome `RouteAccess` direto precisa atualizar os literais.
+3. **Log do kernel perde o campo `sessionId`.** A superfície de sessão saiu do kernel; o
+   logger não tem mais fonte kernel-safe para recompor esse campo. Produto que dependia de
+   `sessionId` correlacionado no log estruturado precisa recompô-lo na própria entrada.
+4. **`/docs` remontado sem autenticação.** `GET /docs` deixou de exigir login e de depender
+   de módulo — é só a documentação servida em cima do `openapi.json`. Produto que precisa
+   do login de volta usa a receita em
+   [`template.md`](template.md#receita-docs-protegido-por-login).
+5. **Web do kernel perde sessão/login.** A entidade de sessão, o fluxo de login, o guard de
+   rota e a página de login saem do template — viram parte da entrada correspondente,
+   instalada via `module add` (parte web da entrada + receita de integração no README dela).
+6. **Ator no ALS troca de forma.** As funções antigas de acesso/sessão do contexto saem;
+   entram `setActor(actor)`/`getActor()` (uma vez, lança na segunda chamada) e
+   `setExtension`/`getExtension` (bag genérico por symbol, dono é a entrada que grava).
+   No contexto de job, o campo de usuário vira `actorId: string | null`.
+7. **Numeração de migrations do kernel reinicia.** O baseline do kernel recomeça em
+   `0000_kernel_baseline.sql`; entradas passam a gerar as próprias migrations no produto
+   (`drizzle-kit generate`, tabelas como TS + SQL manual só para trigger/função) em vez de
+   trazer SQL numerado pronto.
+
+### Passos de migração do filho (`copier update` de v0.2.x)
+
+1. `git status` limpo, depois `copier update` (ou `copier update --vcs-ref v1.0.0`).
+2. Para cada módulo da plataforma já presente no produto: `pnpm platform module adopt
+   <entry> --version <versão-atual>` — registra o `.platform-modules.lock` sem tocar em
+   arquivo.
+3. Resolva o merge de `_journal.json` como de praxe (ver
+   [`numeração de migrations`](template.md#migrations-ad-015)).
+4. `pnpm install`.
+5. `pnpm contract` (regenera `openapi.json` + cliente com o novo formato de
+   `ACCESS_REQUIREMENT` e as rotas afetadas).
+6. Reescreva guard/decorator próprio que lia as chaves antigas de acesso para
+   `ACCESS_REQUIREMENT`.
+7. Se o produto correlaciona log por `sessionId`, adicione uma extension própria no
+   contexto de requisição e registre-a explicitamente nos campos de log — o kernel não
+   repõe mais esse campo sozinho.
+8. Se `/docs` deve continuar atrás de login, aplique a receita de
+   [`template.md`](template.md#receita-docs-protegido-por-login).
+9. Rode as migrations (`pnpm --filter api db:migrate:run`).
+
 ## v0.2.0
 
 Os cinco pontos que antes exigiam editar arquivo de plataforma agora são

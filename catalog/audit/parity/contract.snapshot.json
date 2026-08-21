@@ -1,0 +1,303 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/v1/audit": {
+      "get": {
+        "operationId": "listAuditEntries",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "order",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "occurredAt"
+              ]
+            }
+          },
+          {
+            "name": "table",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "entityId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "actorUserId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "op",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "insert",
+                "update",
+                "delete"
+              ]
+            }
+          },
+          {
+            "name": "origin",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "user",
+                "system"
+              ]
+            }
+          },
+          {
+            "name": "txId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListAuditEntriesResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Administration"
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ListAuditEntriesResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "seq": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "occurredAt": {
+                  "type": "string"
+                },
+                "schemaName": {
+                  "type": "string"
+                },
+                "tableName": {
+                  "type": "string"
+                },
+                "entityId": {
+                  "type": "string"
+                },
+                "op": {
+                  "type": "string",
+                  "enum": [
+                    "insert",
+                    "update",
+                    "delete"
+                  ]
+                },
+                "changedKeys": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "changes": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "old": {},
+                      "new": {},
+                      "oldLabel": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "newLabel": {
+                        "type": "string",
+                        "nullable": true
+                      }
+                    },
+                    "required": [
+                      "old",
+                      "new",
+                      "oldLabel",
+                      "newLabel"
+                    ]
+                  }
+                },
+                "actorUserId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "actorName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "correlationId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "origin": {
+                  "type": "string"
+                },
+                "txId": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "seq",
+                "occurredAt",
+                "schemaName",
+                "tableName",
+                "entityId",
+                "op",
+                "changedKeys",
+                "changes",
+                "actorUserId",
+                "actorName",
+                "correlationId",
+                "origin",
+                "txId"
+              ]
+            }
+          },
+          "page": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "page": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "pageSize": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "total",
+              "page",
+              "pageSize",
+              "totalPages"
+            ]
+          }
+        },
+        "required": [
+          "data",
+          "page"
+        ]
+      }
+    }
+  }
+}

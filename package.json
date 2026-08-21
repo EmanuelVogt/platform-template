@@ -21,6 +21,11 @@
     "check": "turbo lint typecheck",
     "skills:sync": "node scripts/sync-agent-skills.mjs",
     "template:smoke": "node scripts/template-smoke.mjs",
+    "platform": "node scripts/platform/cli.mjs",
+    "catalog:check": "node scripts/platform/catalog-check.mjs",
+    "catalog:lint": "node scripts/platform/catalog-lint.mjs",
+    "catalog:typecheck": "rm -rf apps/api/.catalog-stage && mkdir -p apps/api/.catalog-stage/src/modules && ln -s \"$PWD/apps/api/src/db\" apps/api/.catalog-stage/src/db && ln -s \"$PWD/apps/api/src/docs\" apps/api/.catalog-stage/src/docs && ln -s \"$PWD/apps/api/src/openapi\" apps/api/.catalog-stage/src/openapi && ln -s \"$PWD/apps/api/src/shared\" apps/api/.catalog-stage/src/shared && ln -s \"$PWD/apps/api/src/app.module.ts\" apps/api/.catalog-stage/src/app.module.ts && ln -s \"$PWD/apps/api/src/main.ts\" apps/api/.catalog-stage/src/main.ts && ln -s \"$PWD/apps/api/src/platform-modules.ts\" apps/api/.catalog-stage/src/platform-modules.ts && ln -s \"$PWD/apps/api/src/tracing.bootstrap.ts\" apps/api/.catalog-stage/src/tracing.bootstrap.ts && ln -s \"$PWD/apps/api/test\" apps/api/.catalog-stage/test && cp -r catalog/attachment/api apps/api/.catalog-stage/src/modules/attachment && cp -r catalog/audit/api apps/api/.catalog-stage/src/modules/audit && cp -r catalog/identity/single-tenant/api apps/api/.catalog-stage/src/modules/identity && cp -r catalog/notification/api apps/api/.catalog-stage/src/modules/notification && cp -r catalog/tag/api apps/api/.catalog-stage/src/modules/tag && pnpm --filter api exec tsc -p tsconfig.catalog.json --noEmit",
+    "test:scripts": "node --test scripts/platform/__tests__/*.test.mjs",
     "clean": "turbo clean && rm -rf node_modules"
   },
   "devDependencies": {
@@ -28,8 +33,10 @@
     "lefthook": "^2.1.9",
     "prettier": "^3.8.3",
     "prettier-plugin-tailwindcss": "^0.8.0",
+    "semver": "^7.8.1",
     "turbo": "^2.10.2",
-    "typescript": "~6"
+    "typescript": "~6",
+    "yaml": "^2.9.0"
   },
   "packageManager": "pnpm@10.33.4",
   "engines": {

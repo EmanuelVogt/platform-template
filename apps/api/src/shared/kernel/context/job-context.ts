@@ -7,7 +7,8 @@ import type { RequestContextStore } from "./request-context"
 export type JobContextInput = {
   /** Correlação persistida pelo job; ausente abre uma correlação nova. */
   readonly correlationId?: string | null
-  readonly userId?: string | null
+  readonly actorId?: string | null
+  readonly tenantId?: string | null
 }
 
 /**
@@ -19,18 +20,25 @@ export function buildJobContextStore(
   input: JobContextInput = {}
 ): RequestContextStore {
   const requestId = ulid()
+  const actorId = input.actorId ?? null
+  const tenantId = input.tenantId ?? null
   return {
     requestId,
     correlationId: input.correlationId ?? requestId,
     causationId: null,
     traceId: null,
     spanId: null,
-    tenantId: null,
+    tenantId,
     origin: "job",
-    userId: input.userId ?? null,
-    sessionId: null,
-    deviceId: null,
-    access: null,
+    actor:
+      actorId === null
+        ? null
+        : {
+            id: actorId,
+            kind: "job",
+            ...(tenantId === null ? {} : { tenantId }),
+          },
+    extensions: new Map(),
     locale: "pt-BR",
     ip: null,
     userAgent: null,

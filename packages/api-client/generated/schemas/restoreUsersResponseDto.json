@@ -1,1 +1,0 @@
-{"type":"object","properties":{"restored":{"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991}},"required":["restored"],"x-readme-ref-name":"RestoreUsersResponseDto"}

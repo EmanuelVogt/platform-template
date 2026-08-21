@@ -302,7 +302,7 @@ describe("ListAuditEntriesUseCase — trilha completa (ADR 0049, revisão 2026-0
         page: { page: 1, pageSize: 20, total: 0, totalPages: 0 },
       }),
     }
-    const ctx = { get: () => ({ access: { permissions, isMaster: false } }) }
+    const ctx = { getExtension: () => ({ permissions, isMaster: false }) }
     const useCase = new ListAuditEntriesUseCase(
       repo,
       { findNamesByIds: jest.fn().mockResolvedValue(new Map()) } as never,

@@ -1,0 +1,90 @@
+name: Catalog
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags:
+      - "v*"
+
+jobs:
+  gates:
+    name: Gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm test
+      - run: pnpm test:scripts
+      - run: pnpm catalog:lint
+      - run: pnpm catalog:typecheck
+      - name: ADV-04 no catalog fix without advisory (PR diff)
+        if: github.event_name == 'pull_request'
+        run: |
+          git log -1 --pretty=%B "${{ github.event.pull_request.head.sha }}" > /tmp/pr-commit-msg.txt
+          git reset --soft "${{ github.event.pull_request.base.sha }}"
+          node scripts/platform/advisory-required.mjs /tmp/pr-commit-msg.txt
+
+  catalog:
+    name: "catalog:check (${{ matrix.entry }})"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        entry: [identity, attachment, audit, notification, tag]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: devuser
+          POSTGRES_PASSWORD: devpassword
+          POSTGRES_DB: devdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U devuser" --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgres://devuser:devpassword@localhost:5432/devdb
+      REDIS_URL: redis://localhost:6379
+      WEB_ORIGIN: http://localhost:3000
+      R2_ACCOUNT_ID: placeholder
+      R2_ACCESS_KEY_ID: placeholder
+      R2_SECRET_ACCESS_KEY: placeholder
+      R2_BUCKET: placeholder
+      R2_ENDPOINT: https://placeholder.r2.example.com
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm catalog:check ${{ matrix.entry }}
+
+  smoke:
+    name: template:smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm template:smoke

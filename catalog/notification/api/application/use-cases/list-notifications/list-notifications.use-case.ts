@@ -3,6 +3,7 @@ import { Inject } from "@nestjs/common"
 import { RequestContext } from "../../../../../shared/kernel/context/request-context"
 import { toPaginated } from "../../../../../shared/kernel/listing/paginated"
 import { Traced } from "../../../../../shared/kernel/tracing/traced.decorator"
+import { ReadOnly } from "../../../../../shared/kernel/transactional/transactional.decorator"
 import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
 import {
   NOTIFICATION_REPOSITORY,
@@ -25,6 +26,7 @@ export class ListNotificationsUseCase
     private readonly ctx: RequestContext
   ) {}
 
+  @ReadOnly()
   @Traced({ name: "notification.list" })
   async execute(input: ListNotificationsInput): Promise<ListNotificationsOutput> {
     const recipientId = requireRecipient(this.ctx)

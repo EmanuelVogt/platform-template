@@ -6,7 +6,6 @@
   "dependsOn": [],
   "apiModule": { "export": "NotificationModule", "path": "modules/notification/notification.module" },
   "schemaExports": [
-    "modules/notification/infrastructure/tables/notification.schema",
     "modules/notification/infrastructure/tables/notification.table",
     "modules/notification/infrastructure/tables/notification-delivery.table"
   ],

@@ -1,8 +1,8 @@
 import { PRODUCT_UPLOAD_PROFILES } from "./upload/product-upload-profiles"
 
-import type { UploadProfileDef } from "./upload/upload-profile.types"
 import type { AttachmentConfig } from "../attachment.config"
 import type { Visibility } from "./access-policy"
+import type { UploadProfileDef } from "./upload/upload-profile.types"
 
 export const BASE_UPLOAD_PROFILE_NAMES = [
   "avatar",

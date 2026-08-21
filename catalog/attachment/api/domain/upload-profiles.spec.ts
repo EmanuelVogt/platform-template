@@ -1,6 +1,6 @@
-import { PRODUCT_UPLOAD_PROFILES } from "./upload/product-upload-profiles"
 import { parseAttachmentConfig } from "../attachment.config"
 
+import { PRODUCT_UPLOAD_PROFILES } from "./upload/product-upload-profiles"
 import {
   BASE_UPLOAD_PROFILE_NAMES,
   buildRouteUploadProfileNames,
@@ -11,8 +11,8 @@ import {
   UPLOAD_PROFILE_NAMES,
 } from "./upload-profiles"
 
-import type { UploadProfile } from "./upload-profiles"
 import type { UploadProfileDef } from "./upload/upload-profile.types"
+import type { UploadProfile } from "./upload-profiles"
 
 const config = parseAttachmentConfig({})
 const productUploadProfiles = PRODUCT_UPLOAD_PROFILES as readonly UploadProfileDef[]

@@ -5,22 +5,22 @@ import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { ulid } from "ulid"
 
-import { AppModule } from "../../../../src/app.module"
-import { applySecurity } from "../../../../src/main"
-import { RATE_LIMITER } from "../../../../src/modules/identity/domain/ports/rate-limiter"
-import { seedUser } from "../../../../src/modules/identity/testing/seed-user"
-import { loadEnv } from "../../../../src/shared/config/env"
-import { OBJECT_STORAGE } from "../../../../src/shared/infra/storage/object-storage.port"
-import { RequestContext } from "../../../../src/shared/kernel/context/request-context"
-import { createRequestContextMiddleware } from "../../../../src/shared/kernel/context/request-context.middleware"
 import {
   createTestPool,
   truncateAttachment,
   truncateIdentity,
   truncateKernel,
 } from "../../../../test/setup/test-db"
+import { AppModule } from "../../../app.module"
+import { applySecurity } from "../../../main"
+import { loadEnv } from "../../../shared/config/env"
+import { OBJECT_STORAGE } from "../../../shared/infra/storage/object-storage.port"
+import { RequestContext } from "../../../shared/kernel/context/request-context"
+import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
+import { RATE_LIMITER } from "../../identity/domain/ports/rate-limiter"
+import { seedUser } from "../../identity/testing/seed-user"
 
-import type { ObjectStoragePort } from "../../../../src/shared/infra/storage/object-storage.port"
+import type { ObjectStoragePort } from "../../../shared/infra/storage/object-storage.port"
 import type { Server } from "node:http"
 import type { Pool } from "pg"
 

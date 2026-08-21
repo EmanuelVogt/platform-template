@@ -1,13 +1,15 @@
-import { AttachmentFacade } from "../api/facades/attachment.facade"
 import {
   attachmentAccessActionSchema,
   attachmentAccessEntrySchema,
 } from "../api/contracts/attachment-access-log.contract"
+import { AttachmentFacade } from "../api/facades/attachment.facade"
 
 describe("attachment — log de acesso (contrato para consumidores como audit)", () => {
   it("expõe AttachmentFacade.listAccessLog(attachmentId)", () => {
     expect(typeof AttachmentFacade.prototype.listAccessLog).toBe("function")
-    expect(AttachmentFacade.prototype.listAccessLog).toHaveLength(1)
+    expect(AttachmentFacade.prototype.listAccessLog.bind(AttachmentFacade.prototype)).toHaveLength(
+      1,
+    )
   })
 
   it("mantém as ações de acesso rastreadas", () => {

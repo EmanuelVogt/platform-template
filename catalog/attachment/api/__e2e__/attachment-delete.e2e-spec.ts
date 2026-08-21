@@ -1,10 +1,5 @@
 import request from "supertest"
 
-import { ATTACHMENT_ACCESS_LOG_REPOSITORY } from "../domain/ports/attachment-access-log.repository"
-import { RATE_LIMITER } from "../../../../src/modules/identity/domain/ports/rate-limiter"
-import { OBJECT_STORAGE } from "../../../../src/shared/infra/storage/object-storage.port"
-import { allowAllRateLimiter } from "../../../../src/modules/identity/testing/allow-all-rate-limiter"
-import { seedUser } from "../../../../src/modules/identity/testing/seed-user"
 import { createE2eApp } from "../../../../test/setup/app-factory"
 import { setCookies } from "../../../../test/setup/cookies"
 import {
@@ -14,9 +9,14 @@ import {
   truncateIdentity,
   truncateKernel,
 } from "../../../../test/setup/test-db"
+import { OBJECT_STORAGE } from "../../../shared/infra/storage/object-storage.port"
+import { RATE_LIMITER } from "../../identity/domain/ports/rate-limiter"
+import { allowAllRateLimiter } from "../../identity/testing/allow-all-rate-limiter"
+import { seedUser } from "../../identity/testing/seed-user"
+import { ATTACHMENT_ACCESS_LOG_REPOSITORY } from "../domain/ports/attachment-access-log.repository"
 
+import type { ObjectStoragePort } from "../../../shared/infra/storage/object-storage.port"
 import type { AttachmentAccessLogRepository } from "../domain/ports/attachment-access-log.repository"
-import type { ObjectStoragePort } from "../../../../src/shared/infra/storage/object-storage.port"
 import type { INestApplication } from "@nestjs/common"
 import type { Pool } from "pg"
 

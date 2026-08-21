@@ -51,7 +51,7 @@ describe("UploadAccessLinkAvatarUseCase", () => {
     const t = makeDeps({ attachments: null })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toMatchObject({
       status: 501,
-      type: "https://errors.example.com/auth/profile-image-store-missing",
+      type: "https://errors.example.com/identity/profile-image-store-missing",
       name: ProfileImageStoreMissingError.name,
     })
     expect(t.verificationTokens.findActiveByHash).toHaveBeenCalledTimes(1)

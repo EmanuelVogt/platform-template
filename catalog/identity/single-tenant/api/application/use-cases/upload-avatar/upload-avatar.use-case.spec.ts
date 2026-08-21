@@ -100,7 +100,7 @@ describe("UploadAvatarUseCase", () => {
     })
     await expect(t.uc.execute(DUMMY_INPUT)).rejects.toMatchObject({
       status: 501,
-      type: "https://errors.example.com/auth/profile-image-store-missing",
+      type: "https://errors.example.com/identity/profile-image-store-missing",
       name: ProfileImageStoreMissingError.name,
     })
     expect(t.users.update).not.toHaveBeenCalled()

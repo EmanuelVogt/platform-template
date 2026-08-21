@@ -1,6 +1,6 @@
 import { DomainError } from '../../../shared/kernel/errors/domain.error';
 
-const TYPE_BASE = 'https://errors.example.com/auth';
+const TYPE_BASE = 'https://errors.example.com/identity';
 
 /**
  * Falha de autenticação. UMA única classe para TODOS os caminhos de login

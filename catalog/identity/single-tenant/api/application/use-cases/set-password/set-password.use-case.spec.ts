@@ -130,7 +130,7 @@ describe("SetPasswordUseCase", () => {
       t.uc.execute({ ...VALID_INPUT, avatarAttachmentId: "att-x" }),
     ).rejects.toMatchObject({
       status: 501,
-      type: "https://errors.example.com/auth/profile-image-store-missing",
+      type: "https://errors.example.com/identity/profile-image-store-missing",
       name: ProfileImageStoreMissingError.name,
     })
     expect(t.verificationTokens.consumeByHash).not.toHaveBeenCalled()

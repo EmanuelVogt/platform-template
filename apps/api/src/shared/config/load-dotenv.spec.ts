@@ -1,33 +1,36 @@
 import { loadDotenvForDev } from "./load-dotenv"
 
+const spyLoadEnvFile = () => jest.spyOn(process, "loadEnvFile").mockImplementation(() => undefined)
+
 describe("loadDotenvForDev", () => {
   const originalEnv = process.env.NODE_ENV
-  const loadEnvFile = process.loadEnvFile
 
   afterEach(() => {
     process.env.NODE_ENV = originalEnv
-    process.loadEnvFile = loadEnvFile
+    jest.restoreAllMocks()
   })
 
   it("não carrega arquivo em produção", () => {
     process.env.NODE_ENV = "production"
-    process.loadEnvFile = jest.fn()
+    const loadEnvFile = spyLoadEnvFile()
     loadDotenvForDev()
-    expect(process.loadEnvFile).not.toHaveBeenCalled()
+    expect(loadEnvFile).not.toHaveBeenCalled()
   })
 
   it("tenta carregar .env fora de produção", () => {
     process.env.NODE_ENV = "test"
-    process.loadEnvFile = jest.fn()
+    const loadEnvFile = spyLoadEnvFile()
     loadDotenvForDev()
-    expect(process.loadEnvFile).toHaveBeenCalled()
+    expect(loadEnvFile).toHaveBeenCalled()
   })
 
   it("ignora ausência de .env local", () => {
     process.env.NODE_ENV = "development"
-    process.loadEnvFile = jest.fn(() => {
+    spyLoadEnvFile().mockImplementation(() => {
       throw new Error("ENOENT")
     })
-    expect(() => loadDotenvForDev()).not.toThrow()
+    expect(() => {
+      loadDotenvForDev()
+    }).not.toThrow()
   })
 })

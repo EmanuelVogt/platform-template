@@ -82,7 +82,7 @@ test("module add instala alpha com sucesso: copia arquivo, grava lock e registri
 
   const platformModules = readFileSync(path.join(child, "apps/api/src/platform-modules.ts"), "utf8");
   assert.match(platformModules, /import \{ AlphaModule \} from "\.\/modules\/alpha\/alpha\.module";/);
-  assert.match(platformModules, /export const PLATFORM_MODULES = \[AlphaModule\] as const;/);
+  assert.match(platformModules, /export const PLATFORM_MODULES = \[resolvePlatformModule\(AlphaModule\)\] as const;/);
 });
 
 test("module add retorna exit 3 quando o catálogo é inacessível", async () => {

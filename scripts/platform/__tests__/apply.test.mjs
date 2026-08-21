@@ -78,8 +78,40 @@ test("writeRegistry gera platform-modules.ts e platform-schema.ts de forma idemp
   assert.equal(firstModules, secondModules);
   assert.equal(firstSchema, secondSchema);
   assert.match(firstModules, /import \{ IdentityModule \} from "\.\/modules\/identity\/identity\.module";/);
-  assert.match(firstModules, /export const PLATFORM_MODULES = \[IdentityModule\] as const;/);
+  assert.match(firstModules, /export const PLATFORM_MODULES = \[resolvePlatformModule\(IdentityModule\)\] as const;/);
   assert.match(firstSchema, /export \* from "\.\.\/modules\/identity\/infrastructure\/tables\/users\.table";/);
+});
+
+test("writeRegistry chama resolvePlatformModule para cada entrada, cobrindo módulos com forRoot() dinâmico", () => {
+  const child = makeChild();
+  const platformModulesPath = path.join(child, "apps/api/src/platform-modules.ts");
+  const platformSchemaPath = path.join(child, "apps/api/src/db/platform-schema.ts");
+  const entries = [
+    {
+      name: "notification",
+      apiModule: { export: "NotificationModule", path: "modules/notification/notification.module" },
+      schemaExports: [],
+    },
+    {
+      name: "identity",
+      apiModule: { export: "IdentityModule", path: "modules/identity/identity.module" },
+      schemaExports: [],
+    },
+  ];
+
+  writeRegistry({ entries, platformModulesPath, platformSchemaPath });
+  const content = readFileSync(platformModulesPath, "utf8");
+
+  assert.match(content, /import type \{ DynamicModule, Type \} from "@nestjs\/common";/);
+  assert.match(
+    content,
+    /function resolvePlatformModule\(mod: Type<unknown> & \{ forRoot\?: \(\) => DynamicModule \}\): Type<unknown> \| DynamicModule \{/,
+  );
+  assert.match(content, /return typeof mod\.forRoot === "function" \? mod\.forRoot\(\) : mod;/);
+  assert.match(
+    content,
+    /export const PLATFORM_MODULES = \[resolvePlatformModule\(NotificationModule\), resolvePlatformModule\(IdentityModule\)\] as const;/,
+  );
 });
 
 test("writeLock calcula sha256 de cada arquivo copiado e persiste no lock", () => {

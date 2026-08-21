@@ -79,13 +79,26 @@ function removeEnvBlock(filePath, moduleName) {
 
 function renderPlatformModules(entries) {
   const withApi = entries.filter((entry) => entry.apiModule);
+  const header = "// gerado por `pnpm platform module` — não edite à mão\n";
+  if (withApi.length === 0) {
+    return `${header}\nexport const PLATFORM_MODULES = [] as const;\n`;
+  }
+
   const imports = withApi
     .map((entry) => `import { ${entry.apiModule.export} } from "./${entry.apiModule.path}";`)
     .join("\n");
-  const list = withApi.map((entry) => entry.apiModule.export).join(", ");
-  const header = "// gerado por `pnpm platform module` — não edite à mão\n";
-  const importBlock = imports.length > 0 ? `${imports}\n\n` : "\n";
-  return `${header}${importBlock}export const PLATFORM_MODULES = [${list}] as const;\n`;
+  const list = withApi.map((entry) => `resolvePlatformModule(${entry.apiModule.export})`).join(", ");
+  // Alguns módulos do catálogo expõem um `forRoot()` estático (dynamic module do Nest) em vez
+  // de serem referenciáveis como classe direto — chamamos quando existe, senão registramos a
+  // classe direto.
+  const resolver =
+    "function resolvePlatformModule(mod: Type<unknown> & { forRoot?: () => DynamicModule }): Type<unknown> | DynamicModule {\n" +
+    '  return typeof mod.forRoot === "function" ? mod.forRoot() : mod;\n' +
+    "}";
+  return (
+    `${header}import type { DynamicModule, Type } from "@nestjs/common";\n${imports}\n\n` +
+    `${resolver}\n\nexport const PLATFORM_MODULES = [${list}] as const;\n`
+  );
 }
 
 function renderPlatformSchema(entries) {

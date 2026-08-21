@@ -171,6 +171,7 @@ describe("@MaintenanceJob", () => {
 
 const SRC_DIR = join(__dirname, "..", "..", "..")
 const DECORATOR = /^\s*@MaintenanceJob\(\s*"([^"]+)"/gm
+const JOB_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
 const OUTSIDE_TX_MARKER = "outsideTransaction("
 
 type JobBodyIndex = ReadonlyMap<string, readonly string[]>
@@ -221,11 +222,33 @@ describe("job atômico não referencia a porta fora-de-tx", () => {
       (name) => (bodyFiles.get(name) ?? []).length !== 1
     )
     expect(unresolved).toEqual([])
-    // Corpo de job de entrada do catálogo mora fora de `apps/api/src`, então a
-    // varredura só enxerga — e só cobra — os jobs do próprio kernel. Um
-    // `@MaintenanceJob` aqui dentro com nome fora do registro do kernel cai
-    // nesta comparação.
-    expect([...bodyFiles.keys()].sort()).toEqual([...KERNEL_JOB_NAMES].sort())
+  })
+
+  // As entradas do catálogo instaladas trazem os seus jobs para dentro de
+  // `apps/api/src`: o kernel é subconjunto da varredura, nunca o conjunto todo.
+  // O que continua valendo com qualquer número de entradas é que dois corpos
+  // nunca dividem um nome — o segundo silencia o primeiro no agendador.
+  it("nenhum nome de job com mais de um corpo", () => {
+    const duplicated = [...bodyFiles.entries()]
+      .filter(([, files]) => files.length !== 1)
+      .map(([name, files]) => `${name} → ${[...files].sort().join(", ")}`)
+    expect(duplicated.sort()).toEqual([])
+  })
+
+  it("todo nome decorado segue <escopo>.<ação> em kebab-case", () => {
+    const malformed = [...bodyFiles.keys()].filter(
+      (name) => !JOB_NAME.test(name)
+    )
+    expect(malformed.sort()).toEqual([])
+  })
+
+  it("reprova nome fora do padrão e aceita escopo composto", () => {
+    expect(JOB_NAME.test("outbox.purge")).toBe(true)
+    expect(JOB_NAME.test("attachment-pending.purge")).toBe(true)
+    expect(JOB_NAME.test("OutboxPurge")).toBe(false)
+    expect(JOB_NAME.test("outbox")).toBe(false)
+    expect(JOB_NAME.test("outbox.purge.now")).toBe(false)
+    expect(JOB_NAME.test("outbox_pending.purge")).toBe(false)
   })
 
   it("nenhum job atômico do kernel referencia outsideTransaction", () => {

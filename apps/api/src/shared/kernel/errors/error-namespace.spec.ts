@@ -30,10 +30,6 @@ function namespaceOffenderOf({ module, content }: ModuleErrorsFile): string | nu
 describe("error-namespace — TYPE_BASE segue o nome do módulo e o 403 mora no kernel", () => {
   const files = moduleErrorsFiles()
 
-  it("o template sobe sem módulo — a varredura fica vazia por design (KRN-01)", () => {
-    expect(files).toEqual([])
-  })
-
   it("nenhum TYPE_BASE fora de https://errors.example.com/<módulo>", () => {
     const offenders = files
       .map(namespaceOffenderOf)

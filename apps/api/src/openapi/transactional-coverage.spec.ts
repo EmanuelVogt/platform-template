@@ -31,10 +31,6 @@ function hasTxMarker(relPath: string): boolean {
 describe("transactional-coverage — todo use case declara participação em tx", () => {
   const files = useCaseFiles()
 
-  it("o template sobe sem módulo — a varredura fica vazia por design (KRN-01)", () => {
-    expect(files).toEqual([])
-  })
-
   it("nenhum use case fora da allowlist sem @Transactional/@ReadOnly/txm.run", () => {
     const offenders = files
       .filter((rel) => !ALLOWLIST.has(rel))

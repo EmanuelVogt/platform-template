@@ -85,7 +85,7 @@ function checkFilePairing(entries: JournalEntry[], problems: string[]): void {
   }
 }
 
-function checkWhenOrdering(entries: JournalEntry[], problems: string[]): void {
+export function checkWhenOrdering(entries: JournalEntry[], problems: string[]): void {
   const byWhen = new Map<number, string>()
   for (const entry of entries) {
     const owner = byWhen.get(entry.when)

@@ -223,10 +223,6 @@ function violationOf(edge: Edge): string | null {
 }
 
 describe("module-boundaries — import entre camadas e módulos segue a tabela do handbook", () => {
-  it("o template sobe sem módulo — a varredura fica vazia por design (KRN-01)", () => {
-    expect(productionFiles()).toEqual([])
-  })
-
   it("nenhuma travessia proibida fora das allowlists", () => {
     const offenders = collectEdges()
       .map(violationOf)

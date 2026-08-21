@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 
-import { checkAgainstBase, parseJournal } from "./check-journal"
+import { checkAgainstBase, checkWhenOrdering, parseJournal } from "./check-journal"
 
 import type { JournalEntry } from "./check-journal"
 
@@ -17,6 +17,14 @@ const BASE: JournalEntry[] = [
 ]
 
 const BASE_MAX_WHEN = 1797072480194
+
+// A cadeia que o template distribui. Instalar entrada do catálogo acrescenta
+// migrations depois destas — nunca antes, nunca no meio.
+const KERNEL_TAGS = ["0000_kernel_baseline", "0001_kernel_outbox_notify"] as const
+
+// Formato que o drizzle-kit gera e pelo qual o migrator casa o .sql: índice de
+// quatro dígitos + nome em snake_case.
+const INSTALLED_TAG_RE = /^\d{4}_[a-z0-9]+(?:_[a-z0-9]+)*$/
 
 function run(entries: JournalEntry[]): { problems: string[]; warnings: string[] } {
   const problems: string[] = []
@@ -57,13 +65,32 @@ describe("check-journal — ordem contra a base", () => {
 })
 
 describe("check-journal — isenção de reset de baseline", () => {
+  // As migrations do kernel são o prefixo do journal, nessa ordem; instalar
+  // entrada do catálogo acrescenta depois delas. O guard vale com zero ou N
+  // entradas instaladas, então cobra prefixo e formato, nunca igualdade.
+  it("kernel abre o journal e o que vem depois segue o formato de tag", () => {
+    const entries = branchJournal()
+
+    expect(entries.slice(0, KERNEL_TAGS.length).map((entry) => entry.tag)).toEqual([
+      ...KERNEL_TAGS,
+    ])
+    expect(entries.map((entry) => entry.idx)).toEqual(entries.map((_, index) => index))
+    expect(
+      entries.slice(KERNEL_TAGS.length).map((entry) => entry.tag).filter((tag) => !INSTALLED_TAG_RE.test(tag)),
+    ).toEqual([])
+
+    const orderingProblems: string[] = []
+    checkWhenOrdering(entries, orderingProblems)
+    expect(orderingProblems).toEqual([])
+  })
+
   it("reset deste branch passa e avisa quais entradas publicadas sumiram", () => {
     const entries = branchJournal()
-    expect(entries.map((entry) => entry.tag)).toEqual([
-      "0000_kernel_baseline",
-      "0001_kernel_outbox_notify",
-    ])
-    expect(entries.every((entry) => entry.when < BASE_MAX_WHEN)).toBe(true)
+    // É este retrocesso que torna a isenção de reset decisiva: sem ela a cadeia
+    // do kernel nasceria no passado da base publicada.
+    expect(
+      entries.slice(0, KERNEL_TAGS.length).every((entry) => entry.when < BASE_MAX_WHEN),
+    ).toBe(true)
 
     const { problems, warnings } = run(entries)
 

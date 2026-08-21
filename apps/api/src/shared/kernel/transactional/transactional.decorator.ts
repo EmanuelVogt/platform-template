@@ -35,3 +35,18 @@ export function Transactional(opts: TxOptions = {}): MethodDecorator {
 export function ReadOnly(opts: Omit<TxOptions, "readOnly"> = {}): MethodDecorator {
   return Transactional({ ...opts, readOnly: true })
 }
+
+/**
+ * Declara que o método roda deliberadamente FORA de transação. Existe para o
+ * caso em que o corpo embrulha IO externo (stream de storage, upload de
+ * imagem): abrir transação — mesmo `@ReadOnly()` — prenderia uma conexão do
+ * pool pela duração do IO. Não embrulha nada; é a declaração que o guard de
+ * cobertura transacional lê. O motivo é obrigatório, senão a isenção vira
+ * escape hatch silencioso.
+ */
+export function NonTransactional(reason: string): MethodDecorator {
+  if (reason.trim().length === 0) {
+    throw new Error("@NonTransactional exige um motivo não vazio")
+  }
+  return (): void => undefined
+}

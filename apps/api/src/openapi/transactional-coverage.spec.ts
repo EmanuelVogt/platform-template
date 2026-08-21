@@ -11,7 +11,11 @@ const ALLOWLIST = new Set<string>([])
 // Não aceita `.run(` genérico de propósito: `ctx.run(`/`als.run(` não provam
 // transação nenhuma. Nenhum use case depende dessa fresta hoje — ela é um
 // buraco aberto esperando alguém pisar, não uma isenção em uso.
-const TX_MARKER = /@Transactional\(|@ReadOnly\(|txManager\.run\(|txm\.run\(/
+// `@NonTransactional("motivo")` é a isenção que a entrada declara no próprio
+// use case — o kernel não pode listar caminho de módulo na allowlist acima. Só
+// vale com motivo literal: `@NonTransactional()` continua reprovando.
+const TX_MARKER =
+  /@Transactional\(|@ReadOnly\(|@NonTransactional\(\s*"[^"]+"\s*\)|txManager\.run\(|txm\.run\(/
 
 function useCaseFiles(): string[] {
   return readdirSync(MODULES_DIR, { recursive: true, encoding: "utf8" })
@@ -60,6 +64,14 @@ describe("transactional-coverage — todo use case declara participação em tx"
       expect(TX_MARKER.test("  @ReadOnly()")).toBe(true)
       expect(TX_MARKER.test("await this.txManager.run(() => fn())")).toBe(true)
       expect(TX_MARKER.test("await this.txm.run(() => fn())")).toBe(true)
+    })
+
+    it("aceita @NonTransactional com motivo e recusa a isenção muda", () => {
+      expect(
+        TX_MARKER.test('  @NonTransactional("io externo: stream do storage")')
+      ).toBe(true)
+      expect(TX_MARKER.test("  @NonTransactional()")).toBe(false)
+      expect(TX_MARKER.test('  @NonTransactional("")')).toBe(false)
     })
 
     it("arquivo sem marcador nenhum segue reprovando", () => {

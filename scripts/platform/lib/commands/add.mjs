@@ -31,11 +31,14 @@ function readTemplateVersion(cwd) {
   return answers._commit ? String(answers._commit).replace(/^v/, "") : undefined;
 }
 
+// envPath/envExamplePath ficam em apps/api porque é o cwd de onde `pnpm contract`
+// (e o boot do Nest) carregam o .env local (loadDotenvForDev -> process.loadEnvFile(),
+// relativo ao cwd do processo, não à raiz do monorepo).
 function paths(cwd) {
   return {
     lockPath: path.join(cwd, ".platform-modules.lock"),
-    envExamplePath: path.join(cwd, ".env.example"),
-    envPath: path.join(cwd, ".env"),
+    envExamplePath: path.join(cwd, "apps/api/.env.example"),
+    envPath: path.join(cwd, "apps/api/.env"),
     platformModulesPath: path.join(cwd, "apps/api/src/platform-modules.ts"),
     platformSchemaPath: path.join(cwd, "apps/api/src/db/platform-schema.ts"),
   };

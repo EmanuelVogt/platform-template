@@ -31,7 +31,7 @@ function appendEnvExampleBlock(filePath, moduleName, envVars) {
 }
 
 function appendEnvMissingKeys(filePath, moduleName, envVars) {
-  const content = readFileSync(filePath, "utf8");
+  const content = existsSync(filePath) ? readFileSync(filePath, "utf8") : "";
   const existingKeys = new Set(
     content
       .split("\n")
@@ -51,9 +51,7 @@ function appendEnvMissingKeys(filePath, moduleName, envVars) {
 export function writeEnv({ envExamplePath, envPath, moduleName, envVars }) {
   if (!envVars || envVars.length === 0) return;
   appendEnvExampleBlock(envExamplePath, moduleName, envVars);
-  if (existsSync(envPath)) {
-    appendEnvMissingKeys(envPath, moduleName, envVars);
-  }
+  appendEnvMissingKeys(envPath, moduleName, envVars);
 }
 
 function removeEnvBlock(filePath, moduleName) {

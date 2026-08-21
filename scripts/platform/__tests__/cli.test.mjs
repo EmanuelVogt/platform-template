@@ -85,6 +85,19 @@ test("module add instala alpha com sucesso: copia arquivo, grava lock e registri
   assert.match(platformModules, /export const PLATFORM_MODULES = \[resolvePlatformModule\(AlphaModule\)\] as const;/);
 });
 
+test("module add grava o env do módulo em apps/api/.env (não na raiz), mesmo sem .env pré-existente", async () => {
+  const child = makeChild();
+  const { run: stubRun } = makeStubRun();
+
+  const exitCode = await run(["module", "add", "epsilon", "--catalog-ref", CATALOG_ROOT], { cwd: child, run: stubRun });
+
+  assert.equal(exitCode, EXIT_CODES.OK);
+  assert.equal(existsSync(path.join(child, ".env")), false);
+  assert.equal(existsSync(path.join(child, ".env.example")), false);
+  assert.match(readFileSync(path.join(child, "apps/api/.env"), "utf8"), /EPSILON_SECRET=troque-me/);
+  assert.match(readFileSync(path.join(child, "apps/api/.env.example"), "utf8"), /EPSILON_SECRET=troque-me/);
+});
+
 test("module add retorna exit 3 quando o catálogo é inacessível", async () => {
   const child = makeChild();
   const { run: stubRun } = makeStubRun();

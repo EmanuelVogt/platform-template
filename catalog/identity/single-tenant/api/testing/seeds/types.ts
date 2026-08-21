@@ -1,5 +1,5 @@
-import type { PasswordHasher } from "../../domain/ports/password-hasher"
 import type { DrizzleDb } from "../../../../shared/infra/database/drizzle.provider"
+import type { PasswordHasher } from "../../domain/ports/password-hasher"
 
 /** Dependências que o runner injeta em cada seed. */
 export interface SeedContext {

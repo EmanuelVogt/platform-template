@@ -2,22 +2,22 @@ import { type INestApplication, VersioningType } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
 
-import { AppModule } from "../../../app.module"
-import { applySecurity } from "../../../main"
-import { RATE_LIMITER } from "../domain/ports/rate-limiter"
-import { MAILER } from "../../notification/domain/ports/mailer"
-import { DeliveryDispatcher } from "../../notification/infrastructure/delivery/delivery.dispatcher"
-import { RequestContext } from "../../../shared/kernel/context/request-context"
-import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
-import { OutboxDispatcher } from "../../../shared/kernel/outbox/outbox.dispatcher"
 import { setCookies } from "../../../../test/setup/cookies"
-import { fakeMailer } from "../testing/fake-mailer"
-import { seedUser } from "../testing/seed-user"
 import {
   createTestPool,
   truncateIdentity,
   truncateKernel,
 } from "../../../../test/setup/test-db"
+import { AppModule } from "../../../app.module"
+import { applySecurity } from "../../../main"
+import { RequestContext } from "../../../shared/kernel/context/request-context"
+import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
+import { OutboxDispatcher } from "../../../shared/kernel/outbox/outbox.dispatcher"
+import { MAILER } from "../../notification/domain/ports/mailer"
+import { DeliveryDispatcher } from "../../notification/infrastructure/delivery/delivery.dispatcher"
+import { RATE_LIMITER } from "../domain/ports/rate-limiter"
+import { fakeMailer } from "../testing/fake-mailer"
+import { seedUser } from "../testing/seed-user"
 
 import type { EmailMessage } from "../../notification/domain/ports/mailer"
 

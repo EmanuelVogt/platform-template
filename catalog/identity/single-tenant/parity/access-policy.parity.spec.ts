@@ -3,9 +3,8 @@ import { UnauthorizedException } from "@nestjs/common"
 import { IdentityAccessPolicy } from "../api/access/identity-access.policy"
 import { IDENTITY_ACCESS } from "../application/identity-context"
 
+import type { Actor, RequestContext  } from "../../../shared/kernel/context/request-context"
 import type { IdentityAccess } from "../application/identity-context"
-import type { Actor } from "../../../shared/kernel/context/request-context"
-import type { RequestContext } from "../../../shared/kernel/context/request-context"
 
 const ACTOR: Actor = { id: "user-1", kind: "user" }
 

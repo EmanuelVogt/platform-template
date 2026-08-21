@@ -80,18 +80,18 @@ async function main(): Promise<void> {
       .returning({ id: users.id })
 
     if (inserted.length === 0) {
-      console.info(`[bootstrap-master] ${email} já existe — nada a fazer`)
+      process.stdout.write(`[bootstrap-master] ${email} já existe — nada a fazer\n`)
       return
     }
-    console.info(`[bootstrap-master] criado ${email} (access_profile=master)`)
+    process.stdout.write(`[bootstrap-master] criado ${email} (access_profile=master)\n`)
   } finally {
     await pool.end()
   }
 }
 
 void main().catch((err: unknown) => {
-  console.error(
-    `[bootstrap-master] falhou: ${err instanceof Error ? err.message : String(err)}`,
+  process.stderr.write(
+    `[bootstrap-master] falhou: ${err instanceof Error ? err.message : String(err)}\n`,
   )
   process.exitCode = 1
 })

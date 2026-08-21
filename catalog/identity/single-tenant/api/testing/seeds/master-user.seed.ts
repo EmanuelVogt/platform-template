@@ -46,11 +46,11 @@ export const masterUserSeed: Seed = {
       .returning({ id: users.id })
 
     if (inserted.length === 0) {
-      console.info(`[seed:master-user] ${MASTER_EMAIL} já existe — nada a fazer`)
+      process.stdout.write(`[seed:master-user] ${MASTER_EMAIL} já existe — nada a fazer\n`)
       return
     }
-    console.info(
-      `[seed:master-user] criado ${MASTER_EMAIL} (access_profile=master)`
+    process.stdout.write(
+      `[seed:master-user] criado ${MASTER_EMAIL} (access_profile=master)\n`
     )
   },
 }

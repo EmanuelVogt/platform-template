@@ -2,15 +2,15 @@ import { createZodDto } from "nestjs-zod"
 import { z } from "zod"
 
 import {
-  ACCESS_PROFILES,
-  ASSIGNABLE_ACCESS_PROFILES,
-} from "../../domain/access/permission.types"
-import {
   baseListingQuerySchema,
   zBoolQuery,
 } from "../../../../shared/kernel/listing/listing-query.schema"
 import { makePaginatedSchema } from "../../../../shared/kernel/listing/paginated"
 import { ACCESS_HISTORY_EVENT_TYPES } from "../../application/use-cases/list-access-history/types"
+import {
+  ACCESS_PROFILES,
+  ASSIGNABLE_ACCESS_PROFILES,
+} from "../../domain/access/permission.types"
 import { PERMISSION_KEYS } from "../../domain/permissions/permission-catalog"
 
 const email = z.string().trim().toLowerCase().pipe(z.email("E-mail inválido."))

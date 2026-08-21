@@ -4,25 +4,25 @@ import { type INestApplication, VersioningType } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
 
-import { AppModule } from "../../../app.module"
-import { applySecurity } from "../../../main"
-import { RATE_LIMITER } from "../domain/ports/rate-limiter"
-import { MAILER } from "../../notification/domain/ports/mailer"
-import { OBJECT_STORAGE } from "../../../shared/infra/storage/object-storage.port"
-import { RequestContext } from "../../../shared/kernel/context/request-context"
-import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
-import { OutboxDispatcher } from "../../../shared/kernel/outbox/outbox.dispatcher"
-import { fakeMailer } from "../testing/fake-mailer"
-import { seedUser } from "../testing/seed-user"
 import {
   createTestPool,
   truncateAttachment,
   truncateIdentity,
   truncateKernel,
 } from "../../../../test/setup/test-db"
+import { AppModule } from "../../../app.module"
+import { applySecurity } from "../../../main"
+import { OBJECT_STORAGE } from "../../../shared/infra/storage/object-storage.port"
+import { RequestContext } from "../../../shared/kernel/context/request-context"
+import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
+import { OutboxDispatcher } from "../../../shared/kernel/outbox/outbox.dispatcher"
+import { MAILER } from "../../notification/domain/ports/mailer"
+import { RATE_LIMITER } from "../domain/ports/rate-limiter"
+import { fakeMailer } from "../testing/fake-mailer"
+import { seedUser } from "../testing/seed-user"
 
-import type { EmailMessage } from "../../notification/domain/ports/mailer"
 import type { ObjectStoragePort } from "../../../shared/infra/storage/object-storage.port"
+import type { EmailMessage } from "../../notification/domain/ports/mailer"
 
 const ORIGIN = "http://localhost:5173"
 

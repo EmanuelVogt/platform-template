@@ -51,6 +51,6 @@ async function main(): Promise<void> {
 }
 
 void main().catch((err: unknown) => {
-  console.error(`[seed] falhou: ${err instanceof Error ? err.message : String(err)}`)
+  process.stderr.write(`[seed] falhou: ${err instanceof Error ? err.message : String(err)}\n`)
   process.exitCode = 1
 })

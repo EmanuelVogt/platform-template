@@ -1,18 +1,18 @@
 import request from "supertest"
 
-import { RATE_LIMITER } from "../domain/ports/rate-limiter"
-import { MAILER } from "../../notification/domain/ports/mailer"
-import { OutboxDispatcher } from "../../../shared/kernel/outbox/outbox.dispatcher"
 import { createE2eApp } from "../../../../test/setup/app-factory"
-import { allowAllRateLimiter } from "../testing/allow-all-rate-limiter"
-import { fakeMailer } from "../testing/fake-mailer"
-import { seedUser } from "../testing/seed-user"
 import {
   createTestPool,
   seedEmail,
   truncateIdentity,
   truncateKernel,
 } from "../../../../test/setup/test-db"
+import { OutboxDispatcher } from "../../../shared/kernel/outbox/outbox.dispatcher"
+import { MAILER } from "../../notification/domain/ports/mailer"
+import { RATE_LIMITER } from "../domain/ports/rate-limiter"
+import { allowAllRateLimiter } from "../testing/allow-all-rate-limiter"
+import { fakeMailer } from "../testing/fake-mailer"
+import { seedUser } from "../testing/seed-user"
 
 import type { EmailMessage } from "../../notification/domain/ports/mailer"
 import type { INestApplication } from "@nestjs/common"

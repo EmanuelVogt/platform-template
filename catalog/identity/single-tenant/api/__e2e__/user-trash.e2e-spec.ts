@@ -2,15 +2,15 @@ import { type INestApplication, VersioningType } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
 
+import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
 import { AppModule } from "../../../app.module"
 import { applySecurity } from "../../../main"
-import { RATE_LIMITER } from "../domain/ports/rate-limiter"
-import { MAILER } from "../../notification/domain/ports/mailer"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
 import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
+import { MAILER } from "../../notification/domain/ports/mailer"
+import { RATE_LIMITER } from "../domain/ports/rate-limiter"
 import { fakeMailer } from "../testing/fake-mailer"
 import { seedUser } from "../testing/seed-user"
-import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
 
 const ORIGIN = "http://localhost:5173"
 

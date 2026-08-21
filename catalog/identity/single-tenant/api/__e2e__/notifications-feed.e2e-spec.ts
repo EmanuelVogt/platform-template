@@ -3,15 +3,14 @@ import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { ulid } from "ulid"
 
-import { AppModule } from "../../../../src/app.module"
-import { applySecurity } from "../../../../src/main"
-import { RATE_LIMITER } from "../domain/ports/rate-limiter"
-import { RequestContext } from "../../../../src/shared/kernel/context/request-context"
-import { createRequestContextMiddleware } from "../../../../src/shared/kernel/context/request-context.middleware"
-import { OutboxDispatcher } from "../../../../src/shared/kernel/outbox/outbox.dispatcher"
-
-import { seedUser } from "../testing/seed-user"
 import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
+import { AppModule } from "../../../app.module"
+import { applySecurity } from "../../../main"
+import { RequestContext } from "../../../shared/kernel/context/request-context"
+import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
+import { OutboxDispatcher } from "../../../shared/kernel/outbox/outbox.dispatcher"
+import { RATE_LIMITER } from "../domain/ports/rate-limiter"
+import { seedUser } from "../testing/seed-user"
 
 import type { Pool } from "pg"
 

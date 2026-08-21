@@ -2,14 +2,13 @@ import http from "node:http"
 
 import request from "supertest"
 
-import { RATE_LIMITER } from "../domain/ports/rate-limiter"
-import { MAILER } from "../../notification/domain/ports/mailer"
-
 import { createE2eApp } from "../../../../test/setup/app-factory"
+import { createTestPool, seedEmail, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
+import { MAILER } from "../../notification/domain/ports/mailer"
+import { RATE_LIMITER } from "../domain/ports/rate-limiter"
 import { allowAllRateLimiter } from "../testing/allow-all-rate-limiter"
 import { fakeMailer } from "../testing/fake-mailer"
 import { seedUser } from "../testing/seed-user"
-import { createTestPool, seedEmail, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
 
 import type { INestApplication } from "@nestjs/common"
 import type { Pool } from "pg"

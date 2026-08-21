@@ -2,11 +2,11 @@ import { type INestApplication, VersioningType } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
 
+import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
 import { AppModule } from "../../../app.module"
 import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
 import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
-import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
 
 const ORIGIN = "http://localhost:5173"
 

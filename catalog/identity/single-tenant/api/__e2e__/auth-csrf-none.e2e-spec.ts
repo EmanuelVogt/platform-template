@@ -3,17 +3,17 @@ import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { ulid } from "ulid"
 
+import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
 import { AppModule } from "../../../app.module"
 import { applySecurity } from "../../../main"
+import { RequestContext } from "../../../shared/kernel/context/request-context"
+import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
 import { PASSWORD_HASHER } from "../domain/ports/password-hasher"
 import { RATE_LIMITER } from "../domain/ports/rate-limiter"
 import {
   IDENTITY_CONFIG,
   parseIdentityConfig,
 } from "../identity.config"
-import { RequestContext } from "../../../shared/kernel/context/request-context"
-import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
-import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
 
 import type { Pool } from "pg"
 

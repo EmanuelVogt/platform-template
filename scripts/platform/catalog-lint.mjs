@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
+import { isAdvisoryFilename } from "./lib/advisories.mjs";
 import {
   discoverEntries,
   extractContractHeadings,
@@ -73,7 +74,7 @@ function lintAdvisories(dir) {
   if (!existsSync(dir)) return [];
   const errors = [];
   for (const name of readdirSync(dir)) {
-    if (!name.endsWith(".md")) continue;
+    if (!isAdvisoryFilename(name)) continue;
     const filePath = path.join(dir, name);
     errors.push(
       ...lintAdvisoryFrontmatter(readFileSync(filePath, "utf8"), filePath).map((error) => `${filePath}: ${error}`),

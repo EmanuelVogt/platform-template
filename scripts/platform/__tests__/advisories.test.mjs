@@ -141,6 +141,25 @@ test("loadAdvisories: lê e parseia todos os .md do diretório", () => {
   assert.equal(advisories[0].id, "ADV-20260901-01");
 });
 
+test("loadAdvisories: ignora README.md e APPLIED.md, mesmo tendo extensão .md", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "advisories-test-"));
+  writeFileSync(path.join(dir, "ADV-20260901-01.md"), advisoryMd());
+  writeFileSync(path.join(dir, "README.md"), "# docs/advisories\n\nnão é um advisory.\n");
+  writeFileSync(path.join(dir, "APPLIED.md"), "# Advisories aplicados\n");
+  const advisories = loadAdvisories(dir);
+  assert.equal(advisories.length, 1);
+  assert.equal(advisories[0].id, "ADV-20260901-01");
+});
+
+test("loadAdvisories: ADV-*.md com schema inválido falha alto (não é engolido)", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "advisories-test-"));
+  writeFileSync(path.join(dir, "ADV-20260901-02.md"), advisoryMd({ kind: "cosmetic" }));
+  assert.throws(
+    () => loadAdvisories(dir),
+    (error) => error instanceof AdvisoryParseError && /kind inválido/.test(error.message),
+  );
+});
+
 test("readLedger: arquivo ausente devolve lista vazia", () => {
   const dir = mkdtempSync(path.join(tmpdir(), "advisories-test-"));
   assert.deepEqual(readLedger(path.join(dir, "APPLIED.md")), []);

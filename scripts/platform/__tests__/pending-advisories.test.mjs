@@ -39,13 +39,13 @@ test("lock presente sem advisory pendente: sem saída (branch de lista vazia)", 
   assert.equal(result.stdout, "");
 });
 
-test("lock presente com advisory pendente: emite uma linha com id/kind/severity/module", () => {
+test("lock presente com advisory pendente: emite uma linha `ADV-… <kind> <severity> <module>` (spec.md ADV-02)", () => {
   const result = runHook({ projectDir: path.join(FIXTURES_DIR, "pending") });
   assert.equal(result.status, 0);
   const payload = JSON.parse(result.stdout);
   assert.equal(
     payload.hookSpecificOutput.additionalContext,
-    "pending advisories: ADV-20260901-01 security high identity/single-tenant",
+    "ADV-20260901-01 security high identity/single-tenant",
   );
 });
 

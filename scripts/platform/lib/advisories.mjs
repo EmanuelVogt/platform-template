@@ -4,15 +4,20 @@ import semver from "semver";
 import { AdvisoryParseError, parseAdvisory } from "./frontmatter.mjs";
 
 const LEDGER_LINE_RE = /^-\s*(ADV-\d{8}-\d{2})\b/;
+const ADVISORY_FILENAME_RE = /^ADV-\d{8}-\d{2}\.md$/;
 
 export { AdvisoryParseError, parseAdvisory };
+
+export function isAdvisoryFilename(name) {
+  return ADVISORY_FILENAME_RE.test(name);
+}
 
 export function loadAdvisories(dir) {
   if (!existsSync(dir)) {
     return [];
   }
   return readdirSync(dir)
-    .filter((entry) => entry.endsWith(".md"))
+    .filter((entry) => isAdvisoryFilename(entry))
     .sort()
     .map((entry) => {
       const filePath = path.join(dir, entry);

@@ -30,7 +30,7 @@ try {
 
   const lines = noLock
     ? ["no .platform-modules.lock — run platform module adopt"]
-    : pending.map((advisory) => `pending advisories: ${advisory.id} ${advisory.kind} ${advisory.severity} ${advisory.module}`);
+    : pending.map((advisory) => `${advisory.id} ${advisory.kind} ${advisory.severity} ${advisory.module}`);
 
   if (lines.length === 0) process.exit(0);
 

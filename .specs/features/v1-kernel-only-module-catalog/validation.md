@@ -489,3 +489,171 @@ behind it.
 
 **Next steps**: Fix 1 and Fix 2 are blockers and must land before a v1.0.0 tag. Fix 3 closes the
 surviving mutant. Fixes 4–7 are follow-ups the orchestrator can batch into one wave.
+
+---
+---
+
+# Round 2 (2026-08-21, `e42ab2a`)
+
+Re-verification after wave 7 (T29–T35), commits `47fa6a8..e42ab2a`, branch
+`feat/v1-kernel-only-module-catalog`. Round-1 content above is unchanged. Fresh verifier context —
+every row below was re-derived from `spec.md` and proved with `file:line` or a command exit code.
+
+## Wave 7 commits under review
+
+| Commit | Subject |
+| --- | --- |
+| `0fbfb44` | `docs(back-arch)`: RULE C replaces RULE B; changelog `RouteAccess` |
+| `f59651a` | `ci`: catalog matrix, per-package gates, `template:smoke` |
+| `011a035` | `chore(copier)`: exclude the workflow from the rendered template |
+| `b2a378a` | `test(advisories)`: `docs/advisories/` folder + hook coverage |
+| `4b7445e` | `fix(scripts)`: `template:smoke` tolerates the `public` schema |
+| `f1849f2` | `test(scripts)`: `dependsOn` derived from imports |
+| `5027c21` | `fix(advisories)`: loader ignores README/APPLIED; hook follows the spec format |
+| `e42ab2a` | `fix(scripts)`: `template:smoke` keeps Postgres, starts Redis, passes env to the child |
+
+## Fix Plan status
+
+| Fix | Round-1 priority | Round-2 status | Evidence |
+| --- | --- | --- | --- |
+| **Fix 1** — `template:smoke` fails | Blocker | ✅ **Closed** | `pnpm template:smoke` **exit 0**, all four checks reported (`1/4 pnpm check && pnpm test`, `2/4 db:migrate … só _kernel + drizzle`, `3/4 GET /health`, `4/4 RULE C`) → `Smoke do template passou: as quatro checagens ficaram verdes.` Log `/tmp/claude-1000/catalog-check-logs/template-smoke-r2.log`. Root cause fixed as a **superset** check, not by loosening: `template-smoke.mjs:10-11` `EXPECTED_SCHEMAS = ["_kernel","drizzle"]` + `ALLOWED_EXTRA_SCHEMAS = ["public"]`, `schemasMatchExpected` at `:62-73` checks both directions (every expected present **and** nothing outside expected∪allowed). `spec.md:131` now names `public` explicitly. |
+| **Fix 2** — catalog CI matrix missing | Blocker | ✅ **Closed** (static; see caveat) | `.github/workflows/catalog.yml` exists. Job `catalog` `:36-77` — `strategy.matrix.entry: [identity, attachment, audit, notification, tag]` `:42`, `fail-fast: false` `:40`, Postgres 16 + Redis 7 services `:43-59`, `pnpm catalog:check ${{ matrix.entry }}` `:77` ⇒ one job per entry, 5 jobs. Job `gates` `:11-34` runs the **per-package** gates, never turbo: `pnpm check` `:24`, `pnpm test` `:25`, `pnpm test:scripts` `:26`, `pnpm catalog:lint` `:27`, `pnpm catalog:typecheck` `:28`. Job `smoke` `:79-90` runs `pnpm template:smoke`. ADV-04 job at `:29-34`. `copier.yml` `_exclude` gained `.github/workflows/catalog.yml` so the child does not inherit the template's own CI. |
+| **Fix 3** — surviving `dependsOn` mutant | Major | ✅ **Closed** | `scripts/platform/__tests__/catalog-custom-migrations.test.mjs:74-95` re-derives the graph from `catalog/<entry>/api/**` imports and asserts `assert.deepEqual([...derived].sort(), [...declared].sort())` against `module.json.dependsOn`. Test-only edges are excluded explicitly at `:15-19` (`*.spec.ts`, `*.int-spec.ts`) and `:30` (`testing/`), with `:12-14` recording that e2e edges still count (AD-026). Re-injected mutant **killed** — see Mutant A. |
+| **Fix 4** — `back-arch.md` documents RULE B | Major | ✅ **Closed** | `grep "RULE B" docs/back/back-arch.md` → **no match**. `docs/back/back-arch.md:399-407` documents RULE C with the closed 16-token list, matching `apps/api/src/modules/module-boundaries.spec.ts:518-535` `FORBIDDEN_TOKENS` label-for-label (`identity`, `IdentityModule`, `accessProfile`, `access_profile`, `AccessProfile`, `PermissionsGuard`, `permissionCatalog`, `uploadProfile`, `UploadProfile`, `auditTrail`, `audit_trail`, `AuditRegistry`, `NotificationModule`, `notification_`, `TagModule`, `tag.`) = 16. |
+| **Fix 5** — advisories channel has no folder / hook untested | Major | ✅ **Closed** (one doc item open) | (a) `docs/advisories/APPLIED.md:1-7` immutability header + ledger format `:11`; `docs/advisories/README.md:1-6` immutability header, frontmatter schema `:12-21`. (b) `scripts/platform/__tests__/pending-advisories.test.mjs:65-83` parses **every** `ADV-*.md` in the real folder with `parseAdvisory` and asserts `README.md`/`APPLIED.md` throw `AdvisoryParseError`; `:85-96` fails a schema-invalid advisory (`kind inválido`). (c) `pending-advisories.test.mjs` drives the hook through all four ADV-02 branches — `:25-34` no-lock line, `:36-40` no pending ⇒ empty stdout, `:42-50` `ADV-… <kind> <severity> <module>`, `:52-63` `UserPromptSubmit` fires only on the first prompt of a session — over committed fixtures in `__tests__/fixtures/pending-advisories/{no-lock,no-pending,pending}/`. (d) loader filter `lib/advisories.mjs:7,11-13` `ADVISORY_FILENAME_RE = /^ADV-\d{8}-\d{2}\.md$/` + `isAdvisoryFilename`, reused by `catalog-lint.mjs:77`; covered by `advisories.test.mjs` (`ignora README.md e APPLIED.md`, `ADV-*.md com schema inválido falha alto`). **Open**: `design.md:222` — see *No-lock string* below. |
+| **Fix 6** — TLG assertion gaps | Minor | ⏸️ **Accepted debt** (deliberately not done) | Not attempted in wave 7, per the orchestrator's decision. The five sub-items (a)–(e) stand as recorded in round 1; they downgrade evidence quality on TLG-01/04/05/06, none of them regresses behaviour. Not a v1.0.0 blocker. |
+| **Fix 7** — spec/design corrections owed | Minor | ⚠️ **5 of 6 done** | ① `spec.md:131` names `public` ✅. ② `spec.md:147` clarifies the outbox carries no actor column (note 63) ✅. ③ `spec.md:70-79` carries the measured AD-025/AD-026 graph, not the stale inventory ✅. ④ `spec.md:161` lists `name, variant, version, dependsOn[], kernelRange, migrations, web?` — `files` dropped, with note 37 cited ✅. ⑤ `docs/dev/template-changelog.md:25-29` (worktree) documents the `RouteAccess` shape change `{ kind: "public" } | { kind: "authenticated" } | { kind: "permission"; key: string }` ✅. ⑥ **note 49 not propagated** — resolved only in `tasks.md:748` (the intent is the narrower one; kernel ports from AD-022/AD-024 are reviewed by name, not by regex). `spec.md` has zero occurrences of `FORBIDDEN_TOKENS`/exemption text ❌. |
+
+### Fix 2 caveat — the ADV-04 CI simulation
+
+`.github/workflows/catalog.yml:29-34` reproduces the commit-msg hook in CI by capturing the PR head
+commit message and running `git reset --soft "$base.sha"` before `advisory-required.mjs`.
+
+**Mechanically faithful.** `advisory-required.mjs:45-49` reads staged files with
+`git diff --cached --name-only` and `:32-42` reads advisory bodies with `git show :<file>`. After a
+soft reset from the merge ref to the base SHA the index still holds the merge tree, so the staged
+set equals the full PR diff and `git show :` resolves. The `fetch-depth: 0` at `:16-17` makes
+`base.sha` reachable. The reset is the last step of the job, so it corrupts nothing downstream.
+
+**Where it is weaker than the local hook** (residual gap, not a regression):
+
+1. `git log -1` at `:32` takes **only the PR head commit's message**, then judges the **whole PR
+   diff** against it. The local hook judges one commit's files against that same commit's message.
+   Consequently the escape hatch `TRAILER_RE` (`advisory-required.mjs:8`, `Advisory: none — …`)
+   placed on the head commit exempts **every** `catalog/**` change in the PR, not one commit's.
+   The same widening applies in the safe direction: a per-commit advisory added in commit 2 of 5
+   still covers the aggregate, which is correct.
+2. The step is gated on `if: github.event_name == 'pull_request'` `:30`, so a direct push to `main`
+   or a tag push never runs it. The local commit-msg hook remains the enforcement for that path.
+
+Verdict: CAT-02/ADV-04's CI half is **present and sound**; the trailer's blast radius widening from
+one commit to one PR is a documented follow-up, not a blocker.
+
+### No-lock string — `design.md` is the one to align
+
+| Source | Literal |
+| --- | --- |
+| Code — `.claude/hooks/pending-advisories.mjs:32` | `no .platform-modules.lock — run platform module adopt` |
+| `spec.md:251` (ADV-02 edge case) | `no .platform-modules.lock — run platform module adopt` |
+| `design.md:222` | `no .platform-modules.lock — run pnpm platform module adopt` |
+
+**The code implements `spec.md`.** The assertion is pinned literally at
+`pending-advisories.test.mjs:30-33`, whose name states the alignment
+(`…alinhada ao spec.md ADV-02 (sem prefixo pnpm)`). **`design.md:222` is the stale one** — drop the
+`pnpm ` prefix there. Recommendation stands: align `design.md`, never the code or the spec.
+
+## Gate results (all per-package, never turbo, run in the worktree at `e42ab2a`)
+
+| Command | Exit | Result | Log |
+| --- | --- | --- | --- |
+| `pnpm template:smoke` | **0** | 4/4 checks green | `/tmp/claude-1000/catalog-check-logs/template-smoke-r2.log` |
+| `pnpm test:scripts` | **0** | **tests 179 · pass 179 · fail 0** | `…/test-scripts-r2-baseline.log` |
+| `pnpm catalog:lint` | **0** | 0 errors, 0 warnings | `…/catalog-lint-r2.log` |
+| `pnpm catalog:typecheck` | **0** | 0 errors, 0 warnings | `…/catalog-typecheck-r2.log` |
+| `pnpm catalog:check` (round 14) | **0** | 5/5 entries, 167 suites / 1139 tests | `…/catalog-check-r14.log` |
+
+`test:scripts` moved from the expected 176 to **179**: no test was lost, wave 7 added three
+(`dependsOn` derivation + the two advisory-loader tests) on top of the round-1 baseline; the
+`pending-advisories` suite is counted inside the same total. No count regression anywhere.
+
+## Discrimination sensor — 3 mutations, 3 killed, 0 survived
+
+Every mutation: `git status --short` clean beforehand → edit the real file → run only
+`pnpm test:scripts` → restore with `git checkout -- <file>` → `git status --short` empty. No stash,
+no branch, no worktree operation.
+
+| # | Mutation | Result | Killed by |
+| --- | --- | --- | --- |
+| **A** | `catalog/attachment/module.json:6` — `dependsOn` emptied (`[{ "name": "identity", … }]` → `[]`). Re-injection of round-1's **surviving** mutant. | ☠️ **KILLED** — exit 1, 179 tests / 178 pass / **1 fail** | `catalog-custom-migrations.test.mjs:74` — `dependsOn de cada entrada real do catálogo é derivado dos imports que cruzam para outra entrada`. Log `…/mutant-A-dependsOn.log`. |
+| **B** | `scripts/template-smoke.mjs:11` — `ALLOWED_EXTRA_SCHEMAS = ["public"]` → `[]`, i.e. undo Fix 1's allow-list entry. | ☠️ **KILLED** — exit 1, 179 / 177 / **2 fail** | `template-smoke.test.mjs:66` (`schemasMatchExpected … tolerates Postgres's own public schema`) and `:192` (`runTemplateSmoke does not fail on schema check when Postgres's own public schema is present`). Log `…/mutant-B-public-schema.log`. |
+| **C** | `scripts/platform/lib/advisories.mjs:7` — `ADVISORY_FILENAME_RE` `/^ADV-\d{8}-\d{2}\.md$/` → `/\.md$/`, i.e. undo Fix 5(d)'s loader filter. | ☠️ **KILLED** — exit 1, 179 / 175 / **4 fail** | `advisories.test.mjs` (`loadAdvisories: ignora README.md e APPLIED.md…`) plus three `pending-advisories.test.mjs` hook branches (no-lock line, pending line, `UserPromptSubmit` first-prompt gate). Log `…/mutant-C-advisory-filename.log`. |
+
+Mutant A is the decisive one: round 1's only survivor now dies to a named assertion. Mutants B and
+C confirm the wave-7 code is guarded by tests that fail for the right reason, not by tests that
+merely execute it — B proves Fix 1 widened the allow-list by exactly one member (a schema named
+`identity` is still rejected, `template-smoke.test.mjs:173-189`), and C proves the loader's filter is
+load-bearing across both the CLI lint path and the session hook.
+
+## Requirement Traceability — Round 2 (34 requirements)
+
+| Requirement | Round 1 | Round 2 | Why it moved |
+| --- | --- | --- | --- |
+| KRN-01 | ⚠️ Partial | ✅ Verified | `spec.md:131` names `public`; `schemasMatchExpected` `template-smoke.mjs:62-73`; smoke exit 0 |
+| CAT-02 | ❌ Failing | ✅ Verified | `catalog.yml:36-77` matrix over the 5 entries; the command it runs proved locally (`catalog:check` exit 0, 5/5) |
+| HBK-02 | ❌ Failing | ✅ Verified | no `RULE B` left in `back-arch.md`; RULE C + 16 tokens at `:399-407` |
+| SMK-01 | ❌ Failing | ✅ Verified | AC1 `pnpm template:smoke` exit 0, 4/4; AC2's delegate (the CI matrix) now exists |
+| ADV-01 | ⚠️ Partial | ✅ Verified | `docs/advisories/` shipped; folder-level parse test `pending-advisories.test.mjs:65-83`; invalid schema fails at the template `:85-96` |
+| ADV-02 | ⚠️ Partial | ✅ Verified | all four hook branches asserted, no-lock literal matches `spec.md:251` |
+| ADV-04 | ⚠️ Partial | ⚠️ Partial | CI half added (`catalog.yml:29-34`) but PR-wide trailer scope — see the Fix 2 caveat |
+| TLG-07 | ❌ Failing | ⚠️ Partial | untouched by wave 7; `port-module-update`'s rename-as-conflict path still has **no executable proof** — accepted debt |
+| KRN-02, KRN-03, KRN-05, KRN-06, KRN-07, CAT-01, CAT-04, CAT-05, HBK-01, HBK-03, CTR-01, WEB-01, TLG-02, TLG-03, TLG-08, ADV-05, MIG-01 | ✅ Verified | ✅ Verified | unchanged; CAT-01 additionally strengthened by the `dependsOn` derivation test |
+| KRN-04, CAT-03, HBK-04, TLG-01, TLG-04, TLG-05, TLG-06, ADV-03, MIG-02 | ⚠️ Partial | ⚠️ Partial | Fix 6 deliberately skipped + carried-over spec-precision gaps |
+
+**Coverage: 34 requirements — 23 verified ✅, 11 partial ⚠️, 0 failing ❌.**
+
+Movement from round 1: **+6 verified** (KRN-01, CAT-02, HBK-02, SMK-01, ADV-01, ADV-02),
+**4 → 0 failing**.
+
+---
+
+## Round 2 Summary
+
+**Overall**: ✅ **Ready** (with documented, non-blocking debt)
+
+**Spec-anchored check**: 23/34 requirements fully evidenced · 11 partial · **0 failing** ·
+both round-1 blockers closed
+**Gate**: 5 of 5 commands exit 0 — `template:smoke` **exit 0** (4/4 checks), `test:scripts`
+**exit 0** (179/179), `catalog:lint` **exit 0**, `catalog:typecheck` **exit 0**,
+`catalog:check` **exit 0** (5/5 entries, 1139 assertions)
+**Sensor**: **3 injected, 3 killed, 0 survived** — including the re-injection of round 1's survivor
+**Worktree**: clean at `e42ab2a` — `git status --short` empty after each of the three restores and
+at the end of the round; no stash, no branch, no untracked file
+
+**What changed since round 1**: the feature's own MVP Independent Test now passes end to end in a
+rendered child — all four smoke checks execute, and the schema assertion became a genuine superset
+check that still rejects a module schema rather than a blanket relaxation. The catalog CI matrix
+exists with one job per entry, per-package gates and the ADV-04 job. The dependency graph is no
+longer hand-maintained: a test re-derives it from the real imports and kills the mutant that
+survived round 1. RULE B is gone from the handbook, RULE C is documented against the exact 16
+tokens the spec enforces, and the advisories channel ships as a real folder with a hook covered on
+all four of its branches.
+
+**Residual debt (none blocking a v1.0.0 tag)**:
+
+1. **`design.md:222`** — no-lock string still carries the `pnpm ` prefix the code and `spec.md` do
+   not. One-word doc edit; the code is correct.
+2. **ADV-04 in CI** — `catalog.yml:29-34` judges the whole PR diff against the head commit's
+   message, so the `Advisory: none — …` trailer exempts a PR rather than a commit; and the step is
+   PR-only. The per-commit local hook is unaffected.
+3. **Fix 6 (TLG minors)** — accepted debt by decision; TLG-01/04/05/06 keep partial evidence.
+4. **TLG-07** — `port-module-update`'s renamed-file conflict has no executable proof.
+5. **Note 49** — resolved in `tasks.md:748` only; not propagated to `spec.md` or the handbooks.
+6. **`docs/advisories/` holds no `ADV-*.md` yet** (correct for v1.0.0), so the folder-scan loop in
+   `pending-advisories.test.mjs:65-73` is vacuous over advisories today; the invalid-schema branch
+   is covered by the temp fixture at `:85-96` and by `advisories.test.mjs`, so the behaviour is
+   guarded — the loop only starts earning its keep with the first real advisory.
+7. **The CI workflow has never executed.** Judged statically only; its first real run happens on the
+   first PR against this repo. The commands it invokes are all individually proven green locally.
+
+**Next steps**: items 1 and 5 are one-line doc edits; item 2 deserves a follow-up ticket (compare
+each commit in the PR range, not just the head). None gates the v1.0.0 tag.

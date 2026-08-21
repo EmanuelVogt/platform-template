@@ -3,7 +3,7 @@
 **Spec**: `.specs/features/test-suite-refactor/spec.md`
 **Context**: `.specs/features/test-suite-refactor/context.md` (GA-1..GA-7 locked as defaults)
 **Status**: Draft
-**Decisions loaded**: `.specs/STATE.md` AD-006, AD-012 (95% pre-push bar, api unit + web only), AD-013/AD-017/AD-018/AD-020 (v1 planned — kernel-only template, RULE C, entry anatomy, raw web). No active decision is superseded; AD-021 is appended (below).
+**Decisions loaded**: `.specs/STATE.md` AD-006, AD-012 (95% pre-push bar, api unit + web only), AD-013/AD-017/AD-018/AD-020 (v1 planned — kernel-only template, RULE C, entry anatomy, raw web). No active decision is superseded; AD-023 is appended (below; renumbered from AD-021 on 2026-08-21 — v1 took AD-021).
 **Lessons**: `scripts/lessons.py` not present at HEAD; `docs/test/testing.md` § "O que conta como prova" (L-004, L-007, L-010, L-013) applied as confirmed lessons.
 
 ---
@@ -225,4 +225,4 @@ type E2eApp = { app: INestApplication; http: import("http").Server; close(): Pro
 
 **Project-level decision appended to `.specs/STATE.md`:**
 
-> **AD-021 (planned)** — **Test harness layering.** Runner plumbing (jest configs, containers, env) lives in `apps/api/test/`; everything a spec imports lives in `apps/api/src/shared/test/{unit,int,e2e,parity}` with kernel vocabulary only; each catalog entry ships `api/testing/` (seed, login, fakes, fixtures) listed in `module.json.files`, importable by dependents only through `dependsOn`. Web mirrors it in `apps/web/src/shared/test/`. Test files may not define local copies of harness helpers; lint forbids `.only`/`.skip`/assertion-less/existence-only tests. Supersedes nothing; constrains v1 entry anatomy (README § Tests) and `docs/test/testing.md`.
+> **AD-023 (planned)** — **Test harness layering.** Runner plumbing (jest configs, containers, env) lives in `apps/api/test/`; everything a spec imports lives in `apps/api/src/shared/test/{unit,int,e2e,parity}` with kernel vocabulary only; each catalog entry ships `api/testing/` (seed, login, fakes, fixtures) listed in `module.json.files`, importable by dependents only through `dependsOn`. Web mirrors it in `apps/web/src/shared/test/`. Test files may not define local copies of harness helpers; lint forbids `.only`/`.skip`/assertion-less/existence-only tests. Supersedes nothing; constrains v1 entry anatomy (README § Tests) and `docs/test/testing.md`.

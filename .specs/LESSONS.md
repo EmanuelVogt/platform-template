@@ -56,6 +56,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: .claude/hooks/pending-advisories.mjs:18-22,35 (hooks)
 - last seen: 2026-08-21T06:13:49Z
 
+### L-008 — When a user-visible literal string is specified in both spec.md and design.md, pin it with a literal assertion in a test and name one document canonical. Here the hook emitted the spec.md wording while design.md:222 carried an extra 'pnpm ' prefix; only the test naming its source (pending-advisories.test.mjs:30-33) made the drift decidable instead of a coin flip between two docs.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · harmful: 0
+- features: v1-kernel-only-module-catalog
+- evidence: .specs/features/v1-kernel-only-module-catalog/validation.md#round-2-no-lock-string
+- last seen: 2026-08-21T14:56:46Z
+
+### L-009 — A CI job that re-implements a per-commit git hook must iterate the PR's commits, not collapse the range. Reproducing the commit-msg check with 'git reset --soft base' plus 'git log -1 head' judges the whole PR diff against a single message, so any escape-hatch trailer on the head commit exempts every commit in the PR. Faithful for the file half, weaker for the message half.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · harmful: 0
+- features: v1-kernel-only-module-catalog
+- evidence: .github/workflows/catalog.yml:29-34
+- last seen: 2026-08-21T14:56:46Z
+
 ## Quarantined (failed when applied — ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

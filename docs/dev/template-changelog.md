@@ -4,6 +4,42 @@ Verdade da versão = tag git + esta entrada (AD-006); `package.json` não é inc
 no release. Cada versão lista as mudanças quebra-contrato e os passos para o filho
 aplicar no `copier update`.
 
+## v1.1.0
+
+Harness de agentes portado do piloto e limpeza dos resquícios de registry privado
+que sobraram no kernel. Sem breaking change de contrato: não é preciso `pnpm contract`
+e não há migration nova.
+
+### Mudanças
+
+1. **Harness do piloto.** Hooks novos `dispatch-log.mjs` (registra toda chamada
+   `Agent` e todo `SubagentStart`/`SubagentStop` num `dispatch-log.jsonl` junto aos
+   transcripts, lido por `pnpm dispatch:report`) e `wave-plan-check.mjs` (revalida as
+   regras de wave/cluster a cada escrita de `tasks.md`); `delegate-to-subagent.mjs`
+   ganha quota de navegação direta por turno. Agents (`spec-worker`, `spec-verifier`,
+   `repo-scout`, `shell-runner`) e a skill `tlc-spec-driven` (card do orchestrator,
+   clusters verticais) atualizados; baseline de delegação documentada em
+   [`docs/agents/harness.md`](../agents/harness.md).
+2. **Workflows de CI.** `.github/workflows/ci.yml` (lint/typecheck/builds, unit e
+   gate de cobertura com testcontainers) e `feedback-triage.yml` (triagem de relato
+   via `repository_dispatch`) passam a vir do template.
+3. **`.npmrc` removido e `Dockerfile.dev` simplificado.** O mapeamento do escopo
+   `@bryntum` para registry privado era resquício de produto; `apps/api/Dockerfile.dev`
+   não exige mais token de build e as seções correspondentes saíram de
+   [`ambiente-local.md`](ambiente-local.md) e [`deploy.md`](deploy.md).
+
+### Passos de migração do filho (`copier update` de v1.0.0)
+
+1. `git status` limpo, depois `copier update` (ou `copier update --vcs-ref v1.1.0`).
+2. **Se o produto usa registry privado próprio (ex.: `@bryntum`)**: mantenha o seu
+   `.npmrc` no merge (rejeite a deleção) e reponha secret/build-arg no seu
+   `Dockerfile.dev` — o template não os traz mais.
+3. Se o produto já tem `ci.yml`/`feedback-triage.yml` próprios em
+   `.github/workflows/`, resolva o merge mantendo a sua versão ou adotando a do
+   template (`feedback-triage.yml` pressupõe o módulo de feedback instalado e os
+   secrets correspondentes no repositório).
+4. `pnpm install`.
+
 ## v1.0.0
 
 O template passa a distribuir só o kernel; os módulos que antes vinham no copier viram

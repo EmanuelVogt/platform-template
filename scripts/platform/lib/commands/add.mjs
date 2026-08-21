@@ -2,7 +2,14 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
-import { copyFiles, rollback as applyRollback, writeEnv, writeLock as persistEntry, writeRegistry } from "../apply.mjs";
+import {
+  copyFiles,
+  removeTemplateOnlyFiles,
+  rollback as applyRollback,
+  writeEnv,
+  writeLock as persistEntry,
+  writeRegistry,
+} from "../apply.mjs";
 import { resolveCatalog } from "../catalog-source.mjs";
 import { EXIT_CODES } from "../exit-codes.mjs";
 import { readLock } from "../lock.mjs";
@@ -199,6 +206,10 @@ export async function addCommand({ name, options, cwd = process.cwd(), run = def
       copyFiles(plan.files);
       writeEnv({ envExamplePath, envPath, moduleName: plan.moduleName, envVars: plan.manifest.env });
       lock = persistEntry({ lockPath, lock, name: plan.moduleName, entry: { ...plan.entryBase, migrations: [] } });
+    }
+
+    for (const removed of removeTemplateOnlyFiles(cwd)) {
+      process.stdout.write(`removido (valia só para o template): ${removed}\n`);
     }
 
     const registryEntries = buildRegistryEntries(catalog.root, lock.modules, known, undefined);

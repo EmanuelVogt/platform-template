@@ -10,6 +10,23 @@ export function copyFiles(files) {
   }
 }
 
+// Guards que afirmam um fato do template ("nasce sem entrada instalada") e que
+// a primeira instalação torna falso — o produto herda a regra, não o fato. Sem
+// caminho de volta: `--rollback` não os recria, porque um repositório que já
+// instalou não volta a ser o template.
+export const TEMPLATE_ONLY_FILES = ["apps/api/src/modules/template-kernel-only.spec.ts"];
+
+export function removeTemplateOnlyFiles(cwd) {
+  const removed = [];
+  for (const relPath of TEMPLATE_ONLY_FILES) {
+    const filePath = path.join(cwd, relPath);
+    if (!existsSync(filePath)) continue;
+    rmSync(filePath);
+    removed.push(relPath);
+  }
+  return removed;
+}
+
 function sha256File(filePath) {
   return createHash("sha256").update(readFileSync(filePath)).digest("hex");
 }

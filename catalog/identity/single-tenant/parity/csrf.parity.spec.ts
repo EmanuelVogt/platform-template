@@ -11,6 +11,7 @@ import { CsrfGuard } from "../api/guards/csrf.guard"
 
 import type { CsrfConfig } from "../api/guards/csrf.guard"
 import type { Csrf } from "../domain/ports/csrf"
+import type { AccessRequirement } from "../../../shared/kernel/access/access-policy.port"
 import type { ExecutionContext } from "@nestjs/common"
 
 const WEB_ORIGIN = "https://app.example.com"
@@ -35,7 +36,7 @@ type FakeRequest = {
 
 function contextFor(
   request: FakeRequest,
-  metadata: Record<string, boolean> = {},
+  metadata: Record<string, boolean | AccessRequirement> = {},
 ): ExecutionContext {
   const handler = (): void => undefined
   for (const [key, value] of Object.entries(metadata)) {

@@ -10,6 +10,16 @@ import { installChild, renderChild } from "./platform/lib/render-child.mjs";
 const EXPECTED_SCHEMAS = ["_kernel", "drizzle"];
 const ALLOWED_EXTRA_SCHEMAS = ["public"];
 const HEALTH_PORT = "3222";
+// Espelha CONTRACT_ENV_DEFAULTS de scripts/platform/catalog-check.mjs — variáveis fora do
+// Postgres/Redis efêmeros que o boot do child exige (Zod) mas o smoke não usa de verdade.
+const CHILD_ENV_DEFAULTS = {
+  WEB_ORIGIN: "http://localhost:3000",
+  R2_ACCOUNT_ID: "placeholder",
+  R2_ACCESS_KEY_ID: "placeholder",
+  R2_SECRET_ACCESS_KEY: "placeholder",
+  R2_BUCKET: "placeholder",
+  R2_ENDPOINT: "https://placeholder.r2.example.com",
+};
 
 export function parseArgs(argv) {
   return {
@@ -75,6 +85,15 @@ export async function waitForPostgresReady({ containerId, run, attempts = 30, de
   return false;
 }
 
+export async function waitForRedisReady({ containerId, run, attempts = 30, delayMs = 500, sleep = defaultSleep }) {
+  for (let i = 0; i < attempts; i += 1) {
+    const probe = run("docker", ["exec", containerId, "redis-cli", "ping"]);
+    if (probe.status === 0 && probe.stdout.trim() === "PONG") return true;
+    await sleep(delayMs);
+  }
+  return false;
+}
+
 export async function waitForHealth({ url, fetchImpl = fetch, attempts = 30, delayMs = 500, sleep = defaultSleep }) {
   for (let i = 0; i < attempts; i += 1) {
     try {
@@ -94,85 +113,106 @@ function defaultRun(command, args, options) {
 }
 
 function defaultSpawnProcess(command, args, options) {
-  return spawn(command, args, { stdio: "ignore", ...options });
+  return spawn(command, args, { stdio: ["ignore", "ignore", "pipe"], ...options });
 }
 
 function defaultScratchDir() {
   return mkdtempSync(path.join(tmpdir(), "template-smoke-"));
 }
 
-async function checkMigrateAndSchema({ childDir, run, sleep, log }) {
-  const startResult = run("docker", [
-    "run",
-    "--rm",
-    "-d",
-    "-e",
-    "POSTGRES_PASSWORD=postgres",
-    "-e",
-    "POSTGRES_DB=smoke",
-    "-P",
-    "postgres:16-alpine",
-  ]);
-  if (startResult.status !== 0) {
-    log(`template:smoke — não consegui subir um Postgres efêmero via docker (código ${startResult.status}); verifique se o daemon está rodando`);
-    return EXIT_CODES.CATALOG_UNREACHABLE;
-  }
-  const containerId = startResult.stdout.trim();
-
-  try {
-    const ready = await waitForPostgresReady({ containerId, run, sleep });
-    if (!ready) {
-      log("template:smoke — Postgres efêmero não ficou pronto a tempo (pg_isready nunca retornou 0)");
-      return EXIT_CODES.CATALOG_UNREACHABLE;
-    }
-
-    const portResult = run("docker", ["port", containerId, "5432/tcp"]);
-    const mappedPort = portResult.stdout.trim().split("\n")[0]?.split(":").pop();
-    if (!mappedPort) {
-      log("template:smoke — não consegui descobrir a porta publicada do Postgres efêmero");
-      return EXIT_CODES.CATALOG_UNREACHABLE;
-    }
-    const databaseUrl = `postgres://postgres:postgres@localhost:${mappedPort}/smoke`;
-
-    const migrateResult = run("pnpm", ["--filter", "api", "run", "db:migrate"], {
-      cwd: childDir,
-      env: { ...process.env, DATABASE_URL: databaseUrl },
-    });
-    if (migrateResult.status !== 0) {
-      log(`template:smoke — "pnpm --filter api run db:migrate" falhou no child (código ${migrateResult.status})`);
-      return EXIT_CODES.MIGRATION_FAILURE;
-    }
-
-    const schemaResult = run("docker", [
-      "exec",
-      containerId,
-      "psql",
-      "-U",
-      "postgres",
-      "-d",
-      "smoke",
-      "-tAc",
-      "SELECT nspname FROM pg_catalog.pg_namespace WHERE nspname NOT LIKE 'pg\\_%' AND nspname <> 'information_schema' ORDER BY 1;",
-    ]);
-    if (schemaResult.status !== 0) {
-      log(`template:smoke — não consegui consultar os schemas do Postgres efêmero (código ${schemaResult.status})`);
-      return EXIT_CODES.CATALOG_UNREACHABLE;
-    }
-    const actualSchemas = parseSchemaList(schemaResult.stdout);
-    if (!schemasMatchExpected(actualSchemas)) {
-      log(
-        `template:smoke — schemas após "db:migrate" divergem do esperado: encontrados [${actualSchemas.join(", ")}], obrigatórios [${EXPECTED_SCHEMAS.join(", ")}], extras permitidos [${ALLOWED_EXTRA_SCHEMAS.join(", ")}]`,
-      );
-      return EXIT_CODES.MIGRATION_FAILURE;
-    }
-
-    return null;
-  } finally {
-    run("docker", ["stop", containerId]);
-  }
+function startContainer({ run, image, args = [] }) {
+  const result = run("docker", ["run", "--rm", "-d", ...args, "-P", image]);
+  return { containerId: result.status === 0 ? result.stdout.trim() : null, status: result.status };
 }
 
-async function checkHealth({ childDir, run, spawnProcess, sleep, fetchImpl, log }) {
+function getMappedPort({ run, containerId, containerPort }) {
+  const portResult = run("docker", ["port", containerId, `${containerPort}/tcp`]);
+  return portResult.stdout.trim().split("\n")[0]?.split(":").pop() || null;
+}
+
+async function startPostgres({ run, sleep, log }) {
+  const { containerId, status } = startContainer({
+    run,
+    image: "postgres:16-alpine",
+    args: ["-e", "POSTGRES_PASSWORD=postgres", "-e", "POSTGRES_DB=smoke"],
+  });
+  if (status !== 0) {
+    log(`template:smoke — não consegui subir um Postgres efêmero via docker (código ${status}); verifique se o daemon está rodando`);
+    return null;
+  }
+  const ready = await waitForPostgresReady({ containerId, run, sleep });
+  if (!ready) {
+    log("template:smoke — Postgres efêmero não ficou pronto a tempo (pg_isready nunca retornou 0)");
+    run("docker", ["stop", containerId]);
+    return null;
+  }
+  const mappedPort = getMappedPort({ run, containerId, containerPort: 5432 });
+  if (!mappedPort) {
+    log("template:smoke — não consegui descobrir a porta publicada do Postgres efêmero");
+    run("docker", ["stop", containerId]);
+    return null;
+  }
+  return { containerId, url: `postgres://postgres:postgres@localhost:${mappedPort}/smoke` };
+}
+
+async function startRedis({ run, sleep, log }) {
+  const { containerId, status } = startContainer({ run, image: "redis:7-alpine" });
+  if (status !== 0) {
+    log(`template:smoke — não consegui subir um Redis efêmero via docker (código ${status}); verifique se o daemon está rodando`);
+    return null;
+  }
+  const ready = await waitForRedisReady({ containerId, run, sleep });
+  if (!ready) {
+    log("template:smoke — Redis efêmero não ficou pronto a tempo (redis-cli ping nunca retornou PONG)");
+    run("docker", ["stop", containerId]);
+    return null;
+  }
+  const mappedPort = getMappedPort({ run, containerId, containerPort: 6379 });
+  if (!mappedPort) {
+    log("template:smoke — não consegui descobrir a porta publicada do Redis efêmero");
+    run("docker", ["stop", containerId]);
+    return null;
+  }
+  return { containerId, url: `redis://localhost:${mappedPort}` };
+}
+
+function checkMigrateAndSchema({ childDir, run, containerId, databaseUrl, log }) {
+  const migrateResult = run("pnpm", ["--filter", "api", "run", "db:migrate"], {
+    cwd: childDir,
+    env: { ...process.env, DATABASE_URL: databaseUrl },
+  });
+  if (migrateResult.status !== 0) {
+    log(`template:smoke — "pnpm --filter api run db:migrate" falhou no child (código ${migrateResult.status})`);
+    return EXIT_CODES.MIGRATION_FAILURE;
+  }
+
+  const schemaResult = run("docker", [
+    "exec",
+    containerId,
+    "psql",
+    "-U",
+    "postgres",
+    "-d",
+    "smoke",
+    "-tAc",
+    "SELECT nspname FROM pg_catalog.pg_namespace WHERE nspname NOT LIKE 'pg\\_%' AND nspname <> 'information_schema' ORDER BY 1;",
+  ]);
+  if (schemaResult.status !== 0) {
+    log(`template:smoke — não consegui consultar os schemas do Postgres efêmero (código ${schemaResult.status})`);
+    return EXIT_CODES.CATALOG_UNREACHABLE;
+  }
+  const actualSchemas = parseSchemaList(schemaResult.stdout);
+  if (!schemasMatchExpected(actualSchemas)) {
+    log(
+      `template:smoke — schemas após "db:migrate" divergem do esperado: encontrados [${actualSchemas.join(", ")}], obrigatórios [${EXPECTED_SCHEMAS.join(", ")}], extras permitidos [${ALLOWED_EXTRA_SCHEMAS.join(", ")}]`,
+    );
+    return EXIT_CODES.MIGRATION_FAILURE;
+  }
+
+  return null;
+}
+
+async function checkHealth({ childDir, run, spawnProcess, sleep, fetchImpl, log, databaseUrl, redisUrl }) {
   const buildResult = run("pnpm", ["--filter", "api", "run", "build"], { cwd: childDir });
   if (buildResult.status !== 0) {
     log(`template:smoke — "pnpm --filter api run build" falhou no child (código ${buildResult.status})`);
@@ -181,13 +221,26 @@ async function checkHealth({ childDir, run, spawnProcess, sleep, fetchImpl, log 
 
   const server = spawnProcess("pnpm", ["--filter", "api", "run", "start"], {
     cwd: childDir,
-    env: { ...process.env, PORT: HEALTH_PORT },
+    env: {
+      ...process.env,
+      ...CHILD_ENV_DEFAULTS,
+      PORT: HEALTH_PORT,
+      DATABASE_URL: databaseUrl,
+      REDIS_URL: redisUrl,
+    },
+  });
+
+  let stderrOutput = "";
+  server.stderr?.on("data", (chunk) => {
+    stderrOutput += chunk.toString();
   });
 
   try {
     const healthy = await waitForHealth({ url: `http://localhost:${HEALTH_PORT}/health`, fetchImpl, sleep });
     if (!healthy) {
-      log("template:smoke — GET /health não respondeu 200 a tempo no child");
+      const firstLines = stderrOutput.trim().split("\n").slice(0, 10).join("\n");
+      const detail = firstLines ? ` — stderr do child:\n${firstLines}` : "";
+      log(`template:smoke — GET /health não respondeu 200 a tempo no child${detail}`);
       return EXIT_CODES.TEST_FAILURE;
     }
     return null;
@@ -220,6 +273,8 @@ export async function runTemplateSmoke({
   log = (line) => process.stdout.write(`${line}\n`),
 } = {}) {
   const childDir = scratchDir ?? defaultScratchDir();
+  let postgres = null;
+  let redis = null;
 
   try {
     log(`template:smoke — renderizando child kernel-only em ${childDir}`);
@@ -248,12 +303,29 @@ export async function runTemplateSmoke({
       return EXIT_CODES.TEST_FAILURE;
     }
 
+    log("template:smoke — subindo Postgres efêmero");
+    postgres = await startPostgres({ run, sleep, log });
+    if (!postgres) return EXIT_CODES.CATALOG_UNREACHABLE;
+
     log("template:smoke — checagem 2/4: db:migrate num Postgres efêmero, só _kernel + drizzle");
-    const migrateExit = await checkMigrateAndSchema({ childDir, run, sleep, log });
+    const migrateExit = checkMigrateAndSchema({ childDir, run, containerId: postgres.containerId, databaseUrl: postgres.url, log });
     if (migrateExit !== null) return migrateExit;
 
+    log("template:smoke — subindo Redis efêmero");
+    redis = await startRedis({ run, sleep, log });
+    if (!redis) return EXIT_CODES.CATALOG_UNREACHABLE;
+
     log("template:smoke — checagem 3/4: GET /health");
-    const healthExit = await checkHealth({ childDir, run, spawnProcess, sleep, fetchImpl, log });
+    const healthExit = await checkHealth({
+      childDir,
+      run,
+      spawnProcess,
+      sleep,
+      fetchImpl,
+      log,
+      databaseUrl: postgres.url,
+      redisUrl: redis.url,
+    });
     if (healthExit !== null) return healthExit;
 
     log("template:smoke — checagem 4/4: RULE C (module-boundaries.spec.ts)");
@@ -263,6 +335,8 @@ export async function runTemplateSmoke({
     log("\nSmoke do template passou: as quatro checagens ficaram verdes.");
     return EXIT_CODES.OK;
   } finally {
+    if (postgres) run("docker", ["stop", postgres.containerId]);
+    if (redis) run("docker", ["stop", redis.containerId]);
     if (keep) {
       log(`--keep: diretório do child mantido em ${childDir}`);
     } else {

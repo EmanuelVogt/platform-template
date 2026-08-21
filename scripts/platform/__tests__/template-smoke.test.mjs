@@ -10,6 +10,7 @@ import {
   schemasMatchExpected,
   waitForHealth,
   waitForPostgresReady,
+  waitForRedisReady,
 } from "../../template-smoke.mjs";
 
 function noopLog() {}
@@ -89,6 +90,23 @@ test("waitForPostgresReady stops as soon as pg_isready reports 0", async () => {
 test("waitForPostgresReady gives up after the attempt budget", async () => {
   const run = () => ({ status: 1, stdout: "", stderr: "" });
   const ready = await waitForPostgresReady({ containerId: "cid", run, attempts: 3, sleep: immediateSleep });
+  assert.equal(ready, false);
+});
+
+test("waitForRedisReady stops as soon as redis-cli ping answers PONG", async () => {
+  let attempt = 0;
+  const run = () => {
+    attempt += 1;
+    return { status: 0, stdout: attempt >= 3 ? "PONG\n" : "", stderr: "" };
+  };
+  const ready = await waitForRedisReady({ containerId: "cid", run, attempts: 5, sleep: immediateSleep });
+  assert.equal(ready, true);
+  assert.equal(attempt, 3);
+});
+
+test("waitForRedisReady gives up after the attempt budget", async () => {
+  const run = () => ({ status: 1, stdout: "", stderr: "" });
+  const ready = await waitForRedisReady({ containerId: "cid", run, attempts: 3, sleep: immediateSleep });
   assert.equal(ready, false);
 });
 
@@ -175,6 +193,7 @@ test("runTemplateSmoke does not fail on schema check when Postgres's own public 
   const run = stubRun({
     "docker run": { status: 0, stdout: "cid123\n", stderr: "" },
     "docker exec cid123 pg_isready": { status: 0, stdout: "", stderr: "" },
+    "docker exec cid123 redis-cli ping": { status: 0, stdout: "PONG\n", stderr: "" },
     "docker port cid123": { status: 0, stdout: "0.0.0.0:32000\n", stderr: "" },
     "pnpm --filter api run db:migrate": { status: 0, stdout: "", stderr: "" },
     "docker exec cid123 psql": { status: 0, stdout: "_kernel\ndrizzle\npublic\n", stderr: "" },
@@ -196,6 +215,7 @@ test("runTemplateSmoke returns TEST_FAILURE when GET /health never answers 200",
   const run = stubRun({
     "docker run": { status: 0, stdout: "cid123\n", stderr: "" },
     "docker exec cid123 pg_isready": { status: 0, stdout: "", stderr: "" },
+    "docker exec cid123 redis-cli ping": { status: 0, stdout: "PONG\n", stderr: "" },
     "docker port cid123": { status: 0, stdout: "0.0.0.0:32000\n", stderr: "" },
     "pnpm --filter api run db:migrate": { status: 0, stdout: "", stderr: "" },
     "docker exec cid123 psql": { status: 0, stdout: "_kernel\ndrizzle\n", stderr: "" },
@@ -213,10 +233,52 @@ test("runTemplateSmoke returns TEST_FAILURE when GET /health never answers 200",
   assert.equal(code, EXIT_CODES.TEST_FAILURE);
 });
 
+test("runTemplateSmoke passes DATABASE_URL/REDIS_URL/WEB_ORIGIN to the health-check child and surfaces its stderr on timeout", async () => {
+  const run = stubRun({
+    "docker run": { status: 0, stdout: "cid123\n", stderr: "" },
+    "docker exec cid123 pg_isready": { status: 0, stdout: "", stderr: "" },
+    "docker exec cid123 redis-cli ping": { status: 0, stdout: "PONG\n", stderr: "" },
+    "docker port cid123": { status: 0, stdout: "0.0.0.0:32000\n", stderr: "" },
+    "pnpm --filter api run db:migrate": { status: 0, stdout: "", stderr: "" },
+    "docker exec cid123 psql": { status: 0, stdout: "_kernel\ndrizzle\n", stderr: "" },
+  });
+  const logs = [];
+  let receivedEnv;
+  const server = {
+    stderr: {
+      on: (event, handler) => {
+        if (event === "data") handler(Buffer.from("Invalid input: expected string, received undefined\n  → at DATABASE_URL\n"));
+      },
+    },
+    kill: () => {},
+  };
+  const code = await runTemplateSmoke({
+    scratchDir: "/tmp/template-smoke-test-health-env",
+    run,
+    renderChildFn: () => ({ status: 0, stdout: "", stderr: "" }),
+    installChildFn: () => ({ status: 0, stdout: "", stderr: "" }),
+    spawnProcess: (_command, _args, options) => {
+      receivedEnv = options.env;
+      return server;
+    },
+    fetchImpl: async () => ({ status: 503 }),
+    sleep: immediateSleep,
+    log: (line) => logs.push(line),
+  });
+  assert.equal(code, EXIT_CODES.TEST_FAILURE);
+  assert.equal(typeof receivedEnv.DATABASE_URL, "string");
+  assert.ok(receivedEnv.DATABASE_URL.length > 0);
+  assert.equal(typeof receivedEnv.REDIS_URL, "string");
+  assert.ok(receivedEnv.REDIS_URL.length > 0);
+  assert.equal(receivedEnv.WEB_ORIGIN, "http://localhost:3000");
+  assert.ok(logs.some((line) => line.includes("DATABASE_URL")));
+});
+
 test("runTemplateSmoke returns TEST_FAILURE when the RULE C spec fails on the child", async () => {
   const run = stubRun({
     "docker run": { status: 0, stdout: "cid123\n", stderr: "" },
     "docker exec cid123 pg_isready": { status: 0, stdout: "", stderr: "" },
+    "docker exec cid123 redis-cli ping": { status: 0, stdout: "PONG\n", stderr: "" },
     "docker port cid123": { status: 0, stdout: "0.0.0.0:32000\n", stderr: "" },
     "pnpm --filter api run db:migrate": { status: 0, stdout: "", stderr: "" },
     "docker exec cid123 psql": { status: 0, stdout: "_kernel\ndrizzle\n", stderr: "" },
@@ -239,6 +301,7 @@ test("runTemplateSmoke returns OK when all four checks are green", async () => {
   const run = stubRun({
     "docker run": { status: 0, stdout: "cid123\n", stderr: "" },
     "docker exec cid123 pg_isready": { status: 0, stdout: "", stderr: "" },
+    "docker exec cid123 redis-cli ping": { status: 0, stdout: "PONG\n", stderr: "" },
     "docker port cid123": { status: 0, stdout: "0.0.0.0:32000\n", stderr: "" },
     "pnpm --filter api run db:migrate": { status: 0, stdout: "", stderr: "" },
     "docker exec cid123 psql": { status: 0, stdout: "_kernel\ndrizzle\n", stderr: "" },

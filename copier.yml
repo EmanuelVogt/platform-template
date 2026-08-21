@@ -19,6 +19,7 @@ _exclude:
   - .worktrees
   - .specs
   - catalog/
+  - .github/workflows/catalog.yml
   - .claude/settings.local.json
   - apps/api/.env
   - apps/web/.env.local

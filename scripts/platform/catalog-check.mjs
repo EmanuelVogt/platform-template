@@ -203,7 +203,10 @@ export async function runCatalogCheck({
     for (const entry of order) {
       const label = entryLabel(entry);
       log(`catalog:check — module add ${label}`);
-      const args = ["module", "add", entry.name];
+      // --catalog-ref explícito: o copier normaliza o _src_path do child para o
+      // remote origin (gh:...), e este gate roda ANTES da tag simulada existir lá —
+      // a resolução tem de ficar no checkout local.
+      const args = ["module", "add", entry.name, "--catalog-ref", catalogRoot];
       if (entry.manifest.variant) args.push("--variant", entry.manifest.variant);
       timeoutTracker.reset();
       const exitCode = await runCli(args, { cwd: childDir, run: withContractEnv(timedRun) });

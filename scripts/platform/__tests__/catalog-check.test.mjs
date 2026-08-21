@@ -181,8 +181,8 @@ test("runCatalogCheck happy path renders, installs, adds every entry in order (w
     assert.equal(code, EXIT_CODES.OK);
     const callArgs = runCli.calls.map((call) => call.args);
     assert.deepEqual(callArgs.slice(0, 2), [
-      ["module", "add", "notification"],
-      ["module", "add", "identity", "--variant", "single-tenant"],
+      ["module", "add", "notification", "--catalog-ref", catalogRoot],
+      ["module", "add", "identity", "--catalog-ref", catalogRoot, "--variant", "single-tenant"],
     ]);
     assert.deepEqual(
       new Set(callArgs.slice(2).map((args) => args[2])),
@@ -336,9 +336,9 @@ test("runCatalogCheck attributes a failing entry, propagates its exit code and s
     assert.deepEqual(
       runCli.calls.map((call) => call.args),
       [
-        ["module", "add", "notification"],
-        ["module", "add", "identity", "--variant", "single-tenant"],
-        ["module", "add", "audit"],
+        ["module", "add", "notification", "--catalog-ref", catalogRoot],
+        ["module", "add", "identity", "--catalog-ref", catalogRoot, "--variant", "single-tenant"],
+        ["module", "add", "audit", "--catalog-ref", catalogRoot],
       ],
     );
     assert.ok(logs.some((line) => line.includes('"audit"') && line.includes("7")));

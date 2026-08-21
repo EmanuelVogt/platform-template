@@ -27,6 +27,12 @@ e não há migration nova.
    `@bryntum` para registry privado era resquício de produto; `apps/api/Dockerfile.dev`
    não exige mais token de build e as seções correspondentes saíram de
    [`ambiente-local.md`](ambiente-local.md) e [`deploy.md`](deploy.md).
+4. **`module add` entende o `_src_path` em shorthand do copier.** O copier grava
+   `_src_path: gh:<org>/<repo>` no `.copier-answers.yml` do produto (mesmo gerado
+   de um checkout local, ele normaliza para o remote origin); o resolvedor de
+   catálogo agora expande `gh:`/`gl:` para a URL https antes do `git clone`.
+   Antes, o primeiro `pnpm platform module add` de um produto gerado de `gh:...`
+   falhava com "catálogo inacessível".
 
 ### Passos de migração do filho (`copier update` de v1.0.0)
 

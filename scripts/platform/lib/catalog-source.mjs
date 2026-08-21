@@ -17,6 +17,16 @@ export function isGitRef(source) {
   return /^(git@|https?:\/\/|gh:|file:\/\/)/.test(source) || source.endsWith(".git");
 }
 
+// O copier grava `_src_path` no shorthand dele (`gh:`/`gl:`) — inclusive quando o
+// template foi passado como caminho local (ele normaliza para o remote origin).
+// `git clone` não entende esses prefixos; expande para a URL https equivalente.
+export function expandGitShorthand(source) {
+  const match = /^(gh|gl):(?!\/\/)(.+)$/.exec(source);
+  if (!match) return source;
+  const host = match[1] === "gh" ? "github.com" : "gitlab.com";
+  return `https://${host}/${match[2].replace(/\.git$/, "")}.git`;
+}
+
 function hashRef(ref) {
   return createHash("sha1").update(ref).digest("hex").slice(0, 12);
 }
@@ -78,7 +88,7 @@ export function resolveCatalog(
         "--filter=blob:none",
         "--sparse",
         ...(gitRef ? ["--branch", gitRef] : []),
-        source,
+        expandGitShorthand(source),
         dest,
       ],
       { stdio: "pipe" },

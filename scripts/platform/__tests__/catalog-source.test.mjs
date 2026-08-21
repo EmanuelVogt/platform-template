@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { CatalogUnreachableError, defaultCatalogRef, isGitRef, resolveCatalog, splitCatalogRef } from "../lib/catalog-source.mjs";
+import { CatalogUnreachableError, defaultCatalogRef, expandGitShorthand, isGitRef, resolveCatalog, splitCatalogRef } from "../lib/catalog-source.mjs";
 
 function git(args, cwd) {
   execFileSync("git", args, { cwd, stdio: "pipe" });
@@ -128,4 +128,17 @@ test("splitCatalogRef separa gh:owner/repo#<ref> em (source, gitRef) e isGitRef 
 
 test("splitCatalogRef corta na PRIMEIRA # quando a própria fonte contém #", () => {
   assert.deepEqual(splitCatalogRef("/tmp/weird#dir#v1"), { source: "/tmp/weird", gitRef: "dir#v1" });
+});
+
+test("expandGitShorthand expande gh:/gl: para a URL https clonável", () => {
+  assert.equal(expandGitShorthand("gh:owner/repo"), "https://github.com/owner/repo.git");
+  assert.equal(expandGitShorthand("gh:owner/repo.git"), "https://github.com/owner/repo.git");
+  assert.equal(expandGitShorthand("gl:owner/repo"), "https://gitlab.com/owner/repo.git");
+});
+
+test("expandGitShorthand não altera URLs completas nem caminhos locais", () => {
+  assert.equal(expandGitShorthand("https://github.com/o/r.git"), "https://github.com/o/r.git");
+  assert.equal(expandGitShorthand("git@github.com:o/r.git"), "git@github.com:o/r.git");
+  assert.equal(expandGitShorthand("file:///tmp/repo.git"), "file:///tmp/repo.git");
+  assert.equal(expandGitShorthand("/tmp/algum-diretorio"), "/tmp/algum-diretorio");
 });

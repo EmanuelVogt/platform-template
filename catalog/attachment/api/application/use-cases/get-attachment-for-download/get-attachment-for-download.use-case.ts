@@ -2,6 +2,7 @@ import { Inject } from "@nestjs/common"
 
 import { OBJECT_STORAGE, type ObjectStoragePort } from "../../../../../shared/infra/storage/object-storage.port"
 import { RequestContext } from "../../../../../shared/kernel/context/request-context"
+import { NonTransactional } from "../../../../../shared/kernel/transactional/transactional.decorator"
 import { Traced } from "../../../../../shared/kernel/tracing/traced.decorator"
 import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
 import { AccessPolicy } from "../../../domain/access-policy"
@@ -42,13 +43,10 @@ export class GetAttachmentForDownloadUseCase {
     private readonly ctx: RequestContext,
   ) {}
 
-  /**
-   * Sem transação própria (Regra de Ouro 17): o corpo busca o objeto no storage,
-   * e IO externo nunca roda dentro de tx. Some com a trilha, que commita na
-   * conexão raiz por decisão do repositório, e uma tx aqui seguraria a conexão
-   * dela enquanto pede uma SEGUNDA ao mesmo pool — com `DATABASE_POOL_MAX`
-   * downloads simultâneos ninguém libera a primeira e o pool trava inteiro.
-   */
+  @NonTransactional(
+    "io externo: stream do storage — tx aqui seguraria a conexão do pool " +
+      "enquanto o corpo baixa, travando o pool com downloads concorrentes",
+  )
   @Traced({ name: "attachment.download" })
   async execute(input: {
     id: string

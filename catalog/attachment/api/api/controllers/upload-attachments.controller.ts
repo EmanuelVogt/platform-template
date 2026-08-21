@@ -18,7 +18,7 @@ import {
 import { SelfService } from "../../../../shared/kernel/access/decorators"
 import { RequestContext } from "../../../../shared/kernel/context/request-context"
 import { UploadAttachmentsBatchUseCase } from "../../application/use-cases/upload-attachments-batch/upload-attachments-batch.use-case"
-import { readMultipartFiles } from "../../infrastructure/http/multipart-files"
+import { readMultipartFiles } from "./multipart-files"
 import {
   UploadAttachmentsQueryDto,
   UploadAttachmentsResponseDto,

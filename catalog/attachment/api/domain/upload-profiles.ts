@@ -1,8 +1,15 @@
 import { PRODUCT_UPLOAD_PROFILES } from "./upload/product-upload-profiles"
 
-import type { AttachmentConfig } from "../attachment.config"
 import type { Visibility } from "./access-policy"
 import type { UploadProfileDef } from "./upload/upload-profile.types"
+
+/** Domain não importa `attachment.config` (module-boundaries.spec.ts): só os
+ * limites de bytes que `buildUploadProfiles` usa, não a config inteira. */
+export interface UploadProfileConfig {
+  readonly ATTACHMENT_MAX_UPLOAD_BYTES: number
+  readonly ATTACHMENT_MULTI_MAX_FILE_BYTES: number
+  readonly ATTACHMENT_MULTI_MAX_TOTAL_BYTES: number
+}
 
 export const BASE_UPLOAD_PROFILE_NAMES = [
   "avatar",
@@ -64,7 +71,7 @@ export const ROUTE_UPLOAD_PROFILE_NAMES = buildRouteUploadProfileNames() as read
 ]
 
 export function buildUploadProfiles(
-  config: AttachmentConfig,
+  config: UploadProfileConfig,
   productDefs: readonly UploadProfileDef[] = PRODUCT_UPLOAD_PROFILES,
 ): UploadProfileCatalog {
   const direct: UploadProfile = {

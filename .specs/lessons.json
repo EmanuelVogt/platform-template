@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 3,
+  "next_id": 8,
   "lessons": [
     {
       "id": "L-001",
@@ -40,6 +40,96 @@
       ],
       "created": "2026-08-19T02:25:04Z",
       "last_seen": "2026-08-19T02:25:04Z"
+    },
+    {
+      "id": "L-003",
+      "key": "gate_fail::assert schemas as a superset check that forbids unexpected names never as equality against a fixed list a fresh postgresql database always carries public",
+      "text": "Assert schemas as a superset check that forbids unexpected names, never as equality against a fixed list — a fresh PostgreSQL database always carries public",
+      "signal": "gate_fail",
+      "scope": "gates",
+      "status": "candidate",
+      "features": [
+        "v1-kernel-only-module-catalog"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "scripts/template-smoke.mjs:10 (gates)"
+      ],
+      "created": "2026-08-21T06:13:46Z",
+      "last_seen": "2026-08-21T06:13:46Z"
+    },
+    {
+      "id": "L-004",
+      "key": "ac_gap::an acceptance criterion naming a ci job needs a committed workflow file a gate that only a human can trigger is evidence for one run not a standing guarantee",
+      "text": "An acceptance criterion naming a CI job needs a committed workflow file; a gate that only a human can trigger is evidence for one run, not a standing guarantee",
+      "signal": "ac_gap",
+      "scope": "ci",
+      "status": "candidate",
+      "features": [
+        "v1-kernel-only-module-catalog"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "CAT-02 / spec.md P1 catalog entries AC2 (ci)"
+      ],
+      "created": "2026-08-21T06:13:46Z",
+      "last_seen": "2026-08-21T06:13:46Z"
+    },
+    {
+      "id": "L-005",
+      "key": "surviving_mutant::when a manifest field restates a fact the code already contains add a test that re derives it from the code and asserts equality instead of trusting the hand written value",
+      "text": "When a manifest field restates a fact the code already contains, add a test that re-derives it from the code and asserts equality, instead of trusting the hand-written value",
+      "signal": "surviving_mutant",
+      "scope": "catalog",
+      "status": "candidate",
+      "features": [
+        "v1-kernel-only-module-catalog"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "catalog/attachment/module.json dependsOn -> [] survived catalog:lint and catalog:typecheck (catalog)"
+      ],
+      "created": "2026-08-21T06:13:47Z",
+      "last_seen": "2026-08-21T06:13:47Z"
+    },
+    {
+      "id": "L-006",
+      "key": "spec_precision_gap::when design is corrected because a promised column or field never existed correct the acceptance criterion in spec md in the same change or the verifier reports the clause as uncovered",
+      "text": "When design is corrected because a promised column or field never existed, correct the acceptance criterion in spec.md in the same change, or the verifier reports the clause as uncovered",
+      "signal": "spec_precision_gap",
+      "scope": "spec",
+      "status": "candidate",
+      "features": [
+        "v1-kernel-only-module-catalog"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "spec.md P1 kernel ports AC3 (outbox actorId) (spec)"
+      ],
+      "created": "2026-08-21T06:13:48Z",
+      "last_seen": "2026-08-21T06:13:48Z"
+    },
+    {
+      "id": "L-007",
+      "key": "ac_gap::a hook file is a deliverable test the hook s own entry point including its empty output and event gating paths not only the library it calls",
+      "text": "A hook file is a deliverable: test the hook's own entry point including its empty-output and event-gating paths, not only the library it calls",
+      "signal": "ac_gap",
+      "scope": "hooks",
+      "status": "candidate",
+      "features": [
+        "v1-kernel-only-module-catalog"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        ".claude/hooks/pending-advisories.mjs:18-22,35 (hooks)"
+      ],
+      "created": "2026-08-21T06:13:49Z",
+      "last_seen": "2026-08-21T06:13:49Z"
     }
   ]
 }

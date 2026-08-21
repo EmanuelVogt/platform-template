@@ -67,13 +67,16 @@ Every item below must be resolved by a KRN-* requirement (port/registry in kerne
 
 ### Cross-module dependencies that become catalog dependencies
 
+Measured graph after wave 4c.2 (AD-025/AD-026; production sources only, test-only edges inverted or relocated):
+
 | From | To | Via |
 | --- | --- | --- |
-| identity (avatar upload, access-link avatar, set-password use-cases) | attachment | `attachment/api/facades/attachment.facade.ts` |
-| audit (`list-attachment-access-log`) | attachment | attachment internals (allow-listed today) |
-| attachment (`upload-profiles` → `attachment.config`) | — | same-module allow-list |
+| identity | notification | `NotificationRequested` (×10) |
+| audit | identity | `IdentityModule`, `IDENTITY_ACCESS` via `identity/api/facades/**` (×7) |
+| attachment | identity | `UserDirectoryFacade` (×1) |
+| tag | — | `audit` coupling optional (`IF EXISTS`), deliberately not declared |
 
-Entries therefore declare `dependsOn` in their manifest (CAT-03) and `module add` enforces it (TLG-04).
+Topological order `notification, identity, audit, attachment, tag`; acyclic. Entries declare exactly these edges in `dependsOn` (CAT-03), `module add` enforces them (TLG-04) and a `test:scripts` test re-derives the set from the imports (T30).
 
 ### Web kernel → identity
 
@@ -125,7 +128,7 @@ Gray areas are discussed one at a time (context.md). Rows marked **pending** are
 
 1. WHEN the template is rendered with `copier copy --defaults` THEN the child SHALL contain no directory under `apps/api/src/modules/` and no slice under `apps/web/src/{entities,features,pages}` other than the kernel skeleton listed in Design.
 2. WHEN the child runs `pnpm install && pnpm check && pnpm test` THEN every gate SHALL pass with zero skipped suites.
-3. WHEN the child runs `db:migrate` on an empty database THEN only schema `_kernel` (and `drizzle`) SHALL exist.
+3. WHEN the child runs `db:migrate` on an empty database THEN no schema other than `_kernel`, `drizzle` and PostgreSQL's own `public` SHALL exist (superset check; `public` is created by PostgreSQL, never by the kernel — Verifier Fix 1, T29).
 4. WHEN the child starts THEN `GET /health` SHALL return 200 and the Swagger/openapi export SHALL contain only kernel routes (health; no `/auth`, `/users`, `/attachments`, `/notifications`, `/tags`).
 5. WHEN a grep for the forbidden vocabulary list (`identity`, `accessProfile`, `PermissionsGuard`, `uploadProfile`, `auditTrail`, `notification`, `tag` as module names — exact list in Design) runs over `apps/api/src/shared/**`, `apps/web/src/app/**`, `apps/web/src/shared/**` THEN it SHALL return zero hits (enforced by `module-boundaries.spec.ts` RULE C).
 
@@ -141,7 +144,7 @@ Gray areas are discussed one at a time (context.md). Rows marked **pending** are
 
 1. WHEN a route is decorated with the kernel's access-requirement decorator and no access policy is registered THEN the request SHALL be rejected with RFC 7807 `403` (`type` = `access-policy-missing`) — fail closed.
 2. WHEN a module registers an `AccessPolicy` implementation (kernel DI token) THEN the kernel guard SHALL delegate `can(actor, requirement)` to it and return 403 on `false`, 200 path on `true`.
-3. WHEN `RequestContext.actor` is read outside a request THEN it SHALL be `null`; WHEN set by a module guard THEN it SHALL expose `{ id, kind, tenantId? }` and the outbox/idempotency/audit hooks SHALL record `actorId` without importing any module.
+3. WHEN `RequestContext.actor` is read outside a request THEN it SHALL be `null`; WHEN set by a module guard THEN it SHALL expose `{ id, kind, tenantId? }` and the idempotency/audit hooks SHALL record `actorId` without importing any module (the outbox carries no actor column — note 63; only `job-context.ts` renamed `userId` → `actorId`).
 4. WHEN the identity entry's `web/core` `resolveAccess(user, routeAccess)` is called THEN it SHALL return `"anon"` for a null user on a non-public route, `"forbidden"` for a user lacking the permission, `"allow"` otherwise — pure function, tested in the entry, reproducing v0.2 `requireAccess/requireAnon` decisions; the template web kernel ships no guard.
 5. WHEN `module-boundaries.spec.ts` runs THEN RULE A (`shared/**` never imports `modules/**`) SHALL still hold and RULE B (base-set) SHALL be gone.
 
@@ -155,7 +158,7 @@ Gray areas are discussed one at a time (context.md). Rows marked **pending** are
 
 **Acceptance Criteria**:
 
-1. WHEN the catalog is listed THEN it SHALL contain at least `identity/single-tenant`, `audit`, `attachment`, `notification`, `tag`, each with `module.json` (`name, variant, version, dependsOn[], kernelRange, files, migrations, web?`), `README.md`, `CHANGELOG.md`, `api/**`, `migrations/**`, `parity/**`.
+1. WHEN the catalog is listed THEN it SHALL contain at least `identity/single-tenant`, `audit`, `attachment`, `notification`, `tag`, each with `module.json` (`name, variant, version, dependsOn[], kernelRange, migrations, web?` — no `files`: convention-over-config, note 37), `README.md`, `CHANGELOG.md`, `api/**`, `migrations/**`, `parity/**`.
 2. WHEN the catalog CI job runs for an entry THEN it SHALL render a kernel-only child, `module add` the entry (and its `dependsOn`), and pass `pnpm check && pnpm test` and the entry's parity suite — one job per entry.
 3. WHEN an entry's README is linted THEN it SHALL contain the mandatory sections of the README contract (HBK-01): Contract (routes + events + facades), Kernel ports consumed, Data (schema + tables + migrations), Decisions (ADR list), Parity suite (how to run), Dependencies (other entries), Web part (if any).
 4. WHEN the identity entry is installed THEN its behaviour SHALL equal v0.2's identity module for the parity suite (login, sessions, CSRF, permissions guard, profiles master/admin/professional per AD-002 — `professional` slice stays inside the entry; AD-014).

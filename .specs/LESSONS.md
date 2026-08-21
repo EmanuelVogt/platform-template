@@ -26,6 +26,36 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: .specs/features/v0-2-product-slots/validation.md Fix 2 — apps/api/src/modules/notification/infrastructure/channels/email.channel.spec.ts:157,169 (tests)
 - last seen: 2026-08-19T02:25:04Z
 
+### L-003 — Assert schemas as a superset check that forbids unexpected names, never as equality against a fixed list — a fresh PostgreSQL database always carries public
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `gates` · harmful: 0
+- features: v1-kernel-only-module-catalog
+- evidence: scripts/template-smoke.mjs:10 (gates)
+- last seen: 2026-08-21T06:13:46Z
+
+### L-004 — An acceptance criterion naming a CI job needs a committed workflow file; a gate that only a human can trigger is evidence for one run, not a standing guarantee
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `ci` · harmful: 0
+- features: v1-kernel-only-module-catalog
+- evidence: CAT-02 / spec.md P1 catalog entries AC2 (ci)
+- last seen: 2026-08-21T06:13:46Z
+
+### L-005 — When a manifest field restates a fact the code already contains, add a test that re-derives it from the code and asserts equality, instead of trusting the hand-written value
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `catalog` · harmful: 0
+- features: v1-kernel-only-module-catalog
+- evidence: catalog/attachment/module.json dependsOn -> [] survived catalog:lint and catalog:typecheck (catalog)
+- last seen: 2026-08-21T06:13:47Z
+
+### L-006 — When design is corrected because a promised column or field never existed, correct the acceptance criterion in spec.md in the same change, or the verifier reports the clause as uncovered
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: v1-kernel-only-module-catalog
+- evidence: spec.md P1 kernel ports AC3 (outbox actorId) (spec)
+- last seen: 2026-08-21T06:13:48Z
+
+### L-007 — A hook file is a deliverable: test the hook's own entry point including its empty-output and event-gating paths, not only the library it calls
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `hooks` · harmful: 0
+- features: v1-kernel-only-module-catalog
+- evidence: .claude/hooks/pending-advisories.mjs:18-22,35 (hooks)
+- last seen: 2026-08-21T06:13:49Z
+
 ## Quarantined (failed when applied — ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

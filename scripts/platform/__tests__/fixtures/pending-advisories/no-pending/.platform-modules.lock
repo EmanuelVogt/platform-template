@@ -1,0 +1,6 @@
+{
+  "catalog": { "source": "gh:example/template", "ref": "v1.0.0" },
+  "modules": {
+    "identity": { "variant": "single-tenant", "version": "2.0.0", "installedAt": "2026-08-19T00:00:00.000Z" }
+  }
+}

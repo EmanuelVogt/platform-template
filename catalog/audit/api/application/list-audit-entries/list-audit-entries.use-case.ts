@@ -6,8 +6,8 @@ import { Traced } from "../../../../shared/kernel/tracing/traced.decorator"
 import { ReadOnly } from "../../../../shared/kernel/transactional/transactional.decorator"
 import { UseCase } from "../../../../shared/kernel/use-case/use-case.decorator"
 import { FULL_AUDIT_PERMISSION } from "../../../identity/api/facades/permission-catalog.facade"
-import { IDENTITY_ACCESS } from "../../../identity/application/identity-context"
 import { UserDirectoryFacade } from "../../../identity/api/facades/user-directory.facade"
+import { IDENTITY_ACCESS } from "../../../identity/application/identity-context"
 import {
   AUDIT_REPOSITORY,
   type AuditEntryReadRow,

@@ -3,11 +3,11 @@ import { sql } from "drizzle-orm"
 
 import { TransactionManager } from "../../../../shared/kernel/transactional/transaction-manager"
 
+import type { DrizzleExecutor } from "../../../../shared/infra/database/drizzle.provider"
 import type {
   AuditTrailEntityRef,
   AuditTrailPurger,
 } from "../../../../shared/kernel/audit-trail/audit-trail-purger.port"
-import type { DrizzleExecutor } from "../../../../shared/infra/database/drizzle.provider"
 
 export type AuditEntityRef = AuditTrailEntityRef
 

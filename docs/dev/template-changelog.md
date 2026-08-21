@@ -4,6 +4,17 @@ Verdade da versão = tag git + esta entrada (AD-006); `package.json` não é inc
 no release. Cada versão lista as mudanças quebra-contrato e os passos para o filho
 aplicar no `copier update`.
 
+## v1.1.1
+
+Só documentação: a entrada v1.1.0 deste changelog citava o escopo de pacote de um
+produto como exemplo de registry privado; o exemplo saiu. Sem mudança de contrato,
+sem migration.
+
+### Passos de migração do filho (`copier update` de v1.1.0)
+
+1. `git status` limpo, depois `copier update` (ou `copier update --vcs-ref v1.1.1`) —
+   só `docs/dev/template-changelog.md` muda.
+
 ## v1.1.0
 
 Harness de agentes portado do piloto e limpeza dos resquícios de registry privado
@@ -23,8 +34,8 @@ e não há migration nova.
 2. **Workflows de CI.** `.github/workflows/ci.yml` (lint/typecheck/builds, unit e
    gate de cobertura com testcontainers) e `feedback-triage.yml` (triagem de relato
    via `repository_dispatch`) passam a vir do template.
-3. **`.npmrc` removido e `Dockerfile.dev` simplificado.** O mapeamento do escopo
-   `@bryntum` para registry privado era resquício de produto; `apps/api/Dockerfile.dev`
+3. **`.npmrc` removido e `Dockerfile.dev` simplificado.** O mapeamento de um escopo
+   de pacote para registry privado era resquício de produto; `apps/api/Dockerfile.dev`
    não exige mais token de build e as seções correspondentes saíram de
    [`ambiente-local.md`](ambiente-local.md) e [`deploy.md`](deploy.md).
 4. **`module add` entende o `_src_path` em shorthand do copier.** O copier grava
@@ -37,7 +48,7 @@ e não há migration nova.
 ### Passos de migração do filho (`copier update` de v1.0.0)
 
 1. `git status` limpo, depois `copier update` (ou `copier update --vcs-ref v1.1.0`).
-2. **Se o produto usa registry privado próprio (ex.: `@bryntum`)**: mantenha o seu
+2. **Se o produto usa registry privado próprio**: mantenha o seu
    `.npmrc` no merge (rejeite a deleção) e reponha secret/build-arg no seu
    `Dockerfile.dev` — o template não os traz mais.
 3. Se o produto já tem `ci.yml`/`feedback-triage.yml` próprios em

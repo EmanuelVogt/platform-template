@@ -17,7 +17,9 @@ named section; `coding-principles.md` -> whole.
    **spec-precision gap**, never a vague passing assertion.
 3. **Minimum implementation**, surgical: no adjacent "improvements", no refactor, no scope creep;
    match surrounding style. Never weaken, delete or skip a test.
-4. **Scoped gate via the runner**: quick/full per `tasks.md`, scoped to the files you touched.
+4. **Scoped gate, run it yourself**: quick/full per `tasks.md`, scoped to the files you touched,
+   with the log on disk — `LOG=$(mktemp -t platform-run).log; <cmd> > "$LOG" 2>&1; echo exit=$?`,
+   then `grep -n` the failures or `tail -n 80 "$LOG"`; never cat a whole log into your context.
    Non-zero -> fix, re-run; 3 failed attempts on one task -> STOP `gate-failed`.
 5. **Adequacy review** (hard gate; on failure rewrite/remove, re-gate, re-review). **A**: each
    criterion/AC/edge case cites `file:line` + the assertion whose value matches the spec outcome —
@@ -39,11 +41,14 @@ guess) · `spec-ambiguity` (never decide for the spec) · `test-contradicts-spec
 
 ## Delegation
 
-"Where is X / who uses Y / map of an area" -> `repo-scout` (`model` mandatory: haiku pinpoint,
-sonnet map): `file:line` back, you `Read` the range. Any test/typecheck/lint/build ->
-`shell-runner` (`model: "haiku"`, name the checkout dir): exit code + literal failures + log path.
-Free: `Read` at a known `file:line`, a few `grep -n` in files you know. **Never** a
+**Your gates you run yourself** (step 4) — one hop fewer and the failing lines are already in front
+of you; the runner exists for the orchestrator's Build gate and the Verifier's Final gate, not for
+yours. Default here: a scoped `grep -n` and a `Read` at a known `file:line`. `repo-scout` is
+optional and for the open question you cannot scope ("who consumes Y", "map of the area"): `model`
+mandatory (haiku pinpoint, sonnet map), `file:line` back, you `Read` the range. **Never** a
 project-wide typecheck, the Build gate, or the full e2e/integration suite: the orchestrator's.
+**Never `fork`, never a placeholder agent to wait.** A scout you dispatched re-invokes you
+when it finishes — end your turn; do not spawn anything to "yield" (the hook blocks it).
 
 ## Git
 

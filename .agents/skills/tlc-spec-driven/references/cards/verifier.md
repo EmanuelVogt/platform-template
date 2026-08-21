@@ -19,19 +19,23 @@ the feature is P0 and whether it ran in Light Execute.
 1. **Spec-anchored coverage** — per AC, re-derive the spec-defined outcome and check **the proof
    the spec declared** (traceability `Proof` column): `test` → locate the assertion (scout),
    confirm the *asserted value* matches; `gate` → the Final gate exit code is the evidence, build
-   nothing else; `probe: <cmd>` → run it once via the runner. **Evidence-or-zero**: no `file:line`
+   nothing else; `probe: <cmd>` → run it once yourself, redirected to a log. **Evidence-or-zero**: no `file:line`
    + assertion expression = NOT covered. Spec imprecise, proof missing, or probe without a command
    → ⚠️ spec-precision gap — never a silent pass, never a probe you invent. Scope is the feature's
    diff surface, not the repo.
-2. **Final gate, once** — the Final (or Build) command from `tasks.md`, through the runner. This is
-   the feature's single full-suite run, e2e/integration included. Non-zero → stop and report.
-   Compare the test count with the pre-feature count; a drop is a finding.
+2. **Final gate, once** — the Final (or Build) command from `tasks.md`, **through the runner**
+   (`shell-runner`, haiku; sonnet when the log carries dozens of failures to slice). This is
+   the feature's single full-suite run, e2e/integration included — the one run whose log is too big
+   for your context. Non-zero → stop and report. Compare the test count with the pre-feature count;
+   a drop is a finding.
 3. **Discrimination sensor** — fixed by risk: **Light Execute 1–2** (riskiest AC) · **default 3**
    (every other feature, tooling included) · **P0 ≥5**. Flip a condition, wrong return value,
    off-by-one, drop a required side effect.
-   Per mutant: **inject once → run the scoped gate once through the runner → restore with
-   `git checkout -- <file>`**, then confirm `git status --short -- <file>` prints nothing. Exit code
-   lost → read the runner's log path; never re-inject, never re-run the suite. A surviving mutant is
+   Per mutant: **inject once → run the scoped gate once yourself → restore with
+   `git checkout -- <file>`**, then confirm `git status --short -- <file>` prints nothing. Run it
+   with the log on disk — `LOG=$(mktemp -t platform-run).log; <cmd> > "$LOG" 2>&1; echo exit=$?`,
+   then `grep -n`/`tail -n 80 "$LOG"`; never cat a whole log. Exit code
+   lost → read the log; never re-inject, never re-run the suite. A surviving mutant is
    a weak test → fix task. Never `stash`, never a branch or worktree operation.
 4. **Payload/conjunction rule** — a field is covered only when an assertion targets its value or
    state; an `emit(...)`/`save(...)`/`return` being called, or a spy call count, proves nothing.
@@ -44,8 +48,12 @@ the feature is P0 and whether it ran in Light Execute.
    --text`. `--source` is mandatory. A clean PASS records nothing.
 7. **Return the compact verdict** below — ≤ 1.5 kB, nothing else.
 
-Delegate: locating assertions/consumers → `repo-scout` (`model` mandatory); every command →
-`shell-runner` (`model: "haiku"`, name the checkout dir).
+Delegate: locating assertions/consumers → `repo-scout` (`model` mandatory), optional for a
+question you can scope with `grep -n`; the **Final gate** → `shell-runner` (`model: "haiku"`, name
+the checkout dir). Every other run — the sensor's scoped gates, a `probe` — you run yourself,
+redirected to a log. **Never `fork`, never a placeholder
+agent to wait**: a scout/runner you dispatched re-invokes you when it finishes — end your turn;
+do not spawn anything to "yield" (the hook blocks it).
 
 ## Turn budget ≈120 — validation may take two spawns
 

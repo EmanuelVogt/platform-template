@@ -2,7 +2,7 @@
 
 **Goal**: The orchestrator dispatches; workers implement ONE task at a time. Surgical changes. Verify. Commit. Repeat.
 
-Two readers, two sections. The **orchestrator** (the planning window) reads *Orchestrator* and *After the last wave*; it never runs the per-task cycle itself. A **worker** does not read this file whole: its contract is [cards/worker.md](cards/worker.md), which condenses *Per-task cycle* into ≤4 kB — the § below stays as the reference text, consulted by section (`Read` with `offset`/`limit`) when one rule needs its rationale.
+Two readers, two sections — and neither reads this file whole. The **orchestrator** (the planning window) works from [cards/orchestrator.md](cards/orchestrator.md), which condenses *Orchestrator*, *After the last wave* and the dispatch protocol into ≤4 kB; it opens *Orchestrator* here by section when a rule needs its rationale, and never runs the per-task cycle itself. A **worker** does not read this file whole: its contract is [cards/worker.md](cards/worker.md), which condenses *Per-task cycle* into ≤4 kB — the § below stays as the reference text, consulted by section (`Read` with `offset`/`limit`) when one rule needs its rationale.
 
 **Language**: the inline step list, wave plan, payloads, `tasks.md` updates and `SPEC_DEVIATION` markers are English (SKILL.md Critical Rule 6); only the chat line to the user follows the user's language.
 
@@ -10,7 +10,7 @@ Two readers, two sections. The **orchestrator** (the planning window) reads *Orc
 
 ## Orchestrator: dispatch, don't implement
 
-**You do not write code in Execute.** Not for a one-liner, not "just this once to save a dispatch". The full model — roles, waves and clusters, payload, git protocol, failure handling — is in [sub-agents.md](sub-agents.md); the steps here are the sequence.
+**You do not write a cluster in Execute.** Not for a one-liner inside it, not "just this once to save a dispatch". The exception is a whole plan of **≤3 tasks**, which you implement inline (§ 0 → *Light Execute*). The full model — roles, waves and clusters, payload, git protocol, failure handling — is in [sub-agents.md](sub-agents.md); the steps here are the sequence.
 
 ### 0. Wave plan (MANDATORY — before the first dispatch)
 
@@ -27,7 +27,7 @@ Wave 1: [C1: 1] ∥ [C2: 3]
 Wave 2: [C3: 2 → 4]
 ```
 
-Each step is ONE deliverable, independently verifiable, independently committable. **≤4 steps** → [Light Execute](sub-agents.md#light-execute-4-tasks): one worker runs the whole plan sequentially, no wave/cluster split. **>4 steps or complex dependencies**, fold into waves/clusters with the algorithm in `sub-agents.md`; if listing reveals >5 steps, STOP and create a formal `tasks.md` — the Tasks phase was wrongly skipped.
+Each step is ONE deliverable, independently verifiable, independently committable. **≤3 steps** → [Light Execute](sub-agents.md#light-execute-3-tasks): you implement the plan inline, in order, under the per-task cycle — no worker, no wave/cluster split, gates through the runner, Verifier as always. **4+ steps or complex dependencies**, fold into waves/clusters with the algorithm in `sub-agents.md`; if listing reveals >5 steps, STOP and create a formal `tasks.md` — the Tasks phase was wrongly skipped.
 
 ### 1. Pre-flight (once)
 
@@ -35,7 +35,7 @@ Confirm the checkout the workers will use (feature worktree path + branch, or th
 
 ### 2. Dispatch the wave
 
-One worker per cluster, all clusters in **one message**, each with the worker payload from `sub-agents.md` and a **tier chosen for that cluster** by what it touches (`sub-agents.md` § *Model selection* — mechanics low, sonnet default for everything else, domain/contract/migration/ADR-governed high). ≤4 in flight; the rest queue FIFO. Say which tier each cluster got in the wave report. For a ≤4-task plan, dispatch a single worker instead — see `sub-agents.md` § *Light Execute*.
+One worker per cluster, all clusters in **one message**, each with the worker payload from `sub-agents.md` and a **tier chosen for that cluster** by what it touches (`sub-agents.md` § *Model selection* — mechanics low, sonnet default for everything else, domain/contract/migration/ADR-governed high). ≤4 in flight; the rest queue FIFO. Say which tier each cluster got in the wave report. For a ≤3-task plan there is no dispatch at all: implement it inline — see `sub-agents.md` § *Light Execute*.
 
 ### 3. Collect, gate, record
 
@@ -132,10 +132,17 @@ Follow [coding-principles.md](coding-principles.md):
 
 ### 5. Gate Check (VERIFY)
 
-Run the gate check command from the task definition **through the runner** (it returns exit code + literal failures + the log path; you never read the whole log). This is MANDATORY — not "if applicable."
+Run the gate check command from the task definition **yourself, with the log on disk** — the log never enters your context, only the lines you ask for. This is MANDATORY — not "if applicable."
 
-1. Look up the command for the task's Gate level (quick/full) in the **Gate Check Commands** section of tasks.md, scoped to the files you touched, and hand it to the runner
-2. Non-zero exit code = STOP. Fix the failure. Re-run. Do not proceed until it passes. Three failed attempts on the same task → STOP the cluster and report `gate-failed` with the runner's literal failures.
+```bash
+LOG=$(mktemp -t platform-run).log; cd <checkout> && <gate command> > "$LOG" 2>&1; echo exit=$?
+grep -n "FAIL\|✕\|error TS" "$LOG"   # or: tail -n 80 "$LOG"
+```
+
+1. Look up the command for the task's Gate level (quick/full) in the **Gate Check Commands** section of tasks.md and scope it to the files you touched
+2. Non-zero exit code = STOP. Fix the failure. Re-run. Do not proceed until it passes. Three failed attempts on the same task → STOP the cluster and report `gate-failed` with the literal failures from the log, plus its path.
+
+The `shell-runner` stays for the two gates whose log is genuinely too big for the caller: the orchestrator's Build gate, once per wave, and the Verifier's Final gate. A hop for a scoped run costs more turns than the log it saves (measured 2026-08-21: 73 of 196 worker→runner dispatches had to be escalated to sonnet just to slice a red log).
 3. Confirm the test count matches expectations (no tests were silently deleted or skipped)
 
 **Tiered gates (from the Gate Check Commands section of tasks.md):**
@@ -354,7 +361,7 @@ Dispatch a fresh sub-agent following the **Verifier** role described in [sub-age
 
 **What the Verifier does (full description in [validate.md](validate.md) and [sub-agents.md](sub-agents.md)):**
 1. **Spec-anchored coverage check** — re-derives coverage evidence-or-zero; confirms each test's asserted value matches the spec-defined outcome; flags spec-precision gaps.
-2. **Discrimination sensor** — injects a small behavior-level fault (flip a condition, change a return value, off-by-one) in the real file, runs only the scoped tests through the runner, confirms they kill the mutant, then restores the file from HEAD (`git checkout -- <file>`, never `stash`). Reports killed/survived; surviving mutants become fix tasks.
+2. **Discrimination sensor** — injects a small behavior-level fault (flip a condition, change a return value, off-by-one) in the real file, runs only the scoped tests itself with the log on disk, confirms they kill the mutant, then restores the file from HEAD (`git checkout -- <file>`, never `stash`). Reports killed/survived; surviving mutants become fix tasks.
 3. **Persisted report** — writes `.specs/features/[feature]/validation.md` with PASS/FAIL, per-AC evidence (`file:line` + assertion + spec outcome), gate exit results, sensor result, and the diff/commit range covered.
 4. **Chat return** — returns a compact verdict + ranked gap list to the orchestrator in chat; the orchestrator surfaces it and routes gaps to fix tasks.
 
@@ -438,7 +445,7 @@ If you are unsure whether more tasks remain, check `tasks.md`: if every task is 
 ## Tips
 
 - **One task at a time (per worker)** — Focus prevents errors; parallelism lives between clusters, never inside one
-- **Delegate the noise** — a worker that greps and reads test logs itself loses the task; scout for navigation, runner for gates
+- **Keep the noise out of context** — a worker that pastes a whole test log into itself loses the task; gates run redirected to a file, the scout answers the question you cannot scope
 - **Tools matter** — Wrong MCP = wrong approach
 - **Reuses save tokens** — Copy patterns, don't reinvent
 - **Check before commit** — Verify all criteria, then commit

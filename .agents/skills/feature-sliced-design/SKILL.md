@@ -1,17 +1,6 @@
 ---
 name: feature-sliced-design
-description: >
-  Official Feature-Sliced Design (FSD) v2.1 skill for applying the methodology
-  to frontend projects. Use when the task involves organizing project structure
-  with FSD layers, deciding where code belongs, placing static assets (images,
-  icons, fonts, PDFs), grouping closely related slices, defining public APIs
-  and import boundaries, resolving cross-imports or evaluating the @x pattern,
-  deciding whether to create or remove an entity, evaluating whether the
-  entities layer is needed at all, deciding whether logic should remain local
-  or be extracted, migrating from FSD v2.0 or a non-FSD codebase, integrating
-  FSD with frameworks (Next.js App Router and Pages Router, Nuxt, Vite,
-  Astro), or implementing common patterns such as authentication, API
-  handling, Redux, and TanStack Query (React Query) within FSD.
+description: Official Feature-Sliced Design v2.1 reference. Use when deciding where code belongs in apps/web (layer, slice, segment), whether to create or remove an entity, how to resolve a cross-import (@x), or how to fit TanStack Query/auth into FSD. Project overrides live in docs/front/front-arch.md.
 ---
 
 # Feature-Sliced Design (FSD) v2.1

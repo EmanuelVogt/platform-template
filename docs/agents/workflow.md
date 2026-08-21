@@ -94,7 +94,11 @@ validation doc or delete it; at closeout the feature's Handoff entries move to
 
 **Execute is delegated and parallel.** The window that wrote the spec orchestrates; cheap
 workers implement, one per cluster, all clusters of a wave at once, in the feature's
-worktree (or the main checkout for a small change). Several workers commit into the same
+worktree (or the main checkout for a small change). A cluster is a **vertical slice of
+4–8 tasks** — the domain, ports, repositories, api and tests of one area, wiring last —
+and a wave holds 2–4 of them: a worker pays ~20 turns of warm-up before its first edit,
+so one worker per task pays that warm-up once per task. A plan of **≤3 tasks** is the
+exception — the planning window implements it inline and still dispatches the Verifier. Several workers commit into the same
 checkout, so a worker's commit is always pathspec-limited to the files it owns and never
 `stash`es, `add -A`s or touches a branch; `tasks.md` and the rest of `.specs/` are written
 only by the orchestrator. Mechanics in

@@ -1,6 +1,6 @@
 ---
 name: spec-worker
-description: Executes ONE cluster of tasks from a tlc-spec-driven feature (Execute) in a disposable context — implements, runs the scoped gate, makes the atomic commit per task, and returns only the compact summary. It is dispatched by the orchestrator (the window that planned), never called on its own initiative; it runs in parallel with other workers on the same checkout (or alone, running every task of a ≤4-task plan in Light Execute), each owning its own files. The `model` below is just the default — the orchestrator passes the tier per cluster (sonnet is the default for every cluster, including root config/tooling/CI/docs/tests; haiku only for pure mechanics; opus only for domain entities/transitions, transaction/outbox/ALS, migrations, contract regen, or an ADR-governed rule). Do not use for navigating (repo-scout), running heavy commands (shell-runner), or verifying (spec-verifier).
+description: Implements ONE cluster of tasks from a tlc-spec-driven feature (Execute) — scoped gate, one atomic commit per task, compact summary back. Dispatched only by the orchestrator, in parallel with other workers on the same checkout. Pass `model` per cluster — sonnet by default; haiku for pure mechanics; opus for domain entities/transitions, tx/outbox/ALS, migrations, contract regen, ADR-governed rules. Not for navigating (repo-scout), heavy commands (shell-runner) or verifying (spec-verifier).
 tools: Agent, Read, Edit, Write, Bash, Skill
 model: sonnet
 ---
@@ -28,19 +28,27 @@ by section, with `Read` offset/limit, never whole:
 
 ## Context discipline (the repo's hook enforces this — it isn't advice)
 
-- **Finding code is the `repo-scout`'s job.** Where a symbol is defined, who consumes a
+- **You run your own gates.** Test, typecheck and lint of the files you touched go straight into
+  your `Bash`, with the log on disk so it never lands whole in your context:
+  ```bash
+  LOG=$(mktemp -t platform-run).log; cd <checkout> && <command> > "$LOG" 2>&1; echo exit=$?
+  ```
+  then `grep -n` the failing lines or `tail -n 80 "$LOG"`. Never cat a whole log. The
+  `shell-runner` is for the orchestrator's Build gate and the Verifier's Final gate, not for yours
+  — one hop there costs more turns than the log it saves.
+- **The open question is the `repo-scout`'s job** — where a symbol is defined, who consumes a
   route, the map of the area the task touches:
   `Agent(subagent_type: "repo-scout", model: "haiku", prompt: "<the question, not the command>")`.
   It returns `file:line` + one sentence; you read the excerpt with `Read` and a range. The `model` is
-  mandatory and is your choice: haiku for a pinpoint question, sonnet for the map of an area.
-- **Running gate, test, typecheck, lint, build is the `shell-runner`'s job.**
-  `Agent(subagent_type: "shell-runner", model: "haiku", prompt: "From <checkout>, run `<command>` and return the result")`.
-  It returns `exit=`, counts, and the literal failures with `file:line` — and the log path.
-  Always tell it the checkout directory: it may be a worktree, not the root.
-- You have six free direct navigations for your entire life and zero heavy commands; the
-  seventh navigation and the first test you run are blocked. Spend the navigations
-  on `grep -n` in a file you already know; an open-ended question ("where…", "who uses…") goes
-  to the scout from the very first one. `Read` with a known `file:line` is always free.
+  mandatory and is your choice: haiku for a pinpoint question, sonnet for the map of an area. Inside
+  a worker the scout is optional: a scoped `grep -n` and a `Read` at a known `file:line` are the
+  default, and the scout is what you reach for when you cannot scope the question.
+- Navigation is not counted here and neither are your gate runs. What is budgeted is how many
+  **bytes you Read**, for your whole life: read the card and the ranged sections the payload named,
+  never a reference whole — the warm-up you pay before your first edit is the expensive part.
+- **Never `fork`, never a placeholder agent to wait.** A scout you dispatched re-invokes
+  you when it finishes — end your turn with nothing else pending; do not spawn anything to
+  "yield". Only `repo-scout` and `shell-runner` may be dispatched from here (hook-enforced).
 
 ## Turn budget
 
@@ -69,8 +77,8 @@ so the orchestrator re-dispatches a fresh agent that continues from there. A fre
   gate belongs to the orchestrator, once per wave — never run the whole suite.
 - **Never weaken, skip, or delete a test.** A test that contradicts the spec → STOP and
   report `test-contradicts-spec`. Gate failing after 3 attempts → STOP and report `gate-failed`
-  with the runner's literal failures. Ambiguous spec → STOP and report `spec-ambiguity`. Never
-  decide on the spec's behalf.
+  with the literal failures from your log, plus the log path. Ambiguous spec → STOP and report
+  `spec-ambiguity`. Never decide on the spec's behalf.
 
 ## What to return
 
@@ -78,6 +86,6 @@ Cap the return at ≤1.5 kB (≈25 lines): no narrative, no log, no diff, no res
 Only the *Compact summary* block from `sub-agents.md`: `DONE` or `STOPPED at T<n> (<reason>)`, one
 line per task with hash and test count, files touched, deviations, and the literal blocker —
 verbatim but truncated to the first 10 lines, with the log path for the rest — if it stopped. In
-English — the summary, the `SPEC_DEVIATION` markers, and any prompt you send to a scout or runner;
+English — the summary, the `SPEC_DEVIATION` markers, and any prompt you send to a scout;
 only the code follows the repo's own language rules (pt-BR comments and user-facing strings per
 `docs/code-quality.md`).

@@ -5,6 +5,9 @@ import { execFileSync } from "node:child_process"
 import { existsSync, statSync } from "node:fs"
 import path from "node:path"
 
+// SessionEnd must never fail the shutdown — swallow any top-level crash.
+process.on("uncaughtException", () => process.exit(0))
+
 const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd()
 
 function run(file, args) {

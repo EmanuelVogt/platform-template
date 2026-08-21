@@ -7,6 +7,11 @@ const STEP_BYTES = 2 * 1024 * 1024;
 
 const REMINDERS = [
   {
+    key: "design-system",
+    applies: (filePath) => filePath.includes("/apps/web/"),
+    text: "Editing apps/web. Follow docs/front/front-arch.md: design tokens (never hex), the right role for the token, @workspace/ui primitives via deep import, Sentence case in UI text, Lucide icons, no emoji. If you have not read it in this session, read it before styling.",
+  },
+  {
     key: "comment-policy",
     applies: (filePath) =>
       /[.](ts|tsx|js|jsx|mjs|cjs)$/.test(filePath) &&

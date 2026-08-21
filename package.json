@@ -13,6 +13,7 @@
     "contract:consumers": "node scripts/contract-consumers.mjs",
     "contract:diff": "node scripts/contract-diff.mjs",
     "tokens:report": "node scripts/token-report.mjs",
+    "dispatch:report": "node scripts/dispatch-report.mjs",
     "typecheck": "turbo typecheck",
     "prepare": "lefthook install || true",
     "test": "turbo test",

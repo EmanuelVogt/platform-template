@@ -35,7 +35,7 @@ pattern names — only when asked.
 > sumir da tela."
 
 **Don't name variables, functions, classes or files** mid-explanation. Point at what the
-thing does ("a tela da agenda do hóspede") and put the file link beside it. If a
+thing does ("a tela de configurações da conta") and put the file link beside it. If a
 technical term is unavoidable, translate it in the same sentence.
 
 **Analogies come from the adult world**, preferably from the business itself — front

@@ -396,7 +396,13 @@ Evento tem custo (debug, ordenação, versionamento) — não crie "para o caso 
 A arquitetura parte a codebase em duas regiões — **kernel** (`shared/kernel/` + `shared/infra/`) e **produto** (`modules/`) — com regras de importação rígidas:
 
 - **RULE A** — `shared/**` nunca importa `modules/**` (imports de tipo inclusos). O kernel não conhece o negócio.
-- **RULE B** — módulos da **base-set** (`identity`, `audit`, `attachment`, `tag`, `notification`, `coexistence`) importam apenas a superfície pública de módulos vizinhos (`api/facades/` ou `api/events/`) + `shared/**`. Qualquer outro módulo é isolado no seu domínio.
+- **RULE C** — o vocabulário de uma entrada do catálogo não sobrevive na casca do template
+  (`shared/**`, `app.module.ts`, `db/schema.ts`, `apps/web/src/app/**`, `apps/web/src/shared/**`):
+  nem em código, nem em comentário, nem em string. Lista fechada de 16 tokens proibidos:
+  `identity`, `IdentityModule`, `accessProfile`, `access_profile`, `AccessProfile`,
+  `PermissionsGuard`, `permissionCatalog`, `uploadProfile`, `UploadProfile`, `auditTrail`,
+  `audit_trail`, `AuditRegistry`, `NotificationModule`, `notification_`, `TagModule`,
+  `tag.` (prefixo de schema).
 
 Ambas são automaticamente **verificadas por `apps/api/src/modules/module-boundaries.spec.ts`**; uma violação quebra a build.
 

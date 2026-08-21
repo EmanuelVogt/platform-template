@@ -22,7 +22,11 @@ renderizado), instaladas com `pnpm platform module add` — ver
    guard de acesso do kernel; as chaves antigas de metadata de acesso saem de circulação.
    `SelfService()`/`OptionalAuth()` passam a escrever `ACCESS_REQUIREMENT` diretamente.
    `IS_MACHINE_TO_MACHINE_KEY` sobrevive — é opt-out de CSRF, não requisito de acesso.
-   Guard ou decorator próprio do produto que lia as chaves antigas quebra.
+   Guard ou decorator próprio do produto que lia as chaves antigas quebra. No web, o tipo
+   `RouteAccess` (`apps/web/src/shared/config/route-access.types.ts`) muda de forma:
+   `{ kind: "public" } | { kind: "authenticated" } | { kind: "permission"; key: string }` —
+   a variante `self` vira `authenticated` e `permission` ganha `key: string`. Produto que
+   consome `RouteAccess` direto precisa atualizar os literais.
 3. **Log do kernel perde o campo `sessionId`.** A superfície de sessão saiu do kernel; o
    logger não tem mais fonte kernel-safe para recompor esse campo. Produto que dependia de
    `sessionId` correlacionado no log estruturado precisa recompô-lo na própria entrada.

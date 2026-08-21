@@ -6,7 +6,6 @@
   "dependsOn": [{ "name": "identity", "range": ">=1.0.0 <2.0.0" }],
   "apiModule": { "export": "TagModule", "path": "modules/tag/tag.module" },
   "schemaExports": [
-    "modules/tag/infrastructure/tables/tag.schema",
     "modules/tag/infrastructure/tables/tag.table"
   ],
   "customMigrations": ["01_audit_attach_tags.sql"],

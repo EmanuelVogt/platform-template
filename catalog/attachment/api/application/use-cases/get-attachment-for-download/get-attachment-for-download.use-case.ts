@@ -43,10 +43,7 @@ export class GetAttachmentForDownloadUseCase {
     private readonly ctx: RequestContext,
   ) {}
 
-  @NonTransactional(
-    "io externo: stream do storage — tx aqui seguraria a conexão do pool " +
-      "enquanto o corpo baixa, travando o pool com downloads concorrentes",
-  )
+  @NonTransactional("io externo: stream do storage seguraria conexão do pool durante o download")
   @Traced({ name: "attachment.download" })
   async execute(input: {
     id: string

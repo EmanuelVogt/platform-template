@@ -101,6 +101,8 @@ graph TD
 
 - RULE A kept. RULE B + `BASE_SET` + the attachment/identity `SAME_MODULE_ALLOWLIST` rows removed (entries carry their own boundaries spec copy scoped to themselves; cross-entry rule = facades/events only, `dependsOn` only).
 - **RULE C (new, kernel vocabulary)** over `apps/api/src/shared/**`, `apps/api/src/app.module.ts`, `apps/api/src/db/schema.ts`, `apps/web/src/app/**`, `apps/web/src/shared/**`: forbidden tokens `identity`, `IdentityModule`, `accessProfile`, `access_profile`, `AccessProfile`, `PermissionsGuard`, `permissionCatalog`, `uploadProfile`, `UploadProfile`, `auditTrail`, `audit_trail`, `AuditRegistry`, `NotificationModule`, `notification_`, `TagModule`, `tag.` (as schema prefix). Allow-list: `docs/**`, test fixtures under `shared/test/**` named `*.fixture.ts`. Case-sensitive regexes listed in the spec file header.
+- **Kernel guards are invariants, not template snapshots (T28u, note 67).** `module-boundaries`, `maintenance-registry`, `check-journal`, `transactional-coverage`, `schema-completeness`, `error-namespace` assert "for every module present", so they stay green after `module add`. The single "template ships with no entry" assertion (KRN-01) lives in `apps/api/src/modules/template-kernel-only.spec.ts`, listed in `TEMPLATE_ONLY_FILES` (`scripts/platform/lib/apply.mjs`) and deleted by the first `module add`.
+- **Read-only / non-transactional use-cases**: `transactional-coverage` accepts `@Transactional()` or `@ReadOnly()` (`TX_MARKER`). `@ReadOnly()` opens a real `READ ONLY` transaction, so a use-case whose body is external IO (storage stream, image upload) must not use it — pending T28w: kernel marker `@NonTransactional(reason)` recognised by `TX_MARKER`, no allowlist of module paths in kernel files.
 
 ---
 

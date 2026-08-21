@@ -192,7 +192,7 @@ Exit codes are part of the contract (tests assert them).
 
 ### 5.3 Generated registries (AD-020)
 
-- `apps/api/src/platform-modules.ts` — generated from the lock: imports + `export const PLATFORM_MODULES = [AttachmentModule, IdentityModule] as const;` header `// gerado por \`pnpm platform module\` — não edite à mão`. Kernel `app.module.ts` does `imports: [...kernelModules, ...PLATFORM_MODULES, ...productModules]`. Template ships the file with an empty array.
+- `apps/api/src/platform-modules.ts` — generated from the lock: imports + a `resolvePlatformModule(mod)` helper that calls the module's static `forRoot()` when it has one (dynamic modules such as `IdentityModule` register controllers/providers **only** inside `forRoot()` — a bare class reference boots silently with zero routes; found by T28k, the reason no child ever exposed an identity route) + `export const PLATFORM_MODULES = [resolvePlatformModule(AttachmentModule), resolvePlatformModule(IdentityModule)] as const;` header `// gerado por \`pnpm platform module\` — não edite à mão`. Kernel `app.module.ts` does `imports: [...kernelModules, ...PLATFORM_MODULES, ...productModules]`. Template ships the file with an empty array.
 - `apps/api/src/db/platform-schema.ts` — generated `export *` lines from every installed entry's `schemaExports`; `db/schema.ts` has `export * from "./platform-schema"`. Template ships it empty.
 - Web: nothing generated (raw web).
 - `schema-completeness.spec.ts` keeps working: tables reach `schema.ts` through the generated file.

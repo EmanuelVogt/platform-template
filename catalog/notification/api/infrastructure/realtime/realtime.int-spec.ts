@@ -23,7 +23,7 @@ describe("realtime Redis pub/sub (int)", () => {
     sub = new Redis(url)
     registry = new SseConnectionRegistry()
     listener = new RedisRealtimeListener(sub, registry, makeTestLogger().loggerFactory)
-    await listener.onModuleInit()
+    listener.onModuleInit()
   }, 60_000)
 
   afterAll(async () => {

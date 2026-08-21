@@ -5,13 +5,13 @@ import type { Mailer } from "../domain/ports/mailer"
 
 describe("notification — Mailer é transporte puro (AD-008)", () => {
   it("a porta Mailer só expõe send(message) de um argumento", () => {
-    const contract: Mailer = { send: async () => {} }
+    const contract: Mailer = { send: async () => undefined }
     expect(typeof contract.send).toBe("function")
-    expect(LogMailer.prototype.send).toHaveLength(1)
+    expect(LogMailer.prototype.send.bind(LogMailer.prototype)).toHaveLength(1)
   })
 
   it("LogMailer registra to, subject, idempotencyKey e os hrefs extraídos do HTML", async () => {
-    const entries: Array<{ msg: string; meta: Record<string, unknown> }> = []
+    const entries: { msg: string; meta: Record<string, unknown> }[] = []
     const loggerFactory = {
       forModule: () => ({
         info: (msg: string, meta: Record<string, unknown>) => {

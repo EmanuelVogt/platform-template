@@ -2,8 +2,8 @@ import { BASE_TEMPLATE_SOURCES } from "../application/templates/base-template-so
 import { NotificationTemplateSourceRegistry } from "../application/templates/notification-template-registry"
 import { EmailChannel } from "../infrastructure/channels/email.channel"
 
-import type { NotificationTemplateSources } from "../domain/ports/notification-template-source.port"
 import type { Mailer } from "../domain/ports/mailer"
+import type { NotificationTemplateSources } from "../domain/ports/notification-template-source.port"
 import type { TemplateRenderer } from "../domain/ports/template-renderer"
 
 describe("notification — fonte de template registrada (AD-007)", () => {
@@ -79,7 +79,7 @@ describe("notification — fonte de template registrada (AD-007)", () => {
         return "<html></html>"
       },
     }
-    const mailer: Mailer = { send: async () => {} }
+    const mailer: Mailer = { send: async () => undefined }
     const channel = new EmailChannel(templateSources, renderer, mailer)
     const payload = { email: "destinatario@example.com", extra: "valor" }
 

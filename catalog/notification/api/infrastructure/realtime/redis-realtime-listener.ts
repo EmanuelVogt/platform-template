@@ -44,8 +44,10 @@ export class RedisRealtimeListener
     // (ex.: export de OpenAPI) contra um Redis inalcançável. O .catch evita
     // unhandled rejection se a inscrição falhar; erro já vai pro log via
     // listener "error" acima.
-    this.subscriber.subscribe(NOTIF_REALTIME_CHANNEL).catch((err: Error) => {
-      this.log.warn("notifications.subscribe_failed", { err: err.message })
+    this.subscriber.subscribe(NOTIF_REALTIME_CHANNEL).catch((err: unknown) => {
+      this.log.warn("notifications.subscribe_failed", {
+        err: err instanceof Error ? err.message : String(err),
+      })
     })
   }
 

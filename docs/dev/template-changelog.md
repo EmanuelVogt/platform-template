@@ -58,6 +58,17 @@ commit no CI, e o produto deixa de receber o ferramental que só existe com
    Virou `/catalog`, sem barra final: o copier testa o destino como `Path`, que nunca traz
    a barra, então `/catalog/` deixava o diretório-raiz escapar e nascer vazio no filho.
    `docs/catalog/README-contract.md` continua fora, agora por entrada explícita.
+8. **Vitest substitui o jest como runner da api e passa a rodar a raiz inteira.** Um runner só,
+   configs e scripts na raiz (`vitest.config.mts`, `vitest.coverage.mts`,
+   `vitest.integration.mts`), `test:coverage` vira o gate de pre-push (precisa de
+   Docker), regras de lint atualizadas para o novo runner. As cinco entradas do
+   catálogo (attachment, audit, identity/single-tenant, notification, tag) sobem para
+   `2.0.0` com uma advisory `breaking` cada (`ADV-20260821-01..05`). Duas decisões
+   novas em `.specs/STATE.md`: AD-027 (gate de pre-push = `test:coverage`, pisos de
+   cobertura por glob, calibração única e depois só ratchet) e AD-028 (Vitest
+   `projects` é o único runner do monorepo, nada fora dele).
+   `pisos da api: calibrados na T29` — a task de calibração troca essa linha pelos
+   números medidos.
 
 ### Passos de migração do filho
 
@@ -68,6 +79,16 @@ commit no CI, e o produto deixa de receber o ferramental que só existe com
    copier pergunta antes de sobrescrever. O `name` do pacote raiz muda de
    `platform-template` para o `project_slug` — o próprio `_task` roda `pnpm install`
    depois disso.
+3. O `copier update` já traz os configs raiz do runner (`vitest*.mts`), `lefthook.yml`,
+   `ci.yml` e os configs de eslint — nenhuma ação manual aqui.
+4. `node scripts/platform/jest-to-vitest.mjs apps/api/src apps/api/test apps/web/src`
+   reescreve os specs do produto pro runner novo.
+5. `pnpm lint:fix` resolve o que o codemod deixou fora de ordem (import order etc.).
+6. Remova `jest`, `@swc/jest`, `@types/jest` e `nyc` de `apps/api`; remova
+   `@vitest/coverage-v8` de `apps/web` (a cobertura do web passou pra raiz).
+7. `pnpm install`.
+8. Aplique os advisories das entradas já instaladas (`pnpm platform module …`, ver
+   `docs/catalog/catalog.md`).
 
 ## v1.1.1
 

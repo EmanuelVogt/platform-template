@@ -19,7 +19,8 @@ import type { Observable } from "rxjs"
 
 /** Remove query string da url — evita logar token/email de ?token=, ?email=. */
 export function stripQuery(url: string): string {
-  return url.split("?")[0] ?? url
+  const index = url.indexOf("?")
+  return index === -1 ? url : url.slice(0, index)
 }
 
 /** Body só entra no log se tiver conteúdo — não polui GET/DELETE com `{}`. */

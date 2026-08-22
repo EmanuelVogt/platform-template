@@ -1,25 +1,25 @@
 #!/usr/bin/env node
 import { spawn, spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { EXIT_CODES } from "./platform/lib/exit-codes.mjs";
-import { installChild, renderChild } from "./platform/lib/render-child.mjs";
+import {
+  CHILD_ENV_DEFAULTS,
+  childCleanup,
+  createScratchDir,
+  installChild,
+  onInterrupt,
+  renderChild,
+  runGates,
+} from "./platform/lib/child.mjs";
 
 const EXPECTED_SCHEMAS = ["_kernel", "drizzle"];
 const ALLOWED_EXTRA_SCHEMAS = ["public"];
 const HEALTH_PORT = "3222";
-// Espelha CONTRACT_ENV_DEFAULTS de scripts/platform/catalog-check.mjs — variáveis fora do
-// Postgres/Redis efêmeros que o boot do child exige (Zod) mas o smoke não usa de verdade.
-const CHILD_ENV_DEFAULTS = {
-  WEB_ORIGIN: "http://localhost:3000",
-  R2_ACCOUNT_ID: "placeholder",
-  R2_ACCESS_KEY_ID: "placeholder",
-  R2_SECRET_ACCESS_KEY: "placeholder",
-  R2_BUCKET: "placeholder",
-  R2_ENDPOINT: "https://placeholder.r2.example.com",
-};
+
+let activeCleanup = null;
+
+onInterrupt(() => activeCleanup);
 
 export function parseArgs(argv) {
   return {
@@ -114,10 +114,6 @@ function defaultRun(command, args, options) {
 
 function defaultSpawnProcess(command, args, options) {
   return spawn(command, args, { stdio: ["ignore", "ignore", "pipe"], ...options });
-}
-
-function defaultScratchDir() {
-  return mkdtempSync(path.join(tmpdir(), "template-smoke-"));
 }
 
 function startContainer({ run, image, args = [] }) {
@@ -272,7 +268,10 @@ export async function runTemplateSmoke({
   keep = false,
   log = (line) => process.stdout.write(`${line}\n`),
 } = {}) {
-  const childDir = scratchDir ?? defaultScratchDir();
+  const ownsChildDir = scratchDir === undefined;
+  const childDir = scratchDir ?? createScratchDir("template-smoke-");
+  const cleanupChildDir = childCleanup({ childDir, owns: ownsChildDir, keep, log });
+  activeCleanup = cleanupChildDir;
   let postgres = null;
   let redis = null;
 
@@ -292,14 +291,9 @@ export async function runTemplateSmoke({
     }
 
     log("template:smoke — checagem 1/4: pnpm check && pnpm test");
-    const checkResult = run("pnpm", ["check"], { cwd: childDir });
-    if (checkResult.status !== 0) {
-      log(`template:smoke — "pnpm check" falhou no child (código ${checkResult.status})`);
-      return EXIT_CODES.TEST_FAILURE;
-    }
-    const testResult = run("pnpm", ["test"], { cwd: childDir });
-    if (testResult.status !== 0) {
-      log(`template:smoke — "pnpm test" falhou no child (código ${testResult.status})`);
+    const gate = runGates(run, { cwd: childDir });
+    if (!gate.ok) {
+      log(`template:smoke — "${gate.step}" falhou no child (código ${gate.result.status})`);
       return EXIT_CODES.TEST_FAILURE;
     }
 
@@ -337,11 +331,8 @@ export async function runTemplateSmoke({
   } finally {
     if (postgres) run("docker", ["stop", postgres.containerId]);
     if (redis) run("docker", ["stop", redis.containerId]);
-    if (keep) {
-      log(`--keep: diretório do child mantido em ${childDir}`);
-    } else {
-      rmSync(childDir, { recursive: true, force: true });
-    }
+    cleanupChildDir();
+    activeCleanup = null;
   }
 }
 

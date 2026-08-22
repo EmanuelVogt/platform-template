@@ -10,7 +10,9 @@ import {
   writeLock as persistEntry,
   writeRegistry,
 } from "../apply.mjs";
+import { entryRootFor, findEntry } from "../catalog-graph.mjs";
 import { resolveCatalog } from "../catalog-source.mjs";
+import { childLayout, webRootFor } from "../child-layout.mjs";
 import { EXIT_CODES } from "../exit-codes.mjs";
 import { readLock } from "../lock.mjs";
 import { readManifest } from "../manifest.mjs";
@@ -32,32 +34,10 @@ function defaultRun(command, args, options) {
 }
 
 function readTemplateVersion(cwd) {
-  const answersPath = path.join(cwd, ".copier-answers.yml");
+  const answersPath = childLayout(cwd).copierAnswersPath;
   if (!existsSync(answersPath)) return undefined;
   const answers = parseYaml(readFileSync(answersPath, "utf8")) ?? {};
   return answers._commit ? String(answers._commit).replace(/^v/, "") : undefined;
-}
-
-// envPath/envExamplePath ficam em apps/api porque é o cwd de onde `pnpm contract`
-// (e o boot do Nest) carregam o .env local (loadDotenvForDev -> process.loadEnvFile(),
-// relativo ao cwd do processo, não à raiz do monorepo).
-function paths(cwd) {
-  return {
-    lockPath: path.join(cwd, ".platform-modules.lock"),
-    envExamplePath: path.join(cwd, "apps/api/.env.example"),
-    envPath: path.join(cwd, "apps/api/.env"),
-    platformModulesPath: path.join(cwd, "apps/api/src/platform-modules.ts"),
-    platformSchemaPath: path.join(cwd, "apps/api/src/db/platform-schema.ts"),
-  };
-}
-
-function entryRootFor(catalogRoot, name, variant) {
-  return variant ? path.join(catalogRoot, name, variant) : path.join(catalogRoot, name);
-}
-
-function webRootFor(name, options) {
-  const base = options["web-root"] ?? "apps/web/src";
-  return path.join(base, "entities", name);
 }
 
 function registryEntry(manifest) {
@@ -84,13 +64,13 @@ function runRollback({ name, options, cwd, lockPath, envExamplePath, envPath, pl
   }
 
   for (const fileName of entry.migrations ?? []) {
-    const migrationPath = path.join(cwd, "apps/api/drizzle/migrations", fileName);
+    const migrationPath = path.join(childLayout(cwd).migrationsDir, fileName);
     if (existsSync(migrationPath)) rmSync(migrationPath);
   }
 
   let entries = [];
   try {
-    const catalog = resolveCatalog(options["catalog-ref"], { copierAnswersPath: path.join(cwd, ".copier-answers.yml") });
+    const catalog = resolveCatalog(options["catalog-ref"], { copierAnswersPath: childLayout(cwd).copierAnswersPath });
     entries = buildRegistryEntries(catalog.root, lock.modules, new Map(), name);
   } catch {
     entries = [];
@@ -102,7 +82,7 @@ function runRollback({ name, options, cwd, lockPath, envExamplePath, envPath, pl
 }
 
 export async function addCommand({ name, options, cwd = process.cwd(), run = defaultRun }) {
-  const { lockPath, envExamplePath, envPath, platformModulesPath, platformSchemaPath } = paths(cwd);
+  const { lockPath, envExamplePath, envPath, platformModulesPath, platformSchemaPath, copierAnswersPath } = childLayout(cwd);
 
   if (options.rollback) {
     return runRollback({ name, options, cwd, lockPath, envExamplePath, envPath, platformModulesPath, platformSchemaPath });
@@ -111,7 +91,7 @@ export async function addCommand({ name, options, cwd = process.cwd(), run = def
   let catalog;
   let manifest;
   try {
-    catalog = resolveCatalog(options["catalog-ref"], { copierAnswersPath: path.join(cwd, ".copier-answers.yml") });
+    catalog = resolveCatalog(options["catalog-ref"], { copierAnswersPath });
     manifest = readManifest(path.join(entryRootFor(catalog.root, name, options.variant), "module.json"));
   } catch (err) {
     process.stderr.write(`catálogo inacessível ou módulo ausente: ${err.message}\n`);
@@ -154,14 +134,15 @@ export async function addCommand({ name, options, cwd = process.cwd(), run = def
   const known = new Map([[name, manifest]]);
   const plans = [];
   for (const moduleName of order) {
-    const variant = moduleName === name ? options.variant : undefined;
-    const entryRoot = entryRootFor(catalog.root, moduleName, variant);
-    const moduleManifest = moduleName === name ? manifest : readManifest(path.join(entryRoot, "module.json"));
-    if (moduleName !== name) known.set(moduleName, moduleManifest);
+    const isTarget = moduleName === name;
+    const entryRoot = isTarget ? entryRootFor(catalog.root, name, options.variant) : findEntry(catalog.root, moduleName).dir;
+    const moduleManifest = isTarget ? manifest : readManifest(path.join(entryRoot, "module.json"));
+    if (!isTarget) known.set(moduleName, moduleManifest);
 
-    let { files, conflicts } = planCopy(entryRoot, moduleManifest, { webRoot: webRootFor(moduleName, options), targetRoot: cwd });
+    const webRoot = webRootFor(moduleName, options["web-root"]);
+    let { files, conflicts } = planCopy(entryRoot, moduleManifest, { webRoot, targetRoot: cwd });
     if (noWebReact) {
-      const reactPrefix = path.join(cwd, webRootFor(moduleName, options), "react");
+      const reactPrefix = path.join(cwd, webRoot, "react");
       files = files.filter((file) => !file.to.startsWith(reactPrefix));
       conflicts = conflicts.filter((conflict) => !conflict.startsWith(reactPrefix));
     }
@@ -239,7 +220,7 @@ export async function addCommand({ name, options, cwd = process.cwd(), run = def
     }
 
     const targetPlan = plans.find((plan) => plan.moduleName === name);
-    const targetWebRoot = path.join(cwd, webRootFor(name, options));
+    const targetWebRoot = path.join(cwd, webRootFor(name, options["web-root"]));
     const webCopied = targetPlan.files.some((file) => file.to.startsWith(targetWebRoot));
     if (webCopied) {
       const webResult = run("pnpm", ["--filter", "web", "test", "--", `entities/${name}`], { cwd });

@@ -60,6 +60,10 @@ dia a dia.
 | `module list`                                                                     | compara a versão do lock com a HEAD do catálogo                                                                       |
 | `module update <entry>`                                                          | não copia nada — imprime as instruções da skill `port-module-update` (o porte é tarefa de agente, não de script)      |
 
+`module add` também apaga os arquivos só-do-template (`TEMPLATE_ONLY_FILES` em `apply.mjs`) —
+guards que valem só sem entrada instalada, como `template-kernel-only.spec.ts` (KRN-01) e o
+contrato OpenAPI (`apps/api/test/openapi-contract.e2e-spec.ts` + snapshot).
+
 ### `.platform-modules.lock`
 
 Gerado por `module add`/`module adopt`, na raiz do produto — nunca editado à mão: fonte do

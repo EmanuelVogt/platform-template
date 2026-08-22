@@ -1,254 +1,161 @@
 # Testing — Handbook
 
-Guia operacional de testes do monorepo. Fonte da pirâmide: `docs/back/back-arch.md` (seção Testes). Este documento descreve o **setup real** (runners, testcontainers, convenções) e como escrever cada tipo de teste.
+Vitest 4, um projeto por app: `api` (Node + SWC, decorators do Nest) e `web` (jsdom + Testing
+Library). As camadas de banco da api (`api-int`, `api-e2e`) sobem Postgres e Redis reais via
+testcontainers. Vitest `projects` é o único runner do monorepo — nada fora dele (AD-028). Regras
+de código: `docs/code-quality.md`.
 
-## Princípios
-
-1. **Pirâmide, não ampulheta.** Muitos unit (rápidos, puros), integration suficientes (banco real), poucos e2e (caros).
-2. **Sem mock de banco.** Integration e e2e rodam contra Postgres real (testcontainers). Mock de banco é proibido — esconde bug de SQL/migration/transação.
-3. **Teste o comportamento, não a implementação.** Asserts sobre efeito observável (linha no banco, resposta HTTP, evento emitido), não sobre chamadas internas.
-4. **pt-BR** nos `describe`/`it`. Identificador em inglês.
-5. **Isolamento.** Cada teste parte de estado limpo (`truncateKernel` entre integration; container efêmero por suite).
-
-## O que conta como prova
-
-Regras confirmadas pelo loop de lições (`.specs/LESSONS.md`, promovidas por reincidência em features distintas). Valem para qualquer teste do monorepo, dentro ou fora do fluxo de spec:
-
-- **Asserte o valor exato que o critério ou o título do teste promete.** `toBeDefined`, "o campo existe" e "não lançou" não são prova (L-007).
-- **Cubra toda variante de entrada que o critério abrange** — conjunto misto, caminho alternativo, par de mesmo sentido. O caso representativo não prova os outros (L-004).
-- **Asserte que um caminho de produção alcança o estado que dispara o comportamento.** Provar que o handler responde certo quando chamado não prova que ele roda (L-013).
-- **Asserte valor que só existe como dado repassado adiante** — `style` inline, props de filho mockado. Sem assert, apagar o valor não quebra nada (L-010).
-
-Lição nova nasce do Verifier, não daqui: `scripts/lessons.py` + [`.specs/lessons-vocabulary.md`](../../.specs/lessons-vocabulary.md).
-
-## Pirâmide
-
-| Tipo            | Escopo                                          | Banco            | Runner / sufixo                 |
-| --------------- | ----------------------------------------------- | ---------------- | ------------------------------- |
-| **Unit**        | função/classe pura (domain, VO, schema, helper) | nenhum           | jest `*.spec.ts` / vitest `*.test.ts` |
-| **Integration** | `application` + `infrastructure` (repo, tx, outbox) | Postgres real | jest `*.int-spec.ts`            |
-| **E2E**         | controller → use case → banco → outbox → handler | Postgres real   | jest `*.e2e-spec.ts`            |
-| **Contract**    | facade exposta (snapshot do formato)            | nenhum           | jest `*.spec.ts`                |
-| **OpenAPI**     | snapshot do `openapi.json` no CI                | —                | `pnpm contract` + `git diff`    |
-
-## Runners
-
-- **`apps/api` → jest + @swc/jest.** Transform sem typecheck (ordens de magnitude mais rápido que ts-jest); decorators via `legacyDecorator` + `decoratorMetadata` na config inline de cada config jest, `module.type: commonjs`. O tipo dos specs é garantido pelo `tsc --noEmit` (o tsconfig da api inclui `src/**` e `test/**`) — roda no pré-push e no CI.
-- **`apps/web` → vitest + Testing Library + jsdom.** Nativo do ecossistema Vite; rápido; mesmo resolver de alias do app.
-
-> No back **não** use o alias `@/` em código nem em teste — só imports relativos (o builder do Nest e o CommonJS do jest não reescrevem o alias em runtime).
-
-## Estrutura e nomenclatura
-
-```
-apps/api/
-├── src/**/<nome>.spec.ts          Unit — ao lado do código
-├── src/**/<nome>.int-spec.ts      Integration — ao lado do código
-├── test/
-│   ├── <fluxo>.e2e-spec.ts        E2E — boot do app + supertest
-│   ├── jest-integration.json      config jest dos *.int-spec
-│   ├── jest-e2e.json              config jest dos *.e2e-spec
-│   └── setup/
-│       ├── global-setup.ts        sobe container + aplica migrations
-│       ├── global-teardown.ts     derruba container
-│       ├── e2e-env.ts             aponta DATABASE_URL p/ o container (e2e)
-│       ├── test-db.ts             pool/drizzle de teste + truncateKernel
-│       └── test-logger.ts         LoggerFactory silencioso p/ instanciar kernel
-
-apps/web/
-├── src/**/<nome>.test.ts(x)       Unit/componente — ao lado do código
-├── vitest.config.ts
-└── test/setup.ts                  matchers jest-dom
-```
-
-`*.spec.ts` (unit) roda no `pnpm test` e **ignora** `*.int-spec.ts`/`*.e2e-spec.ts` (eles exigem Docker).
+Feito = `pnpm check && pnpm test:coverage` passando (com Docker ligado).
 
 ## Comandos
 
-```
-# apps/api
-pnpm --filter api test        unit (rápido, sem Docker)
-pnpm --filter api test:int    integration (testcontainers)
-pnpm --filter api test:e2e    e2e (testcontainers)
-pnpm --filter api test:all    unit + int + e2e
-
-# apps/web
-pnpm --filter web test        vitest (jsdom)
-
+```bash
 # raiz
-pnpm test                     turbo: roda o `test` (unit) de cada app — NÃO cobre catalog/**
+pnpm test                     # unit dos dois apps (api, web) — sem Docker
+pnpm test:watch                # watch mode
+pnpm test:coverage             # os quatro projetos + relatório + piso de cobertura — precisa de Docker
+pnpm vitest run --project api|web <path>   # roda um projeto/arquivo isolado, sem a suíte inteira
 
-# raiz, só no repositório do template: o produto não recebe `catalog/` nem estes scripts
-pnpm test:scripts             node --test em scripts/platform/__tests__/*.test.mjs
-pnpm catalog:lint             lint de catalog/** e docs/advisories/** (hook pre-commit)
-pnpm catalog:typecheck        só compila as entradas (espelho staged, não roda spec nenhum)
-pnpm catalog:check            único comando que instala e roda os testes de uma entrada
+pnpm test:int                  # api integration, Postgres real — precisa de Docker
+pnpm test:e2e                  # api e2e, Postgres real — precisa de Docker
+pnpm test:db                   # test:int + test:e2e num container só
+
+# raiz, só no repositório do template: o produto não recebe catalog/ nem estes scripts
+pnpm test:scripts              node --test em scripts/platform/__tests__/*.test.mjs
+pnpm catalog:lint              lint de catalog/** e docs/advisories/** (hook pre-commit)
+pnpm catalog:typecheck         só compila as entradas (espelho staged, não roda spec nenhum)
+pnpm catalog:check             único comando que instala e roda os testes de uma entrada
 ```
 
-`pnpm test:scripts` usa o runner nativo do Node (`node --test`) — não há jest/vitest
-configurado para `scripts/`; é o único lugar do monorepo que usa esse runner.
+Saída de cobertura: `coverage/` (gitignored; relatórios `text`, `json-summary`, `html`, `lcov`).
 
-`test:int` roda **paralelo** (`maxWorkers: 4`): cada worker usa um database próprio (`test_w<N>`, clone do DB migrado via `CREATE DATABASE ... TEMPLATE`), então suítes truncam à vontade sem corrida. `test:e2e` roda **serial** (`maxWorkers: 1`) — o app boota no DB base e as suítes compartilham Redis (estado de rate-limit).
+## Layout
 
-**Nada de `--runInBand` no e2e.** Serialização já vem do `maxWorkers: 1`; o `--runInBand` só remove o worker filho, e é ele que segura a memória. Cada arquivo e2e boota o `AppModule` num realm novo, e o jest-circus retém a árvore de describe/hook do arquivo — o closure do `beforeAll` segura o app Nest inteiro. `app.close()` solta socket e timer, **não** o grafo de objetos. In-band os realms se acumulam num processo só: ~3,5 GB no fim do tier sem coverage (teto default do Node é ~4 GB) e OOM com coverage, que ~triplica o custo por arquivo. Em worker, o `workerIdleMemoryLimit` (`1.5GB`, no `jest-e2e.json`) recicla o processo entre arquivos e o pico fica limitado. Detalhe: `shouldRunInBand` do jest só respeita o `workerIdleMemoryLimit` quando `--runInBand` está ausente.
-
-## testcontainers — como funciona
-
-1. `global-setup.ts` sobe `postgres:16-alpine`, aplica as migrations reais (`drizzle-orm/.../migrator`) e publica a URI em `process.env.TC_POSTGRES_URI` (Redis idem, em `TC_REDIS_URI`).
-2. Workers herdam esse env no fork e leem pelos helpers de `test/setup/container-uris.ts` (`globalThis` não atravessa processo; env atravessa). Como o handshake é por processo e não por arquivo em disco, **dois runs simultâneos no mesmo checkout não se atropelam** — cada um fala só com os próprios containers.
-3. `global-teardown.ts` derruba o container (o reaper do testcontainers cobre falhas).
-4. Entre testes, `truncateKernel(pool)` zera o schema `_kernel`.
-
-Exige **Docker** na máquina e no CI. Cada `test:int`/`test:e2e` é uma suite com um container.
-
-**Runtime em VM (Colima, Docker Desktop, Rancher):** nada a configurar. O
-testcontainers procura o socket em caminhos fixos e ignora o contexto do Docker
-CLI — daí o "Could not find a working container runtime strategy" mesmo com o
-`docker` respondendo. `test/setup/docker-runtime.ts` resolve o socket pelo
-contexto ativo e aponta o bind mount do Ryuk para `/var/run/docker.sock` (o
-caminho que vale dentro da VM; sem isso o reaper morre no mount e a alternativa
-seria desligá-lo, vazando Postgres/Redis quando a suíte é morta). `DOCKER_HOST`
-ou `TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE` vindos do ambiente sempre vencem, e
-com daemon nativo (Linux/CI) a detecção é no-op.
-
-## Unit
-
-Puro, sem IO. Instancie e asserte o efeito.
-
-```typescript
-// src/shared/config/env.spec.ts
-import { parseEnv } from "./env"
-
-it("falha (fail-fast) sem DATABASE_URL", () => {
-  expect(() => parseEnv({})).toThrow(/DATABASE_URL/)
-})
-```
-
-Para o que é privado (ex.: `hashRequest`), extraia uma função pura exportável ou teste pelo comportamento público — não exponha interno só para o teste sem necessidade.
-
-## Integration (banco real)
-
-Instancie as classes do kernel **manualmente** (sem o container DI do Nest) com o pool de teste e o `makeTestLogger`. Use `TransactionManager.run` para abrir tx.
-
-```typescript
-// src/shared/kernel/transactional/transaction-manager.int-spec.ts
-beforeAll(() => {
-  pool = createTestPool()
-  db = createTestDb(pool)
-  txm = new TransactionManager(db, makeTestLogger().loggerFactory)
-})
-afterAll(async () => { await pool.end() })
-beforeEach(async () => { await truncateKernel(pool) })
-
-it("faz rollback quando o run lança", async () => {
-  await expect(
-    txm.run(async () => { await insert("e2"); throw new Error("boom") })
-  ).rejects.toThrow("boom")
-  expect(await ids()).toEqual([])
-})
-```
-
-Cubra as invariantes críticas: commit/rollback, join vs `requires_new` (savepoint), `onCommit`, dedupe (`markIfNew`), reclaim de idempotência por expiração, retry/dead-letter do outbox.
-
-Para exercitar o dispatcher sem esperar o poll, registre um listener no `EventEmitter2` e chame `dispatcher.poll()` direto (método público).
-
-## E2E
-
-Boot do `AppModule` real via `@nestjs/testing` + `supertest`, contra o container. Espelhe o setup do `main.ts` (versioning + middleware de contexto).
-
-```typescript
-// test/health.e2e-spec.ts
-beforeAll(async () => {
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
-  app = moduleRef.createNestApplication()
-  app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-  app.use(createRequestContextMiddleware(app.get(RequestContext)))
-  await app.init()
-})
-afterAll(async () => { await app.close() })   // fecha pool + LISTEN client + intervals
-
-it("rota inexistente → 404 RFC 7807 com correlationId do header", async () => {
-  const res = await request(app.getHttpServer())
-    .get("/v1/nope").set("X-Correlation-Id", "corr-e2e").expect(404)
-  expect(res.headers["content-type"]).toContain("application/problem+json")
-  expect(res.body.correlationId).toBe("corr-e2e")
-})
-```
-
-`e2e-env.ts` define `DATABASE_URL` (container), `NODE_ENV=test`, `LOG_LEVEL=silent` antes do boot. Sempre `app.close()` no `afterAll` — senão o pool/LISTEN client/intervals vazam handles.
-
-**IO externo nunca é real no e2e.** O `e2e-env.ts` força `MAIL_TRANSPORT=log` (LogMailer) e apaga `RESEND_API_KEY`/`MAIL_FROM` — o `.env` de dev usa `MAIL_TRANSPORT=resend` com **chave REAL**, e o `DeliveryDispatcher` roda em background (`@Interval`), então um fluxo que dispara e-mail (create-user, forgot-password, lockout) **enviaria de verdade** sem essa trava. Mesma lógica do R2 (credenciais dummy). Pra **asseverar** o efeito de um envio, dê `.overrideProvider(MAILER).useValue(fake)` no `Test.createTestingModule` (idem `OBJECT_STORAGE` p/ storage) — nunca confie no provider real nem em lembrar do override por teste: a trava do `e2e-env` é a rede de segurança.
-
-## Contract / OpenAPI snapshot
-
-- **Contract de facade:** quando houver facade pública entre módulos, snapshot do formato que cada consumidor espera (`*.spec.ts`, sem banco).
-- **OpenAPI:** o CI roda `pnpm contract` e falha se `openapi.json` divergir (`git diff --exit-code openapi.json`). Mudou contrato → regerar e commitar.
-- **`/docs` não dá pra exercitar via HTTP no e2e.** `test/setup/scalar-stub.ts` neutraliza `@scalar/nestjs-api-reference` via `moduleNameMapper` do jest (o pacote é ESM puro, incompatível com o CJS do jest) — o e2e de contrato assevera o `openapi.json` estático, não a página `/docs` renderizada.
-
-## Parity (catálogo)
-
-Toda entrada do catálogo carrega `parity/*.parity.spec.ts` + `parity/contract.snapshot.json`
-ao lado do código — comparam o comportamento observável da entrada (rota, evento, facade)
-contra o snapshot gravado na versão da entrada. `module add` copia os specs de paridade para
-`apps/api/src/modules/<entry>/__parity__/` (convenção de path do `module.json`), onde o
-jest do produto os enxerga como qualquer outro `*.spec.ts`.
-
-**Nenhum gate deste repositório roda um spec do catálogo isoladamente.** `pnpm --filter api
-test` não enxerga `catalog/**` (fora do `rootDir` do jest); `pnpm catalog:typecheck` só
-prova que as entradas compilam, via um espelho staged e gitignored em
-`apps/api/.catalog-stage/`. Os specs unit/integration/e2e/parity de uma entrada só rodam
-**dentro de um produto renderizado**, depois de `module add` — ou seja, via
-`pnpm catalog:check`. Quem quer provar que uma entrada passa nos próprios testes roda
-`catalog:check`, nunca um comando na raiz do template.
-
-## Web (vitest + RTL)
-
-```typescript
-// schema puro
-import { loginSchema } from "./login.schema"
-it("rejeita e-mail inválido", () => {
-  expect(loginSchema.safeParse({ email: "nope", password: "x", rememberMe: false }).success).toBe(false)
-})
-
-// componente
-import "@testing-library/jest-dom/vitest"
-import { render, screen } from "@testing-library/react"
-render(<Greeting name="Mundo" />)
-expect(screen.getByText("Olá, Mundo")).toBeInTheDocument()
-```
-
-Import explícito de `vitest` (`describe`/`it`/`expect`) — sem `globals`, para não mexer no tsconfig do web. Forms que dependem de router/query: envolva nos providers mínimos.
-
-## CI
+Teste ao lado do arquivo testado — sem `__tests__`, sem raiz de teste separada. A exceção é a
+camada e2e da api: um teste que atravessa o app inteiro não tem um único arquivo pra sentar do
+lado, então mora em `apps/api/test/`.
 
 ```
-1. pnpm check               lint + typecheck (todos pacotes)
-2. pnpm --filter api test   unit (sem Docker)
-3. pnpm --filter web test   vitest
-4. [Docker] pnpm --filter api test:int
-5. [Docker] pnpm --filter api test:e2e
-6. pnpm --filter api contract && git diff --exit-code openapi.json
+apps/api/
+  vitest.config.mts        projeto "api"      — unit, src/**/*.spec.ts (inclui *.parity.spec.ts)
+  vitest.int.config.mts    projeto "api-int"  — src/**/*.int-spec.ts
+  vitest.e2e.config.mts    projeto "api-e2e"  — test/**/*.e2e-spec.ts, src/**/*.e2e-spec.ts, serial
+  vitest.shared.mts        plugin SWC + defaults comuns aos três projetos da api
+  test/setup/               ver §O harness da api
+
+apps/web/
+  vitest.config.ts         projeto "web" — src/**/<nome>.test.ts(x)
+
+vitest.config.mts          raiz: projetos api + web, sem container, sem piso — pnpm test
+vitest.coverage.mts        raiz: os quatro projetos + container + cobertura + pisos — pnpm test:coverage
+vitest.integration.mts     raiz: api-int + api-e2e, pra uma rodada de banco isolada
 ```
 
-`test:int`/`test:e2e` exigem um runner com Docker (testcontainers).
+`*.spec.ts` do projeto `api` também casa `*.parity.spec.ts` — os specs de paridade de uma entrada
+do catálogo. `module add` copia esses specs pra dentro do módulo instalado; eles só rodam dentro de
+um produto renderizado (`pnpm catalog:check`), nunca direto na raiz do template.
 
-## Anti-padrões
+## O harness da api
 
-- Mock de banco em integration/e2e (use testcontainers).
-- Asserts em chamadas internas / spies onde dá pra checar o efeito observável.
-- `@/` em teste do back (use relativo).
-- Esquecer `app.close()` no e2e (vaza handles).
-- Teste integration sem `truncate` entre casos (vaza estado).
-- Espera baseada em clock do JS pra efeito gravado pelo Postgres (`new Date()` vs `now()` — precisão ms vs µs; compare no SQL).
-- e2e sem Docker no CI marcado como obrigatório no pipeline rápido (separe o estágio).
+`apps/api/test/setup/` existe pra nenhum teste escrever o próprio bootstrap.
 
-## Onde criar o teste
+- **`docker-runtime.ts`** — resolve o socket do runtime Docker ativo (Colima, Docker Desktop,
+  Rancher); chamado primeiro em `global-setup.ts`, porque o testcontainers ignora o contexto do
+  Docker CLI e procura o socket em caminhos fixos.
+- **`global-setup.ts`** — roda uma vez por execução (não por projeto): sobe um container Postgres
+  e um Redis, aplica as migrations reais, clona uma database por slot de worker
+  (`CREATE DATABASE … TEMPLATE`) e publica as duas URIs via `project.provide()`. Sem um daemon
+  Docker respondendo, a primeira etapa falha rápido com uma mensagem nomeando o comando certo —
+  nunca trava esperando.
+- **`container-uris.ts`** — lado do worker: `inject("postgresUri")` / `inject("redisUri")`.
+  Rodar um spec de banco fora do projeto certo (ex.: `--project api` numa `*.int-spec.ts`) estoura,
+  porque `inject()` volta `undefined`.
+- **`test-db.ts`** — cada worker fala com o próprio banco, `test_w${VITEST_POOL_ID}` (o id do
+  slot, `1..maxWorkers`, compartilhado por todos os projetos da execução — não só os quatro do
+  `api-int`), clonado do banco migrado; as suítes truncam à vontade sem corrida.
+- **`e2e-env.ts`** — trava IO externo antes do boot do app: `MAIL_TRANSPORT=log` e as credenciais
+  de e-mail/R2 apagadas do env. O `.env` de dev carrega uma chave real e o dispatcher de entrega
+  roda em background — sem essa trava, um fluxo que dispara e-mail enviaria de verdade.
+- **`e2e-after-env.ts`** — `flushall` no Redis entre testes; a camada e2e roda serial e compartilha
+  o mesmo Redis, então o estado de rate-limit precisa zerar a cada arquivo.
 
-```
-Regra pura (domain, VO, schema, helper)?     → <nome>.spec.ts ao lado (api) / <nome>.test.ts (web)
-Repo / tx / outbox / idempotência (banco)?   → <nome>.int-spec.ts ao lado
-Fluxo HTTP ponta a ponta?                     → test/<fluxo>.e2e-spec.ts
-Componente React?                             → <nome>.test.tsx ao lado
-Facade pública entre módulos?                 → <facade>.spec.ts (snapshot de contrato)
-Decisão estrutural de teste (exceção)?        → docs/adr/NNNN-titulo.md
-```
+## As três camadas da api
+
+| Camada | Escopo | Postgres |
+| --- | --- | --- |
+| unit `*.spec.ts` | uma classe, ou o grafo do módulo sem query | nenhum |
+| integration `*.int-spec.ts` | um provider contra SQL real | testcontainers |
+| e2e `*.e2e-spec.ts` | HTTP entra, resposta sai, pelo app real | testcontainers |
+
+`vitest.integration.mts` sobe **um** container Postgres e um Redis em `globalSetup` e entrega as
+URIs aos dois projetos por `provide`/`inject` — integration e e2e compartilham a mesma instância.
+Mockar o banco em qualquer uma das duas camadas é proibido — é pra isso que existe a camada unit.
+
+A camada integration roda paralela (`maxWorkers: 4`, um `test_w<N>` por worker); a e2e roda serial
+(`fileParallelism: false`, `maxWorkers: 1`) — cada arquivo sobe o `AppModule` num fork de processo
+novo (`isolate: true`, o default), então o heap não acumula entre arquivos.
+
+## O que a configuração substitui
+
+| Substituído | Por quê |
+| --- | --- |
+| stub de módulo pro `@scalar/nestjs-api-reference` | o pacote é ESM puro e carrega nativamente sob o SSR do Vite — sem stub, sem lista de exclusão de transform |
+| canal de env pra URI dos containers (variável lida do processo) | `provide`/`inject` — nada em disco, nada herdado pelo processo filho |
+| reciclagem de processo por arquivo na e2e | `isolate: true` (default) + `pool: "forks"` — fork novo por arquivo evita acúmulo de heap sem reciclar nada |
+| relatório de cobertura por ferramenta externa | provider `v8` nativo do Vitest |
+
+## Convenções
+
+- `globals: false` em todo projeto — importe `describe`/`it`/`expect`/`vi` de `"vitest"`.
+- Flags de reset de mock (`restoreMocks`/`clearMocks`/`mockReset`) ficam em `false` — os specs
+  migrados foram escritos contra esses defaults; ligar é candidato a `test-suite-refactor`, não a
+  esta migração.
+- Sem mock de banco em integration/e2e — sempre testcontainers real.
+- pt-BR em `describe`/`it`; identificador em inglês.
+- No back, nunca `@/` em teste — só import relativo.
+- No `web`, importe `@testing-library/jest-dom/vitest` pros matchers de DOM
+  (`toBeInTheDocument`, …) — o nome do pacote é histórico, não indica o runner.
+
+## Lint
+
+`@workspace/eslint-config` inclui o conjunto de regras de teste (`@vitest/eslint-plugin`
+`recommended` + doze regras de erro) em `*.spec.ts`, `*.int-spec.ts`, `*.e2e-spec.ts` e
+`*.test.{ts,tsx}`. Falha o build em teste `.only`, `.skip`, sem assertion ou com título
+duplicado; `max-nested-callbacks: 4`.
+
+## Gate de pre-push
+
+`lefthook.yml` roda `migrations → typecheck → catalog-typecheck → test-coverage` no `pre-push`
+(o passo `catalog-typecheck` vive em `lefthook-local.yml`, fora da cópia do produto); qualquer
+etapa vermelha — inclusive um piso de cobertura abaixo do calibrado — aborta o push.
+
+`test-coverage` roda `pnpm test:coverage`: sobe Postgres e Redis em `globalSetup` e mede os
+quatro projetos (`api`, `api-int`, `api-e2e`, `web`) numa passada só — por isso o pre-push e o CI
+precisam de um daemon Docker. `pnpm test` fica só nos dois projetos unit, sem container e sem
+piso, pro loop interno não depender de Docker.
+
+## Exclusões de cobertura (tabela)
+
+| Excluído | Por quê |
+| --- | --- |
+| `**/*.spec.ts`, `**/*.int-spec.ts`, `**/*.e2e-spec.ts`, `**/*.test.{ts,tsx}` | os próprios testes |
+| `**/*.d.ts`, `**/*.fixture.ts` | sem lógica executável |
+| `apps/api/src/main.ts` | bootstrap do processo |
+| `apps/api/src/db/**` | scripts CLI |
+| `apps/web/src/main.tsx` | bootstrap do processo |
+| `**/shared/test/**` | harness de teste |
+| `apps/api/test/**` | a e2e vive fora de `src/**` |
+
+Pisos por glob, sem piso global: `apps/web/src/**` fixo em `{ statements: 64, branches: 56,
+functions: 61, lines: 64 }`. `apps/api/src/**` é calibrado **uma vez**, a partir de uma medição
+cheia da árvore migrada (−1,5 pt sobre o número medido), e depois só sobe — nunca desce
+(AD-027). Números atuais: `docs/dev/template-changelog.md`.
+
+## Performance
+
+- `api`/`api-int` rodam com `maxWorkers: 4`; `api-e2e` roda serial (`fileParallelism: false`,
+  `maxWorkers: 1`) com `isolate: true` — cada arquivo sobe num fork novo, então o heap não
+  acumula entre arquivos.
+- `VITEST_POOL_ID` é compartilhado por todos os projetos da execução (`1..maxWorkers` do
+  projeto raiz) — o `globalSetup` clona `max(maxWorkers do root, de cada projeto)` databases,
+  não só os quatro do `api-int`.

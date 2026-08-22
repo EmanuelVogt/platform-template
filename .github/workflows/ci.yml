@@ -40,8 +40,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter api test:cov
-      - run: pnpm --filter web test:cov
+      - run: pnpm test
 
   test-coverage:
     name: Coverage gate (api int + e2e, testcontainers)
@@ -56,6 +55,6 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # ubuntu-latest já provê o Docker daemon que o testcontainers usa.
-      # test:cov:all roda unit+int+e2e em série (compartilham o .tc-uri), funde a
-      # cobertura e aplica o gate nyc check-coverage — falha o build se erodir.
-      - run: pnpm --filter api test:cov:all
+      # test:coverage roda unit+int+e2e num processo Vitest só, funde a cobertura
+      # e aplica os thresholds por glob — falha o build se erodir.
+      - run: pnpm test:coverage

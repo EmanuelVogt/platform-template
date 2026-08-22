@@ -44,16 +44,18 @@ export class UploadAttachmentUseCase {
     if (input.bytes.byteLength > profile.maxBytes) {
       throw new PayloadTooLargeError(`Limite: ${profile.maxBytes} bytes.`)
     }
+    // Profile "any" confia no tipo declarado porque a origem é interna (PDF que
+    // nós mesmos renderizamos) e o download serve esses profiles como
+    // octet-stream + attachment + nosniff — byte arbitrário não executa.
+    // Profile "image" nunca confia no declarado: persiste o farejado.
+    let contentType = input.declaredContentType
     if (profile.accept === "image") {
       const sniffed = sniffImageContentType(input.bytes)
       if (sniffed === null || sniffed !== input.declaredContentType) {
         throw new UnsupportedMediaTypeError()
       }
+      contentType = sniffed
     }
-    // Profile "any" confia no tipo declarado porque a origem é interna (PDF que
-    // nós mesmos renderizamos) e o download serve esses profiles como
-    // octet-stream + attachment + nosniff — byte arbitrário não executa.
-    const contentType = input.declaredContentType
 
     const checksum = createHash("sha256").update(input.bytes).digest("hex")
     const id = ulid()

@@ -1,4 +1,12 @@
-import { sniffImageContentType } from "./content-type-sniff"
+import { Readable } from "node:stream"
+
+import { sniffImageContentType, sniffImageStream } from "./content-type-sniff"
+
+/** `Readable.from` é object mode por padrão — um stream de upload real não é;
+ *  binário explícito pra `read(n)` acumular pushes pequenos como no busboy. */
+function byteStream(chunks: Buffer[]): Readable {
+  return Readable.from(chunks, { objectMode: false })
+}
 
 const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10])
 const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
@@ -7,6 +15,12 @@ const webp = Buffer.concat([
   Buffer.from([0x00, 0x00, 0x00, 0x00]),
   Buffer.from("WEBP"),
 ])
+
+async function drain(stream: Readable): Promise<Buffer> {
+  const chunks: Buffer[] = []
+  for await (const chunk of stream) chunks.push(chunk as Buffer)
+  return Buffer.concat(chunks)
+}
 
 describe("sniffImageContentType", () => {
   it("detecta jpeg/png/webp", () => {
@@ -52,5 +66,51 @@ describe("sniffImageContentType", () => {
   it("retorna null quando magic bytes do jpeg são parcialmente corretos", () => {
     // 0xff 0xd8 mas terceiro byte não é 0xff
     expect(sniffImageContentType(Buffer.from([0xff, 0xd8, 0x00]))).toBeNull()
+  })
+})
+
+describe("sniffImageStream", () => {
+  it("detecta o tipo pelos primeiros bytes sem truncar o stream (unshift preserva tudo)", async () => {
+    const body = Buffer.concat([png, Buffer.from("resto do arquivo png")])
+    const stream = byteStream([body])
+
+    const sniffed = await sniffImageStream(stream)
+    expect(sniffed).toBe("image/png")
+
+    const full = await drain(stream)
+    expect(full.equals(body)).toBe(true)
+  })
+
+  it("preserva o conteúdo mesmo quando os bytes chegam em vários chunks pequenos", async () => {
+    const body = Buffer.concat([png, Buffer.from("segunda parte, em outro chunk")])
+    // 3-byte chunks força múltiplos eventos "readable" antes de acumular 16 bytes.
+    const chunks: Buffer[] = []
+    for (let i = 0; i < body.length; i += 3) chunks.push(body.subarray(i, i + 3))
+    const stream = byteStream(chunks)
+
+    const sniffed = await sniffImageStream(stream)
+    expect(sniffed).toBe("image/png")
+
+    const full = await drain(stream)
+    expect(full.equals(body)).toBe(true)
+  })
+
+  it("retorna null para um stream cujos bytes não são imagem", async () => {
+    const stream = byteStream([Buffer.from("<html>não é imagem</html>")])
+
+    expect(await sniffImageStream(stream)).toBeNull()
+  })
+
+  it("retorna null para um stream vazio (encerra sem nenhum byte)", async () => {
+    const stream = byteStream([])
+
+    expect(await sniffImageStream(stream)).toBeNull()
+  })
+
+  it("sniffa mesmo um arquivo menor que os 16 bytes de espiada (stream termina cedo)", async () => {
+    const stream = byteStream([jpeg])
+
+    expect(await sniffImageStream(stream)).toBe("image/jpeg")
+    expect((await drain(stream)).equals(jpeg)).toBe(true)
   })
 })

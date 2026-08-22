@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { Tag } from "../../../domain/entities/tag.entity"
 import { TagNotInTrashError } from "../../../domain/errors"
 
@@ -19,10 +21,10 @@ function tag(deleted: boolean) {
 
 function makeDeps(over: Record<string, any> = {}) {
   const tags = over.tags ?? {
-    findByIds: jest.fn().mockResolvedValue([tag(true)]),
-    hardDeleteByIds: jest.fn().mockResolvedValue(undefined),
+    findByIds: vi.fn().mockResolvedValue([tag(true)]),
+    hardDeleteByIds: vi.fn().mockResolvedValue(undefined),
   }
-  const outbox = over.outbox ?? { publish: jest.fn().mockResolvedValue(undefined) }
+  const outbox = over.outbox ?? { publish: vi.fn().mockResolvedValue(undefined) }
   const uc = new PurgeTagsUseCase(tags as never, outbox as never)
   return { uc, tags, outbox }
 }
@@ -51,8 +53,8 @@ describe("PurgeTagsUseCase", () => {
   it("tag fora da lixeira → TagNotInTrashError, sem remoção nem evento", async () => {
     const { uc, tags, outbox } = makeDeps({
       tags: {
-        findByIds: jest.fn().mockResolvedValue([tag(false)]),
-        hardDeleteByIds: jest.fn(),
+        findByIds: vi.fn().mockResolvedValue([tag(false)]),
+        hardDeleteByIds: vi.fn(),
       },
     })
     await expect(uc.execute({ tagIds: ["t-live"] })).rejects.toThrow(
@@ -65,8 +67,8 @@ describe("PurgeTagsUseCase", () => {
   it("nenhum id encontrado → não emite evento", async () => {
     const { uc, outbox } = makeDeps({
       tags: {
-        findByIds: jest.fn().mockResolvedValue([]),
-        hardDeleteByIds: jest.fn(),
+        findByIds: vi.fn().mockResolvedValue([]),
+        hardDeleteByIds: vi.fn(),
       },
     })
     await expect(uc.execute({ tagIds: ["ghost"] })).resolves.toEqual({ purged: 0 })

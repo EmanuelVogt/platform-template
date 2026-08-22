@@ -45,6 +45,7 @@ const config = parseIdentityConfig({
   PASSWORD_PEPPER: PEPPER,
   CSRF_SECRET: "y".repeat(32),
   BREACH_CHECK_MODE: "fail_open",
+  BREACH_CHECK_ENABLED: "false",
   COOKIE_SECURE: "false",
   COOKIE_NAME: "rit_session",
   DEVICE_COOKIE_NAME: "rit_device",

@@ -370,6 +370,7 @@ describe("DrizzleAuthEventRepository (int)", () => {
         PASSWORD_PEPPER: "x".repeat(32),
         CSRF_SECRET: "y".repeat(32),
         BREACH_CHECK_MODE: "fail_closed",
+        BREACH_CHECK_ENABLED: "false",
         COOKIE_SECURE: "false",
         COOKIE_NAME: "rit_session",
         DEVICE_COOKIE_NAME: "rit_device",

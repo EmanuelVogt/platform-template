@@ -34,22 +34,28 @@ export default defineConfig({
         "**/shared/test/**",
         "apps/api/test/**",
       ],
-      // Ratchet por glob, sem barra global: não baixar para passar no gate —
-      // subir só com teste novo.
+      // Barra única de 90 (AD-027, decisão do dono em 2026-08-22, precedente
+      // ailapidus): global + um piso por glob, os quatro na mesma altura. Não
+      // baixar para passar no gate — o caminho é cobrir, nunca afrouxar.
       thresholds: {
-        // calibrado uma vez na migração (AD-027): medido − 1,5 pt, arredondado
-        // para baixo em uma casa decimal; ratchet só para cima a partir daqui.
+        statements: 90,
+        branches: 90,
+        functions: 90,
+        lines: 90,
+        // A api ainda não alcança a barra (branches 74.21% em 2026-08-22): o
+        // pre-push fica vermelho de propósito até a test-suite-refactor cobrir
+        // a lacuna. É a barra que puxa o teste, não o contrário.
         "apps/api/src/**": {
-          statements: 86.1,
-          branches: 72.7,
-          functions: 89.8,
-          lines: 86.9,
+          statements: 90,
+          branches: 90,
+          functions: 90,
+          lines: 90,
         },
         "apps/web/src/**": {
-          statements: 64,
-          branches: 56,
-          functions: 61,
-          lines: 64,
+          statements: 90,
+          branches: 90,
+          functions: 90,
+          lines: 90,
         },
       },
     },

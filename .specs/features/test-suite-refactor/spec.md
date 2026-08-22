@@ -14,7 +14,7 @@ The test *setup* is strong (unit / int / e2e tiers on testcontainers, per-worker
 - [ ] Unit and int specs build doubles and fixtures from shared factories; zero `Record<string, any>` deps in specs, `as never` / `as unknown as` only inside the harness.
 - [ ] Every test proves a value: lint blocks `.only`/`.skip`, assertion-less tests and existence-only asserts; the weak spots found by the audit are strengthened, none deleted; the `it` count never decreases.
 - [ ] The duplication bans are executable: a committed guard spec fails when a banned helper, bootstrap or literal reappears — no grep-in-a-review as the only defence.
-- [ ] Gates exist and run: CI covers quality → unit → coverage (int + e2e) → contract; pre-push stays the AD-027 gate (`pnpm test:coverage`, Docker) and its per-glob floors are ratcheted to 95 % on the kernel-only denominator.
+- [ ] Gates exist and run: CI covers quality → unit → coverage (int + e2e) → contract; pre-push stays the AD-027 gate (`pnpm test:coverage`, Docker), whose floors are already 90 % on every metric — this feature is what makes the api tree actually clear them.
 - [ ] `docs/test/testing.md` describes the real harness, the entry convention, the lint rules and the real CI (absorbs v1 T26).
 
 ## Out of Scope
@@ -22,8 +22,8 @@ The test *setup* is strong (unit / int / e2e tiers on testcontainers, per-worker
 | Feature | Reason |
 | --- | --- |
 | Moving module code or tests into `catalog/` | done by v1 T22; this feature starts from that tree |
-| Filling catalog entries to 95 % unit coverage | entries are gated by `catalog:check` (v1 CAT-02); only the two gaps named in GAP-01 are filled here |
-| The nyc combined floor (85/51/90/90) | gone — AD-027 replaced it with per-glob floors in `vitest.coverage.mts`; this feature only raises those (T39) |
+| Filling catalog entries to 90 % unit coverage | entries are gated by `catalog:check` (v1 CAT-02); only the two gaps named in GAP-01 are filled here |
+| The nyc combined floor (85/51/90/90) | gone — AD-027 replaced it with a flat 90 (global + per glob) in `vitest.coverage.mts`; this feature covers the code that makes the api clear it (T39) |
 | Mutation testing as a permanent tool (Stryker) | the Verifier's sensor is bounded and manual; a tool is a follow-up |
 | Browser/visual tests for web | template web is a router shell after v1 |
 | `packages/api-client` tests | generated output — only an explicit no-op `test` script (DOC-02) |
@@ -152,11 +152,11 @@ The test *setup* is strong (unit / int / e2e tiers on testcontainers, per-worker
 
 **Acceptance Criteria**:
 
-1. WHEN pre-push runs `pnpm test:coverage` THEN any metric below 95 % (statements, branches, functions, lines) on `apps/api/src/**` or `apps/web/src/**` SHALL block the push, and at or above 95 % coverage SHALL never block (COV-01..03).
+1. WHEN pre-push runs `pnpm test:coverage` THEN any metric below 90 % (statements, branches, functions, lines), globally or on `apps/api/src/**` / `apps/web/src/**`, SHALL block the push, and at or above 90 % coverage SHALL never block (COV-01..03).
 2. WHEN coverage is computed THEN the denominator SHALL exclude test files, `*.d.ts`, `main.ts(x)`, the api and web harnesses, entry `testing/**` and the generated client (COV-04).
 3. WHEN branch coverage is reported THEN it SHALL be computed from the TypeScript source, and an untested source branch SHALL keep the suite below the bar (COV-05..06).
 4. WHEN a gap is filled THEN it SHALL be filled with an assertion on an observable outcome or on the error class and message — never with an ignore pragma, and dead code SHALL be deleted rather than ignored (COV-07..10).
-5. WHEN the fills land THEN they SHALL target `apps/api/src/**` and `apps/web/src/**` on the post-v1 denominator, and the ratchet SHALL raise the `vitest.coverage.mts` floors from the AD-027 calibration (api 86.1 / 72.7 / 89.8 / 86.9, web 64 / 56 / 61 / 64) to 95, last (COV-11).
+5. WHEN the fills land THEN they SHALL target `apps/api/src/**` on the post-v1 denominator and SHALL close the gap to the 90 % floors already declared — measured 2026-08-22: 24 statements, 76 branches and 15 lines short (COV-11).
 
 ---
 
@@ -246,5 +246,5 @@ The test *setup* is strong (unit / int / e2e tiers on testcontainers, per-worker
 - [ ] `Test.createTestingModule` resolves to exactly one file across `apps/api/**` and `catalog/**`.
 - [ ] `pnpm lint` fails on a fixture with `it.only`, on an assertion-less test and on an existence-only test.
 - [ ] `pnpm test:e2e --sequence.shuffle` green; every tier green; the `it`-count probe reports no regression beyond the single allowed removal.
-- [ ] CI green on the branch; pre-push blocks below 95 % on api unit and web.
+- [ ] CI green on the branch; pre-push blocks below 90 % on any metric, globally and per glob.
 - [ ] Verifier sensor: every injected mutant killed by a migrated test.

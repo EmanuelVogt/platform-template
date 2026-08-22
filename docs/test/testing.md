@@ -163,10 +163,12 @@ and no floor, so the inner loop does not depend on Docker.
 | `**/shared/test/**` | test harness |
 | `apps/api/test/**` | e2e lives outside `src/**` |
 
-Floors per glob, no global floor: `apps/web/src/**` fixed at `{ statements: 64, branches: 56,
-functions: 61, lines: 64 }`. `apps/api/src/**` is calibrated **once**, from a full measurement of
-the migrated tree (−1.5 pt on the measured number), and only goes up afterwards — never down
-(AD-027). Current numbers: `docs/dev/template-changelog.md`.
+One bar, 90 on every metric: a global threshold plus a 90 per glob (`apps/api/src/**`,
+`apps/web/src/**`) — statements, branches, functions and lines alike (AD-027). A floor is never
+lowered to make a push pass; the way past a red gate is covering the code. The api does not
+clear the bar yet (branches 74.21 % at the time of writing), so the coverage step is red on
+purpose until `test-suite-refactor` closes the gap — `pnpm test` stays the green inner loop
+meanwhile.
 
 ## Performance
 

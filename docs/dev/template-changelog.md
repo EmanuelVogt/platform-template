@@ -17,14 +17,14 @@ every child: the specs change runner and the five catalog entries move to `2.0.0
    Docker); the lint rules were updated to the new runner. The five catalog entries
    (attachment, audit, identity/single-tenant, notification, tag) move to `2.0.0`, each
    with a `breaking` advisory (`ADV-20260821-01..05`). Two new decisions in
-   `.specs/STATE.md`: AD-027 (pre-push gate = `test:coverage`, coverage floors per glob,
-   calibrated once and ratchet-only afterwards) and AD-028 (Vitest `projects` is the
+   `.specs/STATE.md`: AD-027 (pre-push gate = `test:coverage`, coverage floors of 90
+   on every metric, global and per glob, never lowered to pass) and AD-028 (Vitest `projects` is the
    monorepo's only runner, nothing outside it).
-   The api floors were calibrated in T29 from the final migrated tree
-   (`pnpm test:coverage`, `apps/api/src/**`): measured statements 87.69% / branches
-   74.21% / functions 91.3% / lines 88.43%; floor = measured − 1.5 pt, rounded down to
-   one decimal → statements 86.1 / branches 72.7 / functions 89.8 / lines 86.9. The web
-   stays at 64/56/61/64.
+   The floors are a flat **90** on statements, branches, functions and lines — a global
+   threshold plus one per glob (`apps/api/src/**`, `apps/web/src/**`). The template's own
+   api does not clear it yet (measured 87.70 / 74.21 / 91.30 / 88.44 at the merge), so the
+   coverage step is red until that gap is covered; the web clears it (94.78 / 94.51 /
+   95.56 / 96.58). A floor is never lowered to make a push pass.
 
 ### Child migration steps
 
@@ -38,6 +38,9 @@ every child: the specs change runner and the five catalog entries move to `2.0.0
 5. `pnpm install`.
 6. Apply the advisories of the entries already installed (`pnpm platform module …`, see
    `docs/catalog/catalog.md`).
+7. Run `pnpm test:coverage` once and read the gap: the coverage floors are 90 on all four
+   metrics, and a product whose tree does not clear them will have `pre-push` blocked until
+   it does. Cover the gap — do not lower the floor.
 
 ## v1.2.0
 

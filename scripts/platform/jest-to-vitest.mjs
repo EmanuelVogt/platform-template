@@ -34,6 +34,18 @@ const RENAMED_MEMBERS = new Set([
   "resetModules",
 ]);
 
+// Rule 4: tipos `jest.<X>` viram o nome nu importado de "vitest"; SpyInstance
+// não existe mais em Vitest — o substituto é MockInstance.
+const TYPE_RENAMES = {
+  Mock: "Mock",
+  Mocked: "Mocked",
+  MockedFunction: "MockedFunction",
+  MockedClass: "MockedClass",
+  SpyInstance: "MockInstance",
+};
+
+const TEST_GLOBALS = ["describe", "it", "test", "expect", "beforeAll", "beforeEach", "afterAll", "afterEach"];
+
 function scriptKindFor(fileName) {
   return fileName.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
 }
@@ -69,6 +81,172 @@ function findEnclosingFunction(node) {
 
 function isAlreadyAsync(fn) {
   return (fn.modifiers ?? []).some((modifier) => modifier.kind === ts.SyntaxKind.AsyncKeyword);
+}
+
+// Rule 4: referências de tipo `jest.Mock` / `jest.Mocked` / etc.
+function visitTypeReferences(node, sourceFile, edits, state) {
+  if (
+    ts.isTypeReferenceNode(node) &&
+    ts.isQualifiedName(node.typeName) &&
+    ts.isIdentifier(node.typeName.left) &&
+    node.typeName.left.text === "jest"
+  ) {
+    const renamed = TYPE_RENAMES[node.typeName.right.text];
+    if (renamed) {
+      edits.push({ start: node.typeName.getStart(sourceFile), end: node.typeName.getEnd(), text: renamed });
+      state.usedTypeNames.add(renamed);
+    }
+  }
+  ts.forEachChild(node, (child) => visitTypeReferences(child, sourceFile, edits, state));
+}
+
+function collectImportNames(importClause, names) {
+  if (importClause.name) names.add(importClause.name.text);
+  const bindings = importClause.namedBindings;
+  if (!bindings) return;
+  if (ts.isNamespaceImport(bindings)) names.add(bindings.name.text);
+  else if (ts.isNamedImports(bindings)) for (const element of bindings.elements) names.add(element.name.text);
+}
+
+// Bindings top-level elegíveis para `vi.hoisted` (um único `const`/`let` por
+// statement) vs. os que só entram no relatório de revisão manual se uma
+// factory de `jest.mock` fechar sobre eles (var/function/import — o hoist do
+// Vitest sobe `vi.mock` acima dos imports, então não dá pra fechar sobre eles).
+function collectTopLevelBindings(sourceFile) {
+  const hoistable = new Map();
+  const other = new Set();
+  for (const statement of sourceFile.statements) {
+    if (ts.isVariableStatement(statement)) {
+      const flags = statement.declarationList.flags;
+      const isConstOrLet = (flags & ts.NodeFlags.Const) !== 0 || (flags & ts.NodeFlags.Let) !== 0;
+      const single = statement.declarationList.declarations.length === 1;
+      for (const declaration of statement.declarationList.declarations) {
+        if (!ts.isIdentifier(declaration.name)) continue;
+        if (isConstOrLet && single) hoistable.set(declaration.name.text, statement);
+        else other.add(declaration.name.text);
+      }
+    } else if (ts.isFunctionDeclaration(statement) && statement.name) {
+      other.add(statement.name.text);
+    } else if (ts.isImportDeclaration(statement) && statement.importClause) {
+      collectImportNames(statement.importClause, other);
+    }
+  }
+  return { hoistable, other };
+}
+
+function collectRuntimeIdentifiers(node, names) {
+  if (ts.isTypeNode(node)) return;
+  if (ts.isIdentifier(node)) names.add(node.text);
+  ts.forEachChild(node, (child) => collectRuntimeIdentifiers(child, names));
+}
+
+// Rule 5: `jest.mock(path, factory)` cuja factory referencia um `const`/`let`
+// top-level do arquivo — a declaração vira `const { name } = vi.hoisted(...)`
+// envolvendo o statement original (edits de abertura/fechamento, não um
+// replace do range inteiro — assim as regras 1-3 já aplicadas no interior,
+// como `jest.fn()` -> `vi.fn()`, compõem sem conflito de range).
+function visitMockFactories(node, sourceFile, edits, manualReview, state, bindings) {
+  if (
+    isJestCall(node) &&
+    node.expression.name.text === "mock" &&
+    node.arguments.length >= 2 &&
+    (ts.isArrowFunction(node.arguments[1]) || ts.isFunctionExpression(node.arguments[1]))
+  ) {
+    const factory = node.arguments[1];
+    const referenced = new Set();
+    collectRuntimeIdentifiers(factory.body, referenced);
+    for (const name of referenced) {
+      if (bindings.hoistable.has(name) && !state.hoisted.has(name)) {
+        state.hoisted.add(name);
+        const statement = bindings.hoistable.get(name);
+        edits.push({
+          start: statement.getStart(sourceFile),
+          end: statement.getStart(sourceFile),
+          text: `const { ${name} } = vi.hoisted(() => {\n  `,
+        });
+        edits.push({ start: statement.getEnd(), end: statement.getEnd(), text: `\n  return { ${name} }\n})` });
+        state.usesVi = true;
+      } else if (bindings.other.has(name) && !state.flaggedClosures.has(name)) {
+        state.flaggedClosures.add(name);
+        manualReview.push({
+          line: lineOf(sourceFile, factory.getStart(sourceFile)),
+          message: `manual review: factory de vi.mock fecha sobre ${name}`,
+        });
+      }
+    }
+  }
+  ts.forEachChild(node, (child) => visitMockFactories(child, sourceFile, edits, manualReview, state, bindings));
+}
+
+function isDeclarationName(node) {
+  const parent = node.parent;
+  if (!parent) return false;
+  if (
+    (ts.isVariableDeclaration(parent) || ts.isBindingElement(parent) || ts.isParameter(parent)) &&
+    parent.name === node
+  ) {
+    return true;
+  }
+  if (
+    (ts.isFunctionDeclaration(parent) || ts.isClassDeclaration(parent) || ts.isFunctionExpression(parent)) &&
+    parent.name === node
+  ) {
+    return true;
+  }
+  if (
+    (ts.isImportSpecifier(parent) || ts.isImportClause(parent) || ts.isNamespaceImport(parent)) &&
+    (parent.name === node || parent.propertyName === node)
+  ) {
+    return true;
+  }
+  if (ts.isPropertyAccessExpression(parent) && parent.name === node) return true;
+  if (
+    (ts.isPropertyAssignment(parent) || ts.isShorthandPropertyAssignment(parent) || ts.isMethodDeclaration(parent)) &&
+    parent.name === node
+  ) {
+    return true;
+  }
+  return false;
+}
+
+// Rule 6: identificadores livres dos globais de teste, usados como valor (não
+// declarados/importados no arquivo), viram o import único de "vitest".
+function collectUsedGlobals(sourceFile) {
+  const used = new Set();
+  function visit(node) {
+    if (ts.isTypeNode(node)) return;
+    if (ts.isIdentifier(node) && TEST_GLOBALS.includes(node.text) && !isDeclarationName(node)) used.add(node.text);
+    ts.forEachChild(node, visit);
+  }
+  visit(sourceFile);
+  return used;
+}
+
+function findVitestImport(sourceFile) {
+  return sourceFile.statements.find(
+    (statement) =>
+      ts.isImportDeclaration(statement) &&
+      ts.isStringLiteral(statement.moduleSpecifier) &&
+      statement.moduleSpecifier.text === "vitest" &&
+      statement.importClause?.namedBindings &&
+      ts.isNamedImports(statement.importClause.namedBindings),
+  );
+}
+
+function extendVitestImportNames(existingImport, valueNames, typeNames) {
+  for (const element of existingImport.importClause.namedBindings.elements) {
+    if (element.isTypeOnly) typeNames.add(element.name.text);
+    else valueNames.add(element.name.text);
+  }
+}
+
+function buildImportSpecifiers(valueNames, typeNames) {
+  const items = [
+    ...[...valueNames].map((name) => ({ name, text: name })),
+    ...[...typeNames].filter((name) => !valueNames.has(name)).map((name) => ({ name, text: `type ${name}` })),
+  ];
+  items.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  return items.map((item) => item.text).join(", ");
 }
 
 // Rules 1-3: chamadas `jest.<m>(...)`. Um membro fora da lista conhecida e fora das
@@ -125,9 +303,33 @@ function transformSource(sourceText, fileName) {
   );
   const edits = [];
   const manualReview = [];
-  const state = { usesVi: false, asyncified: new Set() };
+  const state = { usesVi: false, asyncified: new Set(), usedTypeNames: new Set(), hoisted: new Set(), flaggedClosures: new Set() };
 
   visitJestCalls(sourceFile, sourceFile, edits, manualReview, state);
+  visitTypeReferences(sourceFile, sourceFile, edits, state);
+  visitMockFactories(sourceFile, sourceFile, edits, manualReview, state, collectTopLevelBindings(sourceFile));
+
+  const valueNames = collectUsedGlobals(sourceFile);
+  if (state.usesVi) valueNames.add("vi");
+  const typeNames = new Set(state.usedTypeNames);
+
+  const existingImport = findVitestImport(sourceFile);
+  if (existingImport) {
+    extendVitestImportNames(existingImport, valueNames, typeNames);
+    edits.push({
+      start: existingImport.getStart(sourceFile),
+      end: existingImport.getEnd(),
+      text: `import { ${buildImportSpecifiers(valueNames, typeNames)} } from "vitest"`,
+    });
+  } else if (valueNames.size > 0 || typeNames.size > 0) {
+    const importLine = `import { ${buildImportSpecifiers(valueNames, typeNames)} } from "vitest"`;
+    const lastImport = [...sourceFile.statements].reverse().find((statement) => ts.isImportDeclaration(statement));
+    if (lastImport) {
+      edits.push({ start: lastImport.getEnd(), end: lastImport.getEnd(), text: `\n${importLine}` });
+    } else {
+      edits.push({ start: 0, end: 0, text: `${importLine}\n\n` });
+    }
+  }
 
   edits.sort((a, b) => b.start - a.start || b.end - a.end);
   let text = sourceText;

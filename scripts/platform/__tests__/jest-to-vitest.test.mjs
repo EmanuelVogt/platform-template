@@ -10,7 +10,7 @@ test("rule 1 — jest.fn/mock/spyOn vira vi.<mesmo nome> mantendo os argumentos"
   const { text, changed, manualReview } = transformSource(input, "sample.spec.ts");
   assert.equal(
     text,
-    `const spy = vi.spyOn(obj, "method")\nconst mocked = vi.fn(() => 1)\nvi.mock("./dep")`,
+    `import { vi } from "vitest"\n\nconst spy = vi.spyOn(obj, "method")\nconst mocked = vi.fn(() => 1)\nvi.mock("./dep")`,
   );
   assert.equal(changed, true);
   assert.deepEqual(manualReview, []);
@@ -31,7 +31,7 @@ test("rule 2 — jest.requireActual dentro de uma factory vira await vi.importAc
   const { text, changed, manualReview } = transformSource(input, "sample.spec.ts");
   assert.equal(
     text,
-    `const factory = async () => {\n  const actual = await vi.importActual("./dep")\n  return actual\n}`,
+    `import { vi } from "vitest"\n\nconst factory = async () => {\n  const actual = await vi.importActual("./dep")\n  return actual\n}`,
   );
   assert.equal(changed, true);
   assert.deepEqual(manualReview, []);
@@ -49,8 +49,105 @@ test("rule 2 — jest.requireMock sem função envolvente é reportado e deixado
 test("rule 3 — jest.setTimeout(n) vira vi.setConfig({ testTimeout: n })", () => {
   const input = `jest.setTimeout(30000)`;
   const { text, changed, manualReview } = transformSource(input, "sample.spec.ts");
-  assert.equal(text, `vi.setConfig({ testTimeout: 30000 })`);
+  assert.equal(text, `import { vi } from "vitest"\n\nvi.setConfig({ testTimeout: 30000 })`);
   assert.equal(changed, true);
+  assert.deepEqual(manualReview, []);
+});
+
+test("rule 4 — tipos jest.Mock/jest.SpyInstance viram o nome nu e entram como type import", () => {
+  const input = `const spy: jest.SpyInstance = jest.fn()`;
+  const { text, changed, manualReview } = transformSource(input, "sample.spec.ts");
+  assert.equal(text, `import { type MockInstance, vi } from "vitest"\n\nconst spy: MockInstance = vi.fn()`);
+  assert.equal(changed, true);
+  assert.deepEqual(manualReview, []);
+});
+
+test("rule 5 — factory de jest.mock que fecha sobre um const top-level vira vi.hoisted (forma do traced.decorator.spec.ts:20)", () => {
+  const input = `import * as OtelApi from "@opentelemetry/api"
+
+const mockSpan = {
+  recordException: jest.fn(),
+  setStatus: jest.fn(),
+  end: jest.fn(),
+}
+
+jest.mock("@opentelemetry/api", () => {
+  const actual = jest.requireActual<typeof OtelApi>("@opentelemetry/api")
+  return Object.assign({}, actual, {
+    trace: Object.assign({}, actual.trace, {
+      getTracer: () => ({
+        startActiveSpan: (_name: string, fn: (span: unknown) => unknown) =>
+          fn(mockSpan),
+      }),
+    }),
+  })
+})`;
+  const expected = `import * as OtelApi from "@opentelemetry/api"
+import { vi } from "vitest"
+
+const { mockSpan } = vi.hoisted(() => {
+  const mockSpan = {
+  recordException: vi.fn(),
+  setStatus: vi.fn(),
+  end: vi.fn(),
+}
+  return { mockSpan }
+})
+
+vi.mock("@opentelemetry/api", async () => {
+  const actual = await vi.importActual<typeof OtelApi>("@opentelemetry/api")
+  return Object.assign({}, actual, {
+    trace: Object.assign({}, actual.trace, {
+      getTracer: () => ({
+        startActiveSpan: (_name: string, fn: (span: unknown) => unknown) =>
+          fn(mockSpan),
+      }),
+    }),
+  })
+})`;
+  const { text, changed, manualReview } = transformSource(input, "traced.decorator.spec.ts");
+  assert.equal(text, expected);
+  assert.equal(changed, true);
+  assert.deepEqual(manualReview, []);
+});
+
+test("rule 6 — import existente de vitest é estendido, nunca duplicado", () => {
+  const input = `import { describe, it } from "vitest"
+
+describe("thing", () => {
+  it("does it", () => {
+    const spy = jest.fn()
+    expect(spy).toBeDefined()
+  })
+})`;
+  const expected = `import { describe, expect, it, vi } from "vitest"
+
+describe("thing", () => {
+  it("does it", () => {
+    const spy = vi.fn()
+    expect(spy).toBeDefined()
+  })
+})`;
+  const { text, changed, manualReview } = transformSource(input, "sample.spec.ts");
+  assert.equal(text, expected);
+  assert.equal(changed, true);
+  assert.deepEqual(manualReview, []);
+});
+
+test("it.each/describe.each passam intocados quando o arquivo já não usa jest.*", () => {
+  const input = `import { describe, expect, it } from "vitest"
+
+describe.each([1, 2])("case %s", (value) => {
+  it.each([
+    [1, 1],
+    [2, 4],
+  ])("doubles %i to %i", (input, output) => {
+    expect(input * 2).toBe(output)
+  })
+})`;
+  const { text, changed, manualReview } = transformSource(input, "sample.spec.ts");
+  assert.equal(text, input);
+  assert.equal(changed, false);
   assert.deepEqual(manualReview, []);
 });
 

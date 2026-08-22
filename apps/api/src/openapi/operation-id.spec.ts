@@ -1,7 +1,8 @@
 import "reflect-metadata"
 
-import { readdirSync } from "node:fs"
 import { join, relative } from "node:path"
+
+import { endsWith, listFilePaths } from "../shared/test/unit/source-survey"
 
 // Valores de PATH_METADATA/METHOD_METADATA (@nestjs/common) e do metadata key
 // do @ApiOperation (@nestjs/swagger) — constants fora do exports map dos
@@ -24,9 +25,7 @@ type RouteOperation = {
 }
 
 function findControllerFiles(): string[] {
-  return readdirSync(SRC_DIR, { recursive: true, encoding: "utf8" })
-    .filter((entry) => entry.endsWith(".controller.ts"))
-    .map((entry) => join(SRC_DIR, entry))
+  return listFilePaths(SRC_DIR, endsWith(".controller.ts"))
 }
 
 function isControllerClass(value: unknown): value is new () => object {

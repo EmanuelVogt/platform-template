@@ -1,9 +1,9 @@
 import "reflect-metadata"
 
-import { readdirSync } from "node:fs"
 import { join, relative } from "node:path"
 
 import { ACCESS_REQUIREMENT } from "../shared/kernel/access/decorators"
+import { endsWith, listFilePaths } from "../shared/test/unit/source-survey"
 
 // Constants do Nest fora do exports map — mesma razão do operation-id.spec.ts.
 const PATH_METADATA = "path"
@@ -19,9 +19,7 @@ type RouteAccess = {
 }
 
 function findControllerFiles(): string[] {
-  return readdirSync(SRC_DIR, { recursive: true, encoding: "utf8" })
-    .filter((entry) => entry.endsWith(".controller.ts"))
-    .map((entry) => join(SRC_DIR, entry))
+  return listFilePaths(SRC_DIR, endsWith(".controller.ts"))
 }
 
 function isControllerClass(value: unknown): value is new () => object {

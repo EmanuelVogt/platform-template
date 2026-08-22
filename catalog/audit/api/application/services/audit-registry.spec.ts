@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { PERMISSION_KEYS } from "../../../identity/api/facades/permission-catalog.facade"
 import { AUDITED } from "../../domain/audit-coverage"
 import { DuplicateAuditRegistrationError } from "../../domain/errors"

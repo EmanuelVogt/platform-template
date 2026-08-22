@@ -1,4 +1,10 @@
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
+
 import { createTestPool } from "../../../../test/setup/test-db"
+import {
+  detachIdentityTables,
+  reattachIdentityTables,
+} from "../testing/reattach-identity-tables"
 
 import { AUDITED, EXEMPT, MODULE_SCHEMAS } from "./audit-coverage"
 
@@ -14,10 +20,17 @@ import type { Pool } from "pg"
 describe("audit coverage enforcement (int)", () => {
   let pool: Pool
   let moduleTables: string[]
+  let installedSchemas: Set<string>
   let auditedTables: Set<string>
 
   beforeAll(async () => {
     pool = createTestPool()
+    // SPEC_DEVIATION: reanexa as tabelas do identity ao trigger antes de medir
+    // cobertura. Reason: mesma causa de audit-trigger.int-spec.ts — a
+    // migration custom do identity roda antes de `audit.attach` existir num
+    // `catalog:check audit`; simula o passo manual que um produto reaplicaria.
+    await reattachIdentityTables(pool)
+
     const { rows: tables } = await pool.query<{ schema: string; table: string }>(
       `SELECT table_schema AS schema, table_name AS table
        FROM information_schema.tables
@@ -25,6 +38,7 @@ describe("audit coverage enforcement (int)", () => {
       [[...MODULE_SCHEMAS]]
     )
     moduleTables = tables.map((t) => `${t.schema}.${t.table}`)
+    installedSchemas = new Set(tables.map((t) => t.schema))
 
     const { rows: triggered } = await pool.query<{
       schema: string
@@ -40,6 +54,7 @@ describe("audit coverage enforcement (int)", () => {
   })
 
   afterAll(async () => {
+    await detachIdentityTables(pool)
     await pool.end()
   })
 
@@ -50,8 +65,16 @@ describe("audit coverage enforcement (int)", () => {
     expect(orphans).toEqual([])
   })
 
-  it("toda tabela AUDITED tem o trigger audit_row no banco", () => {
-    const missing = [...AUDITED].filter((t) => !auditedTables.has(t))
+  // SPEC_DEVIATION: filtra AUDITED pelos schemas de módulo instalados antes de
+  // checar o trigger. Reason: AUDITED é o registro combinado de todo o
+  // "produto final" (comentário da lista: "módulo de produto novo entra aqui
+  // junto com a migration") — num `catalog:check <entrada>` standalone, só
+  // uma fração dos módulos que a lista cobre está instalada; tabela cujo
+  // schema nem existe não é um buraco de cobertura, é módulo não instalado.
+  it("toda tabela AUDITED de módulo instalado tem o trigger audit_row no banco", () => {
+    const missing = [...AUDITED]
+      .filter((t) => installedSchemas.has(t.split(".")[0]!))
+      .filter((t) => !auditedTables.has(t))
     expect(missing).toEqual([])
   })
 

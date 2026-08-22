@@ -1,5 +1,6 @@
 import { Injectable, Module } from "@nestjs/common"
 import request from "supertest"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { createE2eApp } from "../../../../test/setup/app-factory"
 import { setCookies } from "../../../../test/setup/cookies"

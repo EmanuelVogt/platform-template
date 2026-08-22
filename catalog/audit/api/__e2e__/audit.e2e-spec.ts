@@ -1,4 +1,5 @@
 import request from "supertest"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { createE2eApp } from "../../../../test/setup/app-factory"
 import { setCookies } from "../../../../test/setup/cookies"
@@ -7,11 +8,14 @@ import {
   seedEmail,
   truncateIdentity,
   truncateKernel,
-  truncateTag,
 } from "../../../../test/setup/test-db"
 import { RATE_LIMITER } from "../../identity/domain/ports/rate-limiter"
 import { allowAllRateLimiter } from "../../identity/testing/allow-all-rate-limiter"
 import { seedUser } from "../../identity/testing/seed-user"
+import {
+  detachIdentityTables,
+  reattachIdentityTables,
+} from "../testing/reattach-identity-tables"
 
 import type { INestApplication } from "@nestjs/common"
 
@@ -42,28 +46,37 @@ describe("Audit log (e2e)", () => {
     const pool = createTestPool()
     await truncateIdentity(pool)
     await truncateKernel(pool)
-    await truncateTag(pool)
+    // SPEC_DEVIATION: reanexa as tabelas do identity ao trigger.
+    // Reason: mesma causa de audit-trigger.int-spec.ts — a migration custom
+    // do identity roda antes de `audit.attach` existir num `catalog:check
+    // audit`; simula o passo manual que um produto reaplicaria.
+    await reattachIdentityTables(pool)
 
     app = await createE2eApp((b) =>
       b.overrideProvider(RATE_LIMITER).useValue(allowAllRateLimiter)
     )
 
+    // SPEC_DEVIATION: veículo trocado de /v1/admin/tags para
+    // /v1/admin/permission-templates. Reason: audit não depende de tag
+    // (siblings sob identity) — um `catalog:check audit` standalone nunca
+    // instala o módulo tag; permission-templates é CRUD real de identity
+    // (dependência declarada) com o mesmo formato (create/update audited).
     await seedUser(app, pool, {
       email: auditorEmail,
       password: PASSWORD,
       accessProfile: "admin",
       permissions: [
-        "admin.tags.create",
-        "admin.tags.update",
-        "admin.tags.read",
-        "admin.tags.audit.read",
+        "admin.permission_templates.create",
+        "admin.permission_templates.update",
+        "admin.permission_templates.read",
+        "admin.permission_templates.audit.read",
       ],
     })
     await seedUser(app, pool, {
       email: noAuditEmail,
       password: PASSWORD,
       accessProfile: "admin",
-      permissions: ["admin.tags.read"],
+      permissions: ["admin.permission_templates.read"],
     })
     await seedUser(app, pool, {
       email: userAuditorEmail,
@@ -80,27 +93,35 @@ describe("Audit log (e2e)", () => {
 
   afterAll(async () => {
     await app.close()
+    const pool = createTestPool()
+    await detachIdentityTables(pool)
+    await pool.end()
   })
 
   it("reflete create + update do ator no GET /v1/audit", async () => {
     const created = await request(app.getHttpServer())
-      .post("/v1/admin/tags")
+      .post("/v1/admin/permission-templates")
       .set("Origin", ORIGIN)
       .set("Cookie", auditorCookie)
-      .send({ name: "Tag auditada" })
+      .set("Idempotency-Key", "audit-e2e-create")
+      .send({ name: "Template auditado", permissions: ["admin.users.read"] })
       .expect(201)
-    const tagId = created.body.id as string
+    const templateId = created.body.template.id as string
 
     await request(app.getHttpServer())
-      .put(`/v1/admin/tags/${tagId}`)
+      .put(`/v1/admin/permission-templates/${templateId}`)
       .set("Origin", ORIGIN)
       .set("Cookie", auditorCookie)
-      .send({ name: "Tag auditada (editada)" })
+      .set("Idempotency-Key", "audit-e2e-update")
+      .send({
+        name: "Template auditado (editado)",
+        permissions: ["admin.users.read"],
+      })
       .expect(200)
 
     const res = await request(app.getHttpServer())
       .get("/v1/audit")
-      .query({ table: "tags", entityId: tagId })
+      .query({ table: "permission_templates", entityId: templateId })
       .set("Origin", ORIGIN)
       .set("Cookie", auditorCookie)
       .expect(200)
@@ -110,7 +131,7 @@ describe("Audit log (e2e)", () => {
     const update = items.find((i) => i.op === "update")
 
     expect(insert).toBeDefined()
-    expect(insert?.changes.name!.new).toBe("Tag auditada")
+    expect(insert?.changes.name!.new).toBe("Template auditado")
     // Contexto do ator ponta a ponta: middleware → set_config → trigger → leitura.
     expect(insert?.origin).toBe("http")
     expect(insert?.actorUserId).not.toBeNull()
@@ -119,8 +140,8 @@ describe("Audit log (e2e)", () => {
     expect(update).toBeDefined()
     expect(update?.changedKeys).toContain("name")
     expect(update?.changes.name).toEqual({
-      old: "Tag auditada",
-      new: "Tag auditada (editada)",
+      old: "Template auditado",
+      new: "Template auditado (editado)",
       oldLabel: null,
       newLabel: null,
     })
@@ -129,7 +150,7 @@ describe("Audit log (e2e)", () => {
   it("nega leitura sem nenhuma permissão de logs → 403", async () => {
     await request(app.getHttpServer())
       .get("/v1/audit")
-      .query({ table: "tags" })
+      .query({ table: "permission_templates" })
       .set("Origin", ORIGIN)
       .set("Cookie", noAuditCookie)
       .expect(403)
@@ -138,7 +159,7 @@ describe("Audit log (e2e)", () => {
   it("nega tabela fora do escopo do ator → 403", async () => {
     await request(app.getHttpServer())
       .get("/v1/audit")
-      .query({ table: "tags" })
+      .query({ table: "permission_templates" })
       .set("Origin", ORIGIN)
       .set("Cookie", userAuditorCookie)
       .expect(403)

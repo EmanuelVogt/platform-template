@@ -1,9 +1,43 @@
+import { RequestContext } from "../../../../../shared/kernel/context/request-context"
+import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.error"
 import { User } from "../../../domain/entities/user.entity"
+import { IDENTITY_ACCESS } from "../../identity-context"
 
 import { ListUsersUseCase } from "./list-users.use-case"
 
 import type { PaginatedResult } from "../../../../../shared/kernel/listing/paginated"
+import type { RequestContextStore } from "../../../../../shared/kernel/context/request-context"
 import type { UserListRow } from "../../../domain/ports/user.repository"
+
+/** Roda o use-case dentro de um request com as permissões dadas ao ator. */
+async function asActor<T>(
+  permissions: string[],
+  run: () => Promise<T>,
+): Promise<T> {
+  const ctx = new RequestContext()
+  const store: RequestContextStore = {
+    requestId: "r",
+    correlationId: "c",
+    causationId: null,
+    traceId: null,
+    spanId: null,
+    tenantId: null,
+    origin: "http",
+    actor: null,
+    extensions: new Map(),
+    locale: "pt-BR",
+    ip: null,
+    userAgent: null,
+    startedAt: 0,
+  }
+  return ctx.run(store, () => {
+    ctx.setExtension(IDENTITY_ACCESS, {
+      permissions: new Set(permissions),
+      isMaster: false,
+    })
+    return run()
+  })
+}
 
 function makeUserRow(over: Partial<UserListRow> = {}): UserListRow {
   const user = User.fromProps({
@@ -137,9 +171,47 @@ describe("ListUsersUseCase", () => {
       deleted: true,
     }
 
-    await uc.execute(input)
+    await asActor(["admin.users.read", "admin.users.trash.read"], () =>
+      uc.execute(input),
+    )
 
     expect(users.list).toHaveBeenCalledWith(input)
+  })
+
+  it("deleted=true sem admin.users.trash.read responde 403 e não consulta o port", async () => {
+    const { uc, users } = makeDeps({ listResult: makePaginatedResult([]) })
+
+    await expect(
+      asActor(["admin.users.read"], () =>
+        uc.execute({ page: 1, pageSize: 20, deleted: true }),
+      ),
+    ).rejects.toThrow(ForbiddenError)
+    expect(users.list).not.toHaveBeenCalled()
+  })
+
+  it("deleted=true com admin.users.trash.read lista a lixeira", async () => {
+    const { uc, users } = makeDeps({ listResult: makePaginatedResult([]) })
+
+    const out = await asActor(
+      ["admin.users.read", "admin.users.trash.read"],
+      () => uc.execute({ page: 1, pageSize: 20, deleted: true }),
+    )
+
+    expect(out.data).toEqual([])
+    expect(users.list).toHaveBeenCalledWith({
+      page: 1,
+      pageSize: 20,
+      deleted: true,
+    })
+  })
+
+  it("deleted=false não exige a permissão de lixeira (nem lê contexto de acesso)", async () => {
+    const { uc, users } = makeDeps({ listResult: makePaginatedResult([]) })
+
+    await expect(
+      uc.execute({ page: 1, pageSize: 20, deleted: false }),
+    ).resolves.toBeDefined()
+    expect(users.list).toHaveBeenCalledTimes(1)
   })
 
   it("repassa sort e order ao port sem modificar", async () => {

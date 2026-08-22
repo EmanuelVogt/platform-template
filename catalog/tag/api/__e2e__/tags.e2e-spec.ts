@@ -130,6 +130,22 @@ describe("Tags (e2e)", () => {
       )
       expect(listed.usage).toEqual({ total: 0 })
     })
+
+    it("?deleted=true sem admin.tags.trash.read → 403", async () => {
+      await request(app.getHttpServer())
+        .get("/v1/admin/tags?deleted=true")
+        .set("Origin", ORIGIN)
+        .set("Cookie", readerCookie)
+        .expect(403)
+    })
+
+    it("?deleted=true com admin.tags.trash.read → 200", async () => {
+      await request(app.getHttpServer())
+        .get("/v1/admin/tags?deleted=true")
+        .set("Origin", ORIGIN)
+        .set("Cookie", managerCookie)
+        .expect(200)
+    })
   })
 
   describe("GET /v1/admin/tags/linkable", () => {

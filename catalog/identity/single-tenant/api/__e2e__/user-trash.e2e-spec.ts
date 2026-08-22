@@ -144,4 +144,33 @@ describe("Lixeira de usuários (e2e)", () => {
 
     await pool.end()
   })
+
+  it("?deleted=true sem admin.users.trash.read → 403, listagem normal segue 200", async () => {
+    const pool = createTestPool()
+    await seedUser(app, pool, {
+      email: "leitor-trash@example.com",
+      name: "Leitor",
+      password: "Senha-Leitor-Muito-Forte-2026!",
+      permissions: ["admin.users.read"],
+    })
+    await pool.end()
+    const loginRes = await request(app.getHttpServer())
+      .post("/v1/auth/login")
+      .set("Origin", ORIGIN)
+      .send({
+        email: "leitor-trash@example.com",
+        password: "Senha-Leitor-Muito-Forte-2026!",
+      })
+      .expect(200)
+    const cookie = loginRes.headers["set-cookie"]
+
+    await request(app.getHttpServer())
+      .get("/v1/admin/users").query({ deleted: "true" })
+      .set("Origin", ORIGIN).set("Cookie", cookie!)
+      .expect(403)
+    await request(app.getHttpServer())
+      .get("/v1/admin/users")
+      .set("Origin", ORIGIN).set("Cookie", cookie!)
+      .expect(200)
+  })
 })

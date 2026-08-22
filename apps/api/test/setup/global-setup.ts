@@ -1,13 +1,24 @@
 import crypto from "node:crypto"
 import { existsSync, readFileSync } from "node:fs"
+import { availableParallelism } from "node:os"
 import { join } from "node:path"
 
 import { PostgreSqlContainer } from "@testcontainers/postgresql"
 import { Pool } from "pg"
 import { GenericContainer, Wait } from "testcontainers"
 
-import { POSTGRES_URI_ENV, REDIS_URI_ENV } from "./container-uris"
 import { ensureDockerRuntimeEnv } from "./docker-runtime"
+
+import type { StartedPostgreSqlContainer } from "@testcontainers/postgresql"
+import type { StartedTestContainer } from "testcontainers"
+import type { TestProject } from "vitest/node"
+
+declare module "vitest" {
+  interface ProvidedContext {
+    postgresUri: string
+    redisUri: string
+  }
+}
 
 /**
  * Aplica cada arquivo de migration em sua própria transação (BEGIN/COMMIT).
@@ -103,71 +114,102 @@ async function createWorkerDatabases(
 }
 
 /**
- * Sobe Postgres efêmero (testcontainers), aplica as migrations reais e prepara
- * o ambiente do tier que o invocou. As URIs vão pro `process.env` deste
- * processo, que os workers herdam no fork (ver container-uris.ts); os
- * containers ficam no globalThis para o teardown parar.
+ * Quantos bancos de worker clonar: o maior `maxWorkers` declarado entre o root
+ * e os projetos do run — o Vitest reaproveita um único pool de slots
+ * `1..maxWorkers` (`VITEST_POOL_ID`), então esse é o número de bancos que
+ * podem ser exigidos ao mesmo tempo. Sem nenhum valor declarado, o runner usa
+ * a paralelismo da máquina.
+ */
+function workerDatabaseCount(project: TestProject): number {
+  const declared = [
+    project.vitest.config.maxWorkers,
+    ...project.vitest.projects.map((child) => child.config.maxWorkers),
+  ].filter((value): value is number => typeof value === "number")
+  const highest = declared.length > 0 ? Math.max(...declared) : 0
+  return highest > 0 ? Math.max(1, highest) : availableParallelism()
+}
+
+/** Mensagem única para daemon ausente: falha rápida em vez de espera longa. */
+function dockerRuntimeError(cause: unknown): Error {
+  const detail = cause instanceof Error ? cause.message : String(cause)
+  return new Error(
+    `Docker runtime indisponível (${detail}). Suba o Docker Desktop/Colima — test:int, test:e2e e test:coverage precisam dele; pnpm test não.`
+  )
+}
+
+/**
+ * Sobe Postgres e Redis efêmeros (testcontainers) uma vez por run, aplica as
+ * migrations reais, clona um banco por worker e entrega as URIs aos workers
+ * pelo canal do runner (`provide`/`inject`, nunca env ou arquivo). O teardown
+ * devolvido para os containers no fim do run.
+ *
+ * Os dois containers sobem sempre, sem detecção de tier: `test:coverage` roda
+ * int e e2e no mesmo processo, e o e2e boota o AppModule inteiro — cujo
+ * rate-limiter faz fail-open com o Redis fora, deixando o teste de rate-limit
+ * passar por acidente de ambiente.
  *
  * Integration ganha um database por worker (clones do DB migrado) — é o que
- * permite maxWorkers > 1 com suítes que truncam tabelas à vontade.
- *
- * Redis é containerizado só para os e2e: eles bootam o AppModule inteiro, cujo
- * rate-limiter faz fail-open quando o Redis está fora — sem um Redis gerenciado
- * o teste de rate-limit passava por acidente de ambiente. O container parte
- * limpo a cada run, tornando o resultado determinístico. Int não precisa: as
- * duas suítes int de Redis sobem container próprio.
+ * permite maxWorkers > 1 com suítes que truncam tabelas à vontade; o e2e roda
+ * serial no banco base.
  */
-export default async function globalSetup(
-  globalConfig: { maxWorkers: number },
-  projectConfig: { setupFiles?: string[] }
-): Promise<void> {
+export default async function setup(
+  project: TestProject
+): Promise<() => Promise<void>> {
   ensureDockerRuntimeEnv()
-  const pgContainer = await new PostgreSqlContainer("postgres:16-alpine")
-    // Banco descartável: dados em tmpfs e durabilidade desligada — crash-safety
-    // não vale nada aqui e o fsync domina o custo de truncate/insert.
-    .withTmpFs({ "/var/lib/postgresql/data": "rw" })
-    .withCommand([
-      "postgres",
-      "-c",
-      "fsync=off",
-      "-c",
-      "synchronous_commit=off",
-      "-c",
-      "full_page_writes=off",
-    ])
-    .start()
-  // Guarda a referência ANTES de migrar: se migrate() falhar, o teardown ainda
-  // consegue parar o container (evita leak de Docker).
-  globalThis.__pgContainer = pgContainer
+  let pgContainer: StartedPostgreSqlContainer
+  try {
+    pgContainer = await new PostgreSqlContainer("postgres:16-alpine")
+      // Banco descartável: dados em tmpfs e durabilidade desligada — crash-safety
+      // não vale nada aqui e o fsync domina o custo de truncate/insert.
+      .withTmpFs({ "/var/lib/postgresql/data": "rw" })
+      .withCommand([
+        "postgres",
+        "-c",
+        "fsync=off",
+        "-c",
+        "synchronous_commit=off",
+        "-c",
+        "full_page_writes=off",
+      ])
+      .start()
+  } catch (err) {
+    throw dockerRuntimeError(err)
+  }
 
+  let redisContainer: StartedTestContainer | undefined
   try {
     const uri = pgContainer.getConnectionUri()
     const pool = new Pool({ connectionString: uri })
     await runMigrations(pool, join(__dirname, "..", "..", "drizzle", "migrations"))
     await pool.end()
-    process.env[POSTGRES_URI_ENV] = uri
-
-    const isE2e = (projectConfig.setupFiles ?? []).some((file) =>
-      file.includes("e2e-env")
+    await createWorkerDatabases(
+      uri,
+      pgContainer.getDatabase(),
+      workerDatabaseCount(project)
     )
-    if (isE2e) {
-      const redisContainer = await new GenericContainer("redis:7-alpine")
-        .withExposedPorts(6379)
-        // GenericContainer não espera o Redis aceitar conexão por padrão.
-        .withWaitStrategy(Wait.forListeningPorts())
-        .start()
-      globalThis.__redisContainer = redisContainer
-      process.env[REDIS_URI_ENV] = `redis://${redisContainer.getHost()}:${redisContainer.getMappedPort(6379)}`
-    } else {
-      await createWorkerDatabases(
-        uri,
-        pgContainer.getDatabase(),
-        globalConfig.maxWorkers
-      )
-    }
+
+    redisContainer = await new GenericContainer("redis:7-alpine")
+      .withExposedPorts(6379)
+      // GenericContainer não espera o Redis aceitar conexão por padrão.
+      .withWaitStrategy(Wait.forListeningPorts())
+      .start()
+
+    project.provide("postgresUri", uri)
+    project.provide(
+      "redisUri",
+      `redis://${redisContainer.getHost()}:${redisContainer.getMappedPort(6379)}`
+    )
   } catch (err) {
-    await globalThis.__redisContainer?.stop()
+    // Qualquer falha depois do primeiro start para o que já subiu: sem isto o
+    // container fica órfão até o Ryuk recolher.
+    await redisContainer?.stop()
     await pgContainer.stop()
     throw err
+  }
+
+  const startedRedis = redisContainer
+  return async () => {
+    await startedRedis.stop()
+    await pgContainer.stop()
   }
 }

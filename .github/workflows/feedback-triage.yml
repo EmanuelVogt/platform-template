@@ -25,7 +25,7 @@ jobs:
       FEEDBACK_ID: ${{ github.event.client_payload.feedbackId }}
       API_BASE_URL: ${{ github.event.client_payload.apiBaseUrl }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Busca o relato na API
         id: relato
@@ -67,7 +67,7 @@ jobs:
 
       - name: Roda o robô de triagem
         if: steps.relato.outputs.code == '200'
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@24dcd50c0568f0fc9e9211213a4fd2d9eb15c4e0 # v1.0.200
         env:
           GH_TOKEN: ${{ github.token }}
         with:

@@ -25,8 +25,8 @@ const DESCRIPTION = `API da plataforma.
 ## Autenticação
 Sessão via cookie httpOnly (\`__Host-rit_session\`), emitido por \`POST /v1/auth/login\`. Enviar cookies em toda chamada autenticada (\`credentials: include\` no browser). Rotas públicas estão marcadas com \`security: []\` na operação.
 
-## CSRF — exigido em toda mutação
-Requests não-safe (POST/PATCH/PUT/DELETE) exigem header \`Origin\` (ou \`Referer\`) igual à origin do front oficial (\`WEB_ORIGIN\`); ausente ou divergente → 403. Browsers enviam \`Origin\` sozinhos; cliente não-browser precisa setar manualmente. Quando os cookies operam com \`SameSite=None\`, mutações autenticadas exigem também o header \`X-CSRF-Token\` com o valor do cookie \`rit_csrf\` (legível por JS, emitido no login).
+## CSRF — exigido em toda mutação (quando a entrada de identidade está instalada)
+Proteção provida pelo \`CsrfGuard\` da entrada \`identity\`, não pelo kernel. Requests não-safe (POST/PATCH/PUT/DELETE) exigem header \`Origin\` (ou \`Referer\`) igual à origin do front oficial (\`WEB_ORIGIN\`); ausente ou divergente → 403. Browsers enviam \`Origin\` sozinhos; cliente não-browser precisa setar manualmente. Quando os cookies operam com \`SameSite=None\`, mutações autenticadas exigem também o header \`X-CSRF-Token\` com o valor do cookie \`rit_csrf\` (legível por JS, emitido no login).
 
 ## Idempotência
 Endpoints marcados aceitam o header opcional \`Idempotency-Key\` (detalhe na própria operação): mesma chave + mesmo payload → replay da resposta original, sem repetir o efeito.

@@ -2,6 +2,22 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [2.0.0]
+
+### Breaking
+
+- Specs migradas de Jest para Vitest via `node scripts/platform/jest-to-vitest.mjs
+  catalog/tag` (ADV-20260821-05): `jest.*` → `vi.*`, `jest.requireActual` →
+  `await vi.importActual`, tipos `jest.Mock*`/`jest.SpyInstance` → `Mock`/`Mocked`/
+  `MockedFunction`/`MockInstance` de `"vitest"`. `dependsOn` identity sobe para
+  `>=2.0.0 <3.0.0`. Filhos em `>=1.0.0 <2.0.0` precisam rodar o codemod antes de atualizar.
+
+### Fixed
+
+- `module.json` `schemaExports` não listava `tables/tag.schema` (a declaração
+  `pgSchema("tag")`): o snapshot do drizzle-kit gerava `"schemas": {}` e a migração baseline
+  não emitia `CREATE SCHEMA "tag"`, quebrando `pnpm catalog:check` em bancos novos.
+
 ## [1.0.0]
 
 ### Adicionado

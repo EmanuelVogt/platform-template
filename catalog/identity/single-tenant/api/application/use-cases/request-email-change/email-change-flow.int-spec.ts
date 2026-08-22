@@ -1,4 +1,5 @@
 import { ulid } from "ulid"
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   createTestDb,
@@ -294,7 +295,7 @@ describe("Fluxo de troca de e-mail (int)", () => {
 
     let capturedRaw: string | null = null
     const origGenerate = tokenGen.generate.bind(tokenGen)
-    jest.spyOn(tokenGen, "generate").mockImplementationOnce(() => {
+    vi.spyOn(tokenGen, "generate").mockImplementationOnce(() => {
       const tok = origGenerate()
       capturedRaw = tok.raw
       return tok

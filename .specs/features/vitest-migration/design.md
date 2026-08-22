@@ -358,8 +358,15 @@ Long evidence lives in `spike.md`. Added at Design (2026-08-21, from the install
   `catalog-check` gates are `check` + `test` (`lib/child.mjs:70-76`); `docs/advisories/` holds no `ADV-*` file yet;
   `apps/api/tsconfig.catalog.json` extends `tsconfig.json` (so `types` propagates); `copier.yml` `_exclude` does not
   touch root `vitest.*` files.
-- **Coverage calibration (A4)** — filled by the calibration task: measured `apps/api/src/**` S/B/F/L on the migrated
-  tree = `__ / __ / __ / __` → floors `__ / __ / __ / __` (measured − 1.5). Web stays 64/56/61/64.
+- **Coverage calibration (A4)** — filled by T29 (2026-08-22, `pnpm test:coverage` on the final tree, 89 files / 519
+  tests, exit 0): measured `apps/api/src/**` S/B/F/L = **87.69 / 74.21 / 91.3 / 88.43** (fractions 884/1008, 354/477,
+  273/299, 849/960) → floors **86.1 / 72.7 / 89.8 / 86.9** (measured − 1.5, floored to one decimal). Web stays
+  64/56/61/64. The numbers are istanbul's literal output: `percent()` — the function Vitest's threshold checker uses,
+  confirmed live — **truncates** to two decimals instead of rounding, so the T18 reading printed 87.70/88.44 for the
+  same fractions and its derived floor would have been 86.2 on statements. Calibrate from the tool's own output, not
+  from a re-rounded value; there is no coverage drift between T18 and T29. Sensitivity proven once: a statements floor
+  of 92.7 (≈ measured + 5) exits 1 with `Coverage for statements (87.69%) does not meet "apps/api/src/**" threshold`,
+  reverted in the same task.
 
 ---
 

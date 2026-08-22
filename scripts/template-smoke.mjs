@@ -246,7 +246,7 @@ async function checkHealth({ childDir, run, spawnProcess, sleep, fetchImpl, log,
 }
 
 function checkRuleC({ childDir, run, log }) {
-  const result = run("pnpm", ["--filter", "api", "exec", "jest", "src/modules/module-boundaries.spec.ts"], {
+  const result = run("pnpm", ["vitest", "run", "--project", "api", "apps/api/src/modules/module-boundaries.spec.ts"], {
     cwd: childDir,
   });
   if (result.status !== 0) {

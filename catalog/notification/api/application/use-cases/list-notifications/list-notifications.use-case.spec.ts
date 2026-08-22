@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { Notification } from "../../../domain/entities/notification.entity"
 import { NotificationMapper } from "../../mappers/notification.mapper"
 
@@ -19,7 +21,7 @@ describe("ListNotificationsUseCase", () => {
       metadata: { at: "2026-06-10T00:00:00.000Z" },
       locale: "pt-BR",
     })
-    const list = jest.fn().mockResolvedValue({ data: [n], total: 7 })
+    const list = vi.fn().mockResolvedValue({ data: [n], total: 7 })
     const repo = { list } as unknown as NotificationRepositoryPort
 
     const out = await new ListNotificationsUseCase(
@@ -34,7 +36,7 @@ describe("ListNotificationsUseCase", () => {
   })
 
   it("sem userId no contexto → lança (rota exige sessão)", async () => {
-    const repo = { list: jest.fn() } as unknown as NotificationRepositoryPort
+    const repo = { list: vi.fn() } as unknown as NotificationRepositoryPort
     const anon = { getActor: () => null } as unknown as RequestContext
     await expect(
       new ListNotificationsUseCase(repo, new NotificationMapper(), anon).execute({

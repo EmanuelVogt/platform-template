@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.error"
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import {
@@ -40,28 +42,28 @@ function makeUser(over: Partial<UserProps> = {}): User {
 
 function makeDeps(over: Record<string, any> = {}) {
   const users = over.users ?? {
-    findById: jest.fn().mockResolvedValue(makeUser()),
-    findByIdForUpdate: jest.fn().mockResolvedValue(makeUser()),
-    update: jest.fn().mockResolvedValue(undefined),
+    findById: vi.fn().mockResolvedValue(makeUser()),
+    findByIdForUpdate: vi.fn().mockResolvedValue(makeUser()),
+    update: vi.fn().mockResolvedValue(undefined),
   }
   const sessions = over.sessions ?? {
-    deleteOthers: jest.fn().mockResolvedValue(undefined),
+    deleteOthers: vi.fn().mockResolvedValue(undefined),
   }
   const hasher = over.hasher ?? {
-    verify: jest.fn().mockResolvedValue(true),
-    hash: jest.fn().mockResolvedValue("argon2-new"),
+    verify: vi.fn().mockResolvedValue(true),
+    hash: vi.fn().mockResolvedValue("argon2-new"),
   }
   const strength = over.strength ?? {
-    score: jest.fn().mockReturnValue(4),
+    score: vi.fn().mockReturnValue(4),
   }
   const breach = over.breach ?? {
-    isBreached: jest.fn().mockResolvedValue(false),
+    isBreached: vi.fn().mockResolvedValue(false),
   }
   const outbox = over.outbox ?? {
-    publish: jest.fn().mockResolvedValue(undefined),
+    publish: vi.fn().mockResolvedValue(undefined),
   }
   const authEvents = over.authEvents ?? {
-    recordInTx: jest.fn().mockResolvedValue(undefined),
+    recordInTx: vi.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => NOW }
   const ctx = over.ctx ?? fakeRequestContext(() => ({
@@ -147,8 +149,8 @@ describe("ChangePasswordUseCase", () => {
   it("usuário não encontrado no repo lança ForbiddenError (não expõe existência)", async () => {
     const t = makeDeps({
       users: {
-        findById: jest.fn().mockResolvedValue(null),
-        update: jest.fn(),
+        findById: vi.fn().mockResolvedValue(null),
+        update: vi.fn(),
       },
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(ForbiddenError)
@@ -159,8 +161,8 @@ describe("ChangePasswordUseCase", () => {
   it("usuário sem senha (pending) lança InvalidCredentialsError", async () => {
     const t = makeDeps({
       users: {
-        findById: jest.fn().mockResolvedValue(makeUser({ passwordHash: null })),
-        update: jest.fn(),
+        findById: vi.fn().mockResolvedValue(makeUser({ passwordHash: null })),
+        update: vi.fn(),
       },
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidCredentialsError)
@@ -171,8 +173,8 @@ describe("ChangePasswordUseCase", () => {
   it("senha atual incorreta lança InvalidCredentialsError sem atualizar nada", async () => {
     const t = makeDeps({
       hasher: {
-        verify: jest.fn().mockResolvedValue(false),
-        hash: jest.fn(),
+        verify: vi.fn().mockResolvedValue(false),
+        hash: vi.fn(),
       },
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidCredentialsError)
@@ -185,7 +187,7 @@ describe("ChangePasswordUseCase", () => {
     const config = makeIdentityConfig({ PASSWORD_MIN_ZXCVBN_SCORE: 3 })
     const t = makeDeps({
       config,
-      strength: { score: jest.fn().mockReturnValue(1) },
+      strength: { score: vi.fn().mockReturnValue(1) },
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(WeakPasswordError)
     expect(t.users.update).not.toHaveBeenCalled()
@@ -196,7 +198,7 @@ describe("ChangePasswordUseCase", () => {
     const config = makeIdentityConfig({ BREACH_CHECK_MODE: "fail_closed" })
     const t = makeDeps({
       config,
-      breach: { isBreached: jest.fn().mockResolvedValue(true) },
+      breach: { isBreached: vi.fn().mockResolvedValue(true) },
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(WeakPasswordError)
     expect(t.users.update).not.toHaveBeenCalled()
@@ -220,7 +222,7 @@ describe("ChangePasswordUseCase", () => {
 
   it("fail_closed: senha não-breachada prossegue normalmente e persiste a troca", async () => {
     const config = makeIdentityConfig({ BREACH_CHECK_MODE: "fail_closed" })
-    const breach = { isBreached: jest.fn().mockResolvedValue(false) }
+    const breach = { isBreached: vi.fn().mockResolvedValue(false) }
     const t = makeDeps({ config, breach })
     await t.uc.execute(VALID_INPUT)
     expect(breach.isBreached).toHaveBeenCalledWith(VALID_INPUT.newPassword)
@@ -233,8 +235,8 @@ describe("ChangePasswordUseCase", () => {
   it("usuário não encontrado: sessions.deleteOthers e outbox.publish NÃO são chamados", async () => {
     const t = makeDeps({
       users: {
-        findById: jest.fn().mockResolvedValue(null),
-        update: jest.fn(),
+        findById: vi.fn().mockResolvedValue(null),
+        update: vi.fn(),
       },
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(ForbiddenError)
@@ -246,8 +248,8 @@ describe("ChangePasswordUseCase", () => {
   it("passwordHash nulo: hasher.verify e users.update NÃO são chamados", async () => {
     const t = makeDeps({
       users: {
-        findById: jest.fn().mockResolvedValue(makeUser({ passwordHash: null })),
-        update: jest.fn(),
+        findById: vi.fn().mockResolvedValue(makeUser({ passwordHash: null })),
+        update: vi.fn(),
       },
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidCredentialsError)
@@ -259,8 +261,8 @@ describe("ChangePasswordUseCase", () => {
   it("senha atual inválida: breach.isBreached e users.update NÃO são chamados", async () => {
     const t = makeDeps({
       hasher: {
-        verify: jest.fn().mockResolvedValue(false),
-        hash: jest.fn(),
+        verify: vi.fn().mockResolvedValue(false),
+        hash: vi.fn(),
       },
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidCredentialsError)

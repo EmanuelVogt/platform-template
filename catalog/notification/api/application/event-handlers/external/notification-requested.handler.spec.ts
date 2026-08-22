@@ -1,4 +1,5 @@
 import { ulid } from "ulid"
+import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 
 import { defineCatalogEntry } from "../../catalog/notification-catalog"
@@ -14,7 +15,7 @@ import type { NotificationRequestedPayload } from "../../../api/events/notificat
 import type { NotificationRepositoryPort } from "../../../domain/ports/notification.repository.port"
 
 const loggerFactory = {
-  forModule: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
+  forModule: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 } as unknown as LoggerFactory
 
 function envelopeOf(
@@ -43,14 +44,14 @@ function makeDeps(
   }> = {}
 ) {
   const templateSources = over.templateSources ?? new NotificationTemplateSourceRegistry()
-  const markIfNew = jest.fn().mockResolvedValue(over.markIfNew ?? true)
-  const insert = jest.fn().mockResolvedValue(undefined)
-  const enqueue = jest.fn().mockResolvedValue(undefined)
-  const allowedChannels = jest
+  const markIfNew = vi.fn().mockResolvedValue(over.markIfNew ?? true)
+  const insert = vi.fn().mockResolvedValue(undefined)
+  const enqueue = vi.fn().mockResolvedValue(undefined)
+  const allowedChannels = vi
     .fn()
     .mockResolvedValue(over.allowed ?? ["system", "email", "push"])
-  const onCommit = jest.fn()
-  const publishNew = jest.fn().mockResolvedValue(undefined)
+  const onCommit = vi.fn()
+  const publishNew = vi.fn().mockResolvedValue(undefined)
   const handler = new NotificationRequestedHandler(
     { markIfNew } as unknown as ProcessedEventsRepository,
     { insert } as unknown as NotificationRepositoryPort,

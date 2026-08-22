@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -15,9 +15,13 @@ function makeChild() {
   return child;
 }
 
-test("a lista de arquivos só-do-template cobre o guard do KRN-01", () => {
+test("a lista de arquivos só-do-template cobre o guard do KRN-01 e o contrato OpenAPI", () => {
   assert.ok(TEMPLATE_ONLY_FILES.length > 0);
   assert.ok(TEMPLATE_ONLY_FILES.includes("apps/api/src/modules/template-kernel-only.spec.ts"));
+  assert.ok(TEMPLATE_ONLY_FILES.includes("apps/api/test/openapi-contract.e2e-spec.ts"));
+  assert.ok(
+    TEMPLATE_ONLY_FILES.includes("apps/api/test/__snapshots__/openapi-contract.e2e-spec.ts.snap")
+  );
 });
 
 test("removeTemplateOnlyFiles apaga cada arquivo e devolve o que apagou", () => {
@@ -38,6 +42,22 @@ test("removeTemplateOnlyFiles é idempotente: segunda passada não apaga nem lan
   const second = removeTemplateOnlyFiles(child);
 
   assert.deepEqual(second, []);
+});
+
+test("removeTemplateOnlyFiles tolera arquivo já removido (produto pode ter apagado antes)", () => {
+  const child = makeChild();
+  const alreadyGone = "apps/api/test/__snapshots__/openapi-contract.e2e-spec.ts.snap";
+  rmSync(path.join(child, alreadyGone));
+
+  const removed = removeTemplateOnlyFiles(child);
+
+  assert.deepEqual(
+    removed,
+    TEMPLATE_ONLY_FILES.filter((relPath) => relPath !== alreadyGone)
+  );
+  for (const relPath of TEMPLATE_ONLY_FILES) {
+    assert.equal(existsSync(path.join(child, relPath)), false);
+  }
 });
 
 test("removeTemplateOnlyFiles não toca em vizinho do mesmo diretório", () => {

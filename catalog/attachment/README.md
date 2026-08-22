@@ -74,7 +74,7 @@ tabelas Drizzle em `api/infrastructure/tables/`: `attachment.table.ts`,
 
 Os specs em `parity/*.parity.spec.ts` são copiados para
 `apps/api/src/modules/attachment/__parity__/` junto com `parity/contract.snapshot.json` e rodam
-no jest do app filho:
+via `pnpm vitest run --project api apps/api/src/modules/attachment` no app filho:
 
 - `contract.parity.spec.ts` — compara `openapi.json` do filho contra `contract.snapshot.json`
   via `expectContractSubset`, garantindo que `uploadAttachments` e `downloadAttachment`

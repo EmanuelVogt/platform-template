@@ -2,6 +2,8 @@ import "reflect-metadata"
 
 import { join, relative } from "node:path"
 
+import { beforeAll, describe, expect, it } from "vitest"
+
 import { endsWith, listFilePaths } from "../shared/test/unit/source-survey"
 
 // Valores de PATH_METADATA/METHOD_METADATA (@nestjs/common) e do metadata key

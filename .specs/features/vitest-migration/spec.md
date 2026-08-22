@@ -101,7 +101,7 @@ current containers, worker DBs and env locks, so that the Jest-only workarounds 
 **Acceptance Criteria**:
 
 1. WHEN `node scripts/platform/jest-to-vitest.mjs <path…>` runs on a tree of Jest specs THEN every `jest.fn|spyOn|mock|mocked|restoreAllMocks|resetAllMocks|clearAllMocks|useFakeTimers|useRealTimers|advanceTimersByTime|setSystemTime` SHALL become `vi.<same>`, `jest.requireActual(x)` SHALL become `await vi.importActual(x)` inside an `async` factory, `jest.setTimeout(n)` SHALL become `vi.setConfig({ testTimeout: n })`, `jest.Mock`/`jest.Mocked`/`jest.MockedFunction`/`jest.SpyInstance` SHALL become `Mock`/`Mocked`/`MockedFunction`/`MockInstance` imported from `vitest`, a `jest.mock` factory that references an outer binding SHALL have that binding wrapped in `vi.hoisted`, and each file SHALL gain one `import { … } from "vitest"` covering exactly the globals it uses; a second run SHALL change nothing.
-2. WHEN the codemod has run over `apps/api` and `catalog` THEN `rg -c 'jest\.' apps/api catalog` SHALL return no matches.
+2. WHEN the codemod has run over `apps/api` and `catalog` THEN `rg -c 'jest\.' apps/api catalog --glob '!*.md'` SHALL return no matches. The `--glob` excludes the entries' `CHANGELOG.md`, whose migration notes quote the rewritten APIs as prose; the probe targets code (Deviation 26).
 3. WHEN `pnpm catalog:check <entry>` runs for `identity`, `attachment`, `audit`, `notification`, `tag` THEN the rendered child SHALL install the entry and its unit/int/e2e/parity specs SHALL pass on Vitest.
 4. WHEN `module add` finishes installing an entry THEN its post-install test commands SHALL target the Vitest projects (`pnpm vitest run --project api <path>` / `--project web <path>`) and `scripts/template-smoke.mjs` SHALL invoke `module-boundaries.spec.ts` through Vitest.
 5. WHEN an entry's specs change THEN its `module.json.version` SHALL bump major, its CHANGELOG SHALL gain the entry, and `docs/advisories/ADV-20260821-NN.md` (`kind: breaking`, `affects` the previous range, `fix` = the codemod command) SHALL exist — one per entry — so `pnpm catalog:lint` and the commit-msg hook accept the change.
@@ -138,7 +138,7 @@ describe the Vitest setup, so that nobody reaches for a jest command that no lon
 **Acceptance Criteria**:
 
 1. WHEN `docs/test/testing.md` is read THEN it SHALL describe the Vitest setup in the ailapidus structure (Commands, Layout, api harness, three tiers, what the setup replaces, Conventions, Lint, Pre-push gate, exclusions table, Performance) with the kernel specifics (worker DBs, Redis, mail/R2 locks, Docker runtime) and no Jest-era section (`--runInBand`, `workerIdleMemoryLimit`, `scalar-stub`, nyc).
-2. WHEN `rg -in 'jest' docs .claude/agents .claude/hooks .agents/skills/tlc-spec-driven/references/cards scripts catalog/*/README.md apps packages --glob '!docs/dev/template-changelog.md' --glob '!pnpm-lock.yaml'` runs THEN the only matches SHALL be `@testing-library/jest-dom` and `jest-to-vitest`.
+2. WHEN `rg -in 'jest' docs .claude/agents .claude/hooks .agents/skills/tlc-spec-driven/references/cards scripts catalog/*/README.md apps packages --glob '!docs/dev/template-changelog.md' --glob '!pnpm-lock.yaml' --glob '!docs/advisories/*' --glob '!scripts/platform/jest-to-vitest*'` runs THEN the only matches SHALL be `@testing-library/jest-dom`, the string `jest-to-vitest`, and the absence-assertions in `scripts/platform/__tests__/gates.test.mjs` (`assert.equal(manifest.jest, undefined)`). The two added globs exempt the files whose subject *is* Jest — the advisories that tell a child how to migrate, and the codemod's own source and fixtures — on the same grounds as the changelog exclusion already there (Deviation 26).
 3. WHEN `docs/back/back-arch.md` §Testes, `docs/catalog/catalog.md`, `AGENTS.md.jinja` and `docs/agents/harness.md` mention the runner THEN they SHALL name Vitest and the root commands.
 
 ---
@@ -171,7 +171,7 @@ describe the Vitest setup, so that nobody reaches for a jest command that no lon
 | GAT-06 | P1 gates — CI jobs (AC6) | test: `gates.test.mjs` parses `.github/workflows/{ci,catalog}.yml` | Pending | Pending |
 | GAT-07 | P1 gates — no `test*` in turbo/app manifests (AC7) | test: `gates.test.mjs` | Pending | Pending |
 | CAT-01 | P1 catalog — codemod rewrites (AC1) | test: `scripts/platform/__tests__/jest-to-vitest.test.mjs` | Pending | Pending |
-| CAT-02 | P1 catalog — no `jest.` left in api/catalog (AC2) | probe: `rg -c 'jest\.' apps/api catalog` → no output | Pending | Pending |
+| CAT-02 | P1 catalog — no `jest.` left in api/catalog (AC2) | probe: `rg -c 'jest\.' apps/api catalog --glob '!*.md'` → no output | Pending | Pending |
 | CAT-03 | P1 catalog — five entries green in a rendered child (AC3) | gate: `pnpm catalog:check` | Pending | Pending |
 | CAT-04 | P1 catalog — `module add` / `template-smoke` run Vitest (AC4) | test: `scripts/platform/__tests__/{template-smoke,module-add}.test.mjs` | Pending | Pending |
 | CAT-05 | P1 catalog — entry version/CHANGELOG/advisory per entry (AC5) | gate: `pnpm catalog:lint` | Pending | Pending |
@@ -180,10 +180,10 @@ describe the Vitest setup, so that nobody reaches for a jest command that no lon
 | LNT-02 | P2 lint — `it.only` / assertion-free fixture fails (AC2) | test: `packages/eslint-config/vitest.test.js` | Pending | Pending |
 | LNT-03 | P2 lint — tree lints clean (AC3) | gate: `pnpm lint` | Pending | Pending |
 | DOC-01 | P3 docs — `testing.md` rewritten (AC1) | gate: reviewed by the Verifier against the section list | Pending | Pending |
-| DOC-02 | P3 docs — no stray "jest" (AC2) | probe: the `rg` in AC2 → only `jest-dom` / `jest-to-vitest` lines | Pending | Pending |
+| DOC-02 | P3 docs — no stray "jest" (AC2) | probe: the `rg` in AC2 → only `jest-dom` / `jest-to-vitest` lines and `gates.test.mjs`'s absence-assertions | Pending | Pending |
 | DOC-03 | P3 docs — arch/catalog/agents docs name Vitest (AC3) | gate: covered by DOC-02's probe | Pending | Pending |
 
-**Coverage:** 24 total, 0 mapped to tasks, 24 unmapped ⚠️ (Tasks phase pending). Probe budget: 3 of 3 (CAT-02, CAT-06, DOC-02).
+**Coverage:** 24 total, 24 mapped to tasks (`tasks.md` § *Requirement → tasks*, 2026-08-21), 0 unmapped. Probe budget: 3 of 3 (CAT-02, CAT-06, DOC-02). Tasks-phase deviations (counts, `catalog-typecheck` in `lefthook-local.yml`, `api-int` include, DOC-02 glob, `dependsOn` majors): `tasks.md` § *Deviations recorded at Tasks*.
 
 ---
 

@@ -134,8 +134,9 @@ entrada). Nenhum ciclo: `identity` não importa `audit`.
 `parity/contract.parity.spec.ts` chama `expectContractSubset` contra o
 `openapi.json` gerado do app e o snapshot `parity/contract.snapshot.json`,
 confirmando que a operação `listAuditEntries` (GET `/v1/audit`) segue exposta
-com o mesmo contrato. Rodar via `pnpm --filter api test` (specs do app) depois
-que a entrada for adotada em `apps/api/src/modules/audit/__parity__/`.
+com o mesmo contrato. Rodar via `pnpm vitest run --project api
+apps/api/src/modules/audit` depois que a entrada for adotada em
+`apps/api/src/modules/audit/__parity__/`.
 
 Para confirmar que o trigger de captura (`migrations/custom/01_audit_trail_capture.sql`)
 realmente dispara depois de aplicado, `api/infrastructure/trail/audit-trigger.int-spec.ts`

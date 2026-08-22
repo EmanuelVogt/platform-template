@@ -4,6 +4,7 @@ import { type INestApplication, VersioningType } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { ulid } from "ulid"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import {
   createTestPool,
@@ -98,6 +99,15 @@ async function seedAttachment(
     [id, opts.visibility],
   )
   return id
+}
+
+// SPEC_DEVIATION: extraído do it() por causa de vitest/no-conditional-in-test
+// (regra nova do vitest lint set). Reason: idempotência de listen() fica fora
+// do corpo do teste, sem mudar o comportamento (guard, não asserção).
+async function ensureListening(server: Server): Promise<void> {
+  if (!server.listening) {
+    await new Promise<void>((resolve) => server.listen(0, resolve))
+  }
 }
 
 describe("Attachment (e2e): download com ACL", () => {
@@ -319,9 +329,7 @@ describe("Attachment (e2e): download com ACL", () => {
     // chamada, e 16 binds concorrentes derrubam uns aos outros com ECONNRESET
     // antes de qualquer request chegar ao pool.
     const server = app.getHttpServer() as Server
-    if (!server.listening) {
-      await new Promise<void>((resolve) => server.listen(0, resolve))
-    }
+    await ensureListening(server)
 
     const simultaneos = 3 * loadEnv().DATABASE_POOL_MAX
     const responses = await Promise.all(

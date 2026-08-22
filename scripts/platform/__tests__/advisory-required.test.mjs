@@ -121,6 +121,45 @@ test("range vazio passa (PR sem commit que toque catalog/**)", () => {
   assert.deepEqual(checkAdvisoryRange({ commits: [] }), { ok: true });
 });
 
+test("resolve o nome real da entrada quando o próprio tier api aninha um segmento api (catalog/<entry>/api/api/**)", () => {
+  const result = checkAdvisoryRequired({
+    stagedFiles: ["catalog/notification/api/api/contracts/notification.contract.ts"],
+    commitMessage: "feat(catalog/notification)!: specs on vitest — 2.0.0",
+    stagedAdvisories: [],
+  });
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.missing, ["notification"]);
+});
+
+test("resolve variante + tier api aninhado sem colidir com o segmento de variante (catalog/identity/single-tenant/api/api/**)", () => {
+  const result = checkAdvisoryRequired({
+    stagedFiles: ["catalog/identity/single-tenant/api/api/contracts/session.contract.ts"],
+    commitMessage: "feat(identity): specs on vitest",
+    stagedAdvisories: [],
+  });
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.missing, ["identity/single-tenant"]);
+});
+
+test("reconhece tier web de uma entrada com variante (catalog/identity/single-tenant/web/**)", () => {
+  const result = checkAdvisoryRequired({
+    stagedFiles: ["catalog/identity/single-tenant/web/core/session.types.ts"],
+    commitMessage: "feat(identity): ajusta tipos de sessão no client",
+    stagedAdvisories: [],
+  });
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.missing, ["identity/single-tenant"]);
+});
+
+test("ignora arquivo de catalog/** fora de um tier reconhecido (api|web|migrations|parity)", () => {
+  const result = checkAdvisoryRequired({
+    stagedFiles: ["catalog/notification/module.json"],
+    commitMessage: "chore(catalog/notification): bump version",
+    stagedAdvisories: [],
+  });
+  assert.equal(result.ok, true);
+});
+
 test("cobre apenas as entradas sem ADV quando várias entradas são tocadas na mesma mudança", () => {
   const result = checkAdvisoryRequired({
     stagedFiles: [

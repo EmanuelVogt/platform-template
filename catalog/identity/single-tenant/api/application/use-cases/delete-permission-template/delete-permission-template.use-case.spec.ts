@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { PermissionTemplate } from "../../../domain/entities/permission-template.entity"
 import { PermissionTemplateNotFoundError } from "../../../domain/errors"
 
@@ -17,8 +19,8 @@ function existingTemplate(): PermissionTemplate {
 describe("DeletePermissionTemplateUseCase", () => {
   it("happy: deleta pelo id", async () => {
     const templates = {
-      findById: jest.fn().mockResolvedValue(existingTemplate()),
-      deleteById: jest.fn().mockResolvedValue(undefined),
+      findById: vi.fn().mockResolvedValue(existingTemplate()),
+      deleteById: vi.fn().mockResolvedValue(undefined),
     }
     const uc = new DeletePermissionTemplateUseCase(templates as never)
     await uc.execute({ id: "t-1" })
@@ -27,8 +29,8 @@ describe("DeletePermissionTemplateUseCase", () => {
 
   it("id inexistente → 404", async () => {
     const templates = {
-      findById: jest.fn().mockResolvedValue(null),
-      deleteById: jest.fn(),
+      findById: vi.fn().mockResolvedValue(null),
+      deleteById: vi.fn(),
     }
     const uc = new DeletePermissionTemplateUseCase(templates as never)
     await expect(uc.execute({ id: "x" })).rejects.toThrow(
@@ -39,8 +41,8 @@ describe("DeletePermissionTemplateUseCase", () => {
 
   it("não encontrado → deleteById nunca chamado mesmo que repo aceite qualquer id", async () => {
     const templates = {
-      findById: jest.fn().mockResolvedValue(undefined),
-      deleteById: jest.fn().mockResolvedValue(undefined),
+      findById: vi.fn().mockResolvedValue(undefined),
+      deleteById: vi.fn().mockResolvedValue(undefined),
     }
     const uc = new DeletePermissionTemplateUseCase(templates as never)
     await expect(uc.execute({ id: "ghost" })).rejects.toBeInstanceOf(
@@ -52,8 +54,8 @@ describe("DeletePermissionTemplateUseCase", () => {
 
   it("happy: findById chamado com o id exato antes de deletar", async () => {
     const templates = {
-      findById: jest.fn().mockResolvedValue(existingTemplate()),
-      deleteById: jest.fn().mockResolvedValue(undefined),
+      findById: vi.fn().mockResolvedValue(existingTemplate()),
+      deleteById: vi.fn().mockResolvedValue(undefined),
     }
     const uc = new DeletePermissionTemplateUseCase(templates as never)
     await uc.execute({ id: "t-1" })

@@ -1,3 +1,4 @@
+import { type Mock, beforeEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 
 import { defineCatalogEntry } from "../../application/catalog/notification-catalog"
@@ -93,13 +94,13 @@ const BASE_EMAIL_CASES: readonly {
 ]
 
 describe("EmailChannel", () => {
-  let render: jest.Mock
-  let send: jest.Mock
+  let render: Mock
+  let send: Mock
   let channel: EmailChannel
 
   beforeEach(() => {
-    render = jest.fn().mockReturnValue("<html>ok</html>")
-    send = jest.fn().mockResolvedValue(undefined)
+    render = vi.fn().mockReturnValue("<html>ok</html>")
+    send = vi.fn().mockResolvedValue(undefined)
     const renderer: TemplateRenderer = { render }
     const mailer: Mailer = { send }
     channel = new EmailChannel(new NotificationTemplateSourceRegistry(), renderer, mailer)

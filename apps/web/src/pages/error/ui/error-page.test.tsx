@@ -21,12 +21,12 @@ vi.mock("@tanstack/react-router", () => ({
   useLocation: () => ({ pathname: routerState.pathname }),
 }))
 
-beforeEach(() => {
-  localStorage.clear()
-  routerState.navigate.mockClear()
-})
-
 describe("ErrorPage", () => {
+  beforeEach(() => {
+    localStorage.clear()
+    routerState.navigate.mockClear()
+  })
+
   it("esquece a rota que falhou para o início não trazer o usuário de volta", () => {
     persistLastLocation(brokenRoute)
 

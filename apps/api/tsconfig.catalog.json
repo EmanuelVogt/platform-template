@@ -4,6 +4,9 @@
     "noEmit": true,
     "rootDir": ".catalog-stage"
   },
-  "include": [".catalog-stage/src/modules/**/*"],
+  "include": [
+    ".catalog-stage/src/modules/**/*",
+    ".catalog-stage/test/setup/global-setup.ts"
+  ],
   "exclude": ["node_modules", "dist"]
 }

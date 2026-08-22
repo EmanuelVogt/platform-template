@@ -67,7 +67,7 @@ export class TransactionManager implements OnModuleInit {
   // roda ANTES do onApplicationShutdown dos dispatchers (fases do Nest), então
   // desregistrar aqui faria o drain do outbox processar handlers com
   // @Transactional no-op — insert em autocommit e onCommit lançando. O
-  // singleton morre com o processo (prod) ou com o module registry do jest.
+  // singleton morre com o processo (prod) ou com o module registry do runner.
   onModuleInit(): void {
     setActiveManager(this)
   }

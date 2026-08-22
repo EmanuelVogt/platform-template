@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { VerificationToken } from './verification-token.entity';
 
 const NOW = new Date('2026-04-01T00:00:00Z');

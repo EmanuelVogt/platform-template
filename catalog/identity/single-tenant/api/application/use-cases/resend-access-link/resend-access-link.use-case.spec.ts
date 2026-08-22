@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { AccessLinkNotResendableError } from "../../../domain/errors"
 import { makeIdentityConfig } from "../../../identity.config.fixture"
 import { fakeRequestContext } from "../../request-context.fixture"
@@ -8,15 +10,15 @@ const NOW = new Date("2026-06-08T00:00:00.000Z")
 const PENDING = { props: { id: "u-1", name: "Ana", email: "ana@x.test", status: "pending", accessProfile: "admin" } }
 
 function makeDeps(over: Record<string, any> = {}) {
-  const users = over.users ?? { findById: jest.fn().mockResolvedValue(PENDING) }
+  const users = over.users ?? { findById: vi.fn().mockResolvedValue(PENDING) }
   const verificationTokens = over.verificationTokens ?? {
-    findLatestForUser: jest.fn().mockResolvedValue({ expiresAt: new Date("2026-06-01T00:00:00.000Z"), consumedAt: null }), // expirado
-    invalidateAllForUser: jest.fn().mockResolvedValue(undefined),
-    create: jest.fn().mockResolvedValue(undefined),
+    findLatestForUser: vi.fn().mockResolvedValue({ expiresAt: new Date("2026-06-01T00:00:00.000Z"), consumedAt: null }), // expirado
+    invalidateAllForUser: vi.fn().mockResolvedValue(undefined),
+    create: vi.fn().mockResolvedValue(undefined),
   }
-  const tokens = over.tokens ?? { generate: jest.fn().mockReturnValue({ raw: "raw-tok", hash: "hash-tok" }) }
-  const outbox = over.outbox ?? { publish: jest.fn().mockResolvedValue(undefined) }
-  const authEvents = over.authEvents ?? { recordInTx: jest.fn().mockResolvedValue(undefined) }
+  const tokens = over.tokens ?? { generate: vi.fn().mockReturnValue({ raw: "raw-tok", hash: "hash-tok" }) }
+  const outbox = over.outbox ?? { publish: vi.fn().mockResolvedValue(undefined) }
+  const authEvents = over.authEvents ?? { recordInTx: vi.fn().mockResolvedValue(undefined) }
   const clock = over.clock ?? { now: () => NOW }
   const ctx = over.ctx ?? fakeRequestContext(() => ({ ip: null, userAgent: null, correlationId: "c1", locale: "pt-BR", userId: "master-1", sessionId: null, traceId: null, spanId: null }))
   const config = over.config ?? makeIdentityConfig()
@@ -26,20 +28,20 @@ function makeDeps(over: Record<string, any> = {}) {
 
 describe("ResendAccessLinkUseCase", () => {
   it("usuário inexistente lança AccessLinkNotResendableError", async () => {
-    const t = makeDeps({ users: { findById: jest.fn().mockResolvedValue(null) } })
+    const t = makeDeps({ users: { findById: vi.fn().mockResolvedValue(null) } })
     await expect(t.uc.execute({ userId: "x" })).rejects.toBeInstanceOf(AccessLinkNotResendableError)
   })
 
   it("usuário não-pending lança AccessLinkNotResendableError", async () => {
-    const t = makeDeps({ users: { findById: jest.fn().mockResolvedValue({ props: { ...PENDING.props, status: "active" } }) } })
+    const t = makeDeps({ users: { findById: vi.fn().mockResolvedValue({ props: { ...PENDING.props, status: "active" } }) } })
     await expect(t.uc.execute({ userId: "u-1" })).rejects.toBeInstanceOf(AccessLinkNotResendableError)
   })
 
   it("link de acesso ainda válido lança AccessLinkNotResendableError", async () => {
     const t = makeDeps({
       verificationTokens: {
-        findLatestForUser: jest.fn().mockResolvedValue({ expiresAt: new Date("2026-07-01T00:00:00.000Z"), consumedAt: null }),
-        invalidateAllForUser: jest.fn(), create: jest.fn(),
+        findLatestForUser: vi.fn().mockResolvedValue({ expiresAt: new Date("2026-07-01T00:00:00.000Z"), consumedAt: null }),
+        invalidateAllForUser: vi.fn(), create: vi.fn(),
       },
     })
     await expect(t.uc.execute({ userId: "u-1" })).rejects.toBeInstanceOf(AccessLinkNotResendableError)
@@ -60,9 +62,9 @@ describe("ResendAccessLinkUseCase", () => {
   it("pending sem token (null) é reenviável", async () => {
     const t = makeDeps({
       verificationTokens: {
-        findLatestForUser: jest.fn().mockResolvedValue(null),
-        invalidateAllForUser: jest.fn().mockResolvedValue(undefined),
-        create: jest.fn().mockResolvedValue(undefined),
+        findLatestForUser: vi.fn().mockResolvedValue(null),
+        invalidateAllForUser: vi.fn().mockResolvedValue(undefined),
+        create: vi.fn().mockResolvedValue(undefined),
       },
     })
     await t.uc.execute({ userId: "u-1" })
@@ -72,12 +74,12 @@ describe("ResendAccessLinkUseCase", () => {
   it("token consumido (consumedAt != null) mas não expirado é reenviável", async () => {
     const t = makeDeps({
       verificationTokens: {
-        findLatestForUser: jest.fn().mockResolvedValue({
+        findLatestForUser: vi.fn().mockResolvedValue({
           expiresAt: new Date("2026-07-01T00:00:00.000Z"),
           consumedAt: new Date("2026-06-07T00:00:00.000Z"),
         }),
-        invalidateAllForUser: jest.fn().mockResolvedValue(undefined),
-        create: jest.fn().mockResolvedValue(undefined),
+        invalidateAllForUser: vi.fn().mockResolvedValue(undefined),
+        create: vi.fn().mockResolvedValue(undefined),
       },
     })
     await t.uc.execute({ userId: "u-1" })
@@ -88,12 +90,12 @@ describe("ResendAccessLinkUseCase", () => {
   it("token expirado exato na fronteira (expiresAt === now) é reenviável", async () => {
     const t = makeDeps({
       verificationTokens: {
-        findLatestForUser: jest.fn().mockResolvedValue({
+        findLatestForUser: vi.fn().mockResolvedValue({
           expiresAt: NOW,
           consumedAt: null,
         }),
-        invalidateAllForUser: jest.fn().mockResolvedValue(undefined),
-        create: jest.fn().mockResolvedValue(undefined),
+        invalidateAllForUser: vi.fn().mockResolvedValue(undefined),
+        create: vi.fn().mockResolvedValue(undefined),
       },
     })
     await t.uc.execute({ userId: "u-1" })
@@ -101,7 +103,7 @@ describe("ResendAccessLinkUseCase", () => {
   })
 
   it("usuário inexistente não chama invalidateAllForUser nem create", async () => {
-    const t = makeDeps({ users: { findById: jest.fn().mockResolvedValue(null) } })
+    const t = makeDeps({ users: { findById: vi.fn().mockResolvedValue(null) } })
     await expect(t.uc.execute({ userId: "x" })).rejects.toBeInstanceOf(AccessLinkNotResendableError)
     expect(t.verificationTokens.invalidateAllForUser).not.toHaveBeenCalled()
     expect(t.verificationTokens.create).not.toHaveBeenCalled()
@@ -109,7 +111,7 @@ describe("ResendAccessLinkUseCase", () => {
 
   it("usuário não-pending não chama invalidateAllForUser nem create", async () => {
     const t = makeDeps({
-      users: { findById: jest.fn().mockResolvedValue({ props: { ...PENDING.props, status: "active" } }) },
+      users: { findById: vi.fn().mockResolvedValue({ props: { ...PENDING.props, status: "active" } }) },
     })
     await expect(t.uc.execute({ userId: "u-1" })).rejects.toBeInstanceOf(AccessLinkNotResendableError)
     expect(t.verificationTokens.invalidateAllForUser).not.toHaveBeenCalled()
@@ -119,12 +121,12 @@ describe("ResendAccessLinkUseCase", () => {
   it("link de acesso ainda válido não chama invalidateAllForUser nem create", async () => {
     const t = makeDeps({
       verificationTokens: {
-        findLatestForUser: jest.fn().mockResolvedValue({
+        findLatestForUser: vi.fn().mockResolvedValue({
           expiresAt: new Date("2026-07-01T00:00:00.000Z"),
           consumedAt: null,
         }),
-        invalidateAllForUser: jest.fn(),
-        create: jest.fn(),
+        invalidateAllForUser: vi.fn(),
+        create: vi.fn(),
       },
     })
     await expect(t.uc.execute({ userId: "u-1" })).rejects.toBeInstanceOf(AccessLinkNotResendableError)
@@ -137,7 +139,7 @@ describe("ResendAccessLinkUseCase", () => {
     const t = makeDeps({ config })
     await t.uc.execute({ userId: "u-1" })
     const published: { payload: { type: string; recipientId: string; locale: string; data: Record<string, unknown> } } =
-      t.outbox.publish.mock.calls[0][0]
+      t.outbox.publish.mock.calls[0]?.[0]
     expect(published.payload.type).toBe("access_link_sent")
     expect(published.payload.recipientId).toBe("u-1")
     expect(published.payload.data.link).toContain("https://app.test/configurar-senha?token=raw-tok")

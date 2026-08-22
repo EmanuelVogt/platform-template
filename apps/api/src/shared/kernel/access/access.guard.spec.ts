@@ -1,6 +1,7 @@
 import "reflect-metadata"
 
 import { Reflector } from "@nestjs/core"
+import { type Mock, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ForbiddenError } from "../errors/forbidden.error"
 
@@ -17,13 +18,11 @@ import {
 import type { AccessPolicy, AccessRequirement } from "./access-policy.port"
 import type { ExecutionContext } from "@nestjs/common"
 
-jest.mock("../context/request-context", () => ({
-  getActor: jest.fn(),
-}))
+// SPEC_DEVIATION: `vi.hoisted` instead of `await vi.importMock` — see
+// tracing.setup.spec.ts. Reason: CommonJS output rejects top-level `await`.
+const { getActor } = vi.hoisted(() => ({ getActor: vi.fn() }))
 
-const { getActor } = jest.requireMock<{
-  getActor: jest.Mock
-}>("../context/request-context")
+vi.mock("../context/request-context", () => ({ getActor }))
 
 class Routes {
   @Public()
@@ -65,8 +64,8 @@ function contextFor(route: keyof Routes): ExecutionContext {
 
 function policyReturning(
   result: boolean | Promise<boolean>
-): AccessPolicy & { can: jest.Mock } {
-  return { can: jest.fn().mockReturnValue(result) }
+): AccessPolicy & { can: Mock } {
+  return { can: vi.fn().mockReturnValue(result) }
 }
 
 function guardWithout(): AccessGuard {

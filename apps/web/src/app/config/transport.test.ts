@@ -17,29 +17,29 @@ function post(data?: unknown) {
   return client({ method: "POST", url: MUTATION_URL, data })
 }
 
-beforeAll(() => {
-  server.listen({ onUnhandledRequest: "error" })
-  configureClient({
-    baseURL: BASE_URL,
-    onUnauthorized: (ctx) => onUnauthorized(ctx),
-  })
-})
-
-beforeEach(() => {
-  onUnauthorized.mockReset()
-  document.cookie = "rit_csrf=tok-123"
-})
-
-afterEach(() => {
-  server.resetHandlers()
-  document.cookie = "rit_csrf=; expires=Thu, 01 Jan 1970 00:00:00 GMT"
-})
-
-afterAll(() => {
-  server.close()
-})
-
 describe("transporte do api-client (integração via MSW)", () => {
+  beforeAll(() => {
+    server.listen({ onUnhandledRequest: "error" })
+    configureClient({
+      baseURL: BASE_URL,
+      onUnauthorized: (ctx) => onUnauthorized(ctx),
+    })
+  })
+
+  beforeEach(() => {
+    onUnauthorized.mockReset()
+    document.cookie = "rit_csrf=tok-123"
+  })
+
+  afterEach(() => {
+    server.resetHandlers()
+    document.cookie = "rit_csrf=; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+  })
+
+  afterAll(() => {
+    server.close()
+  })
+
   it("reflete o cookie rit_csrf em X-CSRF-Token nas mutações com corpo", async () => {
     let received: string | null = null
     server.use(

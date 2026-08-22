@@ -3,7 +3,6 @@
   "private": true,
   "scripts": {
     "db:generate": "drizzle-kit generate",
-    "db:check:journal": "ts-node src/db/check-journal.ts",
-    "test": "jest"
+    "db:check:journal": "ts-node src/db/check-journal.ts"
   }
 }

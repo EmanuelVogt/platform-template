@@ -1,5 +1,6 @@
 import { pgTable, text } from "drizzle-orm/pg-core"
 import { Pool } from "pg"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { DatabaseModule } from "./database.module"
 import { DedicatedClientFactory } from "./dedicated-client.factory"

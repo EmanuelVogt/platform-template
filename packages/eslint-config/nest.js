@@ -8,7 +8,7 @@ export const nestConfig = tseslint.config(
   {
     files: ["**/*.ts"],
     languageOptions: {
-      globals: { ...globals.node, ...globals.jest },
+      globals: { ...globals.node },
     },
     rules: {
       // Nest depende muito de DI por classe e decorators

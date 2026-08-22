@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { maintenanceRegistry } from "../../../../shared/kernel/scheduling/maintenance-registry"
 
 import "./purge-auth-events.job"

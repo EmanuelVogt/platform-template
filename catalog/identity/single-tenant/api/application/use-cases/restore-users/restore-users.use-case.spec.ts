@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import { fakeRequestContext } from "../../request-context.fixture"
 
@@ -32,10 +34,10 @@ function makeUser(over: Partial<UserProps> = {}): User {
 
 function makeDeps(found: User[]) {
   const users = {
-    findByIds: jest.fn().mockResolvedValue(found),
-    update: jest.fn().mockResolvedValue(undefined),
+    findByIds: vi.fn().mockResolvedValue(found),
+    update: vi.fn().mockResolvedValue(undefined),
   }
-  const authEvents = { recordInTx: jest.fn().mockResolvedValue(undefined) }
+  const authEvents = { recordInTx: vi.fn().mockResolvedValue(undefined) }
   const ctx = fakeRequestContext(() => ({
       correlationId: "c1",
       locale: "pt-BR",
@@ -57,12 +59,12 @@ describe("RestoreUsersUseCase", () => {
 
     expect(out).toEqual({ restored: 1 })
     expect(users.update).toHaveBeenCalledTimes(1)
-    const updated = users.update.mock.calls[0][0] as User
+    const updated = users.update.mock.calls[0]?.[0] as User
     expect(updated.props.id).toBe("u-dead")
     expect(updated.isDeleted()).toBe(false)
     expect(authEvents.recordInTx).toHaveBeenCalledTimes(1)
-    expect(authEvents.recordInTx.mock.calls[0][0].props.eventType).toBe("user_restored")
-    expect(authEvents.recordInTx.mock.calls[0][0].props.actorUserId).toBe("u-admin")
+    expect(authEvents.recordInTx.mock.calls[0]?.[0].props.eventType).toBe("user_restored")
+    expect(authEvents.recordInTx.mock.calls[0]?.[0].props.actorUserId).toBe("u-admin")
   })
 
   it("ids inexistentes: no-op com restored 0", async () => {

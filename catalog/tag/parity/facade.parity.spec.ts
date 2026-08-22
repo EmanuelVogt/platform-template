@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { TagDirectoryFacade } from "../api/facades/tag-directory.facade"
 import { TagUsageRegistry } from "../application/tag-usage.registry"
 

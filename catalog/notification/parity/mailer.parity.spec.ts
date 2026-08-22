@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { LogMailer } from "../infrastructure/mailer/log-mailer"
 
 import type { LoggerFactory } from "../../../shared/kernel/logging/logger.factory"

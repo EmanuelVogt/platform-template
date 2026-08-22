@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { OBJECT_STORAGE } from "./object-storage.port"
 
 describe("OBJECT_STORAGE token", () => {

@@ -78,7 +78,7 @@ const NAV_CMDS = new Set([
   'grep', 'rg', 'find', 'fd', 'ls', 'tree', 'cat', 'head', 'tail', 'sed', 'awk',
   'wc', 'less', 'more', 'bat', 'stat', 'file', 'read',
 ]);
-const RUN_CMDS = new Set(['jest', 'vitest', 'tsc', 'eslint', 'turbo', 'playwright']);
+const RUN_CMDS = new Set(['vitest', 'tsc', 'eslint', 'turbo', 'playwright']);
 const RUN_PNPM_SCRIPTS = /^(test(:\w+)?|typecheck|check|lint(:\w+)?|build)$/;
 
 const stateFile = (sessionId) => path.join(tmpdir(), `platform-delegate-${sessionId}.json`);

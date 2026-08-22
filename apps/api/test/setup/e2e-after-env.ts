@@ -1,4 +1,5 @@
 import Redis from "ioredis"
+import { afterAll, afterEach, beforeAll } from "vitest"
 
 import { testRedisUrl } from "./test-db"
 

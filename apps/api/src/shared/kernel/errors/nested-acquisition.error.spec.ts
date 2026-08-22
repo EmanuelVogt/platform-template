@@ -1,4 +1,5 @@
 import pino from "pino"
+import { describe, expect, it } from "vitest"
 
 import { RequestContext } from "../context/request-context"
 import { LoggerFactory } from "../logging/logger.factory"

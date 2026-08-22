@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { Argon2PasswordHasher } from "./argon2-password-hasher"
 
 const opts = {
@@ -10,7 +12,7 @@ const opts = {
 }
 
 describe("Argon2PasswordHasher", () => {
-  jest.setTimeout(20000)
+  vi.setConfig({ testTimeout: 20000 })
 
   it("faz round-trip: hash verifica com a senha correta", async () => {
     const hasher = new Argon2PasswordHasher(opts)

@@ -1,6 +1,8 @@
 import { readdirSync } from "node:fs"
 import { join } from "node:path"
 
+import { describe, expect, it } from "vitest"
+
 // KPB-13: só template genérico (fluxo de conta) mora aqui. Template de produto
 // é registrado pelo módulo dono no NotificationTemplateSourceRegistry.
 const GENERIC_TEMPLATES = [

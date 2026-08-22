@@ -215,8 +215,9 @@ O que cada suíte garante:
   independente.
 
 Além da paridade, a entrada entrega as suítes e2e da v0.2 em `api/__e2e__/` (vão para
-`apps/api/src/modules/identity/__e2e__/`, cobertas pelo `test/jest-e2e.json` do child) e o
-material de harness em `api/testing/` — `seed-user.ts`, `allow-all-rate-limiter.ts`,
+`apps/api/src/modules/identity/__e2e__/`, cobertas pelo projeto `api-e2e` — `pnpm vitest run
+--config vitest.integration.mts --project api-e2e` — do child) e o material de harness em
+`api/testing/` — `seed-user.ts`, `allow-all-rate-limiter.ts`,
 `fake-mailer.ts` e `seeds/` (bootstrap do usuário `master`). `seed-user.ts` e
 `allow-all-rate-limiter.ts` são a superfície que `audit`, `attachment` e `tag` importam por
 `dependsOn` (AD-021/AD-025). O plumbing do runner (containers, env, `test-db`) continua em `apps/api/test/`,

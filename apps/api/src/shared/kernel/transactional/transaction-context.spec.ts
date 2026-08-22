@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { makeTestLogger } from "../../../../test/setup/test-logger"
 import { NestedAcquisitionError } from "../errors/nested-acquisition.error"
 

@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 
+import { describe, expect, it } from "vitest"
+
 import { listDirectories } from "../../test/unit/source-survey"
 
 const MODULES_DIR = join(__dirname, "..", "..", "..", "modules")

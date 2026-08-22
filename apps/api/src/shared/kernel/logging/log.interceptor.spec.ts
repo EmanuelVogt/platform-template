@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { stripQuery } from "./log.interceptor"
 
 describe("stripQuery", () => {

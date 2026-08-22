@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs"
 import { join, sep } from "node:path"
 
 import { Cron } from "@nestjs/schedule"
+import { describe, expect, it, vi } from "vitest"
 
 import { MaintenanceJob } from "./maintenance-job.decorator"
 import {
@@ -13,8 +14,8 @@ import {
 
 import type { MaintenanceJobEntry } from "./maintenance-registry"
 
-jest.mock("@nestjs/schedule", () => ({
-  Cron: jest.fn(() => (): void => undefined),
+vi.mock("@nestjs/schedule", () => ({
+  Cron: vi.fn(() => (): void => undefined),
 }))
 
 const KERNEL_JOB_NAMES: readonly string[] = KERNEL_MAINTENANCE_JOBS.map(
@@ -100,7 +101,7 @@ describe("jobs do próprio kernel", () => {
 
 describe("@MaintenanceJob", () => {
   it("job sem fuso não declara timeZone nas opções do Cron", () => {
-    jest.mocked(Cron).mockClear()
+    vi.mocked(Cron).mockClear()
 
     class Subject {
       @MaintenanceJob("outbox.purge")
@@ -111,13 +112,13 @@ describe("@MaintenanceJob", () => {
 
     void Subject
     expect(Cron).toHaveBeenCalledWith("0 3 * * *", { name: "outbox.purge" })
-    const options = jest.mocked(Cron).mock.calls[0]?.[1]
+    const options = vi.mocked(Cron).mock.calls[0]?.[1]
     expect(options).toBeDefined()
     expect(options).not.toHaveProperty("timeZone")
   })
 
   it("job com fuso repassa timeZone nas opções do Cron", () => {
-    jest.mocked(Cron).mockClear()
+    vi.mocked(Cron).mockClear()
     // Nenhum job do kernel declara fuso; a entrada sintética exercita o ramo
     // sem carimbar um fuso arbitrário num job real.
     registerMaintenanceJob({
@@ -142,7 +143,7 @@ describe("@MaintenanceJob", () => {
   })
 
   it("aceita nome novo registrado fora do kernel, sem união fechada", () => {
-    jest.mocked(Cron).mockClear()
+    vi.mocked(Cron).mockClear()
     registerMaintenanceJob({
       name: "entrada-exemplo.purge",
       cron: "30 2 * * *",

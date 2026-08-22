@@ -1,4 +1,5 @@
 import { firstValueFrom, of } from "rxjs"
+import { describe, expect, it, vi } from "vitest"
 
 import { buildJobContextStore } from "../context/job-context"
 import {
@@ -26,7 +27,7 @@ function makeExecutionContext(): ExecutionContext {
     body: { b: 1, a: 2 },
     headers: { "idempotency-key": "k-1" },
   }
-  const response = { statusCode: 201, status: jest.fn() }
+  const response = { statusCode: 201, status: vi.fn() }
   return {
     getType: () => "http",
     getHandler: () => () => undefined,

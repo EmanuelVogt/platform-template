@@ -82,7 +82,7 @@ enums `notificationDeliveryStatus` e `notificationChannel`). As tabelas nascem d
 
 Os specs em `parity/*.parity.spec.ts` são copiados para
 `apps/api/src/modules/notification/__parity__/` junto com `parity/contract.snapshot.json` e
-rodam no jest do app filho:
+rodam via `pnpm vitest run --project api apps/api/src/modules/notification` no app filho:
 
 - `contract.parity.spec.ts` — compara `openapi.json` do filho contra `contract.snapshot.json`
   via `expectContractSubset`, garantindo que as seis operações do feed continuam presentes com

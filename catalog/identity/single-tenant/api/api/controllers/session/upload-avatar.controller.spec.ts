@@ -1,3 +1,5 @@
+import { type Mock, beforeEach, describe, expect, it, vi } from "vitest"
+
 import { AvatarFileRequiredError } from "../../../domain/errors"
 
 import { UploadAvatarController } from "./upload-avatar.controller"
@@ -16,11 +18,11 @@ function makeFile(mimetype: string): Express.Multer.File {
 }
 
 describe("UploadAvatarController", () => {
-  let useCase: { execute: jest.Mock }
+  let useCase: { execute: Mock }
   let controller: UploadAvatarController
 
   beforeEach(() => {
-    useCase = { execute: jest.fn() }
+    useCase = { execute: vi.fn() }
     controller = new UploadAvatarController(useCase as unknown as UploadAvatarUseCase)
   })
 

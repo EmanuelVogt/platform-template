@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { Transactional } from "./transactional.decorator"
 
 describe("@Transactional (fail-loud)", () => {

@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { ActivityAreaResolver } from "../../application/services/activity-area-resolver"
 import { AuditRegistry } from "../../application/services/audit-registry"
 

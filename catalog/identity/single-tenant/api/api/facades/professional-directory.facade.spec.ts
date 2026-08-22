@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { ProfessionalDirectoryFacade } from "./professional-directory.facade"
 
 import type { UserRepository } from "../../domain/ports/user.repository"
@@ -11,7 +13,7 @@ function makeRepository() {
     ["pro-1", ["area-1", "area-2"]],
     ["pro-2", ["area-2"]],
   ])
-  const findProfessionalAreaIdsByUserIds = jest.fn(
+  const findProfessionalAreaIdsByUserIds = vi.fn(
     (_userIds: string[]): Promise<Map<string, readonly string[]>> =>
       Promise.resolve(groupedAreas)
   )

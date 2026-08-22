@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { AttachmentFacade } from "./attachment.facade"
 
 import type { ListAttachmentAccessLogUseCase } from "../../application/use-cases/list-attachment-access-log/list-attachment-access-log.use-case"
@@ -15,7 +17,7 @@ describe("AttachmentFacade.listAccessLog", () => {
         },
       ],
     }
-    const execute = jest.fn().mockResolvedValue(result)
+    const execute = vi.fn().mockResolvedValue(result)
     const listAccessLogUseCase = {
       execute,
     } as unknown as ListAttachmentAccessLogUseCase

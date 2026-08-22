@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { AUTH_EVENT_REPOSITORY } from './auth-event.repository';
 import { BREACH_CHECK } from './breach-check';
 import { CSRF } from './csrf';

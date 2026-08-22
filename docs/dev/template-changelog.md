@@ -4,6 +4,41 @@ Version truth = git tag + this entry (AD-006); `package.json` is not bumped on
 release. Each version lists the contract-breaking changes and the steps for the child
 to apply on `copier update`.
 
+## Unreleased
+
+Vitest replaces jest as the api runner and takes over the whole root. Breaking for
+every child: the specs change runner and the five catalog entries move to `2.0.0`.
+
+### Changes
+
+1. **Vitest replaces jest as the api runner and runs the whole root.** One runner,
+   configs and scripts at the root (`vitest.config.mts`, `vitest.coverage.mts`,
+   `vitest.integration.mts`); `test:coverage` becomes the pre-push gate (it needs
+   Docker); the lint rules were updated to the new runner. The five catalog entries
+   (attachment, audit, identity/single-tenant, notification, tag) move to `2.0.0`, each
+   with a `breaking` advisory (`ADV-20260821-01..05`). Two new decisions in
+   `.specs/STATE.md`: AD-027 (pre-push gate = `test:coverage`, coverage floors per glob,
+   calibrated once and ratchet-only afterwards) and AD-028 (Vitest `projects` is the
+   monorepo's only runner, nothing outside it).
+   The api floors were calibrated in T29 from the final migrated tree
+   (`pnpm test:coverage`, `apps/api/src/**`): measured statements 87.69% / branches
+   74.21% / functions 91.3% / lines 88.43%; floor = measured − 1.5 pt, rounded down to
+   one decimal → statements 86.1 / branches 72.7 / functions 89.8 / lines 86.9. The web
+   stays at 64/56/61/64.
+
+### Child migration steps
+
+1. `copier update` already brings the root runner configs (`vitest*.mts`),
+   `lefthook.yml`, `ci.yml` and the eslint configs — no manual action here.
+2. `node scripts/platform/jest-to-vitest.mjs apps/api/src apps/api/test apps/web/src`
+   rewrites the product's specs for the new runner.
+3. `pnpm lint:fix` settles what the codemod left out of order (import order and such).
+4. Remove `jest`, `@swc/jest`, `@types/jest` and `nyc` from `apps/api`; remove
+   `@vitest/coverage-v8` from `apps/web` (web coverage moved to the root).
+5. `pnpm install`.
+6. Apply the advisories of the entries already installed (`pnpm platform module …`, see
+   `docs/catalog/catalog.md`).
+
 ## v1.2.0
 
 Refactor of the platform tooling: the child layout, the install order and the child

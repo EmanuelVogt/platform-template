@@ -13,7 +13,6 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "ts-node src/seeds/run.ts",
-    "db:bootstrap": "ts-node src/seeds/bootstrap-master.ts",
     "db:migrate:run": "ts-node src/db/migrate.ts",
     "db:check:journal": "ts-node src/db/check-journal.ts",
     "outbox:replay": "ts-node src/db/outbox-replay.ts",

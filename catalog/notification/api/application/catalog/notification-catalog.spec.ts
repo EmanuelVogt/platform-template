@@ -21,6 +21,30 @@ describe("notificationCatalog", () => {
     expect(entry.dataSchema.safeParse({ email: "a@b.com" }).success).toBe(false)
   })
 
+  it("aceita link https e http, rejeita javascript: e data:", () => {
+    const base = {
+      email: "a@b.com",
+      name: "Ana",
+      tokenExpiresAt: "2026-06-17T00:00:00.000Z",
+    }
+    const { dataSchema } = notificationCatalog.access_link_sent
+    expect(
+      dataSchema.safeParse({ ...base, link: "https://app.local/configurar-senha?token=raw" })
+        .success
+    ).toBe(true)
+    expect(
+      dataSchema.safeParse({ ...base, link: "http://app.local/configurar-senha?token=raw" })
+        .success
+    ).toBe(true)
+    expect(
+      dataSchema.safeParse({ ...base, link: "javascript:alert(1)" }).success
+    ).toBe(false)
+    expect(
+      dataSchema.safeParse({ ...base, link: "data:text/html,<script>alert(1)</script>" })
+        .success
+    ).toBe(false)
+  })
+
   it("metadata de tipo in-app NUNCA contém token/link", () => {
     for (const type of NOTIFICATION_TYPES) {
       const entry = notificationCatalog[type]

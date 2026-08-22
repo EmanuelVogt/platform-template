@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { buildJobContextStore } from "./job-context"
 import { RequestContext } from "./request-context"
 

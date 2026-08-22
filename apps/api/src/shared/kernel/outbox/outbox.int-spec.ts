@@ -1,6 +1,6 @@
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { eq } from "drizzle-orm"
-
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 import {
   createTestDb,
@@ -151,9 +151,9 @@ describe("Outbox (integração)", () => {
     process.env.REDIS_URL ??= "redis://localhost:6379"
     pool = createTestPool()
     db = createTestDb(pool)
-    const test = makeTestLogger()
-    ctx = test.ctx
-    loggerFactory = test.loggerFactory
+    const testLogger = makeTestLogger()
+    ctx = testLogger.ctx
+    loggerFactory = testLogger.loggerFactory
     txm = new TransactionManager(db, loggerFactory)
     publisher = new OutboxPublisher(txm, ctx, loggerFactory)
     processed = new ProcessedEventsRepository(txm)
@@ -601,6 +601,8 @@ describe("Outbox (integração)", () => {
         async () => (await publishedAt("listen-wake-1")) !== null,
         "NOTIFY acordar o dispatch"
       )
+
+      expect(await publishedAt("listen-wake-1")).toBeInstanceOf(Date)
     })
 
     it("após pg_terminate_backend no client do LISTEN, ele se recria e volta a acordar", async () => {

@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { NOTIFICATION_TYPES } from "../../api/events/notification-requested.event"
 
 import { notificationCatalog } from "./notification-catalog"
@@ -67,10 +69,11 @@ describe("notificationCatalog", () => {
   it("todo tipo com canal system tem renderInApp e metadata", () => {
     for (const type of NOTIFICATION_TYPES) {
       const entry = notificationCatalog[type]
-      if (entry.channels.includes("system")) {
-        expect(entry.renderInApp).toBeDefined()
-        expect(entry.metadata).toBeDefined()
-      }
+      // SPEC_DEVIATION: `if` vira early `continue` para tirar o `expect` de dentro do condicional.
+      // Reason: `@vitest/eslint-plugin` (LNT-01) passa a barrar `no-conditional-expect`.
+      if (!entry.channels.includes("system")) continue
+      expect(entry.renderInApp).toBeDefined()
+      expect(entry.metadata).toBeDefined()
     }
   })
 

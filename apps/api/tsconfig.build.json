@@ -8,6 +8,7 @@
     "node_modules",
     "test",
     "dist",
+    "*.mts",
     "**/*.spec.ts",
     "**/*.int-spec.ts",
     "**/*.e2e-spec.ts",

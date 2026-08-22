@@ -111,7 +111,10 @@ export class IdempotencyInterceptor implements NestInterceptor {
     // bucket e uma chave qualquer bloquearia a requisição de outra pessoa.
     const principal = ctx?.actor?.id ?? `ip:${req.ip ?? "_"}`
     const scope = `${ctx?.tenantId ?? "_"}:${principal}`
-    const endpoint = `${req.method} ${req.originalUrl.split("?")[0] ?? ""}`
+    const queryStart = req.originalUrl.indexOf("?")
+    const path =
+      queryStart === -1 ? req.originalUrl : req.originalUrl.slice(0, queryStart)
+    const endpoint = `${req.method} ${path}`
     const expiresAt = new Date(Date.now() + opts.ttlHours * 3_600_000)
 
     const existing = await this.repo.tryReserve({

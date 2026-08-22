@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { parseAttachmentConfig } from "../attachment.config"
 
 import { PRODUCT_UPLOAD_PROFILES } from "./upload/product-upload-profiles"

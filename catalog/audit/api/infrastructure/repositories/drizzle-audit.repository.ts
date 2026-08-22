@@ -9,7 +9,7 @@ import {
 import { toPaginated } from "../../../../shared/kernel/listing/paginated"
 import { TransactionManager } from "../../../../shared/kernel/transactional/transaction-manager"
 import { UserDirectoryFacade } from "../../../identity/api/facades/user-directory.facade"
-import { auditEntries } from "../tables/audit-entry.table"
+import { auditEntries } from "../tables/audit-entry.readmodel"
 
 import type { DrizzleExecutor } from "../../../../shared/infra/database/drizzle.provider"
 import type { PaginatedResult } from "../../../../shared/kernel/listing/paginated"

@@ -19,41 +19,41 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 | Code Layer | Required Test Type | Coverage Expectation | Location Pattern | Run Command |
 | --- | --- | --- | --- | --- |
-| Kernel harness helper (`mockOf`, `resetDb`, `waitFor`, `expectProblem`, `drainOutbox`) | unit | every documented behaviour incl. the failure path (unstubbed method, unknown schema, timeout) | `apps/api/src/shared/test/**/<name>.spec.ts` | `pnpm --filter api test -- shared/test` |
-| Guard spec scanner | unit | the scanner reports a seeded violation and ignores `.catalog-stage` | `apps/api/src/shared/test/hygiene/*.spec.ts` | `pnpm --filter api test -- hygiene` |
+| Kernel harness helper (`mockOf`, `resetDb`, `waitFor`, `expectProblem`, `drainOutbox`) | unit | every documented behaviour incl. the failure path (unstubbed method, unknown schema, timeout) | `apps/api/src/shared/test/**/<name>.spec.ts` | `pnpm vitest run --project api apps/api/src/shared/test` |
+| Guard spec scanner | unit | the scanner reports a seeded violation and ignores `.catalog-stage` | `apps/api/src/shared/test/hygiene/*.spec.ts` | `pnpm vitest run --project api apps/api/src/shared/test/hygiene` |
 | Entry `testing/` barrel | none of its own | exercised by the entry's specs; excluded from the coverage denominator | `catalog/<entry>/api/testing/**` | `pnpm catalog:check` |
-| Use case (entry) | unit | happy path + every `throw`; the saved entity asserted, not only the call | `catalog/<entry>/api/application/use-cases/<name>/<name>.use-case.spec.ts` | `pnpm --filter api test` |
-| Repository / trigger (entry) | integration | key query paths + conflict/error path, against the real database | `catalog/<entry>/api/infrastructure/**/*.int-spec.ts` | `pnpm --filter api test:int` |
-| Route / flow (entry, kernel) | e2e | status, problem body, persisted state; order-independent | `catalog/<entry>/api/__e2e__/*.e2e-spec.ts`, `apps/api/test/*.e2e-spec.ts` | `pnpm --filter api test:e2e` |
-| Cross-entry facade | unit | the shape each consumer relies on | `catalog/<entry>/api/api/facades/*.facade.spec.ts` | `pnpm --filter api test` |
+| Use case (entry) | unit | happy path + every `throw`; the saved entity asserted, not only the call | `catalog/<entry>/api/application/use-cases/<name>/<name>.use-case.spec.ts` | `pnpm catalog:check` (an entry's specs only run inside a rendered child) |
+| Repository / trigger (entry) | integration | key query paths + conflict/error path, against the real database | `catalog/<entry>/api/infrastructure/**/*.int-spec.ts` | `pnpm catalog:check` (kernel equivalent: `pnpm test:int`) |
+| Route / flow (entry, kernel) | e2e | status, problem body, persisted state; order-independent | `catalog/<entry>/api/__e2e__/*.e2e-spec.ts`, `apps/api/test/*.e2e-spec.ts` | `pnpm catalog:check` (kernel equivalent: `pnpm test:e2e`) |
+| Cross-entry facade | unit | the shape each consumer relies on | `catalog/<entry>/api/api/facades/*.facade.spec.ts` | `pnpm catalog:check` |
 | ESLint local rule | unit (RuleTester) | reported and exempt cases both | `packages/eslint-config/rules/*.test.js` | `pnpm --filter @platform/eslint-config test` |
 | Lint configuration | unit | resolved severities for an api and a web test file | `packages/eslint-config/*.config.test.js` | `pnpm --filter @platform/eslint-config test` |
-| Web component / hook | vitest | rendered outcome or navigation target, never existence | `apps/web/src/**/*.test.ts(x)` | `pnpm --filter web test` |
+| Web component / hook | vitest | rendered outcome or navigation target, never existence | `apps/web/src/**/*.test.ts(x)` | `pnpm vitest run --project web <path>` |
 | Repo tooling (`it-count`, gates) | node:test | exit codes and the reported drop | `scripts/platform/__tests__/*.test.mjs` | `pnpm test:scripts` |
 
 ## Gate Check Commands
 
 | Gate Level | When to Use | Command |
 | --- | --- | --- |
-| quick | inside a task, on the files just changed | `pnpm --filter api test -- <path>` · `pnpm --filter web test -- <path>` |
-| scoped | worker's cluster gate, and the wave Build gate for a wave marked `scoped` | `pnpm --filter api typecheck && pnpm --filter api test -- <cluster paths>` (+ `test:int`/`test:e2e` limited to the touched entry) |
-| full-unit | wave Build gate for a wave that touches kernel, harness, lint config or root config | `pnpm check && pnpm turbo test:cov --filter=api --filter=web` |
-| final | Verifier only, once per feature | `pnpm check && pnpm --filter api test:cov && pnpm --filter api test:int && pnpm --filter api test:e2e -- --randomize && pnpm --filter web test:cov && pnpm contract && git diff --exit-code openapi.json && pnpm catalog:check && pnpm test:scripts && node scripts/platform/it-count.mjs --check .specs/features/test-suite-refactor/baseline.json` |
+| quick | inside a task, on the files just changed | `pnpm vitest run --project api <path>` · `pnpm vitest run --project web <path>` |
+| scoped | worker's cluster gate, and the wave Build gate for a wave marked `scoped` | `pnpm --filter api typecheck && pnpm vitest run --project api <cluster paths>` (+ `pnpm vitest run --config vitest.integration.mts --project api-int|api-e2e <path>` when the cluster touches a database tier) |
+| full-unit | wave Build gate for a wave that touches kernel, harness, lint config or root config | `pnpm check && pnpm test` (the two unit projects, Docker-free) |
+| final | Verifier only, once per feature | `pnpm check && pnpm test:coverage && pnpm contract && git diff --exit-code openapi.json && pnpm catalog:check && pnpm template:smoke && pnpm test:scripts && node scripts/platform/it-count.mjs --check .specs/features/test-suite-refactor/baseline.json` (`test:coverage` covers the four projects and the floors in one run — it needs Docker) |
 
 ## Wave Plan
 
 | Wave | Cluster | Tasks (in order) | Files (union of Touches) | Notes |
 | --- | --- | --- | --- | --- |
-| 1 | C1 — kernel harness | T1 → T2 → T3 → T4 → T5 → T6 | `scripts/platform/it-count.mjs`, `scripts/platform/__tests__/it-count.test.mjs`, `.specs/features/test-suite-refactor/baseline.json`, `apps/api/src/shared/test/{unit,int,e2e}/**`, `apps/api/test/**`, `apps/api/package.json` (jest config), `catalog/identity/single-tenant/api/testing/**` | `gate: full-unit`; tier **opus** — harness API is the contract every other cluster reuses, and RULE C is decided here |
-| 1 | C2 — web vertical | T7 → T8 → T9 → T10 | `apps/web/src/shared/test/**`, `apps/web/src/**/*.test.ts(x)`, `apps/web/src/**` (coverage fill), `apps/web/vitest.config.ts` (excludes only) | `gate: scoped`; tier **sonnet**; no file in common with C1 |
+| 1 | C1 — kernel harness | T1 → T2 → T3 → T4 → T5 → T6 | `scripts/platform/it-count.mjs`, `scripts/platform/__tests__/it-count.test.mjs`, `.specs/features/test-suite-refactor/baseline.json`, `apps/api/src/shared/test/{unit,int,e2e}/**`, `apps/api/test/**`, `apps/api/vitest.*.mts`, `vitest.coverage.mts`, `catalog/identity/single-tenant/api/testing/**` | `gate: full-unit`; tier **opus** — harness API is the contract every other cluster reuses, and RULE C is decided here |
+| 1 | C2 — web vertical | T7 → T8 → T9 → T10 | `apps/web/src/shared/test/**`, `apps/web/src/**/*.test.ts(x)`, `apps/web/src/**` (coverage fill) | `gate: scoped`; tier **sonnet**; no file in common with C1 |
 | 2 | C3 — identity | T11 → T12 → T13 → T14 → T15 → T16 | `catalog/identity/single-tenant/api/**` | `gate: full-unit` (wave); tier **sonnet**, T12/T14 **opus** if the chain split touches domain invariants |
 | 2 | C4 — notification + attachment | T17 → T18 → T19 → T20 → T21 → T22 | `catalog/notification/api/**`, `catalog/attachment/api/**` | tier **sonnet** |
 | 2 | C5 — tag + audit | T23 → T24 → T25 → T26 → T27 | `catalog/tag/api/**`, `catalog/audit/api/**` | tier **sonnet** |
 | 2 | C6 — kernel specs | T28 → T29 → T30 | `apps/api/src/**` excluding `src/shared/test/**` and `src/modules/**` | tier **sonnet**; single vertical over the kernel's own specs |
 | 3 | C7 — enforcement | T31 → T32 → T33 → T34 | `packages/eslint-config/**`, `apps/api/src/shared/test/hygiene/**`, `apps/api/src/modules/module-boundaries.spec.ts`, `scripts/platform/catalog-lint.mjs` | `gate: full-unit`; tier **opus** for T33/T34 (RULE C/D semantics), **sonnet** for T31/T32 |
 | 3 | C8 — docs and formatting | T35 → T36 | `docs/test/testing.md`, `catalog/*/README.md`, `packages/api-client/package.json`, formatting-only edits across spec files | tier **sonnet**; touches no file owned by C7 |
-| 4 | C9 — root gates (exclusive) | T37 → T38 | `turbo.json`, `.github/workflows/ci.yml`, `scripts/platform/__tests__/gates.test.mjs` | `Exclusive: yes` — alone in its wave; `gate: scoped`; tier **sonnet** |
-| 5 | C10 — ratchet and closure (exclusive) | T39 → T40 | `apps/api/package.json`, `apps/web/vitest.config.ts`, `lefthook.yml`, `.specs/STATE.md`, `.specs/features/test-suite-refactor/**` | `Exclusive: yes`; `gate: full-unit` — this wave *is* the coverage gate; tier **sonnet** |
+| 4 | C9 — root gates (exclusive) | T37 → T38 | `.github/workflows/ci.yml`, `scripts/platform/__tests__/gates.test.mjs` | `Exclusive: yes` — alone in its wave; `gate: scoped`; tier **sonnet** |
+| 5 | C10 — ratchet and closure (exclusive) | T39 → T40 | `vitest.coverage.mts`, `.specs/STATE.md`, `.specs/features/test-suite-refactor/**` | `Exclusive: yes`; `gate: full-unit` — this wave *is* the coverage gate; tier **sonnet** |
 
 ```
 Wave 1: [C1: T1→T2→T3→T4→T5→T6]  ∥  [C2: T7→T8→T9→T10]
@@ -104,7 +104,7 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 
 **Done when**:
 
-- [ ] `mockOf<T>()` returns `jest.Mocked<T>`; a method neither supplied nor stubbed **rejects** naming itself
+- [ ] `mockOf<T>()` returns `Mocked<T>` (imported from `"vitest"`); a method neither supplied nor stubbed **rejects** naming itself
 - [ ] `fixedClock`, `fakeRequestContext` (kernel defaults), `fakeLogger` exported with types, no `any`
 - [ ] `FIXED_NOW` and `TEST_PASSWORD` are the only literals of their kind in the harness
 - [ ] Each helper has a spec asserting its documented behaviour and its failure path
@@ -131,7 +131,7 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 - [ ] `withTestDb({ schemas })` registers its own `beforeAll`/`beforeEach`/`afterAll` and returns `{ pool, db, txm, logger }`
 - [ ] No module-named truncation helper exists anywhere in the harness
 - [ ] Kernel int-specs use `withTestDb`; no `createTestPool()` inside an `it` body in this scope
-- [ ] `pnpm --filter api test:int` green
+- [ ] `pnpm test:int` green
 
 **Tests**: integration · **Gate**: scoped
 **Commit**: `test(api): int harness — withTestDb, resetDb by schema, shared redis`
@@ -154,7 +154,7 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 - [ ] `drainOutbox` takes `dispatchers` as a `Pollable[]` option — no module dispatcher named in the kernel (RULE C) — and rejects with the timeout in the message
 - [ ] `expectProblem`, `waitFor`, `cookieValue`, `cookieHeader`, `withE2ePool`, `E2E_ORIGIN` exported and specced
 - [ ] The two kernel e2e boot through the factory and own no pool of their own
-- [ ] `pnpm --filter api test:e2e` green
+- [ ] `pnpm test:e2e` green
 
 **Tests**: e2e + unit (helpers) · **Gate**: scoped
 **Commit**: `test(api): e2e harness — one app factory, problem and outbox vocabulary`
@@ -162,7 +162,7 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 ### T5: Runner plumbing and coverage denominator
 
 **What**: reduce `apps/api/test/setup/` to the runner allow-list and exclude the harness from coverage.
-**Where**: `apps/api/test/setup/**`, `apps/api/test/jest-*.json`, `apps/api/package.json`
+**Where**: `apps/api/test/setup/**`, `apps/api/vitest.{config,int.config,e2e.config,shared}.mts`, `vitest.coverage.mts`
 **Touches**: the paths above
 **Depends on**: T4
 **Exclusive**: no
@@ -175,7 +175,7 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 
 - [ ] `app-factory.ts`, `cookies.ts`, `test-db.ts`, `test-logger.ts` no longer exist under `test/setup/`; nothing imports them
 - [ ] `unit-env.ts` imports the shared env block instead of duplicating `e2e-env.ts`
-- [ ] Coverage excludes `src/shared/test/**`, `src/modules/*/testing/**`, test files, `*.d.ts`, `main.ts`
+- [ ] `vitest.coverage.mts` `exclude` covers `**/shared/test/**`, `apps/api/src/modules/*/testing/**`, test files, `*.d.ts`, `apps/api/src/main.ts` (the first, third, fourth and fifth are already there — AD-027)
 - [ ] All three tiers still discover and run the same file set as before the change
 
 **Tests**: none (config) · **Gate**: full-unit
@@ -242,7 +242,7 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 - [ ] No `vi.mock("@tanstack/react-router")` and no `new QueryClient(` in a test file
 - [ ] No re-import of a matcher set already loaded by `test/setup.ts`; every `vi.mock` factory uses `vi.hoisted`
 - [ ] Current-user fixtures come from the identity web barrel, not from literals
-- [ ] `it` count per file ≥ baseline; `pnpm --filter web test` green
+- [ ] `it` count per file ≥ baseline; `pnpm vitest run --project web` green
 
 **Tests**: vitest · **Gate**: scoped
 **Commit**: `test(web): tests on the shared harness`
@@ -283,7 +283,7 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 
 **Done when**:
 
-- [ ] `pnpm --filter web test:cov` reports ≥95 % on all four metrics
+- [ ] `pnpm test:coverage` reports ≥95 % on all four metrics for `apps/web/src/**`
 - [ ] Every new test asserts an observable outcome or an error class and message — no ignore pragma anywhere
 - [ ] Dead code found while filling is deleted, not ignored, and the deletion is named in the commit body
 
@@ -307,7 +307,7 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 - [ ] No local `allowAll`, `login`, `extractCookieValue`, `parseSetCookie`, `linkFromHtml` in these files
 - [ ] `auth-rate-limit` asserts a numeric `retry-after` and the problem `type` suffix through `expectProblem`
 - [ ] `auth-outbox-email` proves delivery through `drainOutbox`, with no `setTimeout` as proof
-- [ ] `it` count ≥ baseline; the group passes under `--randomize`
+- [ ] `it` count ≥ baseline; the group passes under `--sequence.shuffle`
 
 **Tests**: e2e · **Gate**: scoped
 **Commit**: `test(identity): auth e2e on the shared harness`
@@ -330,7 +330,7 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 - [ ] The "seed master" pseudo-test is removed — the single removal this feature allows, named in the commit body
 - [ ] `authz` asserts a 200 and its body instead of "not 401"; `access-catalog` asserts the 403 body through `expectProblem`
 - [ ] `user-trash` reads the row through the pool after each mutation
-- [ ] `pnpm --filter api test:e2e -- --randomize` green for these files; `it` count ≥ baseline − 1
+- [ ] `pnpm test:e2e --sequence.shuffle` green for these files; `it` count ≥ baseline − 1
 
 **Tests**: e2e · **Gate**: scoped
 **Commit**: `test(identity): order-independent flow e2e, persisted-state asserts`
@@ -352,7 +352,7 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 - [ ] Delivery is driven by `drainOutbox` with the dispatchers passed in — no hand-rolled poll loop, no sleep
 - [ ] Truncation is `resetDb(pool, [...schemas])`, never raw SQL per table
 - [ ] Mail assertions go through `findSent`, not a local finder
-- [ ] `it` count ≥ baseline; the group passes under `--randomize`
+- [ ] `it` count ≥ baseline; the group passes under `--sequence.shuffle`
 
 **Tests**: e2e · **Gate**: scoped
 **Commit**: `test(identity): notification e2e on drainOutbox`
@@ -375,7 +375,7 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 - [ ] No `User.fromProps({` outside the barrel; `makeUser` defined exactly once
 - [ ] `request-email-change`, `change-password`, `upload-avatar`, `set-password` each assert the changed fields of the saved entity
 - [ ] No inline `parseIdentityConfig({…})` — `makeIdentityConfig` instead
-- [ ] `it` count ≥ baseline; `pnpm --filter api test` green
+- [ ] `it` count ≥ baseline; `pnpm vitest run --project api` green
 
 **Tests**: unit · **Gate**: scoped
 **Commit**: `test(identity): unit specs on typed doubles and entry builders`
@@ -396,7 +396,7 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 
 - [ ] Every int-spec here uses `withTestDb`; no `createTestPool()` inside an `it`
 - [ ] `redis-rate-limiter.int-spec.ts` uses `testRedisUrl()` + `flushRedis()`; no `GenericContainer`
-- [ ] `pnpm --filter api test:int` green and measurably faster for this entry (runtime named in the commit body)
+- [ ] `pnpm test:int` green and measurably faster for this entry (runtime named in the commit body)
 
 **Tests**: integration · **Gate**: scoped
 **Commit**: `test(identity): int-specs on withTestDb and the shared redis`
@@ -480,7 +480,7 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 - [ ] No inline bootstrap, no local storage fake, no local poll loop, no raw per-table truncation
 - [ ] Attachment e2e log in through identity's `loginAs` (import backed by `dependsOn`)
 - [ ] Upload and download assert the stored object and the persisted row, not only the status code
-- [ ] `it` count ≥ baseline; both groups pass under `--randomize`
+- [ ] `it` count ≥ baseline; both groups pass under `--sequence.shuffle`
 
 **Tests**: e2e · **Gate**: scoped
 **Commit**: `test(notification,attachment): e2e on the shared harness`
@@ -523,7 +523,7 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 
 - [ ] The key query paths are covered against the real database, each asserting returned rows
 - [ ] The conflict/error path is covered, asserting the error class and message
-- [ ] `pnpm --filter api test:int` green
+- [ ] `pnpm test:int` green
 
 **Tests**: integration · **Gate**: scoped
 **Commit**: `test(notification): int-spec for the delivery repository`
@@ -587,7 +587,7 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 - [ ] No inline bootstrap, no local login or cookie helper, no raw per-table truncation
 - [ ] The 403 cases assert the body through `expectProblem`, not only the status
 - [ ] The tag trash case reads the row after the mutation
-- [ ] `it` count ≥ baseline; both groups pass under `--randomize`
+- [ ] `it` count ≥ baseline; both groups pass under `--sequence.shuffle`
 
 **Tests**: e2e · **Gate**: scoped
 **Commit**: `test(tag,audit): e2e on the shared harness with body and row asserts`
@@ -630,7 +630,7 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 
 - [ ] Each spec covers the happy path and every `throw` in its use-case, asserting the error class and message
 - [ ] Writes assert the entity captured by the port, not only that the port was called
-- [ ] `pnpm --filter api test` green
+- [ ] `pnpm vitest run --project api` green
 
 **Tests**: unit · **Gate**: scoped
 **Commit**: `test(tag): specs for the five uncovered use-cases`
@@ -671,7 +671,7 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 
 - [ ] No `Record<string, any>` and no `as never` / `as unknown as` in kernel specs
 - [ ] Every kernel int-spec uses `withTestDb`; no `createTestPool()` inside an `it`
-- [ ] `it` count ≥ baseline; `pnpm --filter api test` and `test:int` green
+- [ ] `it` count ≥ baseline; `pnpm vitest run --project api` and `pnpm test:int` green
 
 **Tests**: unit + integration · **Gate**: scoped
 **Commit**: `test(api): kernel specs on the shared doubles`
@@ -711,7 +711,7 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 
 **Done when**:
 
-- [ ] `pnpm --filter api test:cov` reports ≥95 % on all four metrics
+- [ ] `pnpm test:coverage` reports ≥95 % on all four metrics for `apps/api/src/**`
 - [ ] Every new test asserts an observable outcome or an error class and message — no ignore pragma
 - [ ] Dead code found while filling is deleted, not ignored, and named in the commit body
 
@@ -721,7 +721,7 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 ### T31: Test lint plugins
 
 **What**: wire the four plugins and prove they actually resolve.
-**Where**: `packages/eslint-config/{base.js,react.js,package.json}`, `packages/eslint-config/config.test.js`
+**Where**: `packages/eslint-config/{vitest.js,react.js,package.json}`, `packages/eslint-config/config.test.js`
 **Touches**: the same
 **Depends on**: None
 **Exclusive**: no
@@ -732,7 +732,7 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 
 **Done when**:
 
-- [ ] `eslint-plugin-jest` on api test globs; `@vitest/eslint-plugin`, `eslint-plugin-testing-library`, `eslint-plugin-jest-dom` on web test globs, versions pinned
+- [ ] `@vitest/eslint-plugin` already covers the api and web test globs and `eslint-plugin-testing-library` the web ones (`packages/eslint-config/vitest.js:1-2`, vitest-migration) — this task adds `eslint-plugin-jest-dom` on the web globs and pins the versions
 - [ ] `no-focused-tests`, `no-disabled-tests`, `expect-expect`, `no-conditional-expect` resolve as `error` for both an api and a web test file, asserted by the config test
 - [ ] `pnpm lint` green on the whole repository — no `eslint-disable`, no allow-list
 
@@ -849,21 +849,21 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 
 ### T37: Turbo pipelines and the CI workflow
 
-**What**: the pipeline the handbook has been promising.
-**Where**: `turbo.json`, `.github/workflows/ci.yml`
-**Touches**: the two files
+**What**: close the gaps in the pipeline vitest-migration created.
+**Where**: `.github/workflows/ci.yml`
+**Touches**: the file
 **Depends on**: None
 **Exclusive**: **yes** — root configuration
-**Reuses**: `.github/workflows/catalog.yml` as the shape reference (Node from `.nvmrc`, pnpm from `packageManager`)
+**Reuses**: the existing `ci.yml` (jobs `quality`, `test-unit`, `test-coverage`) and `catalog.yml` as the shape reference (Node from `.nvmrc`, pnpm from `packageManager`)
 **Requirement**: CI-01
 
 **Tools**: MCP NONE · Skill NONE
 
 **Done when**:
 
-- [ ] Jobs `check`, `unit`, `int`, `e2e` (with `--randomize`), `contract`, `coverage-all`; `contract` fails on a dirty `openapi.json`; `coverage-all` keeps the existing combined floors
-- [ ] `int` and `e2e` bring up their Docker services; jobs are independent so one red job never masks another
-- [ ] `turbo.json` declares `test:cov`, `test:cov:all`, `test:watch` with `outputs: ["coverage/**"]` and `cache: false` on the Docker-bound tasks
+- [ ] On top of the existing `quality`, `test-unit` and `test-coverage` jobs: a `contract` job that fails on a dirty `openapi.json`, and `sequence.shuffle` on the `api-e2e` project in CI
+- [ ] The Docker-bound job (`test-coverage`, which carries int and e2e) declares its services; jobs are independent so one red job never masks another
+- [ ] `turbo.json` stays free of any `test*` task (AD-028) — tests run outside Turbo
 - [ ] `catalog.yml` is untouched and no job is duplicated between the two files
 - [ ] The workflow runs green on the feature branch (run URL in the commit body)
 
@@ -884,8 +884,8 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 
 **Done when**:
 
-- [ ] Asserts pre-push runs typecheck, migrations check, api `test:cov` and web `test:cov`, and that no pre-push task needs Docker
-- [ ] Asserts the three turbo test pipelines exist with the declared `outputs` and `cache` flags
+- [ ] Asserts pre-push runs `migrations → typecheck → catalog-typecheck → test-coverage` (AD-027) and that `test-coverage` is the only Docker-bound step
+- [ ] Asserts `turbo.json` and the app manifests carry no `test*` task or script (AD-028) — GAT-07 already asserts the api side
 - [ ] `pnpm test:scripts` green
 
 **Tests**: node:test · **Gate**: scoped
@@ -894,23 +894,23 @@ Why the order is what it is: the harness is the contract (wave 1), the migration
 ### T39: Coverage ratchet
 
 **What**: raise the bar now that the tree can meet it.
-**Where**: `apps/api/package.json` (jest thresholds), `apps/web/vitest.config.ts`, `lefthook.yml`
-**Touches**: the three files
+**Where**: `vitest.coverage.mts` (the per-glob floors)
+**Touches**: the file
 **Depends on**: None (within its own wave; every fill landed in wave 2)
 **Exclusive**: **yes** — it changes the gate that every push runs
-**Reuses**: the thresholds already declared at the lower value
+**Reuses**: the floors calibrated by vitest-migration T29 (api 86.1 / 72.7 / 89.8 / 86.9; web 64 / 56 / 61 / 64)
 **Requirement**: COV-01, COV-02, COV-03, COV-11
 
 **Tools**: MCP NONE · Skill NONE
 
 **Done when**:
 
-- [ ] jest and vitest thresholds are 95 for statements, branches, functions and lines
-- [ ] lefthook pre-push runs api `test:cov` (switched from `test`) and web `test:cov`, still Docker-free
+- [ ] `vitest.coverage.mts` thresholds for `apps/api/src/**` and `apps/web/src/**` are 95 on statements, branches, functions and lines — a raise only, never a lowering (AD-027 is ratchet-only)
+- [ ] `lefthook.yml` pre-push is unchanged (`test-coverage` already runs `pnpm test:coverage`)
 - [ ] A scratch file with an uncovered branch blocks `git push`, and its removal unblocks it (verified once, reverted)
 
 **Tests**: none (config) · **Gate**: full-unit
-**Commit**: `chore(gates): ratchet coverage to 95% and switch pre-push to test:cov`
+**Commit**: `chore(gates): ratchet the coverage floors to 95%`
 
 ### T40: Closure
 
@@ -1017,7 +1017,7 @@ Orchestrator per wave: dispatch every cluster of the wave in one message · wait
 | 4 | C9 | T37→T38 | `turbo.json`, `.github/workflows/ci.yml`, `scripts/platform/__tests__/gates.test.mjs` | no | n/a | yes — alone in wave 4 | ✅ |
 | 5 | C10 | T39→T40 | `apps/api/package.json`, `apps/web/vitest.config.ts`, `lefthook.yml`, `.specs/**` | no | n/a | yes — alone in wave 5 | ✅ |
 
-Notes: `apps/api/package.json` is touched by C1 (jest coverage excludes, wave 1) and by C10 (thresholds, wave 5) — different waves, no concurrent ownership. Four clusters is the cap and wave 2 sits exactly at it.
+Notes: `vitest.coverage.mts` is touched by C1 (coverage excludes, wave 1) and by C10 (floors, wave 5) — different waves, no concurrent ownership. Four clusters is the cap and wave 2 sits exactly at it.
 
 ## Test Co-location Validation
 
@@ -1030,7 +1030,7 @@ Notes: `apps/api/package.json` is touched by C1 (jest coverage excludes, wave 1)
 | T7 | web harness | unit | unit | ✅ |
 | T8, T9 | web components/hooks | vitest, outcome asserted | vitest with value asserts | ✅ |
 | T10, T30 | coverage fills | same tier as the code filled | unit/vitest | ✅ |
-| T11, T12, T13, T19, T24 | routes and flows | e2e, order-independent | e2e + `--randomize` | ✅ |
+| T11, T12, T13, T19, T24 | routes and flows | e2e, order-independent | e2e + `--sequence.shuffle` | ✅ |
 | T14, T20, T25, T26 | use cases | unit, saved entity asserted | unit with captured-entity asserts | ✅ |
 | T15, T20, T21, T25 | repositories, triggers, realtime | integration | integration on `withTestDb` | ✅ |
 | T16, T27 | cross-entry facades | unit shape spec | unit shape spec | ✅ |

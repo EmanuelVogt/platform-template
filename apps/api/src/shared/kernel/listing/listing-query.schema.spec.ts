@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { baseListingQuerySchema, zBoolQuery } from "./listing-query.schema"
 
 describe("zBoolQuery", () => {

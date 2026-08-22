@@ -72,7 +72,7 @@ export function withEnvDefaults(run, defaults, { only } = {}) {
 }
 
 export function runGates(run, { cwd }) {
-  for (const step of ["check", "test"]) {
+  for (const step of ["check", "test", "test:db"]) {
     const result = run("pnpm", [step], { cwd });
     if (result.timedOut || result.status !== 0) return { ok: false, step: `pnpm ${step}`, result };
   }

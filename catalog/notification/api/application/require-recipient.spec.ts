@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { ForbiddenError } from "../../../shared/kernel/errors/forbidden.error"
 
 import { requireRecipient } from "./require-recipient"

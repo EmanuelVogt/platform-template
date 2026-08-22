@@ -1,3 +1,8 @@
+// `reflect-metadata` antes de qualquer import de spec: os decorators do Nest
+// gravam metadados no carregamento do módulo e o `setupFiles` é o único ponto
+// que roda antes deles.
+import "reflect-metadata"
+
 // Env mínima para testes unitários (não conectam ao banco). `env()` valida
 // tudo no boot e memoiza; sem estas vars, qualquer use-case que chama `env()`
 // derruba o teste com "Configuração de ambiente inválida". DATABASE_URL só

@@ -1,14 +1,17 @@
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 
+import { describe, expect, it } from "vitest"
+
 type OpenApiDocument = {
   paths: Record<string, Record<string, { operationId?: string }>>
 }
 
-// `/docs` não é exercido aqui: o pacote real do Scalar é ESM puro e o jest
-// (CJS) o stuba (ver test/setup/scalar-stub.ts) — a UI não responde na
-// suíte. O contrato em si (o mesmo documento que `/docs` serve em produção)
-// é o que este arquivo valida, lendo o openapi.json exportado na raiz.
+// O contrato em si (o mesmo documento que `/docs` serve em produção) é o que
+// este arquivo valida, lendo o openapi.json exportado na raiz. O snapshot só
+// vale sem entrada instalada — é um guard só-do-template como o KRN-01
+// (`template-kernel-only.spec.ts`): `TEMPLATE_ONLY_FILES` (`apply.mjs`) apaga
+// este arquivo e o snapshot no primeiro `module add`.
 describe("contrato OpenAPI do kernel", () => {
   it("expõe só as operações do kernel-only tree", () => {
     const path = resolve(__dirname, "../../../openapi.json")

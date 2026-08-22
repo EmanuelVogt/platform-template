@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import {
   EmailAlreadyInUseError,
@@ -40,22 +42,22 @@ function makeUser(over: Partial<UserProps> = {}): User {
 
 function makeDeps(over: Record<string, any> = {}) {
   const verificationTokens = over.verificationTokens ?? {
-    findActiveByHash: jest.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2026-06-02T12:00:00.000Z") }),
-    consumeByHash: jest.fn().mockResolvedValue({ userId: "u-1" }),
-    invalidateAllForUser: jest.fn().mockResolvedValue(undefined),
+    findActiveByHash: vi.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2026-06-02T12:00:00.000Z") }),
+    consumeByHash: vi.fn().mockResolvedValue({ userId: "u-1" }),
+    invalidateAllForUser: vi.fn().mockResolvedValue(undefined),
   }
   const users = over.users ?? {
-    findById: jest.fn().mockResolvedValue(makeUser()),
-    update: jest.fn().mockResolvedValue(undefined),
-    findPermissions: jest.fn().mockResolvedValue([]),
+    findById: vi.fn().mockResolvedValue(makeUser()),
+    update: vi.fn().mockResolvedValue(undefined),
+    findPermissions: vi.fn().mockResolvedValue([]),
   }
   const tokens = over.tokens ?? {
-    generate: jest.fn().mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
-    hashOf: jest.fn().mockReturnValue("token-hash"),
+    generate: vi.fn().mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
+    hashOf: vi.fn().mockReturnValue("token-hash"),
   }
   const authEvents = over.authEvents ?? {
-    record: jest.fn().mockResolvedValue(undefined),
-    recordInTx: jest.fn().mockResolvedValue(undefined),
+    record: vi.fn().mockResolvedValue(undefined),
+    recordInTx: vi.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => NOW }
   const ctx = over.ctx ?? fakeRequestContext(() => ({
@@ -67,14 +69,14 @@ function makeDeps(over: Record<string, any> = {}) {
       sessionId: null,
     }))
   const sessions = over.sessions ?? {
-    create: jest.fn().mockResolvedValue(undefined),
-    countByUser: jest.fn().mockResolvedValue(1),
-    deleteOldestOverCap: jest.fn().mockResolvedValue(undefined),
-    deleteByDevice: jest.fn().mockResolvedValue(undefined),
+    create: vi.fn().mockResolvedValue(undefined),
+    countByUser: vi.fn().mockResolvedValue(1),
+    deleteOldestOverCap: vi.fn().mockResolvedValue(undefined),
+    deleteByDevice: vi.fn().mockResolvedValue(undefined),
   }
   const devices = over.devices ?? {
-    findByUserAndCookieHash: jest.fn().mockResolvedValue(null),
-    create: jest.fn().mockResolvedValue(undefined),
+    findByUserAndCookieHash: vi.fn().mockResolvedValue(null),
+    create: vi.fn().mockResolvedValue(undefined),
   }
 
   const config = makeIdentityConfig()
@@ -153,16 +155,16 @@ describe("ConfirmEmailChangeUseCase", () => {
     it("deviceCookie presente e conhecido: não cria device e mantém o cookie", async () => {
       const t = makeDeps({
         devices: {
-          findByUserAndCookieHash: jest.fn().mockResolvedValue({
+          findByUserAndCookieHash: vi.fn().mockResolvedValue({
             props: { id: "dev-1", userId: "u-1", cookieTokenHash: "cookie-hash", label: null,
               firstSeenAt: new Date("2026-01-01T00:00:00.000Z"),
               createdAt: new Date("2026-01-01T00:00:00.000Z") },
           }),
-          create: jest.fn(),
+          create: vi.fn(),
         },
         tokens: {
-          generate: jest.fn().mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
-          hashOf: jest.fn().mockReturnValue("cookie-hash"),
+          generate: vi.fn().mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
+          hashOf: vi.fn().mockReturnValue("cookie-hash"),
         },
       })
       const out = await t.uc.execute({ token: "raw-token", deviceCookie: "raw-cookie" })
@@ -176,9 +178,9 @@ describe("ConfirmEmailChangeUseCase", () => {
     it("token inexistente/expirado/consumido lança InvalidEmailChangeTokenError antes da tx", async () => {
       const t = makeDeps({
         verificationTokens: {
-          findActiveByHash: jest.fn().mockResolvedValue(null),
-          consumeByHash: jest.fn(),
-          invalidateAllForUser: jest.fn(),
+          findActiveByHash: vi.fn().mockResolvedValue(null),
+          consumeByHash: vi.fn(),
+          invalidateAllForUser: vi.fn(),
         },
       })
 
@@ -194,14 +196,14 @@ describe("ConfirmEmailChangeUseCase", () => {
       const userSemPendente = makeUser({ pendingEmail: null, status: "active", emailVerified: true })
       const t = makeDeps({
         users: {
-          findById: jest.fn().mockResolvedValue(userSemPendente),
-          update: jest.fn(),
-          findPermissions: jest.fn().mockResolvedValue([]),
+          findById: vi.fn().mockResolvedValue(userSemPendente),
+          update: vi.fn(),
+          findPermissions: vi.fn().mockResolvedValue([]),
         },
         verificationTokens: {
-          findActiveByHash: jest.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2026-06-02T12:00:00.000Z") }),
-          consumeByHash: jest.fn(),
-          invalidateAllForUser: jest.fn(),
+          findActiveByHash: vi.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2026-06-02T12:00:00.000Z") }),
+          consumeByHash: vi.fn(),
+          invalidateAllForUser: vi.fn(),
         },
       })
 
@@ -215,14 +217,14 @@ describe("ConfirmEmailChangeUseCase", () => {
     it("token válido mas usuário inexistente lança InvalidEmailChangeTokenError no pré-check", async () => {
       const t = makeDeps({
         users: {
-          findById: jest.fn().mockResolvedValue(null),
-          update: jest.fn(),
-          findPermissions: jest.fn().mockResolvedValue([]),
+          findById: vi.fn().mockResolvedValue(null),
+          update: vi.fn(),
+          findPermissions: vi.fn().mockResolvedValue([]),
         },
         verificationTokens: {
-          findActiveByHash: jest.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2026-06-02T12:00:00.000Z") }),
-          consumeByHash: jest.fn(),
-          invalidateAllForUser: jest.fn(),
+          findActiveByHash: vi.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2026-06-02T12:00:00.000Z") }),
+          consumeByHash: vi.fn(),
+          invalidateAllForUser: vi.fn(),
         },
       })
 
@@ -238,9 +240,9 @@ describe("ConfirmEmailChangeUseCase", () => {
       // findActiveByHash retorna ok (pré-check passa), consumeByHash retorna null (race)
       const t = makeDeps({
         verificationTokens: {
-          findActiveByHash: jest.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2026-06-02T12:00:00.000Z") }),
-          consumeByHash: jest.fn().mockResolvedValue(null),
-          invalidateAllForUser: jest.fn(),
+          findActiveByHash: vi.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2026-06-02T12:00:00.000Z") }),
+          consumeByHash: vi.fn().mockResolvedValue(null),
+          invalidateAllForUser: vi.fn(),
         },
       })
 
@@ -253,7 +255,7 @@ describe("ConfirmEmailChangeUseCase", () => {
 
     it("consumeByHash retorna userId mas user não tem pendingEmail (estado corrompido): lança InvalidEmailChangeTokenError", async () => {
       const userSemPendente = makeUser({ pendingEmail: null, status: "active", emailVerified: true })
-      const findByIdMock = jest.fn()
+      const findByIdMock = vi.fn()
         // primeira chamada = pré-check (user com pendingEmail)
         .mockResolvedValueOnce(makeUser())
         // segunda chamada = dentro da tx (estado diferente)
@@ -262,8 +264,8 @@ describe("ConfirmEmailChangeUseCase", () => {
       const t = makeDeps({
         users: {
           findById: findByIdMock,
-          update: jest.fn(),
-          findPermissions: jest.fn().mockResolvedValue([]),
+          update: vi.fn(),
+          findPermissions: vi.fn().mockResolvedValue([]),
         },
       })
 
@@ -274,15 +276,15 @@ describe("ConfirmEmailChangeUseCase", () => {
     })
 
     it("consumeByHash retorna token mas findById retorna null dentro da tx: lança InvalidEmailChangeTokenError", async () => {
-      const findByIdMock = jest.fn()
+      const findByIdMock = vi.fn()
         .mockResolvedValueOnce(makeUser())
         .mockResolvedValueOnce(null)
 
       const t = makeDeps({
         users: {
           findById: findByIdMock,
-          update: jest.fn(),
-          findPermissions: jest.fn().mockResolvedValue([]),
+          update: vi.fn(),
+          findPermissions: vi.fn().mockResolvedValue([]),
         },
       })
 
@@ -298,9 +300,9 @@ describe("ConfirmEmailChangeUseCase", () => {
       const pgUniqueError = Object.assign(new Error("unique violation"), { code: "23505" })
       const t = makeDeps({
         users: {
-          findById: jest.fn().mockResolvedValue(makeUser()),
-          update: jest.fn().mockRejectedValue(pgUniqueError),
-          findPermissions: jest.fn().mockResolvedValue([]),
+          findById: vi.fn().mockResolvedValue(makeUser()),
+          update: vi.fn().mockRejectedValue(pgUniqueError),
+          findPermissions: vi.fn().mockResolvedValue([]),
         },
       })
 
@@ -316,9 +318,9 @@ describe("ConfirmEmailChangeUseCase", () => {
       const dbError = Object.assign(new Error("connection error"), { code: "08006" })
       const t = makeDeps({
         users: {
-          findById: jest.fn().mockResolvedValue(makeUser()),
-          update: jest.fn().mockRejectedValue(dbError),
-          findPermissions: jest.fn().mockResolvedValue([]),
+          findById: vi.fn().mockResolvedValue(makeUser()),
+          update: vi.fn().mockRejectedValue(dbError),
+          findPermissions: vi.fn().mockResolvedValue([]),
         },
       })
 
@@ -328,9 +330,9 @@ describe("ConfirmEmailChangeUseCase", () => {
     it("update rejeita com null: relança null sem converter (isUniqueViolation: error !== null = false)", async () => {
       const t = makeDeps({
         users: {
-          findById: jest.fn().mockResolvedValue(makeUser()),
-          update: jest.fn().mockRejectedValue(null),
-          findPermissions: jest.fn().mockResolvedValue([]),
+          findById: vi.fn().mockResolvedValue(makeUser()),
+          update: vi.fn().mockRejectedValue(null),
+          findPermissions: vi.fn().mockResolvedValue([]),
         },
       })
 
@@ -340,9 +342,9 @@ describe("ConfirmEmailChangeUseCase", () => {
     it("update rejeita com string: relança sem converter (isUniqueViolation: typeof !== object)", async () => {
       const t = makeDeps({
         users: {
-          findById: jest.fn().mockResolvedValue(makeUser()),
-          update: jest.fn().mockRejectedValue("db failure"),
-          findPermissions: jest.fn().mockResolvedValue([]),
+          findById: vi.fn().mockResolvedValue(makeUser()),
+          update: vi.fn().mockRejectedValue("db failure"),
+          findPermissions: vi.fn().mockResolvedValue([]),
         },
       })
 
@@ -353,9 +355,9 @@ describe("ConfirmEmailChangeUseCase", () => {
       const errorSemCode = new Error("unexpected")
       const t = makeDeps({
         users: {
-          findById: jest.fn().mockResolvedValue(makeUser()),
-          update: jest.fn().mockRejectedValue(errorSemCode),
-          findPermissions: jest.fn().mockResolvedValue([]),
+          findById: vi.fn().mockResolvedValue(makeUser()),
+          update: vi.fn().mockRejectedValue(errorSemCode),
+          findPermissions: vi.fn().mockResolvedValue([]),
         },
       })
 

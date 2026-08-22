@@ -149,8 +149,10 @@ a composition-root slot (the `DatabaseModule.forRoot` schema), a kernel port or 
 
 One mould: filesystem sweep, a sanity `it` on the glob, offenders `toEqual([])`, an allowlist with a reason per entry
 and a dead-entry `it`; a new spec lives next to the code it guards; bypassing one without a justified allowlist entry
-fails the PR. Pre-push: `db:check:journal` → typecheck → unit tests; int/e2e (real Postgres) run in CI — run locally
-for a guard, permission or SQL change. e2e snapshots the exported `openapi.json`; a public facade gets a shape snapshot.
+fails the PR. Pre-push: `db:check:journal` → typecheck → `pnpm test:coverage`, one Vitest process over the four
+projects (`api`, `api-int`, `api-e2e`, `web`) against real Postgres and Redis — it needs Docker, and a coverage floor
+below the calibrated one aborts the push (AD-027). e2e snapshots the exported `openapi.json`; a public facade gets a
+shape snapshot.
 
 | Spec                                                       | Lives in                    | Enforces                                                                                                                 |
 | ---------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------ |

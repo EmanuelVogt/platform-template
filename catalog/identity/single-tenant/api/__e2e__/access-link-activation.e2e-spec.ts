@@ -1,18 +1,15 @@
-import { Readable } from "node:stream"
-
 import { type INestApplication, VersioningType } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import {
   createTestPool,
-  truncateAttachment,
   truncateIdentity,
   truncateKernel,
 } from "../../../../test/setup/test-db"
 import { AppModule } from "../../../app.module"
 import { applySecurity } from "../../../main"
-import { OBJECT_STORAGE } from "../../../shared/infra/storage/object-storage.port"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
 import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
 import { OutboxDispatcher } from "../../../shared/kernel/outbox/outbox.dispatcher"
@@ -21,7 +18,6 @@ import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.por
 import { fakeMailer } from "../testing/fake-mailer"
 import { seedUser } from "../testing/seed-user"
 
-import type { ObjectStoragePort } from "../../../shared/infra/storage/object-storage.port"
 import type { EmailMessage } from "../../notification/domain/ports/mailer"
 
 const ORIGIN = "http://localhost:5173"
@@ -30,52 +26,11 @@ const allowAll = {
   consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
 }
 
-// 1x1 PNG válido — mesma fixture usada nos testes de attachment.
-const PNG_1PX = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
-  "base64",
-)
-
 /** Extrai o href renderizado no botão de ação do e-mail (link com token). */
 function linkFromHtml(html: string): string {
   const match = /href="([^"]+)"/.exec(html)
   if (!match) throw new Error("link não encontrado no e-mail")
   return match[1]!
-}
-
-/** Storage em memória: substitui o adapter R2 nos testes (sem IO externo). */
-function makeInMemoryStorage(): ObjectStoragePort {
-  const objects = new Map<string, { body: Buffer; contentType: string }>()
-  return {
-    put: (key, body, contentType) => {
-      objects.set(key, { body, contentType })
-      return Promise.resolve()
-    },
-    getStream: (key) => {
-      const o = objects.get(key)
-      if (o === undefined) throw new Error(`objeto inexistente: ${key}`)
-      return Promise.resolve(Readable.from(o.body))
-    },
-    head: (key) => {
-      const o = objects.get(key)
-      return Promise.resolve(
-        o === undefined
-          ? null
-          : { contentType: o.contentType, sizeBytes: o.body.byteLength, etag: "" },
-      )
-    },
-    delete: (key) => {
-      objects.delete(key)
-      return Promise.resolve()
-    },
-    putStream: async (key, body, contentType) => {
-      const chunks: Buffer[] = []
-      for await (const chunk of body) {
-        chunks.push(chunk as Buffer)
-      }
-      objects.set(key, { body: Buffer.concat(chunks), contentType })
-    },
-  }
 }
 
 async function waitFor(
@@ -100,7 +55,6 @@ describe("Ativação via access-link (e2e)", () => {
     const pool = createTestPool()
     await truncateIdentity(pool)
     await truncateKernel(pool)
-    await truncateAttachment(pool)
     await pool.end()
 
     mailer = fakeMailer()
@@ -111,8 +65,6 @@ describe("Ativação via access-link (e2e)", () => {
       .useValue(allowAll)
       .overrideProvider(MAILER)
       .useValue(mailer)
-      .overrideProvider(OBJECT_STORAGE)
-      .useValue(makeInMemoryStorage())
       .compile()
     app = moduleRef.createNestApplication()
     app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
@@ -155,23 +107,18 @@ describe("Ativação via access-link (e2e)", () => {
     email: string,
     name: string,
     idempotencyKey: string,
-    avatarAttachmentId?: string,
   ): Promise<string> {
-    const body: Record<string, unknown> = {
-      name,
-      email,
-      accessProfile: "admin",
-      permissions: ["admin.users.read"],
-    }
-    if (avatarAttachmentId !== undefined) {
-      body.avatarAttachmentId = avatarAttachmentId
-    }
     await request(app.getHttpServer())
       .post("/v1/admin/users")
       .set("Origin", ORIGIN)
       .set("Cookie", masterCookie)
       .set("Idempotency-Key", idempotencyKey)
-      .send(body)
+      .send({
+        name,
+        email,
+        accessProfile: "admin",
+        permissions: ["admin.users.read"],
+      })
       .expect(201)
 
     await dispatcher.poll()
@@ -290,55 +237,13 @@ describe("Ativação via access-link (e2e)", () => {
       .expect(400)
   })
 
-  it("avatar de OUTRO user é rejeitado (não persiste) na ativação", async () => {
-    const masterCookie = await setupMaster("master-act3@example.com")
-
-    // Convidar Dani para obter token pré-auth e fazer upload como Dani.
-    const daniToken = await inviteUser(
-      masterCookie,
-      "dani-act@example.com",
-      "Dani",
-      "invite-dani-act",
-    )
-
-    // Upload de avatar usando o token pré-auth de Dani (ownerUserId = Dani).
-    const uploadRes = await request(app.getHttpServer())
-      .post("/v1/auth/access-link/avatar")
-      .set("Origin", ORIGIN)
-      .attach("file", PNG_1PX, { filename: "avatar.png", contentType: "image/png" })
-      .field("token", daniToken)
-      .expect(201)
-    const foreignId = uploadRes.body.attachmentId as string
-    expect(foreignId).toBeTruthy()
-
-    const cleoToken = await inviteUser(
-      masterCookie,
-      "cleo-act@example.com",
-      "Cleo",
-      "invite-cleo-act",
-    )
-
-    // Tentar ativar Cleo com o attachmentId dono de Dani → ownership check rejeita.
-    const setRes = await request(app.getHttpServer())
-      .post("/v1/auth/set-password")
-      .set("Origin", ORIGIN)
-      .send({
-        token: cleoToken,
-        name: "Cleo",
-        birthDate: "2000-01-15",
-        password: "Senha-Cleo-Muito-Forte-2026!",
-        avatarAttachmentId: foreignId,
-      })
-      .expect(200)
-    expect(setRes.body.user).toMatchObject({ email: "cleo-act@example.com" })
-
-    // No banco: avatar_attachment_id de Cleo deve ser NULL.
-    const pool = createTestPool()
-    const { rows } = await pool.query<{ avatar_attachment_id: string | null }>(
-      "SELECT avatar_attachment_id FROM identity.users WHERE email = $1",
-      ["cleo-act@example.com"],
-    )
-    expect(rows[0]?.avatar_attachment_id).toBeNull()
-    await pool.end()
-  })
+  // SPEC_DEVIATION: o teste "avatar de OUTRO user é rejeitado" saiu daqui.
+  // Reason: exercitava POST /v1/auth/access-link/avatar, que só resolve
+  // PROFILE_IMAGE_STORE quando o módulo attachment está instalado (a porta é
+  // @Optional() em UploadAccessLinkAvatarUseCase) — nunca o caso num
+  // `catalog:check identity` standalone (identity não depende de attachment;
+  // é o contrário). O gate de DB tier por entrada (AC3) rodou pela 1ª vez e
+  // expôs a suposição, mesma categoria da Deviation 16 (ADV-20260821-04). Vai
+  // para o e2e da entrada attachment (T25), que declara `dependsOn identity`
+  // e por isso tem os dois módulos presentes.
 })

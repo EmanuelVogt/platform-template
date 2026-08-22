@@ -1,3 +1,5 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
 import { SseConnectionRegistry } from "./sse-connection-registry"
 
 import type { MessageEvent } from "@nestjs/common"
@@ -44,16 +46,16 @@ describe("SseConnectionRegistry", () => {
   })
 
   it("heartbeat emite ping periódico a toda conexão registrada", () => {
-    jest.useFakeTimers()
+    vi.useFakeTimers()
     try {
       registry.onModuleInit()
       const { events } = collect(registry, "u1")
-      jest.advanceTimersByTime(25_000)
+      vi.advanceTimersByTime(25_000)
       expect(events).toEqual([{ data: { type: "ping" } }])
-      jest.advanceTimersByTime(25_000)
+      vi.advanceTimersByTime(25_000)
       expect(events).toHaveLength(2)
     } finally {
-      jest.useRealTimers()
+      vi.useRealTimers()
     }
   })
 

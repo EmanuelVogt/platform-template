@@ -1,6 +1,7 @@
 import { type INestApplication, VersioningType } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
 import { AppModule } from "../../../app.module"

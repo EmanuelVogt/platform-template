@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { buildEventContextStore } from "./event-context"
 
 import type { EventEnvelope } from "../events/domain-event.base"

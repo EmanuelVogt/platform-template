@@ -1,4 +1,5 @@
 import { ulid } from "ulid"
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   createTestDb,
@@ -342,29 +343,29 @@ describe("DrizzleAuthEventRepository (int)", () => {
       hasherVerifyResult: boolean
     ): LoginUseCase {
       const users = {
-        findByEmail: jest.fn().mockResolvedValue(null),
-        findByIdForUpdate: jest.fn(),
-        update: jest.fn(),
-        findPermissions: jest.fn(),
+        findByEmail: vi.fn().mockResolvedValue(null),
+        findByIdForUpdate: vi.fn(),
+        update: vi.fn(),
+        findPermissions: vi.fn(),
       }
       const hasher = {
-        verify: jest.fn().mockResolvedValue(hasherVerifyResult),
-        needsRehash: jest.fn().mockReturnValue(false),
-        hash: jest.fn().mockResolvedValue("argon2-dummy"),
+        verify: vi.fn().mockResolvedValue(hasherVerifyResult),
+        needsRehash: vi.fn().mockReturnValue(false),
+        hash: vi.fn().mockResolvedValue("argon2-dummy"),
       }
       const tokens = {
-        generate: jest.fn(),
-        hashOf: jest.fn().mockReturnValue("email-hash"),
+        generate: vi.fn(),
+        hashOf: vi.fn().mockReturnValue("email-hash"),
       }
       const rateLimiter = {
-        consume: jest.fn().mockResolvedValue({
+        consume: vi.fn().mockResolvedValue({
           allowed: rateLimiterAllowed,
           retryAfterSeconds: 30,
         }),
         reset: jest.fn().mockResolvedValue(undefined),
       }
       const clock = { now: () => new Date("2026-05-30T00:00:00.000Z") }
-      const outbox = { publish: jest.fn() }
+      const outbox = { publish: vi.fn() }
       const config = parseIdentityConfig({
         WEB_ORIGIN: "http://localhost:5173",
         PASSWORD_PEPPER: "x".repeat(32),

@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { parseStorageConfig } from "./storage.config"
 
 const valid = {

@@ -1,6 +1,7 @@
 import "reflect-metadata"
 
 import { Test } from "@nestjs/testing"
+import { describe, expect, it } from "vitest"
 
 import { CLOCK } from "../../shared/kernel/clock/clock"
 import { RequestContext } from "../../shared/kernel/context/request-context"

@@ -1,3 +1,5 @@
+import { type Mock, describe, expect, it, vi } from "vitest"
+
 import { BASE_ACCESS_PROFILES } from "../domain/access/access-profile.types"
 import {
   InvalidPermissionSetError,
@@ -36,13 +38,12 @@ describe("assertValidPermissionSet (closure de requires)", () => {
     expect(() => { assertValidPermissionSet(["admin.users.trash.purge"]); }).toThrow(
       InvalidPermissionSetError
     )
-    try {
-      assertValidPermissionSet(["admin.users.trash.purge"])
-    } catch (error) {
-      expect((error as InvalidPermissionSetError).message).toContain(
-        "admin.users.trash.read"
-      )
-    }
+    // SPEC_DEVIATION: 2ª chamada com toThrow(string) no lugar de try/catch com
+    // expect dentro do catch. Reason: vitest/no-conditional-expect — toThrow
+    // aceita substring da mensagem e mantém o assert incondicional.
+    expect(() => { assertValidPermissionSet(["admin.users.trash.purge"]); }).toThrow(
+      "admin.users.trash.read"
+    )
   })
 })
 
@@ -88,8 +89,8 @@ describe("assertProfileFloor (piso do perfil)", () => {
   })
 })
 
-function makeScope(): ProfessionalScope & { assertValid: jest.Mock } {
-  return { assertValid: jest.fn().mockResolvedValue(undefined) }
+function makeScope(): ProfessionalScope & { assertValid: Mock } {
+  return { assertValid: vi.fn().mockResolvedValue(undefined) }
 }
 
 const MASTER_GRANT: GrantContext = {
@@ -383,12 +384,16 @@ describe("assertCanGrant (concessão limitada ao ator)", () => {
   })
 
   it("a mensagem não enumera as chaves negadas", () => {
+    // SPEC_DEVIATION: captura fora do catch, asserts incondicionais depois.
+    // Reason: vitest/no-conditional-expect — expect dentro do catch só roda
+    // se lançar; capturando em `caught` os asserts rodam sempre.
+    let caught: unknown
     try {
       assertCanGrant({ actor: actorOf([]), current: [] }, ["admin.users.read"])
-      throw new Error("deveria ter lançado")
     } catch (error) {
-      expect(error).toBeInstanceOf(PermissionGrantNotAllowedError)
-      expect((error as Error).message).not.toContain("admin.users.read")
+      caught = error
     }
+    expect(caught).toBeInstanceOf(PermissionGrantNotAllowedError)
+    expect((caught as Error).message).not.toContain("admin.users.read")
   })
 })

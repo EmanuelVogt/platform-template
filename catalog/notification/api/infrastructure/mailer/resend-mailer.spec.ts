@@ -1,15 +1,21 @@
+import { type Mock, beforeEach, describe, expect, it, vi } from "vitest"
+
 import { ResendMailer } from "./resend-mailer"
 
-jest.mock("resend", () => ({ Resend: jest.fn() }))
+vi.mock("resend", () => ({ Resend: vi.fn() }))
 
 describe("ResendMailer", () => {
   let mailer: ResendMailer
-  let send: jest.Mock
+  let send: Mock
 
-  beforeEach(() => {
-    send = jest.fn().mockResolvedValue({ data: { id: "e1" }, error: null })
-    const { Resend } = jest.requireMock<{ Resend: jest.Mock }>("resend")
-    Resend.mockImplementation(() => ({ emails: { send } }))
+  beforeEach(async () => {
+    send = vi.fn().mockResolvedValue({ data: { id: "e1" }, error: null })
+    const { Resend } = await vi.importMock<{ Resend: Mock }>("resend")
+    // SPEC_DEVIATION: mock passa a usar `function` em vez de arrow function.
+    // Reason: Vitest não constrói (`new`) um mock cuja implementação é uma arrow function.
+    Resend.mockImplementation(function () {
+      return { emails: { send } }
+    })
     mailer = new ResendMailer({ apiKey: "re_x", from: "no-reply@example.com" })
     send.mockClear()
   })

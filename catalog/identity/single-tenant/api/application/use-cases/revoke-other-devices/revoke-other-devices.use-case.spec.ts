@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { fakeRequestContext } from "../../request-context.fixture"
 
 import { RevokeOtherDevicesUseCase } from "./revoke-other-devices.use-case"
@@ -7,8 +9,8 @@ import type { DeviceRepository } from "../../../domain/ports/device.repository"
 
 describe("RevokeOtherDevicesUseCase", () => {
   it("apaga os outros devices e registra sessions_revoked_all", async () => {
-    const deleteOthers = jest.fn()
-    const recordInTx = jest.fn()
+    const deleteOthers = vi.fn()
+    const recordInTx = vi.fn()
     const ctx = fakeRequestContext(() => ({
         userId: "u-1",
         sessionId: "s-1",

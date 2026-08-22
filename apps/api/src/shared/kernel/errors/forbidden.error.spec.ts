@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { DomainError } from "./domain.error"
 import { ForbiddenError } from "./forbidden.error"
 

@@ -1,6 +1,7 @@
 import { type INestApplication, VersioningType } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
 import { AppModule } from "../../../app.module"
@@ -116,10 +117,13 @@ describe("/auth/devices (e2e)", () => {
 
     const listA = await listDevices(jarA).expect(200)
     const other = (listA.body.devices as DeviceItem[]).find((d) => !d.current)
-    if (!other) throw new Error("device do segundo login não encontrado")
+    // SPEC_DEVIATION: expect(...).toBeDefined() + `!` no lugar de `if (!x) throw`.
+    // Reason: vitest/no-conditional-in-test — narrowing continua explícito,
+    // só sem `if` dentro do teste.
+    expect(other).toBeDefined()
 
     await request(app.getHttpServer())
-      .delete(`/v1/auth/devices/${other.id}`)
+      .delete(`/v1/auth/devices/${other!.id}`)
       .set("Origin", ORIGIN)
       .set("Cookie", cookieHeader(jarA))
       .expect(204)
@@ -150,10 +154,13 @@ describe("/auth/devices (e2e)", () => {
     const jar = await login()
     const list = await listDevices(jar).expect(200)
     const current = (list.body.devices as DeviceItem[]).find((d) => d.current)
-    if (!current) throw new Error("device atual não encontrado")
+    // SPEC_DEVIATION: expect(...).toBeDefined() + `!` no lugar de `if (!x) throw`.
+    // Reason: vitest/no-conditional-in-test — narrowing continua explícito,
+    // só sem `if` dentro do teste.
+    expect(current).toBeDefined()
 
     await request(app.getHttpServer())
-      .delete(`/v1/auth/devices/${current.id}`)
+      .delete(`/v1/auth/devices/${current!.id}`)
       .set("Origin", ORIGIN)
       .set("Cookie", cookieHeader(jar))
       .expect(409)

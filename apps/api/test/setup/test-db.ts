@@ -15,7 +15,7 @@ export function testDatabaseUrl(): string {
   const base = containerPostgresUri()
   if (process.env.TEST_DB_PER_WORKER !== "1") return base
   const url = new URL(base)
-  url.pathname = `/test_w${process.env.JEST_WORKER_ID ?? "1"}`
+  url.pathname = `/test_w${process.env.VITEST_POOL_ID ?? "1"}`
   return url.toString()
 }
 

@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { accessProfile, users } from "../infrastructure/tables/user.table"
 
 describe("paridade dos perfis de acesso do identity", () => {

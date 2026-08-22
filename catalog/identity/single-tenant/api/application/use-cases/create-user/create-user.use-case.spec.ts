@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import {
   EmailAlreadyInUseError,
   InvalidPermissionSetError,
@@ -21,24 +23,24 @@ const BASE_ACCESS = {
 
 function makeDeps(over: Record<string, any> = {}) {
   const users = over.users ?? {
-    findByEmail: jest.fn().mockResolvedValue(null),
-    insert: jest.fn().mockResolvedValue(undefined),
-    replacePermissions: jest.fn().mockResolvedValue(undefined),
-    replaceProfessionalAreas: jest.fn().mockResolvedValue(undefined),
-    replaceProfessionalServices: jest.fn().mockResolvedValue(undefined),
-    replaceSchedulingAreas: jest.fn().mockResolvedValue(undefined),
+    findByEmail: vi.fn().mockResolvedValue(null),
+    insert: vi.fn().mockResolvedValue(undefined),
+    replacePermissions: vi.fn().mockResolvedValue(undefined),
+    replaceProfessionalAreas: vi.fn().mockResolvedValue(undefined),
+    replaceProfessionalServices: vi.fn().mockResolvedValue(undefined),
+    replaceSchedulingAreas: vi.fn().mockResolvedValue(undefined),
   }
   const scope = over.scope ?? {
-    assertValid: jest.fn().mockResolvedValue(undefined),
+    assertValid: vi.fn().mockResolvedValue(undefined),
   }
   const verificationTokens = over.verificationTokens ?? {
-    create: jest.fn().mockResolvedValue(undefined),
+    create: vi.fn().mockResolvedValue(undefined),
   }
   const tokens = over.tokens ?? {
-    generate: jest.fn().mockReturnValue({ raw: "raw-tok", hash: "hash-tok" }),
+    generate: vi.fn().mockReturnValue({ raw: "raw-tok", hash: "hash-tok" }),
   }
-  const outbox = over.outbox ?? { publish: jest.fn().mockResolvedValue(undefined) }
-  const authEvents = over.authEvents ?? { recordInTx: jest.fn().mockResolvedValue(undefined) }
+  const outbox = over.outbox ?? { publish: vi.fn().mockResolvedValue(undefined) }
+  const authEvents = over.authEvents ?? { recordInTx: vi.fn().mockResolvedValue(undefined) }
   const clock = over.clock ?? { now: () => NOW }
   const ctx = over.ctx ?? fakeRequestContext(() => ({
       ip: null,
@@ -60,8 +62,8 @@ describe("CreateUserUseCase", () => {
   it("e-mail já existente lança EmailAlreadyInUseError e não cria nada", async () => {
     const t = makeDeps({
       users: {
-        findByEmail: jest.fn().mockResolvedValue({ isDeleted: () => false, props: { id: "u-x" } }),
-        insert: jest.fn(),
+        findByEmail: vi.fn().mockResolvedValue({ isDeleted: () => false, props: { id: "u-x" } }),
+        insert: vi.fn(),
       },
     })
     await expect(t.uc.execute({ name: "Ana", email: "ana@x.test", ...BASE_ACCESS })).rejects.toBeInstanceOf(EmailAlreadyInUseError)
@@ -72,8 +74,8 @@ describe("CreateUserUseCase", () => {
   it("e-mail de usuário soft-deleted → EmailAlreadyInUseError (409 único)", async () => {
     const t = makeDeps({
       users: {
-        findByEmail: jest.fn().mockResolvedValue({ isDeleted: () => true, props: { id: "u-x" } }),
-        insert: jest.fn(),
+        findByEmail: vi.fn().mockResolvedValue({ isDeleted: () => true, props: { id: "u-x" } }),
+        insert: vi.fn(),
       },
     })
     await expect(t.uc.execute({ name: "Novo", email: "morta@example.com", ...BASE_ACCESS })).rejects.toBeInstanceOf(

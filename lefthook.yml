@@ -7,8 +7,7 @@ pre-push:
       run: pnpm --filter api db:check:journal
     typecheck:
       run: pnpm turbo typecheck
-    test-api:
-      run: pnpm turbo test --filter=api
-    # web roda com coverage: o threshold do vitest.config barra push que erode a cobertura.
-    test-web:
-      run: pnpm turbo test:cov --filter=web
+    # roda os quatro projetos (api, api-int, api-e2e, web) num processo Vitest só; o
+    # threshold por glob de vitest.coverage.mts barra push que erode a cobertura.
+    test-coverage:
+      run: pnpm test:coverage

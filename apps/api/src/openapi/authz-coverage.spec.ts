@@ -2,6 +2,8 @@ import "reflect-metadata"
 
 import { join, relative } from "node:path"
 
+import { beforeAll, describe, expect, it } from "vitest"
+
 import { ACCESS_REQUIREMENT } from "../shared/kernel/access/decorators"
 import { endsWith, listFilePaths } from "../shared/test/unit/source-survey"
 

@@ -1,4 +1,5 @@
 import { ServiceUnavailableException } from "@nestjs/common"
+import { describe, expect, it, vi } from "vitest"
 
 import { RequestContext } from "../../../../shared/kernel/context/request-context"
 import {
@@ -76,11 +77,11 @@ type Scenario = {
 
 function setup(scenario: Scenario) {
   const sessions: Partial<SessionRepository> = {
-    findByTokenHash: jest.fn(async () => {
+    findByTokenHash: vi.fn(async () => {
       if (scenario.lookupThrows === true) throw new Error("db down")
       return scenario.session ?? null
     }),
-    touch: jest.fn(async () => undefined),
+    touch: vi.fn(async () => undefined),
   }
   const user = {
     isMaster: () => scenario.master === true,
@@ -88,7 +89,7 @@ function setup(scenario: Scenario) {
     props: { id: "user-1" },
   }
   const users: Partial<UserRepository> = {
-    findByIdWithPermissions: jest.fn(async () =>
+    findByIdWithPermissions: vi.fn(async () =>
       scenario.userNotFound === true
         ? null
         : { user, permissions: scenario.permissions ?? [] }
@@ -124,7 +125,7 @@ function setup(scenario: Scenario) {
       if (value === "") cleared.push(name)
     },
   } as unknown as Response
-  const next = jest.fn() as unknown as NextFunction
+  const next = vi.fn() as unknown as NextFunction
 
   const run = async () =>
     ctx.run(storeOf(scenario.tenantId ?? null), () =>

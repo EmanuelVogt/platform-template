@@ -1,5 +1,7 @@
 import "reflect-metadata"
 
+import { describe, expect, it } from "vitest"
+
 import {
   ACCESS_REQUIREMENT,
   RequirePermission,
@@ -20,6 +22,15 @@ import {
 } from "./permission-catalog"
 
 import type { PermissionKey } from "./permission-catalog"
+
+// SPEC_DEVIATION: extraído do .flatMap inline por causa de max-nested-callbacks
+// (regra nova do vitest lint set). Reason: describe > it > flatMap > flatMap >
+// map já passava do limite de 4; helper nomeado fora do it() quebra a cadeia.
+function permissionKeysOf(
+  feature: (typeof MODULES)[number]["features"][number],
+): string[] {
+  return feature.permissions.map((p) => p.key)
+}
 
 describe("permission-catalog", () => {
   it("chaves são únicas no catálogo inteiro", () => {
@@ -87,9 +98,7 @@ describe("permission-catalog", () => {
   })
 
   it("PERMISSION_KEYS = soma das chaves do catálogo", () => {
-    const catalogCount = MODULES.flatMap((m) =>
-      m.features.flatMap((f) => f.permissions.map((p) => p.key)),
-    ).length
+    const catalogCount = MODULES.flatMap((m) => m.features.flatMap(permissionKeysOf)).length
     expect(PERMISSION_KEYS).toHaveLength(catalogCount)
   })
 })

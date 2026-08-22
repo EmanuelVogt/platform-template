@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { parseAttachmentConfig } from "../../../attachment.config"
 import { Attachment } from "../../../domain/attachment.entity"
 import {
@@ -25,11 +27,11 @@ function pending(overrides: Partial<{ sizeBytes: number; ownerUserId: string }> 
 function makeUseCase(stored: Attachment[], head: { sizeBytes: number; etag: string } | null) {
   const saved: Attachment[] = []
   const repo = {
-    findByIds: jest.fn(async () => stored),
-    saveMany: jest.fn(async (list: Attachment[]) => void saved.push(...list)),
+    findByIds: vi.fn(async () => stored),
+    saveMany: vi.fn(async (list: Attachment[]) => void saved.push(...list)),
   }
   const storage = {
-    head: jest.fn(async () =>
+    head: vi.fn(async () =>
       head === null ? null : { contentType: "application/pdf", sizeBytes: head.sizeBytes, etag: head.etag },
     ),
   }

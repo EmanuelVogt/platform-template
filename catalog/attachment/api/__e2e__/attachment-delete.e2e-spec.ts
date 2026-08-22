@@ -1,4 +1,5 @@
 import request from "supertest"
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
 import { createE2eApp } from "../../../../test/setup/app-factory"
 import { setCookies } from "../../../../test/setup/cookies"
@@ -143,7 +144,7 @@ describe("Attachment delete (e2e): trilha atrelada à tx", () => {
 
     const accessLog = app.get<AttachmentAccessLogRepository>(ATTACHMENT_ACCESS_LOG_REPOSITORY)
     const originalRecordInTx = accessLog.recordInTx.bind(accessLog)
-    const spy = jest
+    const spy = vi
       .spyOn(accessLog, "recordInTx")
       .mockImplementation(async (entry) => {
         await originalRecordInTx(entry) // a linha É gravada na tx…

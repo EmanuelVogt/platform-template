@@ -213,7 +213,7 @@ export async function addCommand({ name, options, cwd = process.cwd(), run = def
   }
 
   if (!options["skip-tests"]) {
-    const testResult = run("pnpm", ["--filter", "api", "test", "--", `modules/${name}`], { cwd });
+    const testResult = run("pnpm", ["vitest", "run", "--project", "api", `apps/api/src/modules/${name}`], { cwd });
     if (testResult.status !== 0) {
       process.stderr.write(`testes falharam — arquivos mantidos, use --rollback\n`);
       return EXIT_CODES.TEST_FAILURE;
@@ -223,7 +223,11 @@ export async function addCommand({ name, options, cwd = process.cwd(), run = def
     const targetWebRoot = path.join(cwd, webRootFor(name, options["web-root"]));
     const webCopied = targetPlan.files.some((file) => file.to.startsWith(targetWebRoot));
     if (webCopied) {
-      const webResult = run("pnpm", ["--filter", "web", "test", "--", `entities/${name}`], { cwd });
+      const webResult = run(
+        "pnpm",
+        ["vitest", "run", "--project", "web", webRootFor(name, options["web-root"])],
+        { cwd },
+      );
       if (webResult.status !== 0) {
         process.stderr.write(`testes web falharam — arquivos mantidos, use --rollback\n`);
         return EXIT_CODES.TEST_FAILURE;

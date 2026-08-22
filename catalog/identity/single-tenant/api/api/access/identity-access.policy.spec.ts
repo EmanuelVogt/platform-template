@@ -1,4 +1,5 @@
 import { UnauthorizedException } from "@nestjs/common"
+import { describe, expect, it } from "vitest"
 
 import { RequestContext } from "../../../../shared/kernel/context/request-context"
 import { IDENTITY_ACCESS } from "../../application/identity-context"

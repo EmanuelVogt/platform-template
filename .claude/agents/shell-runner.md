@@ -43,7 +43,7 @@ this order:
   something was left out, say how many failures remain and where they are in the log
   (`grep -n "●" <log>`).
 - Ran through the `rtk` proxy? `pnpm`, `npx`, and `tsc` are not rewritten here; if the
-  output of `jest`/`vitest` looks too summarized, reconfirm with
+  output of `vitest` looks too summarized, reconfirm with
   `rtk proxy <command>` before reporting.
 
 Never return the whole log, never paraphrase an assert in your own words, never

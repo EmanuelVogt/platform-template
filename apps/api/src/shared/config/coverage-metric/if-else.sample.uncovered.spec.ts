@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { pick } from "./if-else.sample"
 
 describe("if-else sample (true path only)", () => {

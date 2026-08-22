@@ -167,6 +167,7 @@ test("runCatalogCheck happy path renders, installs, adds every entry in order (w
   const catalogRoot = withTmpCatalog(buildRealGraphCatalog);
   const run = stubRun();
   const runCli = stubRunCli();
+  const logs = [];
   try {
     const code = await runCatalogCheck({
       entries: [],
@@ -175,10 +176,11 @@ test("runCatalogCheck happy path renders, installs, adds every entry in order (w
       scratchDir: "/scratch/child",
       run,
       runCli,
-      log: () => {},
+      log: (line) => logs.push(line),
     });
 
     assert.equal(code, EXIT_CODES.OK);
+    assert.ok(logs.some((line) => line.includes("pnpm check && pnpm test && pnpm test:db")));
     const callArgs = runCli.calls.map((call) => call.args);
     assert.deepEqual(callArgs.slice(0, 2), [
       ["module", "add", "notification", "--catalog-ref", catalogRoot],
@@ -194,7 +196,7 @@ test("runCatalogCheck happy path renders, installs, adds every entry in order (w
     const commands = run.calls.map((call) => [call.command, ...call.args].join(" "));
     assert.equal(commands[0], "copier copy --trust --defaults --vcs-ref HEAD --data project_name=Demo --data github_org=acme --data root_domain=demo.test /repo /scratch/child");
     assert.equal(commands[1], "pnpm install");
-    assert.deepEqual(commands.slice(-2), ["pnpm check", "pnpm test"]);
+    assert.deepEqual(commands.slice(-3), ["pnpm check", "pnpm test", "pnpm test:db"]);
   } finally {
     cleanup(catalogRoot);
   }
@@ -455,9 +457,27 @@ test("runCatalogCheck maps a final 'pnpm check' failure to TEST_FAILURE and neve
   }
 });
 
-test("runCatalogCheck maps a final 'pnpm test' failure to TEST_FAILURE", async () => {
+test("runCatalogCheck maps a final 'pnpm test' failure to TEST_FAILURE and never runs 'pnpm test:db'", async () => {
   const catalogRoot = withTmpCatalog(buildRealGraphCatalog);
   const run = stubRun({ "pnpm test": { status: 1, stdout: "", stderr: "boom" } });
+  try {
+    const code = await runCatalogCheck({
+      entries: ["notification"],
+      catalogRoot,
+      run,
+      runCli: stubRunCli(),
+      log: () => {},
+    });
+    assert.equal(code, EXIT_CODES.TEST_FAILURE);
+    assert.ok(run.calls.every((call) => ![...(call.args ?? [])].includes("test:db")));
+  } finally {
+    cleanup(catalogRoot);
+  }
+});
+
+test("runCatalogCheck maps a final 'pnpm test:db' failure to TEST_FAILURE", async () => {
+  const catalogRoot = withTmpCatalog(buildRealGraphCatalog);
+  const run = stubRun({ "pnpm test:db": { status: 1, stdout: "", stderr: "boom" } });
   try {
     const code = await runCatalogCheck({
       entries: ["notification"],

@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 10,
+  "next_id": 14,
   "lessons": [
     {
       "id": "L-001",
@@ -166,6 +166,79 @@
       ],
       "created": "2026-08-21T14:56:46Z",
       "last_seen": "2026-08-21T14:56:46Z"
+    },
+    {
+      "id": "L-010",
+      "key": "gate_fail::a per entry catalog check pass does not prove multi entry compatibility run the combined catalog check every entry installed together the default no args scope at least once before closing a catalog change that touches more than one entry",
+      "text": "A per-entry catalog:check pass does not prove multi-entry compatibility — run the combined catalog:check (every entry installed together, the default no-args scope) at least once before closing a catalog change that touches more than one entry.",
+      "signal": "gate_fail",
+      "scope": "catalog",
+      "status": "candidate",
+      "features": [
+        "vitest-migration"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "CAT-03 / catalog/audit/api/domain/audit-coverage.int-spec.ts:78 (Final gate: pnpm catalog:check, exit 7) (catalog)"
+      ],
+      "created": "2026-08-22T21:54:31Z",
+      "last_seen": "2026-08-22T21:54:31Z"
+    },
+    {
+      "id": "L-011",
+      "key": "spec_deviation::an advisory s corre o adicional for a structural fix must give products already on the old version the same manual ddl step other structural corrections in the same document give not just describe the code side change",
+      "text": "An advisory's 'Correção adicional' for a structural fix must give products already on the old version the same manual DDL step other structural corrections in the same document give, not just describe the code-side change.",
+      "signal": "spec_deviation",
+      "scope": "catalog",
+      "status": "candidate",
+      "features": [
+        "vitest-migration"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "tasks.md Deviation 24b / docs/advisories/ADV-20260821-03.md (missing manual ALTER COLUMN instruction) (catalog)"
+      ],
+      "created": "2026-08-22T21:54:31Z",
+      "last_seen": "2026-08-22T21:54:31Z"
+    },
+    {
+      "id": "L-012",
+      "key": "spec_precision_gap::a no leftover old tool grep probe must exclude prose that documents the migration itself advisories changelogs absence assertions not just the tool s own script name or it flags expected documentation as a failure",
+      "text": "A 'no leftover <old-tool>' grep probe must exclude prose that documents the migration itself (advisories, changelogs, absence-assertions), not just the tool's own script name, or it flags expected documentation as a failure.",
+      "signal": "spec_precision_gap",
+      "scope": "docs",
+      "status": "candidate",
+      "features": [
+        "vitest-migration"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "CAT-02 probe: rg -c 'jest\\.' apps/api catalog (returns 5 CHANGELOG.md matches) (docs)",
+        "DOC-02/DOC-03 probe: rg -in 'jest' ... (residual matches in docs/advisories/*.md and gates.test.mjs) (docs)"
+      ],
+      "created": "2026-08-22T21:54:31Z",
+      "last_seen": "2026-08-22T21:54:31Z"
+    },
+    {
+      "id": "L-013",
+      "key": "spec_deviation::when two catalog entries are siblings install order not forced by dependson and one attaches ddl that depends on the other a combined multi entry install can silently skip the attach cover it with a coverage enforcement test that simulates the documented manual re apply and document the manual step in both entries advisories not just the code comment",
+      "text": "When two catalog entries are siblings (install order not forced by dependsOn) and one attaches DDL that depends on the other, a combined multi-entry install can silently skip the attach — cover it with a coverage-enforcement test that simulates the documented manual re-apply, and document the manual step in both entries' advisories, not just the code comment.",
+      "signal": "spec_deviation",
+      "scope": "catalog",
+      "status": "candidate",
+      "features": [
+        "vitest-migration"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "catalog/audit/api/domain/audit-coverage.int-spec.ts:34-38 (SPEC_DEVIATION) / tasks.md Deviation 27 (catalog)"
+      ],
+      "created": "2026-08-22T22:14:32Z",
+      "last_seen": "2026-08-22T22:14:32Z"
     }
   ]
 }

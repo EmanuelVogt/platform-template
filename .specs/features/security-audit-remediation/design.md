@@ -52,7 +52,7 @@ graph LR
 | `RateLimitGuard` + `@RateLimit` | `catalog/identity/.../api/guards/rate-limit.guard.ts:36-65` | Move; key stays `ip:${req.ip}:${routeKey}`; throw kernel `TooManyRequestsError`, not a bare `HttpException`. |
 | `DomainError.retryAfterSeconds` + `problem-details.filter.ts:118-138` | `shared/kernel/errors/` | Every new 429/503 is a `DomainError` — the filter already emits `Retry-After`. `PoolSaturatedError:6-14` is the 503 shape. |
 | `EventEmitter2` (`outbox.dispatcher.ts:241`) + `authEventOf` (`auth-event.factory.ts:19-35`) | kernel / identity | Composite emits `rate-limiter.degraded`/`recovered`; identity's `@OnEvent` listener records the auth event (`userId` nullable, `auth-event.table.ts:40`). |
-| `MaintenanceRegistry` (AD-022) | `shared/kernel/scheduling/maintenance-registry.ts:85-92`, `maintenance-job.decorator.ts:16` | `outbox-dead.purge`, `lockId: 3`, body beside `purgePublished` (`outbox.dispatcher.ts:94-103`). |
+| `MaintenanceRegistry` (AD-022) | `shared/kernel/scheduling/maintenance-registry.ts:85-92`, `maintenance-job.decorator.ts:16` | `outbox-dead.purge`, `lockId: 6` (was 3 at design time — 3 and 4 are taken by notification `delivery.purge` and identity `email-change.revert`; corrected at the wave-2 gate), body beside `purgePublished` (`outbox.dispatcher.ts:94-103`). |
 | `redactValue`/`redactConfig` | `shared/kernel/logging/log.redact.ts:6-73` | Keep the API; swap the predicate for the shared substring matcher. |
 | `sniffImageContentType(buf)` | `catalog/attachment/api/application/content-type-sniff.ts:7` | Wrap with a stream peeker for the batch path. |
 | Batch discard + single `insertMany` | `upload-attachments-batch.use-case.ts:117-121,137` | Already atomic: a 415/413 in the loop deletes every stored object, persists nothing. |
@@ -88,7 +88,7 @@ graph LR
 
 - **`shared/kernel/redaction/sensitive-keys.ts`**: `SENSITIVE_KEY_FRAGMENTS = ["password", "token", "secret", "authorization", "cookie", "link"]` (case-insensitive substring of the key); `isSensitiveKey(key, fragments?)`; `redactSensitive<T>(value, fragments?): { value: T; changed: boolean }` — recursive over plain objects/arrays, leaves → `"[REDACTED]"`, same reference when nothing matched.
 - **Outbox** (`outbox.dispatcher.ts`): `markPublished` (`:213-216`) → `set({ publishedAt, ...(changed && { payload }) })`; dead-letter insert (`:258-285`) → `payload: redactSensitive(row.payload).value`. The whole envelope is scanned (domain payload nests under `payload.payload`).
-- **`outbox-dead.purge`**: `@MaintenanceJob("outbox-dead.purge") purgeDeadLetters()` on `OutboxDispatcher` — `DELETE FROM _kernel.outbox_dead WHERE dead_lettered_at < now() − OUTBOX_DEAD_RETENTION_DAYS`; `{ cron: "45 3 * * *", lockId: 3 }` in `KERNEL_MAINTENANCE_JOBS`; env `OUTBOX_DEAD_RETENTION_DAYS` (30).
+- **`outbox-dead.purge`**: `@MaintenanceJob("outbox-dead.purge") purgeDeadLetters()` on `OutboxDispatcher` — `DELETE FROM _kernel.outbox_dead WHERE dead_lettered_at < now() − OUTBOX_DEAD_RETENTION_DAYS`; `{ cron: "45 3 * * *", lockId: 6 }` in `KERNEL_MAINTENANCE_JOBS` (corrected from 3 at the wave-2 gate: 3 = notification `delivery.purge`, 4 = identity `email-change.revert`; kernel reserves 1, 2, 6); env `OUTBOX_DEAD_RETENTION_DAYS` (30).
 - **Log redactor** (`log.redact.ts`): `redactValue` uses `isSensitiveKey(k, LOG_FRAGMENTS) || LOG_EXACT.has(k)` with `LOG_FRAGMENTS = [...SENSITIVE_KEY_FRAGMENTS, "email", "cpf", "phone", "creditcard", "useragent", "user_agent", "set-cookie"]` and `LOG_EXACT = {ip, ip_address, ipaddress}` (substring `ip` would hit `recipientId`). pino `redactConfig.paths` stays path-based and gains the literal variants the spec names (`newPassword`, `currentPassword`, `newEmail`, `pendingEmail`, `passwordHash`, `tokenHash`, `cookieTokenHash`).
 - **Notification** `delivery.dispatcher.ts:47-51` `redactPayload` delegates to `redactSensitive`.
 
@@ -141,6 +141,31 @@ graph LR
 - **Advisories (AD-019)**: `ADV-<date>-01` identity `breaking`/high · `-02` attachment `security`/high · `-03` notification `security`/medium · `-04` audit `bug`/low · `-05` tag `security`/low; `detect` = `pnpm platform advisory detect <id>`, `fix` links the entry CHANGELOG, `parity` the entry parity spec; bodies pt-BR per `docs/advisories/README.md`.
 - **Kernel (AD-006)**: tag **`v2.0.0`** (required env vars break every child's boot — semver major; user may choose `v1.3.0`) + `docs/dev/template-changelog.md` section: env now required, `TRUST_PROXY_HOPS` 0, `redis://` refusal, `/docs` gate, swc ignore, entrypoint glob, `@RateLimit` import path, redaction list, `outbox-dead.purge`.
 - **Commit protocol**: the first commit of each entry cluster stages the advisory with the code; later commits in the same entry carry `Advisory: none — covered by ADV-<date>-NN (security-audit-remediation)` (`advisory-required.mjs:8`).
+- **Version fold (pending user confirmation, spec § Open questions)**: `vitest-migration` already took every entry to `2.0.0` (`ADV-20260821-01..05`, unreleased) with `kernelRange` still `">=1.0.0 <2.0.0"` and no kernel tag. Default: entries **stay** `2.0.0` — T53–T56 extend the existing `## [2.0.0]` changelog section instead of adding one, add `ADV-20260822-NN` beside the Vitest advisory, and move `kernelRange` to `">=2.0.0 <3.0.0"`; the `v2.0.0` kernel tag then covers both features (T57 lists the Vitest items by pointer to the migration's own changelog entry).
+
+### H. Jest → Vitest port (added 2026-08-22; REM-48..51)
+
+**Why**: `main` merged `feat/vitest-migration` at `278dde0` (349 files: `apps/api` jest configs deleted, `vitest.{config,int.config,e2e.config,shared}.mts` + root `vitest.config.mts` / `vitest.coverage.mts` / `vitest.integration.mts`, `globals: false`, root-only `test*` scripts, pre-push `migrations → typecheck → catalog-typecheck → test-coverage`). Waves 1–2 of this feature authored **85 spec files in Jest**; 74 files are changed on both sides (68 specs + `.github/workflows/ci.yml`, `apps/api/package.json`, `apps/api/test/setup/unit-env.ts`, `apps/api/tsconfig.build.json`, `scripts/platform/catalog-check.mjs`, `scripts/platform/lib/child.mjs`).
+
+**Strategy — merge, not rebase.** One `git merge main` into the feature branch, one conflict-resolution pass (a rebase would replay 60+ commits each conflicting on the same spec files). Conflict policy, per file class:
+
+| Class | Resolution |
+| --- | --- |
+| Spec file changed on both sides (68) | take **ours** (feature) — it carries the new cases — then codemod it (below) |
+| Spec file only on the feature side (17) | untouched by the merge; codemod |
+| Jest config / setup deleted on `main` (`test/jest-*.json`, `setup/global-teardown.ts`, `setup/scalar-stub.ts`, `scripts/coverage-all.sh`, `test/tools/normalize-coverage.ts`) | take **theirs** (deleted); the feature's `docs.ts` dynamic `import("@scalar/nestjs-api-reference")` (C2 deviation) stays — harmless without the stub |
+| `apps/api/package.json` | theirs for scripts (no `test*` scripts; Vitest deps), ours for the T13 build-related edits; T51's `multer` bump comes later (wave 4) |
+| `apps/api/test/setup/unit-env.ts`, `int-env.ts`, `e2e-env.ts` | theirs for the Vitest wiring (`container-uris.ts` `inject()`), **ours for the env contract** (every variable `env.ts` now requires, set explicitly; `BREACH_CHECK_ENABLED` per T30's `identity.config.ts`) — AC 5 |
+| `tsconfig.build.json` | ours (T13 harness exclusion) + theirs if `main` excluded vitest files |
+| `scripts/platform/catalog-check.mjs`, `lib/child.mjs` | theirs for `runGates` = `pnpm check && pnpm test && pnpm test:db`; ours for T17's `pnpm catalog:lint` step and T11's child env defaults |
+| `.github/workflows/ci.yml` | theirs for the Vitest steps; ours for T18's SHA pins + `permissions:` — REM-47 probe re-run |
+| `.specs/**`, `docs/**`, catalog `module.json`/`CHANGELOG.md`/`README.md` | theirs (the feature has not touched them yet; waves 4–6 edit on top) |
+
+**Codemod**: `node scripts/platform/jest-to-vitest.mjs apps/api/src apps/api/test catalog` (walks directories; rewrites `jest.*` → `vi.*`, `jest.requireActual` → `vi.importActual`, `jest.setTimeout` → `vi.setConfig`, mock types, and merges the `vitest` import). Known manual leftovers it reports with exit 1: top-level `await` in a setup file, and a `vi.mock` factory closing over an outer variable (Vitest hoists `vi.mock` — lift the variable into the factory or use `vi.hoisted`). Then `pnpm lint:fix` (import order), then hand-fix what `pnpm typecheck` and `pnpm test` still flag (typical: `jest.Mocked<T>` generics, `done` callbacks, fake-timer APIs, `expect.any` on `vi.fn()` return types).
+
+**Where proofs run after the port** (replaces the "staged child" constraint of tasks.md § Test Coverage Matrix): kernel unit → `pnpm test` (`vitest run`, project `api`); kernel int/e2e → `pnpm test:int` / `pnpm test:e2e` (Testcontainers via `apps/api/test/setup/global-setup.ts`, Docker); **entry unit/int/e2e → only `pnpm catalog:check`** (rendered child, `check → test → test:db`); single file → `pnpm vitest run --project api <path>`; `pnpm catalog:typecheck --keep` stages for `tsc` only — no vitest config in `.catalog-stage`, so no test runs there. Coverage: `pnpm test:coverage` enforces `vitest.coverage.mts:39-52` floors (api 86.1/72.7/89.8/86.9) — ratchet-only; the feature may raise, never lower.
+
+**Sequencing**: the port is an exclusive wave (every file is in play) placed **right after wave 2's Build gate** — waves 4–6 (lockfile, contract regen, release) then edit on the Vitest tree and the Verifier's Final gate is the Vitest one. Wave 2 closes in Jest inside the worktree (its gate is the last Jest run).
 
 ---
 
@@ -255,5 +280,5 @@ Per-finding evidence: `spike.md`. Verified while designing (Knowledge Verificati
 
 - **Shared files forcing sequencing:** `env.ts` (C + E); `identity.module.ts`, `identity.config.ts`, `module.json`, `CHANGELOG.md` (every identity task); `attachment.config.ts` + `module.json` (D); root `package.json` + lockfile (REM-39, exclusive); `openapi.json` + Kubb output (contract regen, exclusive).
 - **Wave sketch:** W1 kernel — `rate-limit seam` ∥ `config + redaction + outbox` ∥ `build/entrypoint/lint/CI`; W2 entries — `identity login` ∥ `identity authz + input + middleware` (config/manifest edits in the login cluster; the authz cluster uses the trailer) ∥ `attachment` ∥ `notification + audit + tag`; W3 exclusive — dependency bumps + `pnpm audit` gate; W4 exclusive — contract regen, advisories/versions/changelog, docs; Verifier at opus (auth + data integrity, P0).
-- **Tests are born in the runner the checkout has** — Jest today; Vitest if `vitest-migration` lands first.
+- **Tests are born in the runner the checkout has** — Jest today; Vitest if `vitest-migration` lands first. *Outcome (2026-08-22)*: it landed mid-wave-2; waves 1–2 are Jest, § H ports them in wave 3 (exclusive), waves 4–6 + Verifier run on Vitest.
 - **Worktree:** `git worktree add .worktrees/security-audit-remediation -b feat/security-audit-remediation main` after the owner commits or branches the unrelated uncommitted tooling on `main`.

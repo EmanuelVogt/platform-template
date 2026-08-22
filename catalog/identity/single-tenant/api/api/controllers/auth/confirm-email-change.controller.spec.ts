@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { ConfirmEmailChangeController } from "./confirm-email-change.controller"
 
 import type { ConfirmEmailChangeUseCase } from "../../../application/use-cases/confirm-email-change/confirm-email-change.use-case"
@@ -15,8 +17,8 @@ const result = {
 }
 
 function make(sameSite: "lax" | "none") {
-  const useCase = { execute: jest.fn().mockResolvedValue(result) }
-  const csrf = { sign: jest.fn().mockReturnValue("csrf-token") }
+  const useCase = { execute: vi.fn().mockResolvedValue(result) }
+  const csrf = { sign: vi.fn().mockReturnValue("csrf-token") }
   const config = {
     DEVICE_COOKIE_NAME: "rit_device",
     COOKIE_NAME: "rit_session",
@@ -28,7 +30,7 @@ function make(sameSite: "lax" | "none") {
     config,
     csrf as unknown as Csrf,
   )
-  const res = { cookie: jest.fn() } as unknown as Response
+  const res = { cookie: vi.fn() } as unknown as Response
   return { useCase, csrf, controller, res }
 }
 

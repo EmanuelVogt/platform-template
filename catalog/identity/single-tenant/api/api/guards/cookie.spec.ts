@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { setSessionCookie, clearSessionCookie, COOKIE_OPTIONS } from "./cookie"
 
 import type { Response } from "express"

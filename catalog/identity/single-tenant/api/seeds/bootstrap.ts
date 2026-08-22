@@ -1,14 +1,14 @@
 import { ulid } from "ulid"
 
-import * as schema from "../../../../db/schema"
-import { loadDotenvForDev } from "../../../../shared/config/load-dotenv"
+import * as schema from "../../../db/schema"
+import { loadDotenvForDev } from "../../../shared/config/load-dotenv"
 import {
   createDrizzle,
   createPool,
-} from "../../../../shared/infra/database/drizzle.provider"
-import { loadIdentityConfig } from "../../identity.config"
-import { Argon2PasswordHasher } from "../../infrastructure/hashing/argon2-password-hasher"
-import { users } from "../../infrastructure/tables/user.table"
+} from "../../../shared/infra/database/drizzle.provider"
+import { loadIdentityConfig } from "../identity.config"
+import { Argon2PasswordHasher } from "../infrastructure/hashing/argon2-password-hasher"
+import { users } from "../infrastructure/tables/user.table"
 
 // Bootstrap do superusuário (access_profile=master) em QUALQUER ambiente, incluindo produção.
 // Diferente do seed dev (`db:seed`), a credencial vem do ENV — nunca do repo —

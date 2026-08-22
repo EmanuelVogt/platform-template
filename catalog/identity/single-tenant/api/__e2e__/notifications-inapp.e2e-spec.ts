@@ -10,7 +10,7 @@ import { createRequestContextMiddleware } from "../../../shared/kernel/context/r
 import { OutboxDispatcher } from "../../../shared/kernel/outbox/outbox.dispatcher"
 import { MAILER } from "../../notification/domain/ports/mailer"
 import { DeliveryDispatcher } from "../../notification/infrastructure/delivery/delivery.dispatcher"
-import { RATE_LIMITER } from "../domain/ports/rate-limiter"
+import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
 import { fakeMailer } from "../testing/fake-mailer"
 import { seedUser } from "../testing/seed-user"
 

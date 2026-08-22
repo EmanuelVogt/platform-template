@@ -20,7 +20,7 @@ import {
 import {
   RATE_LIMITER,
   type RateLimiter,
-} from "../../../domain/ports/rate-limiter"
+} from "../../../../../shared/kernel/rate-limit/rate-limiter.port"
 import {
   TOKEN_GENERATOR,
   type TokenGenerator,

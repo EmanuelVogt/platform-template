@@ -9,7 +9,7 @@ import {
   truncateIdentity,
   truncateKernel,
 } from "../../../../test/setup/test-db"
-import { RATE_LIMITER } from "../../identity/domain/ports/rate-limiter"
+import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
 import { allowAllRateLimiter } from "../../identity/testing/allow-all-rate-limiter"
 import { seedUser } from "../../identity/testing/seed-user"
 import { AuditRegistry } from "../application/services/audit-registry"

@@ -17,7 +17,7 @@ import { loadEnv } from "../../../shared/config/env"
 import { OBJECT_STORAGE } from "../../../shared/infra/storage/object-storage.port"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
 import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
-import { RATE_LIMITER } from "../../identity/domain/ports/rate-limiter"
+import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
 import { seedUser } from "../../identity/testing/seed-user"
 
 import type { ObjectStoragePort } from "../../../shared/infra/storage/object-storage.port"

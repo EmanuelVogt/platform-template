@@ -2,6 +2,8 @@ import { Module } from "@nestjs/common"
 import { APP_GUARD } from "@nestjs/core"
 
 import { ACCESS_POLICY } from "../../shared/kernel/access/access-policy.port"
+import { RateLimitGuard } from "../../shared/kernel/rate-limit/rate-limit.guard"
+import { RateLimitModule } from "../../shared/kernel/rate-limit/rate-limit.module"
 
 import { IdentityAccessPolicy } from "./api/access/identity-access.policy"
 import { CONTROLLERS } from "./api/controllers"
@@ -9,7 +11,6 @@ import { ProfessionalDirectoryFacade } from "./api/facades/professional-director
 import { UsageAccessFacade } from "./api/facades/usage-access.facade"
 import { UserDirectoryFacade } from "./api/facades/user-directory.facade"
 import { CsrfGuard } from "./api/guards/csrf.guard"
-import { RateLimitGuard } from "./api/guards/rate-limit.guard"
 import {
   AUTH_MIDDLEWARE_ROUTE,
   AuthMiddleware,
@@ -59,7 +60,6 @@ import { PASSWORD_STRENGTH } from "./domain/ports/password-strength"
 import { PERMISSION_TEMPLATE_REPOSITORY } from "./domain/ports/permission-template.repository"
 import { PROFESSIONAL_COMMITMENTS } from "./domain/ports/professional-commitments.port"
 import { PROFESSIONAL_SCOPE } from "./domain/ports/professional-scope.port"
-import { RATE_LIMITER } from "./domain/ports/rate-limiter"
 import { SESSION_REPOSITORY } from "./domain/ports/session.repository"
 import { TOKEN_GENERATOR } from "./domain/ports/token-generator"
 import { USAGE_STATS_READER } from "./domain/ports/usage-stats.reader"
@@ -76,7 +76,6 @@ import {
   NullProfessionalCommitments,
   NullProfessionalScope,
 } from "./infrastructure/professional/null-professional-adapters"
-import { RedisRateLimiter } from "./infrastructure/rate-limit/redis-rate-limiter"
 import { DrizzleAuthEventRepository } from "./infrastructure/repositories/drizzle-auth-event.repository"
 import { DrizzleDeviceRepository } from "./infrastructure/repositories/drizzle-device.repository"
 import { DrizzlePermissionTemplateRepository } from "./infrastructure/repositories/drizzle-permission-template.repository"
@@ -138,7 +137,6 @@ const PORTS: Provider[] = [
     inject: [IDENTITY_CONFIG],
   },
   { provide: TOKEN_GENERATOR, useClass: CryptoTokenGenerator },
-  { provide: RATE_LIMITER, useClass: RedisRateLimiter },
   // CSRF_SECRET só é exigido em SameSite=none; sob lax o Csrf fica dormente.
   // Sem secret: stub fail-loud (não um HmacCsrf de secret vazio, forjável).
   {
@@ -240,7 +238,12 @@ export class IdentityModule implements NestModule {
       global: true,
       // Sem forwardRef: num módulo dinâmico o forwardRef chega cru ao container
       // (addDynamicModules) e gera uma SEGUNDA instância do módulo alvo.
-      imports: professional ? [professional.module] : [],
+      // RateLimitModule (@Global) provê RATE_LIMITER = composite resiliente;
+      // o kernel não registra o guard, a ordem com o CSRF é decidida aqui.
+      imports: [
+        RateLimitModule,
+        ...(professional ? [professional.module] : []),
+      ],
       controllers: CONTROLLERS,
       providers: [
         { provide: IDENTITY_CONFIG, useFactory: loadIdentityConfig },

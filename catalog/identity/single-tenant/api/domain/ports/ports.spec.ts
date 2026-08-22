@@ -1,9 +1,10 @@
+import { RATE_LIMITER } from '../../../../shared/kernel/rate-limit/rate-limiter.port';
+
 import { AUTH_EVENT_REPOSITORY } from './auth-event.repository';
 import { BREACH_CHECK } from './breach-check';
 import { CSRF } from './csrf';
 import { PASSWORD_HASHER } from './password-hasher';
 import { PASSWORD_STRENGTH } from './password-strength';
-import { RATE_LIMITER } from './rate-limiter';
 import { SESSION_REPOSITORY } from './session.repository';
 import { TOKEN_GENERATOR } from './token-generator';
 import { USER_REPOSITORY } from './user.repository';
@@ -19,6 +20,8 @@ describe('ports — tokens de injeção', () => {
     [PASSWORD_STRENGTH, 'PasswordStrength'],
     [BREACH_CHECK, 'BreachCheck'],
     [TOKEN_GENERATOR, 'TokenGenerator'],
+    // RATE_LIMITER mora no kernel (shared/kernel/rate-limit): o seam é
+    // compartilhado com attachment, identity só consome.
     [RATE_LIMITER, 'RateLimiter'],
     [CSRF, 'Csrf'],
   ] as const;

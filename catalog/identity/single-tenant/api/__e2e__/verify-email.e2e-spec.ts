@@ -9,7 +9,7 @@ import {
 } from "../../../../test/setup/test-db"
 import { OutboxDispatcher } from "../../../shared/kernel/outbox/outbox.dispatcher"
 import { MAILER } from "../../notification/domain/ports/mailer"
-import { RATE_LIMITER } from "../domain/ports/rate-limiter"
+import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
 import { allowAllRateLimiter } from "../testing/allow-all-rate-limiter"
 import { fakeMailer } from "../testing/fake-mailer"
 import { seedUser } from "../testing/seed-user"

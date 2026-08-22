@@ -9,7 +9,7 @@ import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
 import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
 import { PASSWORD_HASHER } from "../domain/ports/password-hasher"
-import { RATE_LIMITER } from "../domain/ports/rate-limiter"
+import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
 import {
   IDENTITY_CONFIG,
   parseIdentityConfig,

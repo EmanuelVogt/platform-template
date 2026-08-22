@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
@@ -9,6 +10,7 @@ import {
   lintAdvisoryFrontmatter,
   lintChangelogVersion,
   lintManifest,
+  lintProductionTestingImports,
   lintReadmeHeadings,
   lintWebImports,
 } from "../lib/lint.mjs";
@@ -218,6 +220,48 @@ test("lintAdvisoryFrontmatter falha e nomeia o campo obrigatório ausente", () =
   const errors = lintAdvisoryFrontmatter(md, "docs/advisories/ADV-20260901-01.md");
   assert.equal(errors.length, 1);
   assert.match(errors[0], /parity/);
+});
+
+function writeEntryFile(entryDir, relativePath, content) {
+  const filePath = path.join(entryDir, relativePath);
+  mkdirSync(path.dirname(filePath), { recursive: true });
+  writeFileSync(filePath, content);
+  return filePath;
+}
+
+function makeEntryDir() {
+  return mkdtempSync(path.join(tmpdir(), "lint-production-testing-imports-"));
+}
+
+test("lintProductionTestingImports falha quando código de produção importa de testing/", () => {
+  const entryDir = makeEntryDir();
+  const filePath = writeEntryFile(
+    entryDir,
+    "api/application/use-cases/foo.use-case.ts",
+    `import { helper } from "../../testing/helper"\n`,
+  );
+  const errors = lintProductionTestingImports(entryDir);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], new RegExp(filePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(errors[0], /testing\/helper/);
+});
+
+test("lintProductionTestingImports passa quando um spec importa de testing/", () => {
+  const entryDir = makeEntryDir();
+  writeEntryFile(entryDir, "api/application/use-cases/foo.spec.ts", `import { helper } from "../../testing/helper"\n`);
+  assert.deepEqual(lintProductionTestingImports(entryDir), []);
+});
+
+test("lintProductionTestingImports passa para um arquivo que já está sob testing/", () => {
+  const entryDir = makeEntryDir();
+  writeEntryFile(entryDir, "api/testing/seeds/helper.ts", `import { other } from "../fixtures/testing/other"\n`);
+  assert.deepEqual(lintProductionTestingImports(entryDir), []);
+});
+
+test("lintProductionTestingImports passa para uma entry limpa (sem import de testing/)", () => {
+  const entryDir = makeEntryDir();
+  writeEntryFile(entryDir, "api/application/use-cases/foo.use-case.ts", `import { db } from "../../infrastructure/db"\n`);
+  assert.deepEqual(lintProductionTestingImports(entryDir), []);
 });
 
 test("discoverEntries encontra as entradas fixture, incluindo a forma <name>/<variant>", () => {

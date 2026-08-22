@@ -7,6 +7,7 @@ import {
   lintAdvisoryFrontmatter,
   lintChangelogVersion,
   lintManifest,
+  lintProductionTestingImports,
   lintReadmeHeadings,
   lintWebImports,
 } from "./lib/lint.mjs";
@@ -66,6 +67,8 @@ function lintEntry(entryDir, contractHeadings) {
 
   const webFiles = [...readWebLayer(entryDir, "core"), ...readWebLayer(entryDir, "react")];
   errors.push(...lintWebImports(webFiles));
+
+  errors.push(...lintProductionTestingImports(entryDir));
 
   return errors;
 }

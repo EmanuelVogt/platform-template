@@ -22,6 +22,7 @@ export const authEventType = identitySchema.enum("auth_event_type", [
   "email_verified",
   "breach_check_skipped",
   "rate_limited_burst",
+  "rate_limiter_degraded",
   "admin_action",
   "access_link_sent",
   "access_link_resent",

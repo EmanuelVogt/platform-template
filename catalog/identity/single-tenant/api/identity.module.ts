@@ -17,6 +17,7 @@ import {
 } from "./api/middleware/auth.middleware"
 import { PurgeAuthEventsJob } from "./application/jobs/purge-auth-events.job"
 import { RevertExpiredEmailChangesJob } from "./application/jobs/revert-expired-email-changes.job"
+import { RateLimiterOutageListener } from "./application/rate-limiter-outage.listener"
 import { CreateSessionService } from "./application/services/create-session.service"
 import { CancelAccessLinkUseCase } from "./application/use-cases/cancel-access-link/cancel-access-link.use-case"
 import { ChangePasswordUseCase } from "./application/use-cases/change-password/change-password.use-case"
@@ -262,6 +263,7 @@ export class IdentityModule implements NestModule {
         CreateSessionService,
         RevertExpiredEmailChangesJob,
         PurgeAuthEventsJob,
+        RateLimiterOutageListener,
         AuthMiddleware,
         // Identidade é middleware, não guard: o AccessGuard global do kernel vem
         // do SharedKernelModule (importado antes) e rodaria antes de qualquer

@@ -82,13 +82,13 @@ export function registerMaintenanceJob(entry: MaintenanceJobEntry): void {
  * porque `@MaintenanceJob` importa este módulo: o grafo de imports garante que
  * já estejam registrados quando a classe decorada é avaliada.
  *
- * IDs reservados pelo kernel: 1, 2, 4. Entradas do catálogo escolhem o
+ * IDs reservados pelo kernel: 1, 2, 6. Entradas do catálogo escolhem o
  * próprio lockId livremente — o `register` acima é quem reprova colisão.
  */
 export const KERNEL_MAINTENANCE_JOBS = [
   { name: "outbox.purge", cron: "0 3 * * *", lockId: 1 },
   { name: "idempotency.purge", cron: "15 3 * * *", lockId: 2 },
-  { name: "outbox-dead.purge", cron: "45 3 * * *", lockId: 4 },
+  { name: "outbox-dead.purge", cron: "45 3 * * *", lockId: 6 },
 ] as const satisfies readonly MaintenanceJobEntry[]
 
 for (const job of KERNEL_MAINTENANCE_JOBS) {

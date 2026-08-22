@@ -736,4 +736,5 @@ RUN-01 T15 · RUN-02 T16 · RUN-03 T17 · RUN-04 T17 · RUN-05 T14, T15 · GAT-0
 | --- | --- | --- | --- |
 | 0 | C0 (runner, sonnet) | PASS — baseline recorded above | — |
 | 1 | C1 T2 (haiku) | DONE · gate PASS (`pnpm install --frozen-lockfile` 0, vitest 4.1.11 at root/api/web, diff = the five owned files, nothing removed) | `baf4e6e` |
-| 2 | C2 T3→T5 (sonnet) ∥ C3 T6→T8 (sonnet) ∥ C4 T9→T11 (sonnet) ∥ C5 T12→T13 (sonnet) | in flight | — |
+| 2 | C2 T3→T5 (sonnet) ∥ C3 T6→T8 (sonnet) ∥ C4 T9→T11 (sonnet) ∥ C5 T12→T13 (sonnet) | DONE · gate PASS (`turbo typecheck lint` eslint-config/web/api 0 · `test:scripts` 219/219 · eslint-config 51/51 · web 24 files/68 · `rg jest scripts .claude/hooks` empty). C2 resumed once after an API session cut mid-T4 (repaired from the diff, no re-dispatch). C5: `catalog.yml` already matched GAT-06 — asserted, no diff. C4: header comment added to `catalog-check.mjs` (T10 Done-when). C3: 5 hooks moved into `describe` blocks (require-top-level-describe), assertions unchanged; `pnpm --filter web test` is a no-op since T12 — verified via `pnpm --filter web exec vitest run` | C2 `29701f2` `77f5f7d` `4723646` · C3 `a3396eb` `7c3456b` `b70e51d` · C4 `a45fcde` `425941b` `972aaeb` · C5 `d809bab` `a81acf6` |
+| 3 | C6 T14→T19 (opus, `full-unit`) ∥ C7 T20→T22 (sonnet) | in flight | — |

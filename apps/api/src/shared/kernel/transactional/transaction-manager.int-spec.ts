@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 import {
@@ -7,13 +7,37 @@ import {
   truncateKernel,
 } from "../../../../test/setup/test-db"
 import { makeTestLogger } from "../../../../test/setup/test-logger"
+import { RequestContext } from "../context/request-context"
 import { NestedAcquisitionError } from "../errors/nested-acquisition.error"
 import { processedEvents } from "../outbox/processed-events.table"
 
-import { TransactionManager } from "./transaction-manager"
+import {
+  getActiveTransactionManager,
+  TransactionManager,
+} from "./transaction-manager"
 
 import type { DrizzleDb } from "../../infra/database/drizzle.provider"
+import type { RequestContextStore } from "../context/request-context"
 import type { Pool } from "pg"
+
+function testStore(over: Partial<RequestContextStore> = {}): RequestContextStore {
+  return {
+    requestId: "req-1",
+    correlationId: "corr-1",
+    causationId: null,
+    traceId: null,
+    spanId: null,
+    tenantId: null,
+    origin: "http",
+    actor: null,
+    extensions: new Map(),
+    locale: "pt-BR",
+    ip: null,
+    userAgent: null,
+    startedAt: Date.now(),
+    ...over,
+  }
+}
 
 describe("TransactionManager (integração)", () => {
   let pool: Pool
@@ -208,5 +232,60 @@ describe("TransactionManager (integração)", () => {
       })
     ).rejects.toThrow("pai falha")
     expect(ran).toBe(false)
+  })
+
+  it("onModuleInit registra o manager ativo para o @Transactional alcançar", () => {
+    txm.onModuleInit()
+
+    expect(getActiveTransactionManager()).toBe(txm)
+  })
+
+  it("onCommit fora de uma transação lança", () => {
+    expect(() => txm.onCommit(() => undefined)).toThrow(
+      "onCommit exige uma transação aberta"
+    )
+  })
+
+  it("isInTransaction reflete a tx ativa dentro e fora do run", async () => {
+    expect(txm.isInTransaction()).toBe(false)
+    let insideRun = false
+    await txm.run(async () => {
+      insideRun = txm.isInTransaction()
+    })
+    expect(insideRun).toBe(true)
+    expect(txm.isInTransaction()).toBe(false)
+  })
+
+  it("carimba app.audit_ctx com o ator do RequestContext dentro da tx", async () => {
+    const requestContext = new RequestContext()
+    const txmComContexto = new TransactionManager(
+      db,
+      makeTestLogger().loggerFactory,
+      requestContext
+    )
+    const store = testStore({
+      correlationId: "corr-audit",
+      origin: "job",
+      actor: { id: "user-42", kind: "user" },
+    })
+    let observed: string | null = null
+
+    await requestContext.run(store, () =>
+      txmComContexto.run(async () => {
+        const result = await txmComContexto
+          .getExecutor()
+          .execute<{ ctx: string }>(
+            sql`SELECT current_setting('app.audit_ctx', true) AS ctx`
+          )
+        observed = result.rows.at(0)?.ctx ?? null
+      })
+    )
+
+    expect(observed).not.toBeNull()
+    expect(JSON.parse(observed ?? "")).toEqual({
+      actor_user_id: "user-42",
+      correlation_id: "corr-audit",
+      origin: "job",
+    })
   })
 })

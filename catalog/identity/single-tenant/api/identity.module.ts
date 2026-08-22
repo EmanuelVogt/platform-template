@@ -67,6 +67,7 @@ import { USER_REPOSITORY } from "./domain/ports/user.repository"
 import { VERIFICATION_TOKEN_REPOSITORY } from "./domain/ports/verification-token.repository"
 import { IDENTITY_CONFIG, loadIdentityConfig } from "./identity.config"
 import { Argon2PasswordHasher } from "./infrastructure/hashing/argon2-password-hasher"
+import { BoundedPasswordHasher } from "./infrastructure/hashing/bounded-password-hasher"
 import { CryptoTokenGenerator } from "./infrastructure/hashing/crypto-token-generator"
 import { HmacCsrf } from "./infrastructure/hashing/hmac-csrf"
 import { HibpBreachCheck } from "./infrastructure/password/hibp-breach-check"
@@ -115,15 +116,20 @@ const PORTS: Provider[] = [
   { provide: DEVICE_REPOSITORY, useClass: DrizzleDeviceRepository },
   {
     provide: PASSWORD_HASHER,
+    // Decorado no factory, não no call site: todo consumidor do port — login,
+    // set/reset/change-password e o verify dummy — precisa ficar dentro do teto.
     useFactory: (cfg: IdentityConfig) =>
-      new Argon2PasswordHasher({
-        pepper: cfg.PASSWORD_PEPPER,
-        memoryKib: cfg.ARGON_MEMORY_KIB,
-        timeCost: cfg.ARGON_TIME_COST,
-        parallelism: cfg.ARGON_PARALLELISM,
-        hashLength: cfg.ARGON_HASH_LENGTH,
-        saltLength: cfg.ARGON_SALT_LENGTH,
-      }),
+      new BoundedPasswordHasher(
+        new Argon2PasswordHasher({
+          pepper: cfg.PASSWORD_PEPPER,
+          memoryKib: cfg.ARGON_MEMORY_KIB,
+          timeCost: cfg.ARGON_TIME_COST,
+          parallelism: cfg.ARGON_PARALLELISM,
+          hashLength: cfg.ARGON_HASH_LENGTH,
+          saltLength: cfg.ARGON_SALT_LENGTH,
+        }),
+        cfg.PASSWORD_HASH_MAX_IN_FLIGHT
+      ),
     inject: [IDENTITY_CONFIG],
   },
   { provide: PASSWORD_STRENGTH, useClass: ZxcvbnPasswordStrength },

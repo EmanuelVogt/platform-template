@@ -65,6 +65,8 @@ export const identityConfigSchema = z
     ARGON_PARALLELISM: z.coerce.number().int().min(1).default(1),
     ARGON_HASH_LENGTH: z.coerce.number().int().min(32).default(32),
     ARGON_SALT_LENGTH: z.coerce.number().int().min(16).default(16),
+    // Teto de argon2 em voo: acima dele o pool do libuv trava o processo todo.
+    PASSWORD_HASH_MAX_IN_FLIGHT: z.coerce.number().int().positive().default(8),
 
     // --- pepper + política de senha ---
     PASSWORD_PEPPER: z.string().min(32),

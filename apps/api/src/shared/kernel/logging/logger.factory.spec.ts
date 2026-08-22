@@ -6,6 +6,7 @@ import { RequestContext } from "../context/request-context"
 import { createRootLogger, LoggerFactory } from "./logger.factory"
 
 import type { Logger } from "pino"
+import type * as PinoModule from "pino"
 
 const { env } = vi.hoisted(() => ({ env: vi.fn() }))
 
@@ -17,7 +18,7 @@ const { pinoMock } = vi.hoisted(() => ({ pinoMock: vi.fn() }))
 // lê `pino.stdSerializers` do mesmo default no import time, então o mock
 // precisa repassar o real para não quebrar esse import.
 vi.mock("pino", async () => {
-  const actual = await vi.importActual<typeof import("pino")>("pino")
+  const actual = await vi.importActual<typeof PinoModule>("pino")
   Object.assign(pinoMock, { stdSerializers: actual.stdSerializers })
   return { ...actual, default: pinoMock }
 })
@@ -30,16 +31,23 @@ function withEnv(overrides: {
   env.mockReturnValue({ OTEL_SERVICE_NAME: "api", ...overrides })
 }
 
-function makeRootLogger(): Logger {
+/**
+ * `child` volta à parte (nunca via `root.child`): é um método de `pino.Logger`
+ * que exige `this` amarrado, então lê-lo de volta do objeto tipado como
+ * `Logger` é um unbound method mesmo sob dublê — o handle vem direto da
+ * criação do mock.
+ */
+function makeRootLogger(): { root: Logger; child: Mock } {
+  const child = vi.fn()
   const logger = {
-    child: vi.fn(),
+    child,
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
     debug: vi.fn(),
   }
-  logger.child.mockReturnValue(logger)
-  return logger as unknown as Logger
+  child.mockReturnValue(logger)
+  return { root: logger as unknown as Logger, child }
 }
 
 describe("createRootLogger", () => {
@@ -82,16 +90,16 @@ describe("createRootLogger", () => {
 
 describe("LoggerFactory.forModule", () => {
   it("vincula o logger filho ao nome do módulo pedido", () => {
-    const root = makeRootLogger()
+    const { root, child } = makeRootLogger()
     const factory = new LoggerFactory(new RequestContext(), root)
     factory.forModule("billing")
-    expect(root.child).toHaveBeenCalledWith({ scope: "billing" })
+    expect(child).toHaveBeenCalledWith({ scope: "billing" })
   })
 })
 
 describe("AppLogger — campos de contexto mesclados", () => {
   it("mescla requestId/correlationId/tenantId/userId do RequestContext no record", () => {
-    const root = makeRootLogger()
+    const { root } = makeRootLogger()
     const ctx = new RequestContext()
     const store = buildJobContextStore({ actorId: "a-1", tenantId: "t-1" })
     const logger = new LoggerFactory(ctx, root).forModule("http")
@@ -114,7 +122,7 @@ describe("AppLogger — campos de contexto mesclados", () => {
   })
 
   it("sem ator no contexto o userId cai em null", () => {
-    const root = makeRootLogger()
+    const { root } = makeRootLogger()
     const ctx = new RequestContext()
     const store = buildJobContextStore({ tenantId: "t-1" })
     const logger = new LoggerFactory(ctx, root).forModule("http")
@@ -130,7 +138,7 @@ describe("AppLogger — campos de contexto mesclados", () => {
   })
 
   it("fora de um escopo de request os campos de correlação vêm undefined", () => {
-    const root = makeRootLogger()
+    const { root } = makeRootLogger()
     const logger = new LoggerFactory(new RequestContext(), root).forModule(
       "http"
     )

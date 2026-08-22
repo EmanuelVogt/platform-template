@@ -8,11 +8,19 @@ import type { DedicatedClientFactory } from "./dedicated-client.factory"
 import type { AppLogger } from "../../kernel/logging/logger.factory"
 import type { Client } from "pg"
 
-function fakeClient(): Client {
-  return Object.assign(new EventEmitter(), {
-    end: vi.fn().mockResolvedValue(undefined),
+/**
+ * Devolve o `end` mockado à parte (nunca via `client.end`): esse é um método
+ * de `pg.Client` que exige `this` amarrado, então lê-lo de volta do objeto
+ * tipado como `Client` é um unbound method mesmo sob dublê — o handle vem
+ * direto da criação do mock.
+ */
+function fakeClient(): { client: Client; end: Mock } {
+  const end = vi.fn().mockResolvedValue(undefined)
+  const client = Object.assign(new EventEmitter(), {
+    end,
     query: vi.fn(),
   }) as unknown as Client
+  return { client, end }
 }
 
 /**
@@ -23,8 +31,8 @@ function fakeClient(): Client {
  */
 describe("ManagedDedicatedClient", () => {
   it("drop() loga e engole a falha de client.end() sem propagar", async () => {
-    const client = fakeClient()
-    ;(client.end as Mock).mockRejectedValueOnce(new Error("socket já fechado"))
+    const { client, end } = fakeClient()
+    end.mockRejectedValueOnce(new Error("socket já fechado"))
     const warn = vi.fn()
     const log = { warn } as unknown as AppLogger
     const factory = {
@@ -50,7 +58,7 @@ describe("ManagedDedicatedClient", () => {
   })
 
   it("end() aguarda uma conexão em andamento antes de encerrar, sem vazar o client", async () => {
-    const client = fakeClient()
+    const { client, end } = fakeClient()
     let resolveCreate: (client: Client) => void = () => undefined
     const create = vi.fn(
       () => new Promise<Client>((resolve) => (resolveCreate = resolve))
@@ -69,12 +77,12 @@ describe("ManagedDedicatedClient", () => {
     await ending
 
     expect(create).toHaveBeenCalledTimes(1)
-    expect(client.end).toHaveBeenCalledTimes(1)
+    expect(end).toHaveBeenCalledTimes(1)
   })
 
   it("drop() usa String(err) quando a falha de client.end() não é um Error", async () => {
-    const client = fakeClient()
-    ;(client.end as Mock).mockRejectedValueOnce("connection reset")
+    const { client, end } = fakeClient()
+    end.mockRejectedValueOnce("connection reset")
     const warn = vi.fn()
     const log = { warn } as unknown as AppLogger
     const factory = {
@@ -97,9 +105,8 @@ describe("ManagedDedicatedClient", () => {
   })
 
   it("ensure() envolve rejeição não-Error da factory antes de reapresentar via backoff", async () => {
-    const factory = {
-      create: () => Promise.reject("econnrefused"),
-    } as unknown as DedicatedClientFactory
+    const create = vi.fn().mockRejectedValueOnce("econnrefused")
+    const factory = { create } as unknown as DedicatedClientFactory
     const managed = new ManagedDedicatedClient(factory, "outbox-listen")
 
     const first = await managed.ensure().catch((err: unknown) => err)

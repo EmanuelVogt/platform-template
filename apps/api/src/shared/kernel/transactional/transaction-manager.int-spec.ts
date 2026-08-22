@@ -241,9 +241,9 @@ describe("TransactionManager (integração)", () => {
   })
 
   it("onCommit fora de uma transação lança", () => {
-    expect(() => txm.onCommit(() => undefined)).toThrow(
-      "onCommit exige uma transação aberta"
-    )
+    expect(() => {
+      txm.onCommit(() => undefined)
+    }).toThrow("onCommit exige uma transação aberta")
   })
 
   it("isInTransaction reflete a tx ativa dentro e fora do run", async () => {
@@ -268,16 +268,19 @@ describe("TransactionManager (integração)", () => {
       origin: "job",
       actor: { id: "user-42", kind: "user" },
     })
-    let observed: string | null = null
-
-    await requestContext.run(store, () =>
+    // `observed` sai como retorno da cadeia awaited, nunca de mutação de um
+    // `let` fechado por closure: reatribuir de dentro do callback aninhado
+    // faz o checker perder a narrowing e ler o tipo como sempre-nulo no ponto
+    // de uso (COV-08) — o retorno explícito devolve o tipo real, `string |
+    // null`, e a asserção abaixo prova o conteúdo carimbado de verdade.
+    const observed = await requestContext.run(store, () =>
       txmComContexto.run(async () => {
         const result = await txmComContexto
           .getExecutor()
           .execute<{ ctx: string }>(
             sql`SELECT current_setting('app.audit_ctx', true) AS ctx`
           )
-        observed = result.rows.at(0)?.ctx ?? null
+        return result.rows.at(0)?.ctx ?? null
       })
     )
 

@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm"
 import { boolean, primaryKey, text, timestamp } from "drizzle-orm/pg-core"
 
 import { identitySchema } from "./identity.schema"
@@ -18,9 +19,13 @@ export const userProfessionalServices = identitySchema.table(
     serviceId: text("service_id").notNull(),
     // Profissional padrão do serviço (espelho do isDefault da activity) — vários possíveis.
     isDefault: boolean("is_default").notNull().default(false),
+    // clock_timestamp() (não now()/defaultNow(), que é hora de início da TRANSAÇÃO): um
+    // INSERT em lote de vários vínculos (replaceForService) precisa de um instante distinto
+    // por linha para o ORDER BY abaixo preservar a ordem de inserção — com now() todas as
+    // linhas do mesmo INSERT empatam (ADV-20260821-03).
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
-      .defaultNow(),
+      .default(sql`clock_timestamp()`),
   },
   (t) => [primaryKey({ columns: [t.userId, t.serviceId] })]
 )

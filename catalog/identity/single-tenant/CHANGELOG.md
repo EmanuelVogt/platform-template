@@ -19,6 +19,12 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 - `module.json` `schemaExports` não listava `tables/identity.schema` (a declaração
   `pgSchema("identity")`): o snapshot do drizzle-kit gerava `"schemas": {}` e a migração
   baseline não emitia `CREATE SCHEMA "identity"`, quebrando `pnpm catalog:check` em bancos novos.
+- `user_professional_services.created_at` usava `defaultNow()` (hora de início da transação, não
+  por linha): um `INSERT` em lote de vários vínculos (`replaceForService`) empatava o
+  `created_at` de todas as linhas, e `listByServiceIds` desempatava por `user_id` (ULID), sem
+  relação com a ordem de inserção — exposto por `pnpm catalog:check attachment` (identity como
+  dependência), nunca pelo `catalog:check identity` isolado. Passa a usar `clock_timestamp()`
+  (ADV-20260821-03).
 
 ## [1.0.0]
 

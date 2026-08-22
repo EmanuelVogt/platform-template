@@ -3,6 +3,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 
 import { expectContractSubset } from "./contract-snapshot"
+import { describe, expect, it } from "vitest"
 
 function writeOpenApi(doc: unknown): string {
   const dir = mkdtempSync(join(tmpdir(), "contract-snapshot-"))

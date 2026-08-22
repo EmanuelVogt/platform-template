@@ -5,6 +5,7 @@ import {
   dedicatedConfig,
   poolConfig,
 } from "./connection-config"
+import { describe, expect, it } from "vitest"
 
 const BASE = {
   DATABASE_URL: "postgres://u:p@localhost:5432/db",

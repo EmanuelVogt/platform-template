@@ -1,4 +1,5 @@
 import { listDirectories, listFiles } from "../shared/test/unit/source-survey"
+import { describe, expect, it } from "vitest"
 
 const MODULES_DIR = __dirname
 

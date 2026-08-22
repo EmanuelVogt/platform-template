@@ -4,6 +4,7 @@ import {
   setActor,
   type RequestContextStore,
 } from "./request-context"
+import { describe, expect, it } from "vitest"
 
 function makeStore(
   overrides: Partial<RequestContextStore> = {}

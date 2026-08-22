@@ -1,4 +1,5 @@
 import { isUnchanged } from "./entity-props"
+import { describe, expect, it } from "vitest"
 
 describe("isUnchanged", () => {
   const base = {

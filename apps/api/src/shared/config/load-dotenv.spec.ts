@@ -1,13 +1,14 @@
 import { loadDotenvForDev } from "./load-dotenv"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
-const spyLoadEnvFile = () => jest.spyOn(process, "loadEnvFile").mockImplementation(() => undefined)
+const spyLoadEnvFile = () => vi.spyOn(process, "loadEnvFile").mockImplementation(() => undefined)
 
 describe("loadDotenvForDev", () => {
   const originalEnv = process.env.NODE_ENV
 
   afterEach(() => {
     process.env.NODE_ENV = originalEnv
-    jest.restoreAllMocks()
+    vi.restoreAllMocks()
   })
 
   it("não carrega arquivo em produção", () => {

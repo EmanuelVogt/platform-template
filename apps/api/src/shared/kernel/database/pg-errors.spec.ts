@@ -1,4 +1,5 @@
 import { isUniqueViolation } from "./pg-errors"
+import { describe, expect, it } from "vitest"
 
 describe("isUniqueViolation", () => {
   it("detecta código 23505 no erro direto", () => {

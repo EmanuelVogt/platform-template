@@ -1,6 +1,7 @@
 import { buildEventContextStore } from "./event-context"
 
 import type { EventEnvelope } from "../events/domain-event.base"
+import { describe, expect, it } from "vitest"
 
 function envelope(over: Partial<EventEnvelope> = {}): EventEnvelope {
   return {

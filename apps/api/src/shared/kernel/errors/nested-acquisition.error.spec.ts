@@ -11,6 +11,7 @@ import {
 import { ProblemDetailsFilter } from "./problem-details.filter"
 
 import type { ArgumentsHost } from "@nestjs/common"
+import { describe, expect, it } from "vitest"
 
 function makeHost(captured: { status?: number; body?: unknown }): ArgumentsHost {
   const res = {

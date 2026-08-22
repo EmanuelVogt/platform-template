@@ -10,6 +10,7 @@ import {
 
 import type { DrizzleDb } from "../../infra/database/drizzle.provider"
 import type { Pool, PoolClient } from "pg"
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 describe("advisoryXactLock (integração)", () => {
   let pool: Pool

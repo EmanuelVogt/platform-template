@@ -8,6 +8,7 @@ import {
 } from "./apply-listing"
 
 import type { SQL } from "drizzle-orm"
+import { describe, expect, it } from "vitest"
 
 
 const dialect = new PgDialect()

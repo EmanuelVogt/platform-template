@@ -14,6 +14,7 @@ import { TransactionManager } from "./transaction-manager"
 
 import type { DrizzleDb } from "../../infra/database/drizzle.provider"
 import type { Pool } from "pg"
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 describe("TransactionManager (integração)", () => {
   let pool: Pool

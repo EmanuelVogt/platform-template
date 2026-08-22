@@ -1,4 +1,5 @@
 import { pick } from "./if-else.sample"
+import { describe, expect, it } from "vitest"
 
 describe("if-else sample (true path only)", () => {
   it("returns a when flag is true", () => {

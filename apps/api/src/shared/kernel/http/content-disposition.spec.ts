@@ -1,4 +1,5 @@
 import { buildContentDisposition } from "./content-disposition"
+import { describe, expect, it } from "vitest"
 
 describe("buildContentDisposition", () => {
   it("codifica acento em RFC 5987", () => {

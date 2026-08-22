@@ -1,4 +1,5 @@
 import { Transactional } from "./transactional.decorator"
+import { describe, expect, it } from "vitest"
 
 describe("@Transactional (fail-loud)", () => {
   it("NODE_ENV=test sem manager: pass-through, executa direto", async () => {

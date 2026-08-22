@@ -1,4 +1,5 @@
 import { NonTransactional } from "./transactional.decorator"
+import { describe, expect, it } from "vitest"
 
 describe("@NonTransactional — declara ausência de transação, com motivo", () => {
   it("não embrulha o método: o corpo original roda intacto", async () => {

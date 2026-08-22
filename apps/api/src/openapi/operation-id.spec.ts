@@ -3,6 +3,7 @@ import "reflect-metadata"
 import { join, relative } from "node:path"
 
 import { endsWith, listFilePaths } from "../shared/test/unit/source-survey"
+import { beforeAll, describe, expect, it } from "vitest"
 
 // Valores de PATH_METADATA/METHOD_METADATA (@nestjs/common) e do metadata key
 // do @ApiOperation (@nestjs/swagger) — constants fora do exports map dos

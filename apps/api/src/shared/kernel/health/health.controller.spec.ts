@@ -5,21 +5,22 @@ import { HealthController } from "./health.controller"
 import type { DedicatedClientFactory } from "../../infra/database/dedicated-client.factory"
 import type { LoggerFactory } from "../logging/logger.factory"
 import type { Client } from "pg"
+import { type Mock, describe, expect, it, vi } from "vitest"
 
 function makeController(query: () => Promise<unknown>): {
   ctrl: HealthController
-  errorSpy: jest.Mock
+  errorSpy: Mock
 } {
-  const errorSpy = jest.fn()
+  const errorSpy = vi.fn()
   const lf = {
     forModule: () => ({
       error: errorSpy,
-      warn: jest.fn(),
-      info: jest.fn(),
-      debug: jest.fn(),
+      warn: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
     }),
   } as unknown as LoggerFactory
-  const client = { query, on: jest.fn() } as unknown as Client
+  const client = { query, on: vi.fn() } as unknown as Client
   const factory = {
     create: () => Promise.resolve(client),
   } as unknown as DedicatedClientFactory

@@ -21,6 +21,7 @@ import type { DrizzleDb } from "./drizzle.provider"
 import type { Env } from "../../config/env"
 import type { AppLogger } from "../../kernel/logging/logger.factory"
 import type { PoolClient } from "pg"
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 describe("ApplicationPool (integração)", () => {
   let pool: ApplicationPool
@@ -312,7 +313,7 @@ describe("ApplicationPool (integração)", () => {
 
     it("as duas formas de connect saem com PoolSaturatedError e o log traz o pool do instante", async () => {
       const logger = poolLogger()
-      const warn = jest.spyOn(logger, "warn")
+      const warn = vi.spyOn(logger, "warn")
       const pending = saturatedPool(logger)
       const held = await pending.connect()
       try {
@@ -376,7 +377,7 @@ describe("ApplicationPool (integração)", () => {
 
     it("a espera na fila loga db.pool_acquire_slow com o pool do instante", async () => {
       const logger = makeTestLogger().loggerFactory.forModule("ApplicationPool")
-      const warn = jest.spyOn(logger, "warn")
+      const warn = vi.spyOn(logger, "warn")
       const saturated = warnOnEveryAcquire(logger)
       const held = await saturated.connect()
       try {
@@ -450,7 +451,7 @@ describe("ApplicationPool (integração)", () => {
 
     it("observador que lança não derruba a aquisição", async () => {
       const logger = makeTestLogger().loggerFactory.forModule("ApplicationPool")
-      const warn = jest.spyOn(logger, "warn")
+      const warn = vi.spyOn(logger, "warn")
       const measured = new ApplicationPool(
         {
           connectionString: testDatabaseUrl(),

@@ -30,6 +30,7 @@ import type {
 import type { EventEnvelope } from "../events/domain-event.base"
 import type { LoggerFactory } from "../logging/logger.factory"
 import type { Client, Pool } from "pg"
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 function connectionEnv(): Env {
   return parseEnv({
@@ -142,9 +143,9 @@ describe("Outbox (integração)", () => {
   beforeAll(() => {
     pool = createTestPool()
     db = createTestDb(pool)
-    const test = makeTestLogger()
-    ctx = test.ctx
-    loggerFactory = test.loggerFactory
+    const testLogger = makeTestLogger()
+    ctx = testLogger.ctx
+    loggerFactory = testLogger.loggerFactory
     txm = new TransactionManager(db, loggerFactory)
     publisher = new OutboxPublisher(txm, ctx, loggerFactory)
     processed = new ProcessedEventsRepository(txm)

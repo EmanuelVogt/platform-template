@@ -14,6 +14,7 @@ import type {
 } from "./idempotency.repository"
 import type { CallHandler, ExecutionContext } from "@nestjs/common"
 import type { Reflector } from "@nestjs/core"
+import { describe, expect, it, vi } from "vitest"
 
 function makeStore(tenantId: string | null = null): RequestContextStore {
   return { ...buildJobContextStore({ tenantId }), origin: "http" }
@@ -26,7 +27,7 @@ function makeExecutionContext(): ExecutionContext {
     body: { b: 1, a: 2 },
     headers: { "idempotency-key": "k-1" },
   }
-  const response = { statusCode: 201, status: jest.fn() }
+  const response = { statusCode: 201, status: vi.fn() }
   return {
     getType: () => "http",
     getHandler: () => () => undefined,

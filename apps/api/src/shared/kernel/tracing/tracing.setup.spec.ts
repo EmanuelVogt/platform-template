@@ -1,10 +1,13 @@
 import { signalPipelines } from "./tracing.setup"
+import { describe, expect, it, vi } from "vitest"
 
-jest.mock("../../config/env", () => ({
-  env: jest.fn(),
-}))
+// SPEC_DEVIATION: `vi.hoisted` instead of the `await vi.importMock` the task
+// prescribed. Reason: the api compiles as CommonJS, so top-level `await` fails
+// `tsc --noEmit` (TS1309) — the very gate of this task (RUN-05); `vi.hoisted`
+// keeps the loose `Mock` type the spec was written against.
+const { env } = vi.hoisted(() => ({ env: vi.fn() }))
 
-const { env } = jest.requireMock<{ env: jest.Mock }>("../../config/env")
+vi.mock("../../config/env", () => ({ env }))
 
 function withEndpoint(endpoint: string): void {
   env.mockReturnValue({ OTEL_EXPORTER_OTLP_ENDPOINT: endpoint })

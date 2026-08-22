@@ -1,4 +1,5 @@
 import { stripQuery } from "./log.interceptor"
+import { describe, expect, it } from "vitest"
 
 describe("stripQuery", () => {
   it("remove a query string", () => {

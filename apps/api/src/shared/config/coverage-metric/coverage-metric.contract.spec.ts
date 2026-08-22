@@ -2,6 +2,7 @@ import { execSync } from "node:child_process"
 import { mkdtempSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { describe, expect, it } from "vitest"
 
 type FileCoverage = {
   b?: Record<string, number[]>

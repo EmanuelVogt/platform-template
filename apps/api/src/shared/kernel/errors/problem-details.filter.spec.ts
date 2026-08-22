@@ -10,6 +10,7 @@ import { PoolSaturatedError } from "./pool-saturated.error"
 import { ProblemDetailsFilter } from "./problem-details.filter"
 
 import type { RequestContextStore } from "../context/request-context"
+import { describe, expect, it } from "vitest"
 
 function makeHost(captured: {
   status?: number

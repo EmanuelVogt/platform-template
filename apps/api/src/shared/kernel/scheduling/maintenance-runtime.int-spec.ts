@@ -26,6 +26,7 @@ import type {
   DrizzleExecutor,
 } from "../../infra/database/drizzle.provider"
 import type { PoolClient } from "pg"
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 function connectionEnv(overrides: Record<string, string> = {}): Env {
   return parseEnv({
@@ -120,10 +121,10 @@ describe("MaintenanceRuntime (integração)", () => {
   beforeAll(() => {
     pool = createTestPool()
     db = createTestDb(pool)
-    const test = makeTestLogger()
-    txm = new TransactionManager(db, test.loggerFactory)
+    const testLogger = makeTestLogger()
+    txm = new TransactionManager(db, testLogger.loggerFactory)
     clients = makeClientFactory()
-    runtime = new MaintenanceRuntime(txm, test.ctx, test.loggerFactory, clients)
+    runtime = new MaintenanceRuntime(txm, testLogger.ctx, testLogger.loggerFactory, clients)
   })
 
   afterAll(async () => {
@@ -238,7 +239,7 @@ describe("MaintenanceRuntime (integração)", () => {
   it("solta o lock no finally, antes de encerrar o client, mesmo com o corpo lançando", async () => {
     let holdersAtEnd: LockHolder[] = []
     const realCreate = clients.create.bind(clients)
-    const spy = jest
+    const spy = vi
       .spyOn(clients, "create")
       .mockImplementation(async (purpose: string) => {
         const client = await realCreate(purpose)
@@ -503,13 +504,13 @@ describe("job.skipped não toca o pool de aplicação (integração)", () => {
       connectionTimeoutMillis: 1000,
     })
     hog = await starved.connect()
-    const test = makeTestLogger()
+    const testLogger = makeTestLogger()
     const txm = new TransactionManager(
       createTestDb(starved),
-      test.loggerFactory
+      testLogger.loggerFactory
     )
     clients = makeClientFactory()
-    runtime = new MaintenanceRuntime(txm, test.ctx, test.loggerFactory, clients)
+    runtime = new MaintenanceRuntime(txm, testLogger.ctx, testLogger.loggerFactory, clients)
   })
 
   afterAll(async () => {
@@ -540,14 +541,14 @@ describe("job.skipped não toca o pool de aplicação (integração)", () => {
   })
 
   it("client dedicado que não conecta: skipped com motivo, sem pedir conexão ao pool", async () => {
-    const test = makeTestLogger()
+    const testLogger = makeTestLogger()
     const foraDoAr = makeClientFactory({
       DATABASE_URL: "postgres://u:p@127.0.0.1:1/indisponivel",
     })
     const cego = new MaintenanceRuntime(
-      new TransactionManager(createTestDb(starved), test.loggerFactory),
-      test.ctx,
-      test.loggerFactory,
+      new TransactionManager(createTestDb(starved), testLogger.loggerFactory),
+      testLogger.ctx,
+      testLogger.loggerFactory,
       foraDoAr
     )
     const before = poolSnapshot(starved)

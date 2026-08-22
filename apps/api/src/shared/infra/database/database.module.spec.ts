@@ -11,6 +11,7 @@ import type {
   DrizzleSchema,
 } from "./drizzle.provider"
 import type { FactoryProvider } from "@nestjs/common"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 // Tabela de produto que o kernel não conhece: prova que o executor aceita
 // qualquer tabela do app, não só as do agregado do kernel.

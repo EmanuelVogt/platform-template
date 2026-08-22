@@ -6,7 +6,10 @@ import { defineConfig } from "vitest/config"
  */
 export default defineConfig({
   test: {
-    projects: ["apps/api/vitest.int.config.mts"],
+    projects: [
+      "apps/api/vitest.int.config.mts",
+      "apps/api/vitest.e2e.config.mts",
+    ],
     globalSetup: ["apps/api/test/setup/global-setup.ts"],
   },
 })

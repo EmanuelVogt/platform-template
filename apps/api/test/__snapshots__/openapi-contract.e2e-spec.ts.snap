@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`contrato OpenAPI do kernel expõe só as operações do kernel-only tree 1`] = `
+exports[`contrato OpenAPI do kernel > expõe só as operações do kernel-only tree 1`] = `
 [
   "GET /health :: liveness",
   "GET /ready :: readiness",

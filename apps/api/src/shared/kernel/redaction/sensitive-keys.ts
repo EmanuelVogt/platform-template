@@ -28,13 +28,11 @@ function redactRecursively(
   fragments: readonly string[]
 ): Redacted<unknown> {
   if (Array.isArray(value)) {
-    let changed = false
-    const next = value.map((item) => {
-      const result = redactRecursively(item, fragments)
-      if (result.changed) changed = true
-      return result.value
-    })
-    return changed ? { value: next, changed: true } : { value, changed: false }
+    const results = value.map((item) => redactRecursively(item, fragments))
+    const changed = results.some((result) => result.changed)
+    return changed
+      ? { value: results.map((result) => result.value), changed: true }
+      : { value, changed: false }
   }
 
   if (isPlainObject(value)) {

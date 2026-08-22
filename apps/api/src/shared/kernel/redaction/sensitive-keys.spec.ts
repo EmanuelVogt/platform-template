@@ -68,7 +68,7 @@ describe("redactSensitive", () => {
     ]
     const result = redactSensitive(input)
     expect(result.changed).toBe(true)
-    expect(result.value[0].token).toBe("[REDACTED]")
+    expect(result.value[0]?.token).toBe("[REDACTED]")
     expect(result.value[1]).toEqual({ description: "sem segredo" })
   })
 

@@ -10,7 +10,7 @@ const DOCS_PATH = "/docs"
  * a regra de gate mora aqui, testável sem boot do Nest.
  */
 export function shouldMountDocs(env: Pick<Env, "NODE_ENV" | "DOCS_ENABLED">): boolean {
-  return !(env.NODE_ENV === "production" && env.DOCS_ENABLED !== true)
+  return !(env.NODE_ENV === "production" && !env.DOCS_ENABLED)
 }
 
 /**

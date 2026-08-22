@@ -1,41 +1,34 @@
-import type Redis from "ioredis"
+import { parseEnv } from "../../config/env"
 
-// Isola env() do processo (memoizado) por teste: reseta o registro de módulos
-// e injeta REDIS_URL/DATABASE_SSL antes de reimportar createRedis a cada caso.
+import { createRedis } from "./redis.provider"
+
+const BASE = {
+  NODE_ENV: "test",
+  DATABASE_URL: "postgres://u:p@localhost:5432/db",
+  DATABASE_SSL: "disable",
+  WEB_ORIGIN: "http://localhost:5173",
+  REDIS_URL: "redis://localhost:6379",
+} as NodeJS.ProcessEnv
+
 describe("createRedis", () => {
-  const ORIGINAL_ENV = { ...process.env }
-
-  beforeEach(() => {
-    jest.resetModules()
-    process.env = { ...ORIGINAL_ENV, DATABASE_SSL: "disable" }
-  })
-
-  afterAll(() => {
-    process.env = ORIGINAL_ENV
-  })
-
-  async function buildClient(redisUrl: string): Promise<Redis> {
-    process.env.REDIS_URL = redisUrl
-    const { createRedis } = await import("./redis.provider")
-    return createRedis()
-  }
-
-  it("define commandTimeout de 2000ms", async () => {
-    const client = await buildClient("redis://localhost:6379")
+  it("define commandTimeout de 2000ms", () => {
+    const client = createRedis(parseEnv(BASE))
     expect(client.options.commandTimeout).toBe(2000)
     client.disconnect()
   })
 
-  it("repassa a URL redis:// (texto plano) sem alterar host/porta/tls", async () => {
-    const client = await buildClient("redis://localhost:6379")
+  it("repassa a URL redis:// (texto plano) sem alterar host/porta/tls", () => {
+    const client = createRedis(parseEnv(BASE))
     expect(client.options.host).toBe("localhost")
     expect(client.options.port).toBe(6379)
     expect(client.options.tls).toBeUndefined()
     client.disconnect()
   })
 
-  it("repassa a URL rediss:// (TLS) sem alterar host/porta/tls", async () => {
-    const client = await buildClient("rediss://localhost:6380")
+  it("repassa a URL rediss:// (TLS) sem alterar host/porta/tls", () => {
+    const client = createRedis(
+      parseEnv({ ...BASE, REDIS_URL: "rediss://localhost:6380" })
+    )
     expect(client.options.host).toBe("localhost")
     expect(client.options.port).toBe(6380)
     expect(client.options.tls).toBeTruthy()

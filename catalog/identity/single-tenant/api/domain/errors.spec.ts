@@ -6,6 +6,10 @@ import {
   InvalidResetTokenError,
   SessionNotFoundError,
   RateLimitedError,
+  PasswordHashingSaturatedError,
+  BreachCheckUnavailableError,
+  PermissionGrantNotAllowedError,
+  EmailBelongsToDeletedUserError,
 } from './errors';
 
 describe('errors de domínio identity', () => {
@@ -16,6 +20,9 @@ describe('errors de domínio identity', () => {
       new InvalidResetTokenError(),
       new SessionNotFoundError(),
       new RateLimitedError(30),
+      new PasswordHashingSaturatedError(),
+      new BreachCheckUnavailableError(),
+      new PermissionGrantNotAllowedError(),
     ];
     for (const err of errors) {
       expect(err).toBeInstanceOf(DomainError);
@@ -65,5 +72,50 @@ describe('errors de domínio identity', () => {
     expect(err.status).toBe(429);
     expect(err.type).toBe('https://errors.example.com/identity/rate-limited');
     expect(err.retryAfterSeconds).toBe(45);
+  });
+
+  it('PasswordHashingSaturatedError: status 503, type estável, Retry-After 2s', () => {
+    const err = new PasswordHashingSaturatedError();
+    expect(err.status).toBe(503);
+    expect(err.type).toBe('https://errors.example.com/identity/password-hashing-saturated');
+    expect(err.retryAfterSeconds).toBe(2);
+    expect(err.title).toBe('Serviço temporariamente indisponível');
+  });
+
+  it('BreachCheckUnavailableError: status 503, type estável, Retry-After 5s', () => {
+    const err = new BreachCheckUnavailableError();
+    expect(err.status).toBe(503);
+    expect(err.type).toBe('https://errors.example.com/identity/breach-check-unavailable');
+    expect(err.retryAfterSeconds).toBe(5);
+  });
+
+  it('BreachCheckUnavailableError nunca se confunde com senha vazada', () => {
+    expect(new BreachCheckUnavailableError().type).not.toBe(
+      new WeakPasswordError().type,
+    );
+  });
+
+  it('PermissionGrantNotAllowedError: status 403, type permission-grant-not-allowed', () => {
+    const err = new PermissionGrantNotAllowedError();
+    expect(err.status).toBe(403);
+    expect(err.type).toBe('https://errors.example.com/identity/permission-grant-not-allowed');
+    expect(err.retryAfterSeconds).toBeUndefined();
+  });
+
+  it('EmailBelongsToDeletedUserError segue no catálogo (sai só em T37)', () => {
+    const err = new EmailBelongsToDeletedUserError();
+    expect(err.status).toBe(409);
+    expect(err.type).toBe('https://errors.example.com/identity/email-belongs-to-deleted-user');
+  });
+
+  it('os três types novos são únicos entre si e distintos dos existentes', () => {
+    const types = [
+      new PasswordHashingSaturatedError().type,
+      new BreachCheckUnavailableError().type,
+      new PermissionGrantNotAllowedError().type,
+      new RateLimitedError(1).type,
+      new InvalidCredentialsError().type,
+    ];
+    expect(new Set(types).size).toBe(types.length);
   });
 });

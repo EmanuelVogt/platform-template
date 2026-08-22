@@ -9,7 +9,7 @@ const REMINDERS = [
   {
     key: "design-system",
     applies: (filePath) => filePath.includes("/apps/web/"),
-    text: "Editing apps/web. Follow docs/front/front-arch.md: design tokens (never hex), the right role for the token, @workspace/ui primitives via deep import, Sentence case in UI text, Lucide icons, no emoji. If you have not read it in this session, read it before styling.",
+    text: "Editing apps/web. Follow docs/arch/front.md: design tokens (never hex), the right role for the token, @workspace/ui primitives via deep import, Sentence case in UI text, Lucide icons, no emoji. If you have not read it in this session, read it before styling.",
   },
   {
     key: "comment-policy",

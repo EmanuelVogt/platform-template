@@ -1,237 +1,261 @@
-# Changelog do template
+# Template changelog
 
-Verdade da versão = tag git + esta entrada (AD-006); `package.json` não é incrementado
-no release. Cada versão lista as mudanças quebra-contrato e os passos para o filho
-aplicar no `copier update`.
+Version truth = git tag + this entry (AD-006); `package.json` is not bumped on
+release. Each version lists the contract-breaking changes and the steps for the child
+to apply on `copier update`.
 
-## Não publicado
+## Unreleased
 
-Refactor do tooling da plataforma: o layout do filho, a ordem de instalação e o
-harness de child ganham cada um um dono só, o gate de advisory passa a valer por
-commit no CI, e o produto deixa de receber o ferramental que só existe com
-`catalog/` presente. Sem mudança de contrato e sem migration.
+Refactor of the platform tooling: the child layout, the install order and the child
+harness each get a single owner, the advisory gate now applies per commit in CI, and
+the product stops receiving the tooling that only exists with `catalog/` present. No
+contract change and no migration.
 
-### Mudanças
+### Changes
 
-1. **Layout do filho num módulo (`scripts/platform/lib/child-layout.mjs`).** Onde uma
-   entrada aterrissa dentro do filho (`apps/api/src/modules/<name>`, `__parity__`,
+1. **Child layout in one module (`scripts/platform/lib/child-layout.mjs`).** Where an
+   entry lands inside the child (`apps/api/src/modules/<name>`, `__parity__`,
    `<webRoot>/entities/<name>`, `.env`, `platform-modules.ts`, `platform-schema.ts`,
-   `drizzle/migrations`) era recalculado em `plan.mjs`, `add.mjs`, `adopt.mjs` e
-   `migrations.mjs`. Agora todos consultam `childLayout(cwd)` / `webRootFor(name)`.
-2. **`catalog:typecheck` deixa de ser one-liner de shell.** O staging virou
-   `scripts/platform/catalog-stage.mjs`: descobre as entradas por `catalog/` (lista
-   escrita à mão eliminada), tem teardown, aceita `--keep` e sai 0 num checkout sem
-   `catalog/` — antes o pre-push do filho quebrava nesse passo.
-3. **Uma resolução de ordem de instalação.** `plan.resolveDeps` delega a
-   `catalog-graph.resolveInstallOrder`. Isso **corrige** `module add <entrada> --with-deps`
-   quando a dependência mora sob variante (`identity` em `identity/single-tenant/`),
-   que falhava com ENOENT em `catalog/identity/module.json`.
-4. **Harness de child (`scripts/platform/lib/child.mjs`, antes `render-child.mjs`).**
-   Absorve os defaults de env, o scratch dir, o teardown com `--keep`, o SIGINT e a
-   sequência `pnpm check && pnpm test`, que estavam duplicados entre `catalog:check` e
-   `template:smoke`. `template:smoke` passa a limpar o scratch dir ao receber SIGINT.
-5. **Gate de advisory por commit no CI.** `advisory-required.mjs` ganha `--range
-   <base>..<head>`; `.github/workflows/catalog.yml` chama o módulo em vez de
-   reimplementar a regra em shell. O `git reset --soft base` anterior julgava o diff
-   inteiro do PR contra a mensagem do head, então um trailer `Advisory: none` no último
-   commit isentava todos os outros (`.specs/LESSONS.md` L-009).
-6. **O ferramental de catálogo para de vazar para o filho.** `catalog/` já estava fora
-   da cópia, mas os scripts que só existem por causa dele não: `catalog-check.mjs`,
+   `drizzle/migrations`) was recomputed in `plan.mjs`, `add.mjs`, `adopt.mjs` and
+   `migrations.mjs`. Now they all consult `childLayout(cwd)` / `webRootFor(name)`.
+2. **`catalog:typecheck` is no longer a shell one-liner.** Staging became
+   `scripts/platform/catalog-stage.mjs`: it discovers the entries via `catalog/`
+   (hand-written list eliminated), has teardown, accepts `--keep` and exits 0 in a
+   checkout without `catalog/` — before, the child's pre-push broke at that step.
+3. **One install-order resolution.** `plan.resolveDeps` delegates to
+   `catalog-graph.resolveInstallOrder`. This **fixes** `module add <entry> --with-deps`
+   when the dependency lives under a variant (`identity` in `identity/single-tenant/`),
+   which failed with ENOENT on `catalog/identity/module.json`.
+4. **Child harness (`scripts/platform/lib/child.mjs`, formerly `render-child.mjs`).**
+   It absorbs the env defaults, the scratch dir, the teardown with `--keep`, the SIGINT
+   handling and the `pnpm check && pnpm test` sequence, which were duplicated between
+   `catalog:check` and `template:smoke`. `template:smoke` now cleans the scratch dir on
+   SIGINT.
+5. **Advisory gate per commit in CI.** `advisory-required.mjs` gains `--range
+   <base>..<head>`; `.github/workflows/catalog.yml` calls the module instead of
+   reimplementing the rule in shell. The previous `git reset --soft base` judged the
+   PR's entire diff against the head's message, so an `Advisory: none` trailer on the
+   last commit exempted all the others (`.specs/LESSONS.md` L-009).
+6. **The catalog tooling stops leaking into the child.** `catalog/` was already out of
+   the copy, but the scripts that only exist because of it were not: `catalog-check.mjs`,
    `catalog-lint.mjs`, `catalog-stage.mjs`, `advisory-required.mjs`, `template-smoke.mjs`,
-   `lib/child.mjs`, `lib/lint.mjs`, `scripts/platform/__tests__/**` e
-   `docs/catalog/README-contract.md` entraram no `_exclude`. O que **quebrava**: o
-   `lefthook.yml` do produto chamava `catalog:typecheck` no `pre-push`, `catalog:lint` no
-   `pre-commit` (com glob em `docs/advisories/**`, que o filho tem) e `advisory-required`
-   no `commit-msg` — gates do template rodando em todo commit e push do produto. Esses três
-   passaram para `lefthook-local.yml` (mesclado pelo lefthook, fora da cópia) e chamam o
-   módulo direto em vez do script de `package.json`. O manifest do filho é podado por um
-   `_task` novo, antes do `pnpm install`: saem os scripts `catalog:*`, `template:smoke` e
-   `test:scripts`, e `name` passa a ser o `project_slug` — antes todo produto nascia com
-   `"name": "platform-template"` na raiz. Não dá para resolver isso com um
-   `package.json.jinja`: o `_exclude` do copier casa pelo caminho de **destino**, e os dois
-   arquivos desembocam no mesmo `package.json`. `child-manifest.test.mjs` barra script novo
-   dependente de `catalog/` que fique fora da lista de poda.
-7. **`_exclude: catalog/` levava junto `docs/catalog/`.** Padrão gitignore sem `/` no
-   início não é âncorado: casava qualquer diretório chamado `catalog` em qualquer
-   profundidade. O filho nunca recebeu `docs/catalog/catalog.md` — que o próprio
-   `AGENTS.md` dele lista como handbook de "instalar/atualizar uma entrada do catálogo".
-   Virou `/catalog`, sem barra final: o copier testa o destino como `Path`, que nunca traz
-   a barra, então `/catalog/` deixava o diretório-raiz escapar e nascer vazio no filho.
-   `docs/catalog/README-contract.md` continua fora, agora por entrada explícita.
-8. **Repositório público, com cara pública.** O template passa a ser público no GitHub —
-   `copier copy` e o clone do catálogo no `module add` já eram HTTPS, então o produto
-   deixa de precisar de chave SSH. Entram `.github/README.md` (a página do repositório,
-   já que a raiz só tem `README.md.jinja`, que renderiza o README do produto),
-   `.github/assets/banner.svg` e `LICENSE` (MIT). Os três estão no `_exclude`: o produto
-   escreve o próprio README e decide a própria licença.
+   `lib/child.mjs`, `lib/lint.mjs`, `scripts/platform/__tests__/**` and
+   `docs/catalog/README-contract.md` went into `_exclude`. What **broke**: the product's
+   `lefthook.yml` called `catalog:typecheck` on `pre-push`, `catalog:lint` on
+   `pre-commit` (with a glob on `docs/advisories/**`, which the child has) and
+   `advisory-required` on `commit-msg` — template gates running on every product commit
+   and push. These three moved to `lefthook-local.yml` (merged by lefthook, outside the
+   copy) and call the module directly instead of the `package.json` script. The child's
+   manifest is pruned by a new `_task`, before `pnpm install`: the `catalog:*`,
+   `template:smoke` and `test:scripts` scripts go out, and `name` becomes the
+   `project_slug` — before, every product was born with `"name": "platform-template"` at
+   the root. This cannot be solved with a `package.json.jinja`: copier's `_exclude`
+   matches by **destination** path, and both files land in the same `package.json`.
+   `child-manifest.test.mjs` blocks any new `catalog/`-dependent script left out of the
+   prune list.
+7. **`_exclude: catalog/` took `docs/catalog/` along with it.** A gitignore pattern
+   without a leading `/` is not anchored: it matched any directory named `catalog` at
+   any depth. The child never received `docs/catalog/catalog.md` — which its own
+   `AGENTS.md` lists as the "install/update a catalog entry" handbook. It became
+   `/catalog`, without a trailing slash: copier tests the destination as a `Path`, which
+   never carries the slash, so `/catalog/` let the root directory slip through and be
+   born empty in the child. `docs/catalog/README-contract.md` stays out, now via an
+   explicit entry.
+8. **Public repository, with a public face.** The template becomes public on GitHub —
+   `copier copy` and the catalog clone on `module add` were already HTTPS, so the
+   product no longer needs an SSH key. In come `.github/README.md` (the repository page,
+   since the root only has `README.md.jinja`, which renders the product's README),
+   `.github/assets/banner.svg` and `LICENSE` (MIT). All three are in `_exclude`: the
+   product writes its own README and decides its own license.
+9. **Docs and handbooks in English; architecture handbooks consolidated.** Everything
+   under `docs/`, plus `AGENTS.md`, `README.md` and the template-only handbooks, is now
+   English. `docs/back/back-arch.md` and `docs/front/front-arch.md` became
+   `docs/arch/back.md` and `docs/arch/front.md` — purely conceptual, at most 200 lines
+   each, no code samples: mechanics live in the code and in the conformance specs, and
+   the inherited ADR numbers are gone from them. The Golden Rules keep their numbering
+   (back 1–32, front 1–26), so every citation by number still holds.
+   `docs/dev/ambiente-local.md` became `docs/dev/local-environment.md`; the ADR
+   file-name template is `NNNN-title.md`. Hooks, agent definitions, skills and code
+   comments that cited the old paths were re-pointed; `.rgignore` (two dead
+   `docs/superpowers/` entries) is gone. The heading literals in
+   `docs/catalog/README-contract.md` stay in Portuguese on purpose — `catalog-lint`
+   and the entry READMEs depend on them.
 
-### Passos de migração do filho
+### Child migration steps
 
-1. `copier update` — nenhuma ação manual. Quem chamava `render-child.mjs` direto (não
-   há chamador conhecido fora do template) passa a importar `lib/child.mjs`.
-2. O `copier update` apaga do produto os arquivos que entraram no `_exclude`, reescreve
-   `lefthook.yml` e poda o `package.json`. Se você tinha editado algum dos dois à mão, o
-   copier pergunta antes de sobrescrever. O `name` do pacote raiz muda de
-   `platform-template` para o `project_slug` — o próprio `_task` roda `pnpm install`
-   depois disso.
+1. `copier update` — no manual action. Whoever called `render-child.mjs` directly (there
+   is no known caller outside the template) now imports `lib/child.mjs`.
+2. `copier update` deletes from the product the files that went into `_exclude`, rewrites
+   `lefthook.yml` and prunes `package.json`. If you had edited either of the two by hand,
+   copier asks before overwriting. The root package `name` changes from
+   `platform-template` to the `project_slug` — the `_task` itself runs `pnpm install`
+   after that.
+3. `copier update` deletes `docs/back/`, `docs/front/` and `docs/dev/ambiente-local.md`
+   and adds `docs/arch/` and `docs/dev/local-environment.md`. If the product edited any
+   of the removed handbooks, move those edits into the new files (or into a product ADR)
+   before updating — copier flags the conflict. Product ADRs, specs and comments that
+   cite the old paths need re-pointing (`git grep -l "back-arch\|front-arch\|ambiente-local"`
+   lists them); citations of a Golden Rule by number keep working.
 
 ## v1.1.1
 
-Só documentação: a entrada v1.1.0 deste changelog citava o escopo de pacote de um
-produto como exemplo de registry privado; o exemplo saiu. Sem mudança de contrato,
-sem migration.
+Documentation only: the v1.1.0 entry of this changelog cited a product's package scope
+as an example of private registry; the example is gone. No contract change,
+no migration.
 
-### Passos de migração do filho (`copier update` de v1.1.0)
+### Child migration steps (`copier update` from v1.1.0)
 
-1. `git status` limpo, depois `copier update` (ou `copier update --vcs-ref v1.1.1`) —
-   só `docs/dev/template-changelog.md` muda.
+1. Clean `git status`, then `copier update` (or `copier update --vcs-ref v1.1.1`) —
+   only `docs/dev/template-changelog.md` changes.
 
 ## v1.1.0
 
-Harness de agentes portado do piloto e limpeza dos resquícios de registry privado
-que sobraram no kernel. Sem breaking change de contrato: não é preciso `pnpm contract`
-e não há migration nova.
+Agent harness ported from the pilot and cleanup of the private-registry leftovers
+that remained in the kernel. No contract breaking change: `pnpm contract` is not
+needed and there is no new migration.
 
-### Mudanças
+### Changes
 
-1. **Harness do piloto.** Hooks novos `dispatch-log.mjs` (registra toda chamada
-   `Agent` e todo `SubagentStart`/`SubagentStop` num `dispatch-log.jsonl` junto aos
-   transcripts, lido por `pnpm dispatch:report`) e `wave-plan-check.mjs` (revalida as
-   regras de wave/cluster a cada escrita de `tasks.md`); `delegate-to-subagent.mjs`
-   ganha quota de navegação direta por turno. Agents (`spec-worker`, `spec-verifier`,
-   `repo-scout`, `shell-runner`) e a skill `tlc-spec-driven` (card do orchestrator,
-   clusters verticais) atualizados; baseline de delegação documentada em
+1. **Pilot harness.** New hooks `dispatch-log.mjs` (records every `Agent` call and
+   every `SubagentStart`/`SubagentStop` in a `dispatch-log.jsonl` next to the
+   transcripts, read by `pnpm dispatch:report`) and `wave-plan-check.mjs` (re-validates
+   the wave/cluster rules on every write of `tasks.md`); `delegate-to-subagent.mjs`
+   gains a direct-navigation quota per turn. Agents (`spec-worker`, `spec-verifier`,
+   `repo-scout`, `shell-runner`) and the `tlc-spec-driven` skill (orchestrator card,
+   vertical clusters) updated; delegation baseline documented in
    [`docs/agents/harness.md`](../agents/harness.md).
-2. **Workflows de CI.** `.github/workflows/ci.yml` (lint/typecheck/builds, unit e
-   gate de cobertura com testcontainers) e `feedback-triage.yml` (triagem de relato
-   via `repository_dispatch`) passam a vir do template.
-3. **`.npmrc` removido e `Dockerfile.dev` simplificado.** O mapeamento de um escopo
-   de pacote para registry privado era resquício de produto; `apps/api/Dockerfile.dev`
-   não exige mais token de build e as seções correspondentes saíram de
-   [`ambiente-local.md`](ambiente-local.md) e [`deploy.md`](deploy.md).
-4. **`module add` entende o `_src_path` em shorthand do copier.** O copier grava
-   `_src_path: gh:<org>/<repo>` no `.copier-answers.yml` do produto (mesmo gerado
-   de um checkout local, ele normaliza para o remote origin); o resolvedor de
-   catálogo agora expande `gh:`/`gl:` para a URL https antes do `git clone`.
-   Antes, o primeiro `pnpm platform module add` de um produto gerado de `gh:...`
-   falhava com "catálogo inacessível".
+2. **CI workflows.** `.github/workflows/ci.yml` (lint/typecheck/builds, unit and
+   coverage gate with testcontainers) and `feedback-triage.yml` (report triage via
+   `repository_dispatch`) now come from the template.
+3. **`.npmrc` removed and `Dockerfile.dev` simplified.** Mapping a package scope to a
+   private registry was a product leftover; `apps/api/Dockerfile.dev` no longer
+   requires a build token and the corresponding sections were removed from
+   [`local-environment.md`](local-environment.md) and [`deploy.md`](deploy.md).
+4. **`module add` understands copier's shorthand `_src_path`.** Copier writes
+   `_src_path: gh:<org>/<repo>` in the product's `.copier-answers.yml` (even when
+   generated from a local checkout, it normalizes to the origin remote); the catalog
+   resolver now expands `gh:`/`gl:` to the https URL before `git clone`.
+   Before, the first `pnpm platform module add` of a product generated from `gh:...`
+   failed with "catálogo inacessível".
 
-### Passos de migração do filho (`copier update` de v1.0.0)
+### Child migration steps (`copier update` from v1.0.0)
 
-1. `git status` limpo, depois `copier update` (ou `copier update --vcs-ref v1.1.0`).
-2. **Se o produto usa registry privado próprio**: mantenha o seu
-   `.npmrc` no merge (rejeite a deleção) e reponha secret/build-arg no seu
-   `Dockerfile.dev` — o template não os traz mais.
-3. Se o produto já tem `ci.yml`/`feedback-triage.yml` próprios em
-   `.github/workflows/`, resolva o merge mantendo a sua versão ou adotando a do
-   template (`feedback-triage.yml` pressupõe o módulo de feedback instalado e os
-   secrets correspondentes no repositório).
+1. Clean `git status`, then `copier update` (or `copier update --vcs-ref v1.1.0`).
+2. **If the product uses its own private registry**: keep your `.npmrc` in the merge
+   (reject the deletion) and restore the secret/build-arg in your `Dockerfile.dev` —
+   the template no longer ships them.
+3. If the product already has its own `ci.yml`/`feedback-triage.yml` in
+   `.github/workflows/`, resolve the merge by keeping your version or adopting the
+   template's (`feedback-triage.yml` assumes the feedback module installed and the
+   corresponding secrets in the repository).
 4. `pnpm install`.
 
 ## v1.0.0
 
-O template passa a distribuir só o kernel; os módulos que antes vinham no copier viram
-entradas versionadas do catálogo (`catalog/<entry>[/<variant>]/`, fora do template
-renderizado), instaladas com `pnpm platform module add` — ver
-[`template.md`](template.md#catálogo-de-módulos).
+The template now distributes only the kernel; the modules that used to come via copier
+become versioned catalog entries (`catalog/<entry>[/<variant>]/`, outside the rendered
+template), installed with `pnpm platform module add` — see
+[`template.md`](template.md#module-catalog).
 
 ### Breaking changes
 
-1. **Kernel-only; módulos viram entradas de catálogo (AD-013).** Slot files
-   (perfis de acesso, catálogos de permissão, perfis de upload) foram retirados —
-   AD-001 aposentado. Extensão agora é `dependsOn` entre entradas ou uma porta do kernel,
-   nunca mais um slot editado pelo produto.
-2. **Seam de acesso do kernel muda de forma.** `ACCESS_REQUIREMENT` (metadata
-   `{ kind: "public" | "authenticated" | "permission", key? }`) é a única fonte lida pelo
-   guard de acesso do kernel; as chaves antigas de metadata de acesso saem de circulação.
-   `SelfService()`/`OptionalAuth()` passam a escrever `ACCESS_REQUIREMENT` diretamente.
-   `IS_MACHINE_TO_MACHINE_KEY` sobrevive — é opt-out de CSRF, não requisito de acesso.
-   Guard ou decorator próprio do produto que lia as chaves antigas quebra. No web, o tipo
-   `RouteAccess` (`apps/web/src/shared/config/route-access.types.ts`) muda de forma:
+1. **Kernel-only; modules become catalog entries (AD-013).** Slot files
+   (access profiles, permission catalogs, upload profiles) were removed —
+   AD-001 retired. Extension is now `dependsOn` between entries or a kernel port,
+   never again a slot edited by the product.
+2. **The kernel access seam changes shape.** `ACCESS_REQUIREMENT` (metadata
+   `{ kind: "public" | "authenticated" | "permission", key? }`) is the only source read
+   by the kernel access guard; the old access metadata keys go out of circulation.
+   `SelfService()`/`OptionalAuth()` now write `ACCESS_REQUIREMENT` directly.
+   `IS_MACHINE_TO_MACHINE_KEY` survives — it is a CSRF opt-out, not an access requirement.
+   Any product-owned guard or decorator that read the old keys breaks. On the web, the
+   `RouteAccess` type (`apps/web/src/shared/config/route-access.types.ts`) changes shape:
    `{ kind: "public" } | { kind: "authenticated" } | { kind: "permission"; key: string }` —
-   a variante `self` vira `authenticated` e `permission` ganha `key: string`. Produto que
-   consome `RouteAccess` direto precisa atualizar os literais.
-3. **Log do kernel perde o campo `sessionId`.** A superfície de sessão saiu do kernel; o
-   logger não tem mais fonte kernel-safe para recompor esse campo. Produto que dependia de
-   `sessionId` correlacionado no log estruturado precisa recompô-lo na própria entrada.
-4. **`/docs` remontado sem autenticação.** `GET /docs` deixou de exigir login e de depender
-   de módulo — é só a documentação servida em cima do `openapi.json`. Produto que precisa
-   do login de volta usa a receita em
-   [`template.md`](template.md#receita-docs-protegido-por-login).
-5. **Web do kernel perde sessão/login.** A entidade de sessão, o fluxo de login, o guard de
-   rota e a página de login saem do template — viram parte da entrada correspondente,
-   instalada via `module add` (parte web da entrada + receita de integração no README dela).
-6. **Ator no ALS troca de forma.** As funções antigas de acesso/sessão do contexto saem;
-   entram `setActor(actor)`/`getActor()` (uma vez, lança na segunda chamada) e
-   `setExtension`/`getExtension` (bag genérico por symbol, dono é a entrada que grava).
-   No contexto de job, o campo de usuário vira `actorId: string | null`.
-7. **Numeração de migrations do kernel reinicia.** O baseline do kernel recomeça em
-   `0000_kernel_baseline.sql`; entradas passam a gerar as próprias migrations no produto
-   (`drizzle-kit generate`, tabelas como TS + SQL manual só para trigger/função) em vez de
-   trazer SQL numerado pronto.
+   the `self` variant becomes `authenticated` and `permission` gains `key: string`. A
+   product that consumes `RouteAccess` directly needs to update the literals.
+3. **The kernel log loses the `sessionId` field.** The session surface left the kernel;
+   the logger no longer has a kernel-safe source to rebuild that field. A product that
+   relied on a correlated `sessionId` in the structured log needs to rebuild it in its
+   own entry.
+4. **`/docs` remounted without authentication.** `GET /docs` no longer requires login
+   nor depends on a module — it is just the documentation served on top of
+   `openapi.json`. A product that needs the login back uses the recipe in
+   [`template.md`](template.md#recipe-docs-protected-by-login).
+5. **The kernel web loses session/login.** The session entity, the login flow, the
+   route guard and the login page leave the template — they become part of the
+   corresponding entry, installed via `module add` (the entry's web part + integration
+   recipe in its README).
+6. **The actor in ALS changes shape.** The old access/session functions of the context
+   go out; in come `setActor(actor)`/`getActor()` (once, throws on the second call) and
+   `setExtension`/`getExtension` (a generic bag keyed by symbol, owned by the entry that
+   writes it). In the job context, the user field becomes `actorId: string | null`.
+7. **Kernel migration numbering restarts.** The kernel baseline restarts at
+   `0000_kernel_baseline.sql`; entries now generate their own migrations in the product
+   (`drizzle-kit generate`, tables as TS + manual SQL only for trigger/function) instead
+   of bringing ready-made numbered SQL.
 
-### Passos de migração do filho (`copier update` de v0.2.x)
+### Child migration steps (`copier update` from v0.2.x)
 
-1. `git status` limpo, depois `copier update` (ou `copier update --vcs-ref v1.0.0`).
-2. Para cada módulo da plataforma já presente no produto: `pnpm platform module adopt
-<entry> --version <versão-atual>` — registra o `.platform-modules.lock` sem tocar em
-   arquivo.
-3. Resolva o merge de `_journal.json` como de praxe (ver
-   [`numeração de migrations`](template.md#migrations-ad-015)).
+1. Clean `git status`, then `copier update` (or `copier update --vcs-ref v1.0.0`).
+2. For each platform module already present in the product: `pnpm platform module adopt
+<entry> --version <current-version>` — records the `.platform-modules.lock` without
+   touching any file.
+3. Resolve the `_journal.json` merge as usual (see
+   [`migration numbering`](template.md#migrations-ad-015)).
 4. `pnpm install`.
-5. `pnpm contract` (regenera `openapi.json` + cliente com o novo formato de
-   `ACCESS_REQUIREMENT` e as rotas afetadas).
-6. Reescreva guard/decorator próprio que lia as chaves antigas de acesso para
+5. `pnpm contract` (regenerates `openapi.json` + client with the new
+   `ACCESS_REQUIREMENT` format and the affected routes).
+6. Rewrite any product-owned guard/decorator that read the old access keys to use
    `ACCESS_REQUIREMENT`.
-7. Se o produto correlaciona log por `sessionId`, adicione uma extension própria no
-   contexto de requisição e registre-a explicitamente nos campos de log — o kernel não
-   repõe mais esse campo sozinho.
-8. Se `/docs` deve continuar atrás de login, aplique a receita de
-   [`template.md`](template.md#receita-docs-protegido-por-login).
-9. Rode as migrations (`pnpm --filter api db:migrate:run`).
+7. If the product correlates logs by `sessionId`, add your own extension in the request
+   context and register it explicitly in the log fields — the kernel no longer restores
+   that field on its own.
+8. If `/docs` must stay behind login, apply the recipe from
+   [`template.md`](template.md#recipe-docs-protected-by-login).
+9. Run the migrations (`pnpm --filter api db:migrate:run`).
 
 ## v0.2.0
 
-Os cinco pontos que antes exigiam editar arquivo de plataforma agora são
-slot/registry/porta — ver [`template.md`](template.md#slots-e-registries).
+The five points that used to require editing a platform file are now
+slot/registry/port — see [`template.md`](template.md).
 
 ### Breaking changes
 
-1. **`attendsGuests` → `servesClients`** — coluna `identity.users.attends_guests` vira
-   `serves_clients` (migration `0004_identity_serves_clients.sql`). Passo: renomeie o
-   campo em toda chamada de `createUser`/`updateUser`/`listUsers` do seu produto.
-2. **Nomes de perfil de upload** — `feedback-attachment` vira `multi` (migration
+1. **`attendsGuests` → `servesClients`** — column `identity.users.attends_guests` becomes
+   `serves_clients` (migration `0004_identity_serves_clients.sql`). Step: rename the
+   field in every `createUser`/`updateUser`/`listUsers` call in your product.
+2. **Upload profile names** — `feedback-attachment` becomes `multi` (migration
    `0005_attachment_generic_upload_profiles.sql`); `credit-receipt`,
-   `accommodation-type-image` e `report-artifact` deixam de existir. Env renomeadas:
+   `accommodation-type-image` and `report-artifact` cease to exist. Renamed env vars:
    `ATTACHMENT_FEEDBACK_MAX_FILE_BYTES`/`ATTACHMENT_FEEDBACK_MAX_TOTAL_BYTES` →
    `ATTACHMENT_MULTI_MAX_FILE_BYTES`/`ATTACHMENT_MULTI_MAX_TOTAL_BYTES`;
-   `ATTACHMENT_REPORT_MAX_BYTES` foi removida. Passo: atualize o `.env` e qualquer
-   upload do seu produto que ainda use os nomes antigos.
-3. **`Mailer` virou porta só de transporte** — `send({ to, subject, html,
-idempotencyKey? })`; a renderização saiu do mailer. Passo: se seu produto tem um
-   `Mailer` próprio, implemente só `send`; troque fakes de teste para
+   `ATTACHMENT_REPORT_MAX_BYTES` was removed. Step: update the `.env` and any upload
+   in your product that still uses the old names.
+3. **`Mailer` became a transport-only port** — `send({ to, subject, html,
+idempotencyKey? })`; rendering left the mailer. Step: if your product has its own
+   `Mailer`, implement only `send`; switch test fakes to
    `{ send: jest.fn() }`.
-4. **Forma da fonte de template mudou** — de `{ template, templateDir, subject }` solto
-   para `{ type, catalog, email? }` (`email` carrega `template`, `templateDir?`,
-   `subject`, `recipient?`, `view?`). Passo: reescreva todo `register(...)` que seu
-   produto faz em `NotificationTemplateSourceRegistry` para a nova forma.
-5. **`access-catalog` ganhou `profiles`** — `GET /v1/access-catalog` agora responde
-   também `profiles: [{ key, label, assignable }]`. Passo: regenere o cliente
-   (`pnpm contract`) antes de consumir a rota.
+4. **Template source shape changed** — from a loose `{ template, templateDir, subject }`
+   to `{ type, catalog, email? }` (`email` carries `template`, `templateDir?`,
+   `subject`, `recipient?`, `view?`). Step: rewrite every `register(...)` your
+   product makes on `NotificationTemplateSourceRegistry` to the new shape.
+5. **`access-catalog` gained `profiles`** — `GET /v1/access-catalog` now also responds
+   with `profiles: [{ key, label, assignable }]`. Step: regenerate the client
+   (`pnpm contract`) before consuming the route.
 
-### Passos de migração do filho (`copier update` de v0.1.0)
+### Child migration steps (`copier update` from v0.1.0)
 
-1. `git status` limpo, depois `copier update` (ou `copier update --vcs-ref v0.2.0`).
-2. Resolva o merge de `apps/api/drizzle/migrations/meta/_journal.json`: se
-   `pnpm --filter api db:check:journal` reprovar por causa das entradas `0004`/`0005`
-   recebidas da plataforma, reestampe o `when` delas para um valor maior que o da
-   última migration já aplicada no filho, preservando a ordem entre `0004` e `0005`
-   (ver [`template.md`](template.md#numeração-de-migrations)).
+1. Clean `git status`, then `copier update` (or `copier update --vcs-ref v0.2.0`).
+2. Resolve the `apps/api/drizzle/migrations/meta/_journal.json` merge: if
+   `pnpm --filter api db:check:journal` fails because of the `0004`/`0005` entries
+   received from the platform, re-stamp their `when` to a value greater than that of the
+   last migration already applied in the child, preserving the order between `0004` and
+   `0005` (see [`template.md`](template.md#migrations-ad-015)).
 3. `pnpm install`.
-4. `pnpm contract` (regenera `openapi.json` + o cliente Kubb com o campo `profiles`).
-5. Atualize os fakes de mailer dos testes do produto para `{ send: jest.fn() }` e as
-   fontes de template registradas para `{ type, catalog, email? }`.
-6. Atualize as env vars de upload do produto (`ATTACHMENT_MULTI_MAX_FILE_BYTES`/
-   `ATTACHMENT_MULTI_MAX_TOTAL_BYTES`; remova `ATTACHMENT_FEEDBACK_*` e
+4. `pnpm contract` (regenerates `openapi.json` + the Kubb client with the `profiles` field).
+5. Update the mailer fakes in the product's tests to `{ send: jest.fn() }` and the
+   registered template sources to `{ type, catalog, email? }`.
+6. Update the product's upload env vars (`ATTACHMENT_MULTI_MAX_FILE_BYTES`/
+   `ATTACHMENT_MULTI_MAX_TOTAL_BYTES`; remove `ATTACHMENT_FEEDBACK_*` and
    `ATTACHMENT_REPORT_MAX_BYTES`).
-7. Rode as migrations (`pnpm --filter api db:migrate:run`) para aplicar `0004`/`0005`.
+7. Run the migrations (`pnpm --filter api db:migrate:run`) to apply `0004`/`0005`.

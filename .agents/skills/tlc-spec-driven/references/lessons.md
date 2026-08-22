@@ -99,7 +99,7 @@ When `add` prints `PROMOTED to confirmed`, take the highest rung that honestly f
 | ---- | --------- | --------- |
 | 1 | PreToolUse hook in `.claude/hooks/` | The violation is detectable in the edit itself (naming, forbidden import, wrong path) |
 | 2 | A test that fails on violation (`apps/web/test/contract-enums.test.ts`, `packages/ui/src/components/select.test.tsx` are the models) | The violation is detectable by scanning the tree or the contract |
-| 3 | A line in the area handbook (`docs/test/testing.md`, `docs/front/front-arch.md`, `docs/back/back-arch.md`) or in `CLAUDE.md` | The rule needs human judgement — most evidence-quality rules land here |
+| 3 | A line in the area handbook (`docs/test/testing.md`, `docs/arch/front.md`, `docs/arch/back.md`) or in `CLAUDE.md` | The rule needs human judgement — most evidence-quality rules land here |
 
 Rung 3 is a real outcome, not a failure — but say in chat which rung you chose and why the one above it does not fit. Silently defaulting to rung 3 for a rule a hook could enforce is how the loop stops paying for itself.
 

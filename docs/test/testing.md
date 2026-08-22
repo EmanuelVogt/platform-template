@@ -1,73 +1,73 @@
 # Testing — Handbook
 
-Guia operacional de testes do monorepo. Fonte da pirâmide: `docs/back/back-arch.md` (seção Testes). Este documento descreve o **setup real** (runners, testcontainers, convenções) e como escrever cada tipo de teste.
+Operational testing guide for the monorepo. Source of the pyramid: `docs/arch/back.md`. This document describes the **actual setup** (runners, testcontainers, conventions) and how to write each kind of test.
 
-## Princípios
+## Principles
 
-1. **Pirâmide, não ampulheta.** Muitos unit (rápidos, puros), integration suficientes (banco real), poucos e2e (caros).
-2. **Sem mock de banco.** Integration e e2e rodam contra Postgres real (testcontainers). Mock de banco é proibido — esconde bug de SQL/migration/transação.
-3. **Teste o comportamento, não a implementação.** Asserts sobre efeito observável (linha no banco, resposta HTTP, evento emitido), não sobre chamadas internas.
-4. **pt-BR** nos `describe`/`it`. Identificador em inglês.
-5. **Isolamento.** Cada teste parte de estado limpo (`truncateKernel` entre integration; container efêmero por suite).
+1. **Pyramid, not hourglass.** Many unit tests (fast, pure), enough integration tests (real database), few e2e (expensive).
+2. **No database mock.** Integration and e2e run against a real Postgres (testcontainers). Mocking the database is forbidden — it hides SQL/migration/transaction bugs.
+3. **Test the behavior, not the implementation.** Assert on the observable effect (row in the database, HTTP response, emitted event), not on internal calls.
+4. **pt-BR** in `describe`/`it`. Identifiers in English.
+5. **Isolation.** Every test starts from a clean state (`truncateKernel` between integration tests; ephemeral container per suite).
 
-## O que conta como prova
+## What counts as proof
 
-Regras confirmadas pelo loop de lições (`.specs/LESSONS.md`, promovidas por reincidência em features distintas). Valem para qualquer teste do monorepo, dentro ou fora do fluxo de spec:
+Rules confirmed by the lessons loop (`.specs/LESSONS.md`, promoted by recurrence across distinct features). They apply to any test in the monorepo, inside or outside the spec flow:
 
-- **Asserte o valor exato que o critério ou o título do teste promete.** `toBeDefined`, "o campo existe" e "não lançou" não são prova (L-007).
-- **Cubra toda variante de entrada que o critério abrange** — conjunto misto, caminho alternativo, par de mesmo sentido. O caso representativo não prova os outros (L-004).
-- **Asserte que um caminho de produção alcança o estado que dispara o comportamento.** Provar que o handler responde certo quando chamado não prova que ele roda (L-013).
-- **Asserte valor que só existe como dado repassado adiante** — `style` inline, props de filho mockado. Sem assert, apagar o valor não quebra nada (L-010).
+- **Assert the exact value the criterion or the test title promises.** `toBeDefined`, "the field exists" and "did not throw" are not proof (L-007).
+- **Cover every input variant the criterion covers** — mixed set, alternate path, same-direction pair. The representative case does not prove the others (L-004).
+- **Assert that a production path reaches the state that triggers the behavior.** Proving the handler answers correctly when called does not prove it runs (L-013).
+- **Assert values that only exist as data passed along** — inline `style`, props of a mocked child. Without the assert, deleting the value breaks nothing (L-010).
 
-Lição nova nasce do Verifier, não daqui: `scripts/lessons.py` + [`.specs/lessons-vocabulary.md`](../../.specs/lessons-vocabulary.md).
+A new lesson is born from the Verifier, not from here: `scripts/lessons.py` + `.specs/lessons-vocabulary.md`.
 
-## Pirâmide
+## Pyramid
 
-| Tipo            | Escopo                                          | Banco            | Runner / sufixo                 |
-| --------------- | ----------------------------------------------- | ---------------- | ------------------------------- |
-| **Unit**        | função/classe pura (domain, VO, schema, helper) | nenhum           | jest `*.spec.ts` / vitest `*.test.ts` |
-| **Integration** | `application` + `infrastructure` (repo, tx, outbox) | Postgres real | jest `*.int-spec.ts`            |
-| **E2E**         | controller → use case → banco → outbox → handler | Postgres real   | jest `*.e2e-spec.ts`            |
-| **Contract**    | facade exposta (snapshot do formato)            | nenhum           | jest `*.spec.ts`                |
-| **OpenAPI**     | snapshot do `openapi.json` no CI                | —                | `pnpm contract` + `git diff`    |
+| Type            | Scope                                               | Database      | Runner / suffix                       |
+| --------------- | --------------------------------------------------- | ------------- | ------------------------------------- |
+| **Unit**        | pure function/class (domain, VO, schema, helper)    | none          | jest `*.spec.ts` / vitest `*.test.ts` |
+| **Integration** | `application` + `infrastructure` (repo, tx, outbox) | real Postgres | jest `*.int-spec.ts`                  |
+| **E2E**         | controller → use case → database → outbox → handler | real Postgres | jest `*.e2e-spec.ts`                  |
+| **Contract**    | exposed facade (format snapshot)                    | none          | jest `*.spec.ts`                      |
+| **OpenAPI**     | `openapi.json` snapshot in CI                       | —             | `pnpm contract` + `git diff`          |
 
 ## Runners
 
-- **`apps/api` → jest + @swc/jest.** Transform sem typecheck (ordens de magnitude mais rápido que ts-jest); decorators via `legacyDecorator` + `decoratorMetadata` na config inline de cada config jest, `module.type: commonjs`. O tipo dos specs é garantido pelo `tsc --noEmit` (o tsconfig da api inclui `src/**` e `test/**`) — roda no pré-push e no CI.
-- **`apps/web` → vitest + Testing Library + jsdom.** Nativo do ecossistema Vite; rápido; mesmo resolver de alias do app.
+- **`apps/api` → jest + @swc/jest.** Transform without typecheck (orders of magnitude faster than ts-jest); decorators via `legacyDecorator` + `decoratorMetadata` in the inline config of each jest config, `module.type: commonjs`. Spec typing is guaranteed by `tsc --noEmit` (the api tsconfig includes `src/**` and `test/**`) — runs on pre-push and in CI.
+- **`apps/web` → vitest + Testing Library + jsdom.** Native to the Vite ecosystem; fast; same alias resolver as the app.
 
-> No back **não** use o alias `@/` em código nem em teste — só imports relativos (o builder do Nest e o CommonJS do jest não reescrevem o alias em runtime).
+> On the back, do **not** use the `@/` alias in code or in tests — relative imports only (the Nest builder and jest's CommonJS do not rewrite the alias at runtime).
 
-## Estrutura e nomenclatura
+## Structure and naming
 
 ```
 apps/api/
-├── src/**/<nome>.spec.ts          Unit — ao lado do código
-├── src/**/<nome>.int-spec.ts      Integration — ao lado do código
+├── src/**/<name>.spec.ts          Unit — next to the code
+├── src/**/<name>.int-spec.ts      Integration — next to the code
 ├── test/
-│   ├── <fluxo>.e2e-spec.ts        E2E — boot do app + supertest
-│   ├── jest-integration.json      config jest dos *.int-spec
-│   ├── jest-e2e.json              config jest dos *.e2e-spec
+│   ├── <flow>.e2e-spec.ts         E2E — app boot + supertest
+│   ├── jest-integration.json      jest config for *.int-spec
+│   ├── jest-e2e.json              jest config for *.e2e-spec
 │   └── setup/
-│       ├── global-setup.ts        sobe container + aplica migrations
-│       ├── global-teardown.ts     derruba container
-│       ├── e2e-env.ts             aponta DATABASE_URL p/ o container (e2e)
-│       ├── test-db.ts             pool/drizzle de teste + truncateKernel
-│       └── test-logger.ts         LoggerFactory silencioso p/ instanciar kernel
+│       ├── global-setup.ts        starts the container + applies migrations
+│       ├── global-teardown.ts     tears the container down
+│       ├── e2e-env.ts             points DATABASE_URL at the container (e2e)
+│       ├── test-db.ts             test pool/drizzle + truncateKernel
+│       └── test-logger.ts         silent LoggerFactory to instantiate the kernel
 
 apps/web/
-├── src/**/<nome>.test.ts(x)       Unit/componente — ao lado do código
+├── src/**/<name>.test.ts(x)       Unit/component — next to the code
 ├── vitest.config.ts
-└── test/setup.ts                  matchers jest-dom
+└── test/setup.ts                  jest-dom matchers
 ```
 
-`*.spec.ts` (unit) roda no `pnpm test` e **ignora** `*.int-spec.ts`/`*.e2e-spec.ts` (eles exigem Docker).
+`*.spec.ts` (unit) runs in `pnpm test` and **ignores** `*.int-spec.ts`/`*.e2e-spec.ts` (they require Docker).
 
-## Comandos
+## Commands
 
 ```
 # apps/api
-pnpm --filter api test        unit (rápido, sem Docker)
+pnpm --filter api test        unit (fast, no Docker)
 pnpm --filter api test:int    integration (testcontainers)
 pnpm --filter api test:e2e    e2e (testcontainers)
 pnpm --filter api test:all    unit + int + e2e
@@ -75,60 +75,61 @@ pnpm --filter api test:all    unit + int + e2e
 # apps/web
 pnpm --filter web test        vitest (jsdom)
 
-# raiz
-pnpm test                     turbo: roda o `test` (unit) de cada app — NÃO cobre catalog/**
+# root
+pnpm test                     turbo: runs each app's `test` (unit) — does NOT cover catalog/**
 
-# raiz, só no repositório do template: o produto não recebe `catalog/` nem estes scripts
-pnpm test:scripts             node --test em scripts/platform/__tests__/*.test.mjs
-pnpm catalog:lint             lint de catalog/** e docs/advisories/** (hook pre-commit)
-pnpm catalog:typecheck        só compila as entradas (espelho staged, não roda spec nenhum)
-pnpm catalog:check            único comando que instala e roda os testes de uma entrada
+# root, template repository only: the product receives neither `catalog/` nor these scripts
+pnpm test:scripts             node --test on scripts/platform/__tests__/*.test.mjs
+pnpm catalog:lint             lint of catalog/** and docs/advisories/** (pre-commit hook)
+pnpm catalog:typecheck        only compiles the entries (staged mirror, runs no spec)
+pnpm catalog:check            the only command that installs and runs an entry's tests
 ```
 
-`pnpm test:scripts` usa o runner nativo do Node (`node --test`) — não há jest/vitest
-configurado para `scripts/`; é o único lugar do monorepo que usa esse runner.
+`pnpm test:scripts` uses Node's native runner (`node --test`) — there is no jest/vitest
+configured for `scripts/`; it is the only place in the monorepo that uses that runner.
 
-`test:int` roda **paralelo** (`maxWorkers: 4`): cada worker usa um database próprio (`test_w<N>`, clone do DB migrado via `CREATE DATABASE ... TEMPLATE`), então suítes truncam à vontade sem corrida. `test:e2e` roda **serial** (`maxWorkers: 1`) — o app boota no DB base e as suítes compartilham Redis (estado de rate-limit).
+`test:int` runs **in parallel** (`maxWorkers: 4`): each worker uses its own database (`test_w<N>`, a clone of the migrated DB via `CREATE DATABASE ... TEMPLATE`), so suites can truncate freely without races. `test:e2e` runs **serially** (`maxWorkers: 1`) — the app boots on the base DB and the suites share Redis (rate-limit state).
 
-**Nada de `--runInBand` no e2e.** Serialização já vem do `maxWorkers: 1`; o `--runInBand` só remove o worker filho, e é ele que segura a memória. Cada arquivo e2e boota o `AppModule` num realm novo, e o jest-circus retém a árvore de describe/hook do arquivo — o closure do `beforeAll` segura o app Nest inteiro. `app.close()` solta socket e timer, **não** o grafo de objetos. In-band os realms se acumulam num processo só: ~3,5 GB no fim do tier sem coverage (teto default do Node é ~4 GB) e OOM com coverage, que ~triplica o custo por arquivo. Em worker, o `workerIdleMemoryLimit` (`1.5GB`, no `jest-e2e.json`) recicla o processo entre arquivos e o pico fica limitado. Detalhe: `shouldRunInBand` do jest só respeita o `workerIdleMemoryLimit` quando `--runInBand` está ausente.
+**No `--runInBand` on e2e.** Serialization already comes from `maxWorkers: 1`; `--runInBand` only removes the child worker, and it is the worker that holds the memory. Each e2e file boots the `AppModule` in a new realm, and jest-circus retains the file's describe/hook tree — the `beforeAll` closure holds the entire Nest app. `app.close()` releases sockets and timers, **not** the object graph. In-band the realms pile up in a single process: ~3.5 GB at the end of the tier without coverage (Node's default ceiling is ~4 GB) and OOM with coverage, which ~triples the cost per file. In a worker, `workerIdleMemoryLimit` (`1.5GB`, in `jest-e2e.json`) recycles the process between files and the peak stays bounded. Detail: jest's `shouldRunInBand` only honors `workerIdleMemoryLimit` when `--runInBand` is absent.
 
-## testcontainers — como funciona
+## testcontainers — how it works
 
-1. `global-setup.ts` sobe `postgres:16-alpine`, aplica as migrations reais (`drizzle-orm/.../migrator`) e publica a URI em `process.env.TC_POSTGRES_URI` (Redis idem, em `TC_REDIS_URI`).
-2. Workers herdam esse env no fork e leem pelos helpers de `test/setup/container-uris.ts` (`globalThis` não atravessa processo; env atravessa). Como o handshake é por processo e não por arquivo em disco, **dois runs simultâneos no mesmo checkout não se atropelam** — cada um fala só com os próprios containers.
-3. `global-teardown.ts` derruba o container (o reaper do testcontainers cobre falhas).
-4. Entre testes, `truncateKernel(pool)` zera o schema `_kernel`.
+1. `global-setup.ts` starts `postgres:16-alpine`, applies the real migrations (`drizzle-orm/.../migrator`) and publishes the URI in `process.env.TC_POSTGRES_URI` (same for Redis, in `TC_REDIS_URI`).
+2. Workers inherit that env on fork and read it through the helpers in `test/setup/container-uris.ts` (`globalThis` does not cross processes; env does). Because the handshake is per process and not per file on disk, **two simultaneous runs on the same checkout do not step on each other** — each one talks only to its own containers.
+3. `global-teardown.ts` tears the container down (the testcontainers reaper covers failures).
+4. Between tests, `truncateKernel(pool)` wipes the `_kernel` schema.
 
-Exige **Docker** na máquina e no CI. Cada `test:int`/`test:e2e` é uma suite com um container.
+Requires **Docker** on the machine and in CI. Each `test:int`/`test:e2e` is one suite with one container.
 
-**Runtime em VM (Colima, Docker Desktop, Rancher):** nada a configurar. O
-testcontainers procura o socket em caminhos fixos e ignora o contexto do Docker
-CLI — daí o "Could not find a working container runtime strategy" mesmo com o
-`docker` respondendo. `test/setup/docker-runtime.ts` resolve o socket pelo
-contexto ativo e aponta o bind mount do Ryuk para `/var/run/docker.sock` (o
-caminho que vale dentro da VM; sem isso o reaper morre no mount e a alternativa
-seria desligá-lo, vazando Postgres/Redis quando a suíte é morta). `DOCKER_HOST`
-ou `TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE` vindos do ambiente sempre vencem, e
-com daemon nativo (Linux/CI) a detecção é no-op.
+**Runtime in a VM (Colima, Docker Desktop, Rancher):** nothing to configure.
+testcontainers looks for the socket at fixed paths and ignores the Docker CLI
+context — hence the "Could not find a working container runtime strategy" even
+with `docker` responding. `test/setup/docker-runtime.ts` resolves the socket from
+the active context and points Ryuk's bind mount at `/var/run/docker.sock` (the
+path that is valid inside the VM; without it the reaper dies on the mount and the
+alternative would be disabling it, leaking Postgres/Redis when the suite gets
+killed). `DOCKER_HOST` or `TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE` coming from the
+environment always win, and with a native daemon (Linux/CI) the detection is a
+no-op.
 
 ## Unit
 
-Puro, sem IO. Instancie e asserte o efeito.
+Pure, no IO. Instantiate and assert the effect.
 
 ```typescript
 // src/shared/config/env.spec.ts
 import { parseEnv } from "./env"
 
-it("falha (fail-fast) sem DATABASE_URL", () => {
+it("fails (fail-fast) without DATABASE_URL", () => {
   expect(() => parseEnv({})).toThrow(/DATABASE_URL/)
 })
 ```
 
-Para o que é privado (ex.: `hashRequest`), extraia uma função pura exportável ou teste pelo comportamento público — não exponha interno só para o teste sem necessidade.
+For what is private (e.g. `hashRequest`), extract an exportable pure function or test through the public behavior — do not expose internals just for the test without need.
 
-## Integration (banco real)
+## Integration (real database)
 
-Instancie as classes do kernel **manualmente** (sem o container DI do Nest) com o pool de teste e o `makeTestLogger`. Use `TransactionManager.run` para abrir tx.
+Instantiate the kernel classes **manually** (without Nest's DI container) with the test pool and `makeTestLogger`. Use `TransactionManager.run` to open a tx.
 
 ```typescript
 // src/shared/kernel/transactional/transaction-manager.int-spec.ts
@@ -140,7 +141,7 @@ beforeAll(() => {
 afterAll(async () => { await pool.end() })
 beforeEach(async () => { await truncateKernel(pool) })
 
-it("faz rollback quando o run lança", async () => {
+it("rolls back when run throws", async () => {
   await expect(
     txm.run(async () => { await insert("e2"); throw new Error("boom") })
   ).rejects.toThrow("boom")
@@ -148,13 +149,13 @@ it("faz rollback quando o run lança", async () => {
 })
 ```
 
-Cubra as invariantes críticas: commit/rollback, join vs `requires_new` (savepoint), `onCommit`, dedupe (`markIfNew`), reclaim de idempotência por expiração, retry/dead-letter do outbox.
+Cover the critical invariants: commit/rollback, join vs `requires_new` (savepoint), `onCommit`, dedupe (`markIfNew`), idempotency reclaim by expiration, outbox retry/dead-letter.
 
-Para exercitar o dispatcher sem esperar o poll, registre um listener no `EventEmitter2` e chame `dispatcher.poll()` direto (método público).
+To exercise the dispatcher without waiting for the poll, register a listener on `EventEmitter2` and call `dispatcher.poll()` directly (public method).
 
 ## E2E
 
-Boot do `AppModule` real via `@nestjs/testing` + `supertest`, contra o container. Espelhe o setup do `main.ts` (versioning + middleware de contexto).
+Boot the real `AppModule` via `@nestjs/testing` + `supertest`, against the container. Mirror the `main.ts` setup (versioning + context middleware).
 
 ```typescript
 // test/health.e2e-spec.ts
@@ -165,9 +166,9 @@ beforeAll(async () => {
   app.use(createRequestContextMiddleware(app.get(RequestContext)))
   await app.init()
 })
-afterAll(async () => { await app.close() })   // fecha pool + LISTEN client + intervals
+afterAll(async () => { await app.close() })   // closes pool + LISTEN client + intervals
 
-it("rota inexistente → 404 RFC 7807 com correlationId do header", async () => {
+it("unknown route → 404 RFC 7807 with the correlationId from the header", async () => {
   const res = await request(app.getHttpServer())
     .get("/v1/nope").set("X-Correlation-Id", "corr-e2e").expect(404)
   expect(res.headers["content-type"]).toContain("application/problem+json")
@@ -175,80 +176,80 @@ it("rota inexistente → 404 RFC 7807 com correlationId do header", async () => 
 })
 ```
 
-`e2e-env.ts` define `DATABASE_URL` (container), `NODE_ENV=test`, `LOG_LEVEL=silent` antes do boot. Sempre `app.close()` no `afterAll` — senão o pool/LISTEN client/intervals vazam handles.
+`e2e-env.ts` sets `DATABASE_URL` (container), `NODE_ENV=test`, `LOG_LEVEL=silent` before boot. Always `app.close()` in `afterAll` — otherwise the pool/LISTEN client/intervals leak handles.
 
-**IO externo nunca é real no e2e.** O `e2e-env.ts` força `MAIL_TRANSPORT=log` (LogMailer) e apaga `RESEND_API_KEY`/`MAIL_FROM` — o `.env` de dev usa `MAIL_TRANSPORT=resend` com **chave REAL**, e o `DeliveryDispatcher` roda em background (`@Interval`), então um fluxo que dispara e-mail (create-user, forgot-password, lockout) **enviaria de verdade** sem essa trava. Mesma lógica do R2 (credenciais dummy). Pra **asseverar** o efeito de um envio, dê `.overrideProvider(MAILER).useValue(fake)` no `Test.createTestingModule` (idem `OBJECT_STORAGE` p/ storage) — nunca confie no provider real nem em lembrar do override por teste: a trava do `e2e-env` é a rede de segurança.
+**External IO is never real in e2e.** `e2e-env.ts` forces `MAIL_TRANSPORT=log` (LogMailer) and removes `RESEND_API_KEY`/`MAIL_FROM` — the dev `.env` uses `MAIL_TRANSPORT=resend` with a **REAL key**, and `DeliveryDispatcher` runs in the background (`@Interval`), so a flow that triggers an e-mail (create-user, forgot-password, lockout) **would actually send it** without this safeguard. Same logic for R2 (dummy credentials). To **assert** the effect of a send, use `.overrideProvider(MAILER).useValue(fake)` in `Test.createTestingModule` (same for `OBJECT_STORAGE` for storage) — never rely on the real provider nor on remembering the override per test: the `e2e-env` safeguard is the safety net.
 
 ## Contract / OpenAPI snapshot
 
-- **Contract de facade:** quando houver facade pública entre módulos, snapshot do formato que cada consumidor espera (`*.spec.ts`, sem banco).
-- **OpenAPI:** o CI roda `pnpm contract` e falha se `openapi.json` divergir (`git diff --exit-code openapi.json`). Mudou contrato → regerar e commitar.
-- **`/docs` não dá pra exercitar via HTTP no e2e.** `test/setup/scalar-stub.ts` neutraliza `@scalar/nestjs-api-reference` via `moduleNameMapper` do jest (o pacote é ESM puro, incompatível com o CJS do jest) — o e2e de contrato assevera o `openapi.json` estático, não a página `/docs` renderizada.
+- **Facade contract:** when there is a public facade between modules, snapshot the format each consumer expects (`*.spec.ts`, no database).
+- **OpenAPI:** CI runs `pnpm contract` and fails if `openapi.json` diverges (`git diff --exit-code openapi.json`). Changed the contract → regenerate and commit.
+- **`/docs` cannot be exercised over HTTP in e2e.** `test/setup/scalar-stub.ts` neutralizes `@scalar/nestjs-api-reference` via jest's `moduleNameMapper` (the package is pure ESM, incompatible with jest's CJS) — the contract e2e asserts the static `openapi.json`, not the rendered `/docs` page.
 
-## Parity (catálogo)
+## Parity (catalog)
 
-Toda entrada do catálogo carrega `parity/*.parity.spec.ts` + `parity/contract.snapshot.json`
-ao lado do código — comparam o comportamento observável da entrada (rota, evento, facade)
-contra o snapshot gravado na versão da entrada. `module add` copia os specs de paridade para
-`apps/api/src/modules/<entry>/__parity__/` (convenção de path do `module.json`), onde o
-jest do produto os enxerga como qualquer outro `*.spec.ts`.
+Every catalog entry carries `parity/*.parity.spec.ts` + `parity/contract.snapshot.json`
+next to the code — they compare the entry's observable behavior (route, event, facade)
+against the snapshot recorded at the entry's version. `module add` copies the parity specs to
+`apps/api/src/modules/<entry>/__parity__/` (path convention from `module.json`), where the
+product's jest sees them like any other `*.spec.ts`.
 
-**Nenhum gate deste repositório roda um spec do catálogo isoladamente.** `pnpm --filter api
-test` não enxerga `catalog/**` (fora do `rootDir` do jest); `pnpm catalog:typecheck` só
-prova que as entradas compilam, via um espelho staged e gitignored em
-`apps/api/.catalog-stage/`. Os specs unit/integration/e2e/parity de uma entrada só rodam
-**dentro de um produto renderizado**, depois de `module add` — ou seja, via
-`pnpm catalog:check`. Quem quer provar que uma entrada passa nos próprios testes roda
-`catalog:check`, nunca um comando na raiz do template.
+**No gate in this repository runs a catalog spec in isolation.** `pnpm --filter api
+test` does not see `catalog/**` (outside jest's `rootDir`); `pnpm catalog:typecheck` only
+proves the entries compile, via a staged, gitignored mirror in
+`apps/api/.catalog-stage/`. An entry's unit/integration/e2e/parity specs only run
+**inside a rendered product**, after `module add` — that is, via
+`pnpm catalog:check`. Whoever wants to prove an entry passes its own tests runs
+`catalog:check`, never a command at the template root.
 
 ## Web (vitest + RTL)
 
 ```typescript
-// schema puro
+// pure schema
 import { loginSchema } from "./login.schema"
-it("rejeita e-mail inválido", () => {
+it("rejects an invalid e-mail", () => {
   expect(loginSchema.safeParse({ email: "nope", password: "x", rememberMe: false }).success).toBe(false)
 })
 
-// componente
+// component
 import "@testing-library/jest-dom/vitest"
 import { render, screen } from "@testing-library/react"
-render(<Greeting name="Mundo" />)
-expect(screen.getByText("Olá, Mundo")).toBeInTheDocument()
+render(<Greeting name="World" />)
+expect(screen.getByText("Hello, World")).toBeInTheDocument()
 ```
 
-Import explícito de `vitest` (`describe`/`it`/`expect`) — sem `globals`, para não mexer no tsconfig do web. Forms que dependem de router/query: envolva nos providers mínimos.
+Explicit import from `vitest` (`describe`/`it`/`expect`) — no `globals`, so as not to touch the web tsconfig. Forms that depend on router/query: wrap them in the minimal providers.
 
 ## CI
 
 ```
-1. pnpm check               lint + typecheck (todos pacotes)
-2. pnpm --filter api test   unit (sem Docker)
+1. pnpm check               lint + typecheck (all packages)
+2. pnpm --filter api test   unit (no Docker)
 3. pnpm --filter web test   vitest
 4. [Docker] pnpm --filter api test:int
 5. [Docker] pnpm --filter api test:e2e
 6. pnpm --filter api contract && git diff --exit-code openapi.json
 ```
 
-`test:int`/`test:e2e` exigem um runner com Docker (testcontainers).
+`test:int`/`test:e2e` require a runner with Docker (testcontainers).
 
-## Anti-padrões
+## Anti-patterns
 
-- Mock de banco em integration/e2e (use testcontainers).
-- Asserts em chamadas internas / spies onde dá pra checar o efeito observável.
-- `@/` em teste do back (use relativo).
-- Esquecer `app.close()` no e2e (vaza handles).
-- Teste integration sem `truncate` entre casos (vaza estado).
-- Espera baseada em clock do JS pra efeito gravado pelo Postgres (`new Date()` vs `now()` — precisão ms vs µs; compare no SQL).
-- e2e sem Docker no CI marcado como obrigatório no pipeline rápido (separe o estágio).
+- Database mock in integration/e2e (use testcontainers).
+- Asserts on internal calls / spies where the observable effect can be checked.
+- `@/` in back tests (use relative).
+- Forgetting `app.close()` in e2e (leaks handles).
+- Integration test without `truncate` between cases (leaks state).
+- Waiting based on the JS clock for an effect recorded by Postgres (`new Date()` vs `now()` — ms vs µs precision; compare in SQL).
+- e2e without Docker in CI marked as mandatory in the fast pipeline (separate the stage).
 
-## Onde criar o teste
+## Where to create the test
 
 ```
-Regra pura (domain, VO, schema, helper)?     → <nome>.spec.ts ao lado (api) / <nome>.test.ts (web)
-Repo / tx / outbox / idempotência (banco)?   → <nome>.int-spec.ts ao lado
-Fluxo HTTP ponta a ponta?                     → test/<fluxo>.e2e-spec.ts
-Componente React?                             → <nome>.test.tsx ao lado
-Facade pública entre módulos?                 → <facade>.spec.ts (snapshot de contrato)
-Decisão estrutural de teste (exceção)?        → docs/adr/NNNN-titulo.md
+Pure rule (domain, VO, schema, helper)?        → <name>.spec.ts next to it (api) / <name>.test.ts (web)
+Repo / tx / outbox / idempotency (database)?   → <name>.int-spec.ts next to it
+End-to-end HTTP flow?                          → test/<flow>.e2e-spec.ts
+React component?                               → <name>.test.tsx next to it
+Public facade between modules?                 → <facade>.spec.ts (contract snapshot)
+Structural test decision (exception)?          → docs/adr/NNNN-title.md
 ```

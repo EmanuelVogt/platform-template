@@ -102,7 +102,7 @@ const sample = hits
   .join('\n');
 
 process.stderr.write(
-  `Contract enum retyped by hand (${hits.length}) — ADR 0076, docs/front/front-arch.md:
+  `Contract enum retyped by hand (${hits.length}) — ADR 0076, docs/arch/front.md § Contract enums and selects:
 ${sample}
 
 The edit was ALREADY APPLIED to the file — do NOT retry the same Edit (old_string no longer matches).

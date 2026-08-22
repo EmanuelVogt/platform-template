@@ -22,8 +22,8 @@ by section, with `Read` offset/limit, never whole:
 3. `.agents/skills/tlc-spec-driven/references/coding-principles.md`.
 4. The sections of `tasks.md` / `spec.md` / `design.md` that the payload pointed to. Never
    `.specs/STATE.md` — a decision you need is in `design.md` or came as one line in the payload.
-5. The handbook for the area you'll be touching, per the `CLAUDE.md` table (`docs/back/back-arch.md`
-   or `docs/front/front-arch.md`) — only the relevant sections; and the `CLAUDE.md` tripwires
+5. The handbook for the area you'll be touching, per the `CLAUDE.md` table (`docs/arch/back.md`
+   or `docs/arch/front.md`) — only the relevant sections; and the `CLAUDE.md` tripwires
    apply in full (language, no `console.*`, no `any`, no barrel in the front, Zod is the contract…).
 
 ## Context discipline (the repo's hook enforces this — it isn't advice)

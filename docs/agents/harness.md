@@ -11,10 +11,10 @@ before it reaches the agent. Registered in `~/.claude/settings.json` (Claude Cod
 
 **Exempt** (`exclude_commands`), each because compression destroyed evidence:
 
-| Command | What compression did |
-| --- | --- |
-| `git` | A clean `git status` became "ok"; `git log` dropped merge commits |
-| `rg` | Delegated to `grep`, different semantics |
+| Command      | What compression did                                                              |
+| ------------ | --------------------------------------------------------------------------------- |
+| `git`        | A clean `git status` became "ok"; `git log` dropped merge commits                 |
+| `rg`         | Delegated to `grep`, different semantics                                          |
 | `npx`, `tsc` | `npx tsc --version` answered "TypeScript: No errors found" instead of the version |
 
 Everything else stays proxied (`cat`→`rtk read`, `ls`, `grep`, `find`, `wc`, lint,
@@ -51,16 +51,16 @@ writes next to the transcripts on every `Agent` call, `SubagentStart` and `Subag
 **Baseline of 2026-08-17**, against which a later run is compared
 — every claim in this section comes from it:
 
-| | |
-| --- | --- |
-| sessions / assistant turns | 22 / 3.516 |
-| cache read (the dominant cost) | 722M |
-| average context per turn | 205k |
-| floor of a fresh session | 41k |
-| the 8 most expensive sessions | 91% of all cache read |
-| shell output that is navigation | 87% (968 calls) |
-| shell output that is tests + typecheck | 1,1% (35 calls) |
-| `Agent` calls vs. direct navigation | 52 vs. 968 |
+|                                        |                       |
+| -------------------------------------- | --------------------- |
+| sessions / assistant turns             | 22 / 3.516            |
+| cache read (the dominant cost)         | 722M                  |
+| average context per turn               | 205k                  |
+| floor of a fresh session               | 41k                   |
+| the 8 most expensive sessions          | 91% of all cache read |
+| shell output that is navigation        | 87% (968 calls)       |
+| shell output that is tests + typecheck | 1,1% (35 calls)       |
+| `Agent` calls vs. direct navigation    | 52 vs. 968            |
 
 The last line is the one to watch: `repo-scout` landed on 2026-08-17, so any drop in
 navigation volume after that date is the habit taking — or not.
@@ -214,7 +214,7 @@ never recreate `.cursor/skills` — Cursor reads `.agents` directly.
   checkout. Rule in [`workflow.md`](workflow.md).
 - `.claude/hooks/contract-consumers.mjs` — runs `pnpm contract:consumers` when a
   `*.contract.ts` file is edited. **Claude Code only** — in Cursor and Codex, run the
-  command by hand. Rule in [`../back/back-arch.md`](../back/back-arch.md).
+  command by hand. Rule in [`../arch/back.md`](../arch/back.md).
 - `.claude/hooks/reinject-tripwires.mjs` — re-injects the CLAUDE.md Tripwires section on
   the next prompt every ~2 MB of transcript growth, so long sessions don't drift from the
   initial instructions.
@@ -229,11 +229,11 @@ never recreate `.cursor/skills` — Cursor reads `.agents` directly.
   navigation in the main thread past a per-turn quota (2) and every test/typecheck/lint/
   build run (quota 0), naming the subagent to call — `repo-scout` or `shell-runner`. A
   piped Bash command is classified by its first pipe segment only (`git status --short |
-  head` isn't navigation — a filter after a pipe reduces what enters the context); the
+head` isn't navigation — a filter after a pipe reduces what enters the context); the
   redirect-to-file check still runs on the whole statement. A Bash statement whose path
   arguments are **all** under `.claude/`, `.agents/`, `docs/agents/`, `scripts/` or
   `.specs/` (`HARNESS_DIRS`) doesn't count as navigation — the quota exists to push
-  exploration of *product* code to `repo-scout`, while editing the harness itself is work
+  exploration of _product_ code to `repo-scout`, while editing the harness itself is work
   the main thread does directly; a statement with no path argument, or with one path
   outside the list, counts as before. A `Read` counts as one navigation against the same
   quota when it's a whole-file or large read of source (`limit` absent or >
@@ -289,7 +289,7 @@ never recreate `.cursor/skills` — Cursor reads `.agents` directly.
   is re-issuing the wave in one message). Measured 2026-08-20: 16 of 17 declared
   multi-cluster waves were dispatched one worker at a time, 26–60 min apart. Per-session
   state in the tmpdir (`platform-wave-<session>.json`). Rule in
-  [Token economy](#token-economy) and `tlc-spec-driven` § *Dispatch protocol* step 2.
+  [Token economy](#token-economy) and `tlc-spec-driven` § _Dispatch protocol_ step 2.
 - `.claude/hooks/wave-plan-check.mjs` — `PostToolUse(Edit|Write|MultiEdit)` on
   `.specs/**/tasks.md`: re-runs two rules of the Wave/Cluster Cross-Check after every write
   of a task plan — sibling clusters of one wave share no path (exact, or glob containment:
@@ -299,7 +299,7 @@ never recreate `.cursor/skills` — Cursor reads `.agents` directly.
   per violation, exit 2; a missing section exits 0. Measured 2026-08-20: 3 of 4
   `blocked-by-ownership` stops were unlisted files (the Touches audit in `tlc-spec-driven`
   tasks.md § 3 is the fix for those), the fourth a planned sibling overlap — what this hook
-  catches. Rule in `tlc-spec-driven` tasks.md § *Wave/Cluster Cross-Check*.
+  catches. Rule in `tlc-spec-driven` tasks.md § _Wave/Cluster Cross-Check_.
 - `.claude/hooks/no-huge-reads.mjs` — blocks reading a file over 100k chars whole, via
   `Read` or via `cat`/`less`/`rtk read`. By **size**, not by a list, so it also catches the
   lockfile, a new drizzle snapshot and an engine fixture. A ranged read (`limit` ≤ 400) or

@@ -142,16 +142,16 @@ Changes that require action from the product are listed, per version, in
 | ----------------------------------------------- | ------------------------------------------------------------------- |
 | Platform × product boundary, `copier update`    | [`docs/dev/template.md`](/docs/dev/template.md)                     |
 | Catalog, advisories, authoring an entry         | [`docs/catalog/catalog.md`](/docs/catalog/catalog.md)               |
-| API architecture                                | [`docs/back/back-arch.md`](/docs/back/back-arch.md)                 |
-| Front-end architecture                          | [`docs/front/front-arch.md`](/docs/front/front-arch.md)             |
+| API architecture                                | [`docs/arch/back.md`](/docs/arch/back.md)                           |
+| Front-end architecture                          | [`docs/arch/front.md`](/docs/arch/front.md)                         |
 | Testing                                         | [`docs/test/testing.md`](/docs/test/testing.md)                     |
 | Code quality                                    | [`docs/code-quality.md`](/docs/code-quality.md)                     |
 | Agents: workflow, harness, communication, infra | [`docs/agents/`](/docs/agents)                                      |
 | Deploy                                          | [`docs/dev/deploy.md`](/docs/dev/deploy.md)                         |
 | Template changelog                              | [`docs/dev/template-changelog.md`](/docs/dev/template-changelog.md) |
 
-Handbooks and changelog are written in Brazilian Portuguese — the working language of
-the products built on this platform.
+Handbooks and changelog are written in English; code comments, test names and
+user-facing strings follow the product's locale (pt-BR by default).
 
 ## Maintaining the template
 

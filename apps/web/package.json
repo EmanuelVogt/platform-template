@@ -10,10 +10,7 @@
     "lint:fix": "eslint --fix",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc -b --force",
-    "preview": "vite preview",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:cov": "vitest run --coverage"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

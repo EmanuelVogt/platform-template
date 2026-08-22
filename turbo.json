@@ -34,19 +34,6 @@
     "clean": {
       "cache": false
     },
-    "test": {
-      "outputs": []
-    },
-    "test:cov": {
-      "cache": false,
-      "outputs": []
-    },
-    "test:int": {
-      "cache": false
-    },
-    "test:e2e": {
-      "cache": false
-    },
     "dev": {
       "cache": false,
       "persistent": true

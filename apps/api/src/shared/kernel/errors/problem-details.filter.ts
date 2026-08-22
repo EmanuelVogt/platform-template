@@ -109,7 +109,9 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     const res = http.getResponse<Response>()
     const correlationId = this.ctx.tryGet()?.correlationId ?? null
     // Sem query string: evita ecoar PII/token (?token=, ?email=) na resposta.
-    const instance = req.originalUrl.split("?")[0] ?? req.originalUrl
+    const queryStart = req.originalUrl.indexOf("?")
+    const instance =
+      queryStart === -1 ? req.originalUrl : req.originalUrl.slice(0, queryStart)
     const problem = toProblem(exception, instance, correlationId)
 
     if (problem.status >= 500) {

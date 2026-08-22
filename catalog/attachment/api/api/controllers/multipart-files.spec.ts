@@ -1,5 +1,7 @@
 import { PassThrough, Readable } from "node:stream"
 
+import { type Mock, describe, expect, it, vi } from "vitest"
+
 import { InvalidMultipartRequestError, UploadInterruptedError } from "../../domain/errors"
 
 import { readMultipartFiles } from "./multipart-files"
@@ -11,11 +13,11 @@ const BOUNDARY = "----teste"
 
 interface FakeResponse {
   headersSent: boolean
-  setHeader: jest.Mock
+  setHeader: Mock
 }
 
 function fakeResponse(): FakeResponse {
-  return { headersSent: false, setHeader: jest.fn() }
+  return { headersSent: false, setHeader: vi.fn() }
 }
 
 function asResponse(res: FakeResponse): Response {

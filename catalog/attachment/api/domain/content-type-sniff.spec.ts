@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { sniffImageContentType } from "./content-type-sniff"
 
 const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10])

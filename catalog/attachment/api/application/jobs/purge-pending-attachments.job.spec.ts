@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { Attachment } from "../../domain/attachment.entity"
 
 import { PurgePendingAttachmentsJob } from "./purge-pending-attachments.job"
@@ -15,10 +17,10 @@ function stale() {
 
 const logger = {
   forModule: () => ({
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
   }),
 } as never
 
@@ -26,10 +28,10 @@ describe("PurgePendingAttachmentsJob", () => {
   it("apaga objeto e linha dos pendentes vencidos", async () => {
     const attachment = stale()
     const repo = {
-      findPendingOlderThan: jest.fn(async () => [attachment]),
-      deleteByIds: jest.fn(async () => undefined),
+      findPendingOlderThan: vi.fn(async () => [attachment]),
+      deleteByIds: vi.fn(async () => undefined),
     }
-    const storage = { delete: jest.fn(async () => undefined) }
+    const storage = { delete: vi.fn(async () => undefined) }
     const job = new PurgePendingAttachmentsJob(storage as never, repo as never, logger)
 
     await job.run()
@@ -41,11 +43,11 @@ describe("PurgePendingAttachmentsJob", () => {
   it("apaga a linha mesmo se o objeto não existir no storage", async () => {
     const attachment = stale()
     const repo = {
-      findPendingOlderThan: jest.fn(async () => [attachment]),
-      deleteByIds: jest.fn(async () => undefined),
+      findPendingOlderThan: vi.fn(async () => [attachment]),
+      deleteByIds: vi.fn(async () => undefined),
     }
     const storage = {
-      delete: jest.fn(async () => {
+      delete: vi.fn(async () => {
         throw new Error("NoSuchKey")
       }),
     }
@@ -58,10 +60,10 @@ describe("PurgePendingAttachmentsJob", () => {
 
   it("não chama o repositório quando não há vencidos", async () => {
     const repo = {
-      findPendingOlderThan: jest.fn(async () => []),
-      deleteByIds: jest.fn(async () => undefined),
+      findPendingOlderThan: vi.fn(async () => []),
+      deleteByIds: vi.fn(async () => undefined),
     }
-    const job = new PurgePendingAttachmentsJob({ delete: jest.fn() } as never, repo as never, logger)
+    const job = new PurgePendingAttachmentsJob({ delete: vi.fn() } as never, repo as never, logger)
 
     await job.run()
 

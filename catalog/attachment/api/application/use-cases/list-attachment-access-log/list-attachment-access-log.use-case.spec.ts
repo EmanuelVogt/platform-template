@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { ListAttachmentAccessLogUseCase } from "./list-attachment-access-log.use-case"
 
 import type { UserDirectoryFacade } from "../../../../identity/api/facades/user-directory.facade"
@@ -7,8 +9,8 @@ import type {
 } from "../../../domain/ports/attachment-access-log.repository"
 
 function makeUseCase(rows: AttachmentAccessLogListItem[], names: Map<string, string>) {
-  const listByAttachment = jest.fn().mockResolvedValue(rows)
-  const findNamesByIds = jest.fn().mockResolvedValue(names)
+  const listByAttachment = vi.fn().mockResolvedValue(rows)
+  const findNamesByIds = vi.fn().mockResolvedValue(names)
   const repo = { listByAttachment } as unknown as AttachmentAccessLogRepository
   const users = { findNamesByIds } as unknown as UserDirectoryFacade
 

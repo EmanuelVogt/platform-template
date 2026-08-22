@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { attachmentConfigSchema, parseAttachmentConfig } from "./attachment.config"
 
 describe("attachment.config", () => {

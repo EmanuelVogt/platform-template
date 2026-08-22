@@ -1,5 +1,7 @@
 import { Readable } from "node:stream"
 
+import { type Mock, describe, expect, it, vi } from "vitest"
+
 import { parseAttachmentConfig } from "../../../attachment.config"
 import {
   EmptyUploadBatchError,
@@ -23,15 +25,15 @@ const profiles = buildUploadProfiles(
 function makeUseCase() {
   const inserted: Attachment[] = []
   const repo = {
-    insertMany: jest.fn(async (rows: Attachment[]) => void inserted.push(...rows)),
+    insertMany: vi.fn(async (rows: Attachment[]) => void inserted.push(...rows)),
   }
   const storage = {
-    putStream: jest.fn(async (_key: string, body: Readable) => {
+    putStream: vi.fn(async (_key: string, body: Readable) => {
       for await (const _chunk of body) {
         // drena o stream como o R2 faria
       }
     }),
-    delete: jest.fn(async (_key: string) => undefined),
+    delete: vi.fn(async (_key: string) => undefined),
   }
   const tx = { run: (fn: () => Promise<void>) => fn() }
   const useCase = new UploadAttachmentsBatchUseCase(
@@ -68,7 +70,7 @@ async function* iterate(...files: IncomingFile[]): AsyncGenerator<IncomingFile> 
   for (const item of files) yield item
 }
 
-function keysOf(mock: jest.Mock): unknown[] {
+function keysOf(mock: Mock): unknown[] {
   return mock.mock.calls.map((call) => call[0])
 }
 

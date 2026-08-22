@@ -24,7 +24,7 @@ import {
   setDeviceCookie,
   setSessionCookie,
 } from "../../guards/cookie"
-import { RateLimit } from "../../guards/rate-limit.guard"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 import type { UserView } from "../../../application/views"
 import type { Csrf } from "../../../domain/ports/csrf"

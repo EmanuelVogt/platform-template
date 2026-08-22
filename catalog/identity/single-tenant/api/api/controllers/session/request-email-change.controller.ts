@@ -14,7 +14,7 @@ import { RequestEmailChangeUseCase } from "../../../application/use-cases/reques
 import { IDENTITY_CONFIG } from "../../../identity.config"
 import { ChangeEmailDto } from "../../contracts/identity.contract"
 import { clearSessionCookie } from "../../guards/cookie"
-import { RateLimit } from "../../guards/rate-limit.guard"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 import type { IdentityConfig } from "../../../identity.config"
 import type { Response } from "express"

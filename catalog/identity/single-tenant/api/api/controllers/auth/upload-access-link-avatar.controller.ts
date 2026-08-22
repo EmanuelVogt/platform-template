@@ -20,7 +20,7 @@ import { Public } from "../../../../../shared/kernel/access/decorators"
 import { UploadAccessLinkAvatarUseCase } from "../../../application/use-cases/upload-access-link-avatar/upload-access-link-avatar.use-case"
 import { AvatarFileRequiredError, InvalidAccessLinkError } from "../../../domain/errors"
 import { AccessLinkAvatarUploadResponseDto } from "../../contracts/identity.contract"
-import { RateLimit } from "../../guards/rate-limit.guard"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 

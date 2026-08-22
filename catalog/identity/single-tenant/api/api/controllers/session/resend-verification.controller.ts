@@ -3,7 +3,7 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger"
 
 import { SelfService } from "../../../../../shared/kernel/access/decorators"
 import { ResendVerificationUseCase } from "../../../application/use-cases/resend-verification/resend-verification.use-case"
-import { RateLimit } from "../../guards/rate-limit.guard"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 @ApiTags("Session")
 @Controller("auth")

@@ -4,7 +4,7 @@ import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger"
 import { RequirePermission } from "../../../../../shared/kernel/access/decorators"
 import { RestoreUsersUseCase } from "../../../application/use-cases/restore-users/restore-users.use-case"
 import { RestoreUsersResponseDto, TrashUserIdsDto } from "../../contracts/identity.contract"
-import { RateLimit } from "../../guards/rate-limit.guard"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 import type { RestoreUsersOutput } from "../../../application/use-cases/restore-users/types"
 

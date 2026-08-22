@@ -4,7 +4,7 @@ import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger"
 import { RequirePermission } from "../../../../../shared/kernel/access/decorators"
 import { PurgeUsersUseCase } from "../../../application/use-cases/purge-users/purge-users.use-case"
 import { PurgeUsersResponseDto, TrashUserIdsDto } from "../../contracts/identity.contract"
-import { RateLimit } from "../../guards/rate-limit.guard"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 import type { PurgeUsersOutput } from "../../../application/use-cases/purge-users/types"
 

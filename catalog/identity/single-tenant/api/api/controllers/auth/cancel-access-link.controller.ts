@@ -4,7 +4,7 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger"
 import { Public } from "../../../../../shared/kernel/access/decorators"
 import { CancelAccessLinkUseCase } from "../../../application/use-cases/cancel-access-link/cancel-access-link.use-case"
 import { CancelAccessLinkDto } from "../../contracts/identity.contract"
-import { RateLimit } from "../../guards/rate-limit.guard"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 @ApiTags("Auth")
 @Controller("auth")

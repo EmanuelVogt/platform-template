@@ -3,7 +3,7 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger"
 
 import { RequirePermission } from "../../../../../shared/kernel/access/decorators"
 import { ResendAccessLinkUseCase } from "../../../application/use-cases/resend-access-link/resend-access-link.use-case"
-import { RateLimit } from "../../guards/rate-limit.guard"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 @ApiTags("Admin")
 @Controller("admin/users")

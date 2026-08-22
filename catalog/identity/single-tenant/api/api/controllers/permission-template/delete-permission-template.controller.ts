@@ -10,7 +10,7 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger"
 import { RequirePermission } from "../../../../../shared/kernel/access/decorators"
 import { DeletePermissionTemplateUseCase } from "../../../application/use-cases/delete-permission-template/delete-permission-template.use-case"
 import { PermissionTemplateParamsDto } from "../../contracts/permission-template.contract"
-import { RateLimit } from "../../guards/rate-limit.guard"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 @ApiTags("Admin")
 @Controller("admin/permission-templates")

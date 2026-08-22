@@ -9,7 +9,7 @@ import {
   PermissionTemplateParamsDto,
   PermissionTemplateResponseDto,
 } from "../../contracts/permission-template.contract"
-import { RateLimit } from "../../guards/rate-limit.guard"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 import type { UpdatePermissionTemplateOutput } from "../../../application/use-cases/update-permission-template/types"
 

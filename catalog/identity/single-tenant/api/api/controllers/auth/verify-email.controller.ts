@@ -4,7 +4,7 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger"
 import { Public } from "../../../../../shared/kernel/access/decorators"
 import { VerifyEmailUseCase } from "../../../application/use-cases/verify-email/verify-email.use-case"
 import { VerifyEmailDto } from "../../contracts/identity.contract"
-import { RateLimit } from "../../guards/rate-limit.guard"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 @ApiTags("Auth")
 @Controller("auth")

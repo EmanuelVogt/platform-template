@@ -3,7 +3,7 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger"
 
 import { SelfService } from "../../../../../shared/kernel/access/decorators"
 import { RevokeOtherDevicesUseCase } from "../../../application/use-cases/revoke-other-devices/revoke-other-devices.use-case"
-import { RateLimit } from "../../guards/rate-limit.guard"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 @ApiTags("Device")
 @Controller("auth")

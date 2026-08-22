@@ -3,7 +3,7 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger"
 
 import { RequirePermission } from "../../../../../shared/kernel/access/decorators"
 import { DeleteUserUseCase } from "../../../application/use-cases/delete-user/delete-user.use-case"
-import { RateLimit } from "../../guards/rate-limit.guard"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 @ApiTags("Admin")
 @Controller("admin/users")

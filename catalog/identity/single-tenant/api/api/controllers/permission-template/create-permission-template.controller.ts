@@ -8,7 +8,7 @@ import {
   PermissionTemplateBodyDto,
   PermissionTemplateResponseDto,
 } from "../../contracts/permission-template.contract"
-import { RateLimit } from "../../guards/rate-limit.guard"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 import type { CreatePermissionTemplateOutput } from "../../../application/use-cases/create-permission-template/types"
 

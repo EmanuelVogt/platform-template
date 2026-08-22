@@ -9,7 +9,7 @@ import {
   ValidateAccessLinkQueryDto,
   validateAccessLinkQuerySchema,
 } from "../../contracts/identity.contract"
-import { RateLimit } from "../../guards/rate-limit.guard"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 @ApiTags("Auth")
 @Controller("auth")

@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { AuthEvent, type AuthEventType } from './auth-event.entity';
 
 describe('AuthEvent.create', () => {

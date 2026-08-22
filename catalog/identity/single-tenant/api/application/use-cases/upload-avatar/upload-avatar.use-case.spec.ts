@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.error"
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import { ProfileImageStoreMissingError } from "../../../domain/errors"
@@ -50,8 +52,8 @@ function makeCtx(over: { userId?: string | null; sessionId?: string | null } = {
 function makeDeps(over: Record<string, any> = {}) {
   const user = over.user !== undefined ? over.user : makeUser()
   const users = over.users ?? {
-    findById: jest.fn().mockResolvedValue(user),
-    update: jest.fn().mockResolvedValue(undefined),
+    findById: vi.fn().mockResolvedValue(user),
+    update: vi.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => NOW }
   const ctx = over.ctx ?? makeCtx()
@@ -59,10 +61,10 @@ function makeDeps(over: Record<string, any> = {}) {
     "attachments" in over
       ? over.attachments
       : {
-          upload: jest.fn().mockResolvedValue({ id: "att-new" }),
-          delete: jest.fn().mockResolvedValue(undefined),
+          upload: vi.fn().mockResolvedValue({ id: "att-new" }),
+          delete: vi.fn().mockResolvedValue(undefined),
         }
-  const logger = { warn: jest.fn(), info: jest.fn(), error: jest.fn() }
+  const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn() }
   const loggerFactory = { forModule: () => logger }
 
   const uc = new UploadAvatarUseCase(users, clock, ctx, attachments, loggerFactory as never)
@@ -128,8 +130,8 @@ describe("UploadAvatarUseCase", () => {
     const t = makeDeps({
       user: makeUser({ avatarAttachmentId: "att-same" }),
       attachments: {
-        upload: jest.fn().mockResolvedValue({ id: "att-same" }),
-        delete: jest.fn(),
+        upload: vi.fn().mockResolvedValue({ id: "att-same" }),
+        delete: vi.fn(),
       },
     })
     await t.uc.execute(DUMMY_INPUT)
@@ -140,8 +142,8 @@ describe("UploadAvatarUseCase", () => {
     const t = makeDeps({
       user: makeUser({ avatarAttachmentId: "att-old" }),
       attachments: {
-        upload: jest.fn().mockResolvedValue({ id: "att-new" }),
-        delete: jest.fn().mockRejectedValue(new Error("R2 timeout")),
+        upload: vi.fn().mockResolvedValue({ id: "att-new" }),
+        delete: vi.fn().mockRejectedValue(new Error("R2 timeout")),
       },
     })
     await expect(t.uc.execute(DUMMY_INPUT)).resolves.toEqual({
@@ -175,8 +177,8 @@ describe("UploadAvatarUseCase", () => {
   it("user desaparece antes do persistAvatar lança ForbiddenError SEM chamar update", async () => {
     // Primeira findById retorna o user; segunda (dentro de persistAvatar) retorna null
     const users = {
-      findById: jest.fn().mockResolvedValueOnce(makeUser()).mockResolvedValueOnce(null),
-      update: jest.fn(),
+      findById: vi.fn().mockResolvedValueOnce(makeUser()).mockResolvedValueOnce(null),
+      update: vi.fn(),
     }
     const t = makeDeps({ users })
     await expect(t.uc.execute(DUMMY_INPUT)).rejects.toBeInstanceOf(ForbiddenError)
@@ -187,8 +189,8 @@ describe("UploadAvatarUseCase", () => {
     const uploadError = new Error("R2 unavailable")
     const t = makeDeps({
       attachments: {
-        upload: jest.fn().mockRejectedValue(uploadError),
-        delete: jest.fn(),
+        upload: vi.fn().mockRejectedValue(uploadError),
+        delete: vi.fn(),
       },
     })
     await expect(t.uc.execute(DUMMY_INPUT)).rejects.toThrow("R2 unavailable")
@@ -199,8 +201,8 @@ describe("UploadAvatarUseCase", () => {
   it("falha no users.update propaga erro e NÃO executa limpeza do avatar antigo", async () => {
     const updateError = new Error("db constraint")
     const users = {
-      findById: jest.fn().mockResolvedValue(makeUser({ avatarAttachmentId: "att-old" })),
-      update: jest.fn().mockRejectedValue(updateError),
+      findById: vi.fn().mockResolvedValue(makeUser({ avatarAttachmentId: "att-old" })),
+      update: vi.fn().mockRejectedValue(updateError),
     }
     const t = makeDeps({ users })
     await expect(t.uc.execute(DUMMY_INPUT)).rejects.toThrow("db constraint")
@@ -212,8 +214,8 @@ describe("UploadAvatarUseCase", () => {
     const t = makeDeps({
       user: makeUser({ avatarAttachmentId: "att-old" }),
       attachments: {
-        upload: jest.fn().mockResolvedValue({ id: "att-new" }),
-        delete: jest.fn().mockRejectedValue(deleteError),
+        upload: vi.fn().mockResolvedValue({ id: "att-new" }),
+        delete: vi.fn().mockRejectedValue(deleteError),
       },
     })
     await t.uc.execute(DUMMY_INPUT)
@@ -230,8 +232,8 @@ describe("UploadAvatarUseCase", () => {
     const t = makeDeps({
       user: makeUser({ avatarAttachmentId: "att-old" }),
       attachments: {
-        upload: jest.fn().mockResolvedValue({ id: "att-new" }),
-        delete: jest.fn().mockRejectedValue("timeout string"),
+        upload: vi.fn().mockResolvedValue({ id: "att-new" }),
+        delete: vi.fn().mockRejectedValue("timeout string"),
       },
     })
     await t.uc.execute(DUMMY_INPUT)

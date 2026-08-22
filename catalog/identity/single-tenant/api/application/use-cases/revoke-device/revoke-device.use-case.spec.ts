@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { CannotRevokeCurrentDeviceError } from "../../../domain/errors"
 import { fakeRequestContext } from "../../request-context.fixture"
 
@@ -19,13 +21,13 @@ const makeCtx = (deviceId: string | null) =>
       locale: "pt-BR",
     }))
 
-const makeOutbox = () => ({ publish: jest.fn().mockResolvedValue(undefined) })
+const makeOutbox = () => ({ publish: vi.fn().mockResolvedValue(undefined) })
 
 describe("RevokeDeviceUseCase", () => {
   it("bloqueia revogar o device atual", async () => {
-    const deleteById = jest.fn()
+    const deleteById = vi.fn()
     const devices = { deleteById } as unknown as DeviceRepository
-    const authEvents = { recordInTx: jest.fn() } as unknown as AuthEventRepository
+    const authEvents = { recordInTx: vi.fn() } as unknown as AuthEventRepository
     const uc = new RevokeDeviceUseCase(
       devices,
       makeOutbox() as never,
@@ -39,8 +41,8 @@ describe("RevokeDeviceUseCase", () => {
   })
 
   it("revoga outro device, registra device_revoked e publica a notificação", async () => {
-    const deleteById = jest.fn().mockResolvedValue(1)
-    const recordInTx = jest.fn()
+    const deleteById = vi.fn().mockResolvedValue(1)
+    const recordInTx = vi.fn()
     const outbox = makeOutbox()
     const uc = new RevokeDeviceUseCase(
       { deleteById } as unknown as DeviceRepository,
@@ -68,10 +70,10 @@ describe("RevokeDeviceUseCase", () => {
   })
 
   it("não registra evento nem publica quando nada foi apagado (n=0)", async () => {
-    const recordInTx = jest.fn()
+    const recordInTx = vi.fn()
     const outbox = makeOutbox()
     const uc = new RevokeDeviceUseCase(
-      { deleteById: jest.fn().mockResolvedValue(0) } as unknown as DeviceRepository,
+      { deleteById: vi.fn().mockResolvedValue(0) } as unknown as DeviceRepository,
       outbox as never,
       { recordInTx } as unknown as AuthEventRepository,
       makeCtx("d-1")

@@ -1,6 +1,7 @@
 import { type INestApplication, VersioningType } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
 import { AppModule } from "../../../app.module"
@@ -58,9 +59,11 @@ describe("Reset — token nunca em corpo/instance/log (e2e)", () => {
     expect(res.status).toBeGreaterThanOrEqual(400)
     expect(res.status).toBeLessThan(500)
     expect(JSON.stringify(res.body)).not.toContain(FAKE_TOKEN)
-    if (res.body.instance) {
-      expect(res.body.instance).not.toContain(FAKE_TOKEN)
-    }
+    // SPEC_DEVIATION: checagem incondicional (?? "") no lugar de `if`.
+    // Reason: vitest/no-conditional-expect — `instance` é opcional no corpo
+    // RFC7807; sem ele, comparar contra "" é sempre verdadeiro e preserva o
+    // "só checa se existir" original sem `expect` dentro de `if`.
+    expect(res.body.instance ?? "").not.toContain(FAKE_TOKEN)
 
     const allLogs = logged.join("")
     expect(allLogs).not.toContain(FAKE_TOKEN)

@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import { UserNotInTrashError } from "../../../domain/errors"
 import { fakeRequestContext } from "../../request-context.fixture"
@@ -33,11 +35,11 @@ function makeUser(over: Partial<UserProps> = {}): User {
 
 function makeDeps(found: User[], withAuditTrail = true) {
   const users = {
-    findByIds: jest.fn().mockResolvedValue(found),
-    hardDeleteByIds: jest.fn().mockResolvedValue(undefined),
+    findByIds: vi.fn().mockResolvedValue(found),
+    hardDeleteByIds: vi.fn().mockResolvedValue(undefined),
   }
-  const authEvents = { recordInTx: jest.fn().mockResolvedValue(undefined) }
-  const auditTrail = { purgeEntities: jest.fn().mockResolvedValue(0) }
+  const authEvents = { recordInTx: vi.fn().mockResolvedValue(undefined) }
+  const auditTrail = { purgeEntities: vi.fn().mockResolvedValue(0) }
   const ctx = fakeRequestContext(() => ({
       correlationId: "c1",
       locale: "pt-BR",

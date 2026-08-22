@@ -1,5 +1,6 @@
 import Redis from "ioredis"
 import { GenericContainer, Wait } from "testcontainers"
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 import { makeTestLogger } from "../../../../../test/setup/test-logger"
 

@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { DomainError } from '../../../shared/kernel/errors/domain.error';
 
 import {

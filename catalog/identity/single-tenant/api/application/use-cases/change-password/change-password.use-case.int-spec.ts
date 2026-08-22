@@ -1,3 +1,5 @@
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
+
 import {
   createTestDb,
   createTestPool,
@@ -86,18 +88,18 @@ describe("ChangePasswordUseCase — breach fora da tx (R17)", () => {
       },
     }
     const users = {
-      findById: jest.fn().mockResolvedValue(makeUser()),
-      findByIdForUpdate: jest.fn().mockResolvedValue(makeUser()),
-      update: jest.fn().mockResolvedValue(undefined),
+      findById: vi.fn().mockResolvedValue(makeUser()),
+      findByIdForUpdate: vi.fn().mockResolvedValue(makeUser()),
+      update: vi.fn().mockResolvedValue(undefined),
     }
-    const sessions = { deleteOthers: jest.fn().mockResolvedValue(undefined) }
+    const sessions = { deleteOthers: vi.fn().mockResolvedValue(undefined) }
     const hasher = {
       verify: () => Promise.resolve(true),
       hash: () => Promise.resolve("argon2-new"),
     }
     const strength = { score: () => 4 }
-    const authEvents = { recordInTx: jest.fn().mockResolvedValue(undefined) }
-    const outbox = { publish: jest.fn().mockResolvedValue(undefined) }
+    const authEvents = { recordInTx: vi.fn().mockResolvedValue(undefined) }
+    const outbox = { publish: vi.fn().mockResolvedValue(undefined) }
     const clock = { now: () => new Date("2026-06-10T12:00:00.000Z") }
 
     const uc = new ChangePasswordUseCase(

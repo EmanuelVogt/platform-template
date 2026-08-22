@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { PermissionTemplate } from "../../../domain/entities/permission-template.entity"
 
 import { ListPermissionTemplatesUseCase } from "./list-permission-templates.use-case"
@@ -21,12 +23,12 @@ function makeTemplate(
 
 function makeDeps(over: Record<string, any> = {}) {
   const templates = over.templates ?? {
-    listAll: jest.fn().mockResolvedValue([]),
-    findById: jest.fn(),
-    findByName: jest.fn(),
-    insert: jest.fn(),
-    update: jest.fn(),
-    deleteById: jest.fn(),
+    listAll: vi.fn().mockResolvedValue([]),
+    findById: vi.fn(),
+    findByName: vi.fn(),
+    insert: vi.fn(),
+    update: vi.fn(),
+    deleteById: vi.fn(),
   }
   const uc = new ListPermissionTemplatesUseCase(templates)
   return { uc, templates }
@@ -53,12 +55,12 @@ describe("ListPermissionTemplatesUseCase", () => {
     })
     const t = makeDeps({
       templates: {
-        listAll: jest.fn().mockResolvedValue([tplA, tplB]),
-        findById: jest.fn(),
-        findByName: jest.fn(),
-        insert: jest.fn(),
-        update: jest.fn(),
-        deleteById: jest.fn(),
+        listAll: vi.fn().mockResolvedValue([tplA, tplB]),
+        findById: vi.fn(),
+        findByName: vi.fn(),
+        insert: vi.fn(),
+        update: vi.fn(),
+        deleteById: vi.fn(),
       },
     })
 
@@ -89,12 +91,12 @@ describe("ListPermissionTemplatesUseCase", () => {
     const tpl = makeTemplate()
     const t = makeDeps({
       templates: {
-        listAll: jest.fn().mockResolvedValue([tpl]),
-        findById: jest.fn(),
-        findByName: jest.fn(),
-        insert: jest.fn(),
-        update: jest.fn(),
-        deleteById: jest.fn(),
+        listAll: vi.fn().mockResolvedValue([tpl]),
+        findById: vi.fn(),
+        findByName: vi.fn(),
+        insert: vi.fn(),
+        update: vi.fn(),
+        deleteById: vi.fn(),
       },
     })
 
@@ -113,12 +115,12 @@ describe("ListPermissionTemplatesUseCase", () => {
     )
     const t = makeDeps({
       templates: {
-        listAll: jest.fn().mockResolvedValue(tpls),
-        findById: jest.fn(),
-        findByName: jest.fn(),
-        insert: jest.fn(),
-        update: jest.fn(),
-        deleteById: jest.fn(),
+        listAll: vi.fn().mockResolvedValue(tpls),
+        findById: vi.fn(),
+        findByName: vi.fn(),
+        insert: vi.fn(),
+        update: vi.fn(),
+        deleteById: vi.fn(),
       },
     })
 
@@ -142,12 +144,12 @@ describe("ListPermissionTemplatesUseCase", () => {
     })
     const t = makeDeps({
       templates: {
-        listAll: jest.fn().mockResolvedValue([tpl]),
-        findById: jest.fn(),
-        findByName: jest.fn(),
-        insert: jest.fn(),
-        update: jest.fn(),
-        deleteById: jest.fn(),
+        listAll: vi.fn().mockResolvedValue([tpl]),
+        findById: vi.fn(),
+        findByName: vi.fn(),
+        insert: vi.fn(),
+        update: vi.fn(),
+        deleteById: vi.fn(),
       },
     })
 

@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.error"
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import { makeIdentityConfig } from "../../../identity.config.fixture"
@@ -37,17 +39,17 @@ function makeUser(over: Partial<UserProps> = {}): User {
 
 function makeDeps(over: Record<string, any> = {}) {
   const users = over.users ?? {
-    findById: jest.fn().mockResolvedValue(makeUser()),
-    update: jest.fn().mockResolvedValue(undefined),
+    findById: vi.fn().mockResolvedValue(makeUser()),
+    update: vi.fn().mockResolvedValue(undefined),
   }
   const verificationTokens = over.verificationTokens ?? {
-    invalidateAllForUser: jest.fn().mockResolvedValue(undefined),
-    create: jest.fn().mockResolvedValue(undefined),
+    invalidateAllForUser: vi.fn().mockResolvedValue(undefined),
+    create: vi.fn().mockResolvedValue(undefined),
   }
   const tokens = over.tokens ?? {
-    generate: jest.fn().mockReturnValue({ raw: "raw-tok", hash: "hash-tok" }),
+    generate: vi.fn().mockReturnValue({ raw: "raw-tok", hash: "hash-tok" }),
   }
-  const outbox = over.outbox ?? { publish: jest.fn().mockResolvedValue(undefined) }
+  const outbox = over.outbox ?? { publish: vi.fn().mockResolvedValue(undefined) }
   const clock = over.clock ?? { now: () => NOW }
   const ctx = over.ctx ?? fakeRequestContext(() => ({
       ip: null,
@@ -83,8 +85,8 @@ describe("ResendVerificationUseCase", () => {
   it("usuário não encontrado: no-op (nada criado nem publicado)", async () => {
     const t = makeDeps({
       users: {
-        findById: jest.fn().mockResolvedValue(null),
-        update: jest.fn(),
+        findById: vi.fn().mockResolvedValue(null),
+        update: vi.fn(),
       },
     })
     await t.uc.execute({})
@@ -96,8 +98,8 @@ describe("ResendVerificationUseCase", () => {
   it("e-mail já verificado: no-op (nada criado nem publicado)", async () => {
     const t = makeDeps({
       users: {
-        findById: jest.fn().mockResolvedValue(makeUser({ emailVerified: true })),
-        update: jest.fn(),
+        findById: vi.fn().mockResolvedValue(makeUser({ emailVerified: true })),
+        update: vi.fn(),
       },
     })
     await t.uc.execute({})
@@ -110,10 +112,10 @@ describe("ResendVerificationUseCase", () => {
     const twoHoursAgo = new Date(NOW.getTime() - 2 * 3600 * 1000)
     const t = makeDeps({
       users: {
-        findById: jest
+        findById: vi
           .fn()
           .mockResolvedValue(makeUser({ lastVerificationRequestedAt: twoHoursAgo })),
-        update: jest.fn().mockResolvedValue(undefined),
+        update: vi.fn().mockResolvedValue(undefined),
       },
     })
     await t.uc.execute({})
@@ -129,10 +131,10 @@ describe("ResendVerificationUseCase", () => {
   it("cooldown ativo: no-op", async () => {
     const t = makeDeps({
       users: {
-        findById: jest
+        findById: vi
           .fn()
           .mockResolvedValue(makeUser({ lastVerificationRequestedAt: NOW })),
-        update: jest.fn(),
+        update: vi.fn(),
       },
     })
     await t.uc.execute({})

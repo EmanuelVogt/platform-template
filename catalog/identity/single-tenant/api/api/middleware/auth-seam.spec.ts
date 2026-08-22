@@ -5,6 +5,7 @@ import { APP_GUARD } from "@nestjs/core"
 import { Test } from "@nestjs/testing"
 import cookieParser from "cookie-parser"
 import request from "supertest"
+import { afterAll, beforeAll, describe, it } from "vitest"
 
 import { ACCESS_POLICY } from "../../../../shared/kernel/access/access-policy.port"
 import { AccessGuard } from "../../../../shared/kernel/access/access.guard"

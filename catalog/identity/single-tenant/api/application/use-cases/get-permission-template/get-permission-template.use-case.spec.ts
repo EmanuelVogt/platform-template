@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { PermissionTemplate } from "../../../domain/entities/permission-template.entity"
 import { PermissionTemplateNotFoundError } from "../../../domain/errors"
 
@@ -13,7 +15,7 @@ describe("GetPermissionTemplateUseCase", () => {
       createdAt: new Date("2026-06-12T12:00:00.000Z"),
       updatedAt: new Date("2026-06-12T12:00:00.000Z"),
     })
-    const templates = { findById: jest.fn().mockResolvedValue(template) }
+    const templates = { findById: vi.fn().mockResolvedValue(template) }
     const uc = new GetPermissionTemplateUseCase(templates as never)
     const out = await uc.execute({ id: "t-1" })
     expect(out.template.id).toBe("t-1")
@@ -21,7 +23,7 @@ describe("GetPermissionTemplateUseCase", () => {
   })
 
   it("id inexistente → 404", async () => {
-    const templates = { findById: jest.fn().mockResolvedValue(null) }
+    const templates = { findById: vi.fn().mockResolvedValue(null) }
     const uc = new GetPermissionTemplateUseCase(templates as never)
     await expect(uc.execute({ id: "x" })).rejects.toThrow(
       PermissionTemplateNotFoundError
@@ -29,7 +31,7 @@ describe("GetPermissionTemplateUseCase", () => {
   })
 
   it("não encontrado → findById chamado com o id recebido e nenhum save/update", async () => {
-    const templates = { findById: jest.fn().mockResolvedValue(null) }
+    const templates = { findById: vi.fn().mockResolvedValue(null) }
     const uc = new GetPermissionTemplateUseCase(templates as never)
     await expect(uc.execute({ id: "nao-existe" })).rejects.toThrow(
       PermissionTemplateNotFoundError
@@ -47,7 +49,7 @@ describe("GetPermissionTemplateUseCase", () => {
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
       updatedAt: new Date("2026-01-02T00:00:00.000Z"),
     })
-    const templates = { findById: jest.fn().mockResolvedValue(template) }
+    const templates = { findById: vi.fn().mockResolvedValue(template) }
     const uc = new GetPermissionTemplateUseCase(templates as never)
     const out = await uc.execute({ id: "t-2" })
     expect(out.template.description).toBe("Acesso gerencial completo")
@@ -64,7 +66,7 @@ describe("GetPermissionTemplateUseCase", () => {
       createdAt: new Date("2026-06-01T00:00:00.000Z"),
       updatedAt: new Date("2026-06-01T00:00:00.000Z"),
     })
-    const templates = { findById: jest.fn().mockResolvedValue(template) }
+    const templates = { findById: vi.fn().mockResolvedValue(template) }
     const uc = new GetPermissionTemplateUseCase(templates as never)
     await uc.execute({ id: "t-abc" })
     expect(templates.findById).toHaveBeenCalledTimes(1)

@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.error"
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import { InvalidBirthDateError } from "../../../domain/errors"
@@ -36,8 +38,8 @@ function makeUser(over: Partial<UserProps> = {}): User {
 
 function makeDeps(over: Record<string, any> = {}) {
   const users = over.users ?? {
-    findById: jest.fn().mockResolvedValue(makeUser()),
-    update: jest.fn().mockResolvedValue(undefined),
+    findById: vi.fn().mockResolvedValue(makeUser()),
+    update: vi.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => NOW }
   const ctx = over.ctx ?? fakeRequestContext(() => ({
@@ -74,8 +76,8 @@ describe("UpdateMyProfileUseCase", () => {
   it("sem birthDate no input: mantém o birthDate existente", async () => {
     const t = makeDeps({
       users: {
-        findById: jest.fn().mockResolvedValue(makeUser({ birthDate: "1985-03-10" })),
-        update: jest.fn().mockResolvedValue(undefined),
+        findById: vi.fn().mockResolvedValue(makeUser({ birthDate: "1985-03-10" })),
+        update: vi.fn().mockResolvedValue(undefined),
       },
     })
     await t.uc.execute({ name: "Ana" })
@@ -118,8 +120,8 @@ describe("UpdateMyProfileUseCase", () => {
   it("usuário não encontrado no repositório lança ForbiddenError e NÃO chama users.update", async () => {
     const t = makeDeps({
       users: {
-        findById: jest.fn().mockResolvedValue(null),
-        update: jest.fn(),
+        findById: vi.fn().mockResolvedValue(null),
+        update: vi.fn(),
       },
     })
     await expect(t.uc.execute({ name: "Ana" })).rejects.toBeInstanceOf(ForbiddenError)
@@ -156,7 +158,7 @@ describe("UpdateMyProfileUseCase", () => {
   })
 
   it("clock.now() é chamado exatamente uma vez por execução", async () => {
-    const now = jest.fn().mockReturnValue(NOW)
+    const now = vi.fn().mockReturnValue(NOW)
     const t = makeDeps({ clock: { now } })
     await t.uc.execute({ name: "Ana" })
     expect(now).toHaveBeenCalledTimes(1)
@@ -178,8 +180,8 @@ describe("UpdateMyProfileUseCase", () => {
     })
     const t = makeDeps({
       users: {
-        findById: jest.fn().mockResolvedValue(deletedUser),
-        update: jest.fn().mockResolvedValue(undefined),
+        findById: vi.fn().mockResolvedValue(deletedUser),
+        update: vi.fn().mockResolvedValue(undefined),
       },
     })
     await t.uc.execute({ name: "Ana Arquivada" })
@@ -191,8 +193,8 @@ describe("UpdateMyProfileUseCase", () => {
   it("birthDate undefined explícito no input: mantém birthDate existente (branch birthDate !== undefined falso)", async () => {
     const t = makeDeps({
       users: {
-        findById: jest.fn().mockResolvedValue(makeUser({ birthDate: "1990-01-15" })),
-        update: jest.fn().mockResolvedValue(undefined),
+        findById: vi.fn().mockResolvedValue(makeUser({ birthDate: "1990-01-15" })),
+        update: vi.fn().mockResolvedValue(undefined),
       },
     })
     await t.uc.execute({ name: "Ana", birthDate: undefined })

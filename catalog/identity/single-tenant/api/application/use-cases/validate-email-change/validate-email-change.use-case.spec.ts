@@ -1,3 +1,5 @@
+import { type Mock, describe, expect, it, vi } from "vitest"
+
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import { InvalidEmailChangeTokenError } from "../../../domain/errors"
 
@@ -33,14 +35,14 @@ function makeUser(over: Partial<UserProps> = {}): User {
 }
 
 function makeDeps(over: Record<string, unknown> = {}) {
-  const verificationTokens = (over.verificationTokens as Record<string, jest.Mock> | undefined) ?? {
-    findActiveByHash: jest.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2026-06-17T00:00:00.000Z") }),
+  const verificationTokens = (over.verificationTokens as Record<string, Mock> | undefined) ?? {
+    findActiveByHash: vi.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2026-06-17T00:00:00.000Z") }),
   }
-  const users = (over.users as Record<string, jest.Mock> | undefined) ?? {
-    findById: jest.fn().mockResolvedValue(makeUser()),
+  const users = (over.users as Record<string, Mock> | undefined) ?? {
+    findById: vi.fn().mockResolvedValue(makeUser()),
   }
-  const tokens = (over.tokens as Record<string, jest.Mock> | undefined) ?? {
-    hashOf: jest.fn().mockReturnValue("token-hash"),
+  const tokens = (over.tokens as Record<string, Mock> | undefined) ?? {
+    hashOf: vi.fn().mockReturnValue("token-hash"),
   }
   const clock = (over.clock as { now: () => Date } | undefined) ?? { now: () => NOW }
 
@@ -70,7 +72,7 @@ describe("ValidateEmailChangeQuery", () => {
   it("token inativo (findActiveByHash null) lança InvalidEmailChangeTokenError", async () => {
     const t = makeDeps({
       verificationTokens: {
-        findActiveByHash: jest.fn().mockResolvedValue(null),
+        findActiveByHash: vi.fn().mockResolvedValue(null),
       },
     })
     await expect(t.uc.execute({ token: "raw-token" })).rejects.toBeInstanceOf(
@@ -82,7 +84,7 @@ describe("ValidateEmailChangeQuery", () => {
   it("usuário não encontrado (findById null) lança InvalidEmailChangeTokenError", async () => {
     const t = makeDeps({
       users: {
-        findById: jest.fn().mockResolvedValue(null),
+        findById: vi.fn().mockResolvedValue(null),
       },
     })
     await expect(t.uc.execute({ token: "raw-token" })).rejects.toBeInstanceOf(
@@ -93,7 +95,7 @@ describe("ValidateEmailChangeQuery", () => {
   it("usuário sem pendingEmail lança InvalidEmailChangeTokenError", async () => {
     const t = makeDeps({
       users: {
-        findById: jest.fn().mockResolvedValue(makeUser({ pendingEmail: null })),
+        findById: vi.fn().mockResolvedValue(makeUser({ pendingEmail: null })),
       },
     })
     await expect(t.uc.execute({ token: "raw-token" })).rejects.toBeInstanceOf(
@@ -115,9 +117,9 @@ describe("ValidateEmailChangeQuery", () => {
   it("em falha de token, users.findById NÃO é chamado", async () => {
     const t = makeDeps({
       verificationTokens: {
-        findActiveByHash: jest.fn().mockResolvedValue(null),
+        findActiveByHash: vi.fn().mockResolvedValue(null),
       },
-      users: { findById: jest.fn() },
+      users: { findById: vi.fn() },
     })
     await expect(t.uc.execute({ token: "tok" })).rejects.toBeInstanceOf(
       InvalidEmailChangeTokenError,
@@ -128,13 +130,13 @@ describe("ValidateEmailChangeQuery", () => {
   it("userId do token ativo é repassado exatamente ao repositório de usuários", async () => {
     const t = makeDeps({
       verificationTokens: {
-        findActiveByHash: jest.fn().mockResolvedValue({
+        findActiveByHash: vi.fn().mockResolvedValue({
           userId: "u-específico-99",
           expiresAt: new Date("2026-06-17T00:00:00.000Z"),
         }),
       },
       users: {
-        findById: jest.fn().mockResolvedValue(makeUser({ pendingEmail: "x@y.com" })),
+        findById: vi.fn().mockResolvedValue(makeUser({ pendingEmail: "x@y.com" })),
       },
     })
     await t.uc.execute({ token: "raw" })
@@ -142,7 +144,7 @@ describe("ValidateEmailChangeQuery", () => {
   })
 
   it("quando pendingEmail é null a query lança mas NÃO propaga dado parcial", async () => {
-    const findById = jest.fn().mockResolvedValue(makeUser({ pendingEmail: null }))
+    const findById = vi.fn().mockResolvedValue(makeUser({ pendingEmail: null }))
     const t = makeDeps({ users: { findById } })
     const result = t.uc.execute({ token: "tok" })
     await expect(result).rejects.toBeInstanceOf(InvalidEmailChangeTokenError)

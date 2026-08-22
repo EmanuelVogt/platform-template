@@ -46,7 +46,7 @@ Três regimes convivem em `src/` e têm regras diferentes:
 | --- | --- | --- |
 | Runtime Nest | `modules/`, `shared/`, `legacy-import/sync/`, `docs/` | camadas + fronteiras + travas |
 | Script CLI | `db/`, `seeds/`, `openapi/export-openapi.ts`, `legacy-import/run.ts`, `legacy-import/tools/` | roda fora do grafo de módulos; pode importar tabela de módulo; `console` permitido (fala com o terminal) |
-| Conformidade | os `*.spec.ts` de invariante (ver §Travas) | precisam morar sob `src/` (`rootDir` do jest unit) |
+| Conformidade | os `*.spec.ts` de invariante (ver §Travas) | precisam morar sob `src/` (o `include` do projeto `api` do vitest) |
 
 **Exceção escrita à Regra de Ouro 5:** código fora de `src/modules/` que roda fora do request (seed, backfill, sync do legado) pode importar e escrever tabela de módulo. O `legacy-import/` é **o único escritor autorizado em tabela alheia em runtime** (ADRs 0044/0052; condição de saída = decisão D2 da 0052). A Regra 5 governa `modules/*`.
 
@@ -609,7 +609,7 @@ Specs unit que rodam no pré-push e no CI; todas seguem o mesmo molde — varred
 | `error-namespace` | `shared/kernel/errors/` | `TYPE_BASE` = nome do módulo; 403 só no kernel |
 | lockId único | `shared/kernel/scheduling/` (spec do schedule) | colisão de advisory lock não silencia job |
 
-`src/openapi/` guarda as quatro primeiras por precedente histórico (elas precisam do `rootDir` do jest unit); trava nova nasce **junto do código que guarda**. Furar uma trava sem entrada de allowlist justificada = PR reprovado.
+`src/openapi/` guarda as quatro primeiras por precedente histórico (elas precisam do `include` do projeto `api` do vitest); trava nova nasce **junto do código que guarda**. Furar uma trava sem entrada de allowlist justificada = PR reprovado.
 
 ## Decisões rápidas
 

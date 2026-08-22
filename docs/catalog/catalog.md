@@ -18,7 +18,7 @@ catalog/
     api/         # espelha apps/api/src/modules/identity/** (código + *.spec.ts + *.int-spec.ts + *.e2e-spec.ts)
     web/core/  web/react/
     migrations/custom/NN_<slug>.sql   # apenas passos SQL manuais (triggers, funções); tabelas vêm de api/**/tables
-    parity/      # *.parity.spec.ts (copiados ao lado do módulo, rodam no jest do filho) + contract.snapshot.json
+    parity/      # *.parity.spec.ts (copiados ao lado do módulo, rodam via `pnpm vitest run --project api <path>` no filho) + contract.snapshot.json
 ```
 
 `module.json` é validado por `catalog/schema/module.schema.json` e segue convenção sobre

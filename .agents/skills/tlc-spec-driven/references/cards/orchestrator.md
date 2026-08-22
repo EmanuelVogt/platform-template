@@ -69,7 +69,7 @@ Wait for **every** compact summary — no next wave, no gate, no `tasks.md` edit
 `HANDOFF:` in a summary = turn budget hit: re-dispatch same type and tier with the block as the first
 payload lines, same ownership, same cluster. Then the **Build gate once** through the runner — scoped to
 the wave's `Touches`, `full-unit` only when the Wave Plan marks it; never e2e/integration (the Verifier's
-Final gate). A path-scoped jest run skips the repo-wide conformance specs — when the wave touched a
+Final gate). A path-scoped vitest run skips the repo-wide conformance specs — when the wave touched a
 module file, a facade or any cross-module import, name them explicitly (`module-boundaries.spec.ts`,
 `architecture.spec.ts`); measured 2026-08-20: a boundary violation shipped through a green scoped gate. Record status + hashes in `tasks.md` (you are the only `.specs/` writer in Execute), one
 line to the user, next wave. A gate failure is a `Touches`/`Depends on` gap: fix the code via a fix

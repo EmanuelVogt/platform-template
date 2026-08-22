@@ -38,7 +38,8 @@ ADRs.
 pnpm dev                    turbo dev — brings everything up
 pnpm check                  lint + typecheck — run before asking for review
 pnpm build | typecheck | lint:fix | format | clean
-pnpm test | test:int | test:e2e
+pnpm test | test:coverage | test:int | test:e2e | test:db
+pnpm vitest run --project api|web <path>   run one file/dir, skip the full suite
 pnpm contract               Zod → openapi.json → Kubb client
 pnpm contract:consumers     which screens consume an operationId/route
 pnpm contract:diff          readable pt-BR summary of an openapi.json change

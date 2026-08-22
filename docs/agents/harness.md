@@ -18,7 +18,7 @@ before it reaches the agent. Registered in `~/.claude/settings.json` (Claude Cod
 | `npx`, `tsc` | `npx tsc --version` answered "TypeScript: No errors found" instead of the version |
 
 Everything else stays proxied (`cat`→`rtk read`, `ls`, `grep`, `find`, `wc`, lint,
-vitest/jest, `docker`, `psql`…) — output arrives reformatted, not in the tool's native
+vitest, `docker`, `psql`…) — output arrives reformatted, not in the tool's native
 shape. Verified 2026-08-10 on rtk 0.44.2: `pnpm` and `node` are **not** rewritten; file
 reads come through complete (`rtk read` defaults to `--level none`); `grep` keeps content
 and count but regroups by file.
@@ -144,7 +144,7 @@ The 1M window is why: nothing ever forced a break.
   (haiku on almost every dispatch, `Bash` + `Read`). It saves the whole log to a file and returns exit code
   plus the failures **verbatim** — test name, assert message, `file:line` — with the log
   path, so nothing is lost, only kept out of the main context. Measured, this category is
-  <1% of shell output (rtk already compresses jest), so the saving here is small; the
+  <1% of shell output (rtk already compresses vitest), so the saving here is small; the
   reason it is delegated is that one unfiltered run can still be tens of thousands of
   tokens. **Two callers only** — the orchestrator's Build gate per wave and the Verifier's
   Final gate: a `spec-worker` and the Verifier's sensor run their own scoped gates directly,
@@ -183,7 +183,7 @@ The 1M window is why: nothing ever forced a break.
   operationId. Reading the raw file or its diff is among the most expensive reads in the
   repo.
 - **Targeted tests while iterating.** `pnpm test -- <path>` or `turbo --filter`; the full
-  suite is a final confirmation, not a first probe. Large jest runs dump tens of
+  suite is a final confirmation, not a first probe. Large vitest runs dump tens of
   thousands of tokens, and rtk has fabricated failures on them before — reconfirm odd
   results with `rtk proxy`.
 - **Point at logs, don't inline them.** Save long output to a file and read the relevant

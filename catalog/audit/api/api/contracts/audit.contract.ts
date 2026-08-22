@@ -15,9 +15,9 @@ export const listAuditEntriesQuerySchema = baseListingQuerySchema.extend({
   actorUserId: z.string().trim().min(1).optional(),
   op: auditOpSchema.optional(),
   origin: auditOriginFilterSchema.optional(),
-  txId: z.coerce.number().int().optional(),
-  from: z.string().trim().min(1).optional(),
-  to: z.string().trim().min(1).optional(),
+  txId: z.coerce.number().int().max(Number.MAX_SAFE_INTEGER).optional(),
+  from: z.iso.datetime().optional(),
+  to: z.iso.datetime().optional(),
 })
 export class ListAuditEntriesQueryDto extends createZodDto(
   listAuditEntriesQuerySchema

@@ -15,7 +15,11 @@
           "**/*.spec.ts",
           "**/*.int-spec.ts",
           "**/*.e2e-spec.ts",
-          "**/*.fixture.ts"
+          "**/*.fixture.ts",
+          "**/testing/**",
+          "**/__e2e__/**",
+          "**/parity/**",
+          "**/__parity__/**"
         ]
       }
     }

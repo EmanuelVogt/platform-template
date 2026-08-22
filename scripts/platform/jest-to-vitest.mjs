@@ -3,6 +3,8 @@
 // Reescreve specs Jest para Vitest na árvore indicada (regras 1-6 de
 // design.md § Codemod). `--check` não escreve nada e sai 1 se algum arquivo
 // mudaria ou carrega um site de revisão manual; `--quiet` mantém só o resumo.
+// Comando do child na migração (spec P1-catalog AC6):
+//   node scripts/platform/jest-to-vitest.mjs apps/api/src apps/web/src
 
 import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -389,14 +391,14 @@ function parseArgv(argv) {
   return { paths, check, quiet };
 }
 
-function printReport(result, { quiet }) {
+function printReport(result, { quiet, log = (line) => process.stdout.write(`${line}\n`) } = {}) {
   if (!quiet) {
-    for (const file of result.rewritten) console.log(`changed: ${file}`);
+    for (const file of result.rewritten) log(`changed: ${file}`);
     for (const { file, sites } of result.manualReview) {
-      for (const site of sites) console.log(`${file}:${site.line} — ${site.message}`);
+      for (const site of sites) log(`${file}:${site.line} — ${site.message}`);
     }
   }
-  console.log(
+  log(
     `jest-to-vitest — ${result.rewritten.length} alterado(s), ${result.unchanged.length} inalterado(s), ${result.manualReview.length} com revisão manual`,
   );
 }
@@ -408,4 +410,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   process.exit(result.exitCode);
 }
 
-export { collectFiles, parseArgv, runCodemod, transformSource, walkFiles };
+export { collectFiles, parseArgv, printReport, runCodemod, transformSource, walkFiles };

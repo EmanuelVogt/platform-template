@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { runCodemod, transformSource } from "../jest-to-vitest.mjs";
+import { printReport, runCodemod, transformSource } from "../jest-to-vitest.mjs";
 
 test("rule 1 — jest.fn/mock/spyOn vira vi.<mesmo nome> mantendo os argumentos", () => {
   const input = `const spy = jest.spyOn(obj, "method")\nconst mocked = jest.fn(() => 1)\njest.mock("./dep")`;
@@ -168,4 +168,114 @@ test("runCodemod caminha o diretório, aplica as regras 1-3 e escreve os arquivo
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("uma segunda rodada não produz mais nenhuma mudança (idempotência)", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "jest-to-vitest-"));
+  try {
+    const specPath = path.join(dir, "sample.spec.ts");
+    writeFileSync(specPath, `describe("thing", () => {\n  it("works", () => {\n    jest.fn()\n  })\n})\n`);
+
+    const first = runCodemod([dir]);
+    assert.deepEqual(first.rewritten, [specPath]);
+    const afterFirst = readFileSync(specPath, "utf8");
+
+    const second = runCodemod([dir]);
+    assert.deepEqual(second.rewritten, []);
+    assert.deepEqual(second.unchanged, [specPath]);
+    assert.equal(readFileSync(specPath, "utf8"), afterFirst);
+
+    const checkAfterSecond = runCodemod([dir], { check: true });
+    assert.equal(checkAfterSecond.exitCode, 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("--check não escreve nada e sai 1 quando um arquivo mudaria", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "jest-to-vitest-"));
+  try {
+    const specPath = path.join(dir, "sample.spec.ts");
+    const original = `jest.fn()\n`;
+    writeFileSync(specPath, original);
+
+    const result = runCodemod([dir], { check: true });
+
+    assert.equal(readFileSync(specPath, "utf8"), original);
+    assert.deepEqual(result.rewritten, [specPath]);
+    assert.equal(result.exitCode, 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("--check sai 1 quando o único achado é um site de revisão manual (nada a reescrever)", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "jest-to-vitest-"));
+  try {
+    const specPath = path.join(dir, "sample.spec.ts");
+    const original = `const actual = jest.requireMock("./dep")\n`;
+    writeFileSync(specPath, original);
+
+    const result = runCodemod([dir], { check: true });
+
+    assert.equal(readFileSync(specPath, "utf8"), original);
+    assert.deepEqual(result.rewritten, []);
+    assert.equal(result.manualReview.length, 1);
+    assert.equal(result.exitCode, 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("--check sai 0 quando não há mudança nem revisão manual pendente", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "jest-to-vitest-"));
+  try {
+    const specPath = path.join(dir, "sample.spec.ts");
+    writeFileSync(
+      specPath,
+      `import { describe, expect, it } from "vitest"\n\ndescribe("thing", () => {\n  it("works", () => {\n    expect(1).toBe(1)\n  })\n})\n`,
+    );
+
+    const result = runCodemod([dir], { check: true });
+
+    assert.deepEqual(result.rewritten, []);
+    assert.deepEqual(result.manualReview, []);
+    assert.equal(result.exitCode, 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("um arquivo sem globais de teste e sem jest. fica byte-a-byte igual (nenhum import é adicionado)", () => {
+  const input = `export function add(a, b) {\n  return a + b\n}\n`;
+  const { text, changed, manualReview } = transformSource(input, "plain.ts");
+  assert.equal(text, input);
+  assert.equal(changed, false);
+  assert.deepEqual(manualReview, []);
+});
+
+test("printReport lista os arquivos alterados, os com revisão manual e o resumo; --quiet mantém só o resumo", () => {
+  const result = {
+    rewritten: ["a.spec.ts"],
+    unchanged: ["b.spec.ts"],
+    manualReview: [{ file: "c.spec.ts", sites: [{ line: 7, message: "manual review: x" }] }],
+  };
+
+  const verboseLines = [];
+  printReport(result, { quiet: false, log: (line) => verboseLines.push(line) });
+  assert.deepEqual(verboseLines, [
+    "changed: a.spec.ts",
+    "c.spec.ts:7 — manual review: x",
+    "jest-to-vitest — 1 alterado(s), 1 inalterado(s), 1 com revisão manual",
+  ]);
+
+  const quietLines = [];
+  printReport(result, { quiet: true, log: (line) => quietLines.push(line) });
+  assert.deepEqual(quietLines, ["jest-to-vitest — 1 alterado(s), 1 inalterado(s), 1 com revisão manual"]);
+});
+
+test("o cabeçalho de uso nomeia o comando do child da spec P1-catalog AC6", () => {
+  const source = readFileSync(new URL("../jest-to-vitest.mjs", import.meta.url), "utf8");
+  const header = source.split("\n").slice(0, 10).join("\n");
+  assert.match(header, /node scripts\/platform\/jest-to-vitest\.mjs apps\/api\/src apps\/web\/src/);
 });

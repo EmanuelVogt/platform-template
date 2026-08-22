@@ -27,6 +27,12 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   (`api/__e2e__/access-link-avatar-ownership.e2e-spec.ts`): exercitava
   `POST /v1/auth/access-link/avatar`, que só resolve `PROFILE_IMAGE_STORE` com `attachment`
   instalado — nunca o caso de um `catalog:check identity` standalone.
+- `module.json` `dependsOn` não declarava `notification`: o e2e relocado sobrepõe a porta
+  `MAILER` de `notification` para interceptar o e-mail de convite e extrair o token do
+  access-link (o fluxo de convite de `identity` publica pela porta real), um acoplamento de
+  produção genuíno que o guard `catalog-custom-migrations.test.mjs` cobra. `dependsOn` ganha
+  `notification` em `>=2.0.0 <3.0.0`, mesma faixa declarada por `identity` — o grafo continua
+  acíclico (`notification.dependsOn` é `[]`) (ADV-20260821-01).
 
 ## [1.0.0]
 

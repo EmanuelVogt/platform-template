@@ -76,12 +76,14 @@ Para manter as entradas portáveis entre apps filhos com stacks web diferentes (
   presença e ordem das seções do README conforme `README-contract.md`; allow-list de imports em
   `web/**`; existência de um título de versão no `CHANGELOG.md` correspondente a
   `module.json.version`; e o frontmatter das advisories.
-- **Regra advisory-required**: hook lefthook **commit-msg**
-  (`scripts/platform/advisory-required.mjs`) — se algum path staged está sob
+- **Regra advisory-required** (`scripts/platform/advisory-required.mjs`): se algum path está sob
   `catalog/<entry>/(api|web|migrations|parity)/**`, precisa existir um
-  `docs/advisories/ADV-*.md` staged com `module: <entry>`, ou a mensagem de commit precisa
-  carregar o trailer `Advisory: none — <motivo>`; caso contrário o commit falha (exit 1) com a
-  regra impressa.
+  `docs/advisories/ADV-*.md` com `module: <entry>` no mesmo commit, ou a mensagem desse commit
+  precisa carregar o trailer `Advisory: none — <motivo>`; caso contrário falha (exit 1) com a
+  regra impressa. Dois acionadores, um só módulo: o hook lefthook **commit-msg** (commit local,
+  arquivos staged) e o job `gates` de `.github/workflows/catalog.yml`, que chama
+  `--range <base>..<head>` e julga **cada commit do PR pela própria mensagem** — um trailer no
+  último commit não isenta os anteriores.
 - **`pnpm catalog:check [entry…]`** (`scripts/platform/catalog-check.mjs`) não é hook de git
   (leva minutos): renderiza um filho kernel-only via copier num diretório de scratch, roda
   `pnpm install`, e para cada entrada em ordem topológica faz `module add` cumulativo + testes

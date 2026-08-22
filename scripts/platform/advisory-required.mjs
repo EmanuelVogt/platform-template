@@ -29,35 +29,69 @@ export function checkAdvisoryRequired({ stagedFiles, commitMessage, stagedAdviso
   return missing.length === 0 ? { ok: true } : { ok: false, missing };
 }
 
-function readStagedAdvisories(stagedFiles) {
-  return stagedFiles
+export function checkAdvisoryRange({ commits }) {
+  const failures = [];
+  for (const commit of commits) {
+    const result = checkAdvisoryRequired({
+      stagedFiles: commit.files,
+      commitMessage: commit.message,
+      stagedAdvisories: commit.advisories,
+    });
+    if (!result.ok) failures.push({ sha: commit.sha, missing: result.missing });
+  }
+  return failures.length === 0 ? { ok: true } : { ok: false, failures };
+}
+
+function git(args) {
+  return execFileSync("git", args, { encoding: "utf8" });
+}
+
+function readAdvisoriesAt(files, revPrefix) {
+  return files
     .filter((file) => ADVISORY_PATH_RE.test(file))
     .flatMap((file) => {
-      const content = execFileSync("git", ["show", `:${file}`], { encoding: "utf8" });
       try {
-        return [{ path: file, module: parseAdvisory(content, file).module }];
+        return [{ path: file, module: parseAdvisory(git(["show", `${revPrefix}${file}`]), file).module }];
       } catch {
         return [];
       }
     });
 }
 
-function getStagedFiles() {
-  return execFileSync("git", ["diff", "--cached", "--name-only"], { encoding: "utf8" })
+function readStagedCommit(commitMessage) {
+  const files = git(["diff", "--cached", "--name-only"]).split("\n").filter(Boolean);
+  return { sha: "staged", files, message: commitMessage, advisories: readAdvisoriesAt(files, ":") };
+}
+
+function readRangeCommits(range) {
+  return git(["rev-list", "--reverse", "--no-merges", range])
     .split("\n")
-    .filter(Boolean);
+    .filter(Boolean)
+    .map((sha) => {
+      const files = git(["show", "--name-only", "--pretty=format:", sha]).split("\n").filter(Boolean);
+      return {
+        sha,
+        files,
+        message: git(["log", "-1", "--pretty=%B", sha]),
+        advisories: readAdvisoriesAt(files, `${sha}:`),
+      };
+    });
+}
+
+function report(failure) {
+  const prefix = failure.sha === "staged" ? "" : `${failure.sha.slice(0, 9)} `;
+  process.stderr.write(`${prefix}advisory obrigatório ausente para: ${failure.missing.join(", ")}\n`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const commitMessage = readFileSync(process.argv[2], "utf8");
-  const stagedFiles = getStagedFiles();
-  const result = checkAdvisoryRequired({
-    stagedFiles,
-    commitMessage,
-    stagedAdvisories: readStagedAdvisories(stagedFiles),
-  });
+  const rangeFlag = process.argv.indexOf("--range");
+  const commits =
+    rangeFlag === -1
+      ? [readStagedCommit(readFileSync(process.argv[2], "utf8"))]
+      : readRangeCommits(process.argv[rangeFlag + 1]);
+  const result = checkAdvisoryRange({ commits });
   if (!result.ok) {
-    process.stderr.write(`advisory obrigatório ausente para: ${result.missing.join(", ")}\n`);
+    result.failures.forEach(report);
     process.exit(EXIT_CODES.ADVISORY_INVALID);
   }
   process.exit(EXIT_CODES.OK);

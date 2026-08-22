@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { checkAdvisoryRequired } from "../advisory-required.mjs";
+import { checkAdvisoryRange, checkAdvisoryRequired } from "../advisory-required.mjs";
 
 test("rejeita mudança de código do catálogo sem advisory staged (exit esperado: 1)", () => {
   const result = checkAdvisoryRequired({
@@ -58,6 +58,67 @@ test("reconhece entradas sem variant (catalog/<name>/(api|web|migrations|parity)
   });
   assert.equal(result.ok, false);
   assert.deepEqual(result.missing, ["tag"]);
+});
+
+test("range: o trailer do último commit não isenta um commit anterior do mesmo PR", () => {
+  const result = checkAdvisoryRange({
+    commits: [
+      {
+        sha: "1111111111111111111111111111111111111111",
+        files: ["catalog/identity/single-tenant/api/session.service.ts"],
+        message: "feat(identity): ajusta expiração de sessão",
+        advisories: [],
+      },
+      {
+        sha: "2222222222222222222222222222222222222222",
+        files: ["docs/dev/template.md"],
+        message: "docs: nota\n\nAdvisory: none — só documentação",
+        advisories: [],
+      },
+    ],
+  });
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.failures, [
+    { sha: "1111111111111111111111111111111111111111", missing: ["identity/single-tenant"] },
+  ]);
+});
+
+test("range: cada commit é julgado pela própria mensagem e pelos próprios advisories", () => {
+  const result = checkAdvisoryRange({
+    commits: [
+      {
+        sha: "3333333333333333333333333333333333333333",
+        files: ["catalog/tag/web/core/labels.ts", "docs/advisories/ADV-20260901-03.md"],
+        message: "feat(tag): novo campo",
+        advisories: [{ path: "docs/advisories/ADV-20260901-03.md", module: "tag" }],
+      },
+      {
+        sha: "4444444444444444444444444444444444444444",
+        files: ["catalog/audit/api/trail.service.ts"],
+        message: "fix(audit): ajuste interno\n\nAdvisory: none — sem mudança de contrato",
+        advisories: [],
+      },
+    ],
+  });
+  assert.equal(result.ok, true);
+});
+
+test("range: reprova cada commit que falha, não só o primeiro", () => {
+  const result = checkAdvisoryRange({
+    commits: [
+      { sha: "aaaaaaaaaa", files: ["catalog/tag/api/tag.service.ts"], message: "feat(tag): a", advisories: [] },
+      { sha: "bbbbbbbbbb", files: ["catalog/audit/api/trail.ts"], message: "feat(audit): b", advisories: [] },
+    ],
+  });
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.failures, [
+    { sha: "aaaaaaaaaa", missing: ["tag"] },
+    { sha: "bbbbbbbbbb", missing: ["audit"] },
+  ]);
+});
+
+test("range vazio passa (PR sem commit que toque catalog/**)", () => {
+  assert.deepEqual(checkAdvisoryRange({ commits: [] }), { ok: true });
 });
 
 test("cobre apenas as entradas sem ADV quando várias entradas são tocadas na mesma mudança", () => {

@@ -26,12 +26,11 @@ jobs:
       - run: pnpm test:scripts
       - run: pnpm catalog:lint
       - run: pnpm catalog:typecheck
-      - name: ADV-04 no catalog fix without advisory (PR diff)
+      - name: ADV-04 no catalog fix without advisory (cada commit do PR)
         if: github.event_name == 'pull_request'
-        run: |
-          git log -1 --pretty=%B "${{ github.event.pull_request.head.sha }}" > /tmp/pr-commit-msg.txt
-          git reset --soft "${{ github.event.pull_request.base.sha }}"
-          node scripts/platform/advisory-required.mjs /tmp/pr-commit-msg.txt
+        run: >-
+          node scripts/platform/advisory-required.mjs --range
+          "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
 
   catalog:
     name: "catalog:check (${{ matrix.entry }})"

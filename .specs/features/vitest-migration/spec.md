@@ -183,7 +183,7 @@ describe the Vitest setup, so that nobody reaches for a jest command that no lon
 | DOC-02 | P3 docs — no stray "jest" (AC2) | probe: the `rg` in AC2 → only `jest-dom` / `jest-to-vitest` lines | Pending | Pending |
 | DOC-03 | P3 docs — arch/catalog/agents docs name Vitest (AC3) | gate: covered by DOC-02's probe | Pending | Pending |
 
-**Coverage:** 24 total, 0 mapped to tasks, 24 unmapped ⚠️ (Tasks phase pending). Probe budget: 3 of 3 (CAT-02, CAT-06, DOC-02).
+**Coverage:** 24 total, 24 mapped to tasks (`tasks.md` § *Requirement → tasks*, 2026-08-21), 0 unmapped. Probe budget: 3 of 3 (CAT-02, CAT-06, DOC-02). Tasks-phase deviations (counts, `catalog-typecheck` in `lefthook-local.yml`, `api-int` include, DOC-02 glob, `dependsOn` majors): `tasks.md` § *Deviations recorded at Tasks*.
 
 ---
 

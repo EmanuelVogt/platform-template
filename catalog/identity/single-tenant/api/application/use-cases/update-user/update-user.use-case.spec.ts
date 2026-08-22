@@ -2,6 +2,7 @@ import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.er
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import {
   InvalidPermissionSetError,
+  PermissionGrantNotAllowedError,
   ProfessionalHasCommitmentsError,
   UserNotFoundError,
 } from "../../../domain/errors"
@@ -105,6 +106,65 @@ describe("UpdateUserUseCase", () => {
     expect(users.replacePermissions).toHaveBeenCalledWith("u-target", [
       "admin.users.read",
       "admin.users.create",
+    ])
+  })
+
+  it("revogar do alvo chave que o ator não possui → 403, nada é gravado", async () => {
+    const { uc, users } = makeDeps({
+      users: {
+        findByIdWithPermissions: jest.fn().mockResolvedValue({
+          user: makeUser(),
+          permissions: ["admin.users.read", "admin.tags.read"],
+        }),
+        update: jest.fn(),
+        replacePermissions: jest.fn(),
+      },
+      ctx: fakeRequestContext(() => ({
+        correlationId: "c1",
+        locale: "pt-BR",
+        userId: "u-admin",
+        access: {
+          permissions: new Set(["admin.users.read", "admin.users.update"]),
+          isMaster: false,
+        },
+      })),
+    })
+
+    await expect(
+      uc.execute({ ...BASE_INPUT, permissions: ["admin.users.read"] })
+    ).rejects.toThrow(PermissionGrantNotAllowedError)
+    expect(users.update).not.toHaveBeenCalled()
+    expect(users.replacePermissions).not.toHaveBeenCalled()
+  })
+
+  it("revogar do alvo chave que o ator possui → grava o novo conjunto", async () => {
+    const { uc, users } = makeDeps({
+      users: {
+        findByIdWithPermissions: jest.fn().mockResolvedValue({
+          user: makeUser(),
+          permissions: ["admin.users.read", "admin.tags.read"],
+        }),
+        update: jest.fn().mockResolvedValue(undefined),
+        replacePermissions: jest.fn().mockResolvedValue(undefined),
+        replaceProfessionalAreas: jest.fn().mockResolvedValue(undefined),
+        replaceProfessionalServices: jest.fn().mockResolvedValue(undefined),
+        replaceSchedulingAreas: jest.fn().mockResolvedValue(undefined),
+      },
+      ctx: fakeRequestContext(() => ({
+        correlationId: "c1",
+        locale: "pt-BR",
+        userId: "u-admin",
+        access: {
+          permissions: new Set(["admin.users.read", "admin.tags.read"]),
+          isMaster: false,
+        },
+      })),
+    })
+
+    await uc.execute({ ...BASE_INPUT, permissions: ["admin.users.read"] })
+
+    expect(users.replacePermissions).toHaveBeenCalledWith("u-target", [
+      "admin.users.read",
     ])
   })
 

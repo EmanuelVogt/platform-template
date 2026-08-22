@@ -308,13 +308,78 @@ describe("assertCanGrant (concessão limitada ao ator)", () => {
     }).not.toThrow()
   })
 
-  it("remover chave que o ator não tem passa (delta é só o acréscimo)", () => {
+  it("revogar chave que o ator não tem lança (a revogação também é edição)", () => {
     expect(() => {
       assertCanGrant(
         { actor: actorOf(["admin.users.update"]), current: ["admin.tags.read"] },
         []
       )
+    }).toThrow(PermissionGrantNotAllowedError)
+  })
+
+  it("revogar chave que o ator tem passa", () => {
+    expect(() => {
+      assertCanGrant(
+        {
+          actor: actorOf(["admin.users.update", "admin.tags.read"]),
+          current: ["admin.tags.read"],
+        },
+        []
+      )
     }).not.toThrow()
+  })
+
+  it("conjunto inalterado passa mesmo com chave fora do ator", () => {
+    expect(() => {
+      assertCanGrant(
+        { actor: actorOf([]), current: ["admin.tags.read"] },
+        ["admin.tags.read"]
+      )
+    }).not.toThrow()
+  })
+
+  it("troca simultânea cobra as duas pontas do delta", () => {
+    expect(() => {
+      assertCanGrant(
+        {
+          actor: actorOf(["admin.users.read", "admin.tags.read"]),
+          current: ["admin.tags.read"],
+        },
+        ["admin.users.read"]
+      )
+    }).not.toThrow()
+    expect(() => {
+      assertCanGrant(
+        { actor: actorOf(["admin.users.read"]), current: ["admin.tags.read"] },
+        ["admin.users.read"]
+      )
+    }).toThrow(PermissionGrantNotAllowedError)
+  })
+
+  it("master revoga chave que não possui", () => {
+    expect(() => {
+      assertCanGrant(
+        {
+          actor: { permissions: new Set<string>(), isMaster: true },
+          current: ["admin.tags.read"],
+        },
+        []
+      )
+    }).not.toThrow()
+  })
+
+  it("o 403 carrega o type permission-grant-not-allowed", () => {
+    try {
+      assertCanGrant(
+        { actor: actorOf([]), current: ["admin.tags.read"] },
+        []
+      )
+      throw new Error("deveria ter lançado")
+    } catch (error) {
+      const denied = error as PermissionGrantNotAllowedError
+      expect(denied.status).toBe(403)
+      expect(denied.type).toMatch(/permission-grant-not-allowed$/)
+    }
   })
 
   it("a mensagem não enumera as chaves negadas", () => {

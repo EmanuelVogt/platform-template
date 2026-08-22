@@ -375,11 +375,11 @@ describe("RequestEmailChangeUseCase", () => {
     it("segunda sondagem em seguida bate no cooldown (429), não em outro 409", async () => {
       const t = makeDeps({
         users: {
-          findById: jest
+          findById: vi
             .fn()
             .mockResolvedValue(makeUser({ lastEmailChangeRequestedAt: NOW })),
-          findByEmail: jest.fn().mockResolvedValue(makeUser({ id: "u-2", email: "novo@example.com" })),
-          update: jest.fn(),
+          findByEmail: vi.fn().mockResolvedValue(makeUser({ id: "u-2", email: "novo@example.com" })),
+          update: vi.fn(),
         },
       })
       await expect(

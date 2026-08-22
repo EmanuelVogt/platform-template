@@ -4,6 +4,7 @@ import { BreachCheckUnavailableError } from "../../domain/errors"
 
 import { HibpBreachCheck } from "./hibp-breach-check"
 import { NoopBreachCheck } from "./noop-breach-check"
+import { describe, expect, it } from "vitest"
 
 function sha1Upper(password: string): string {
   return createHash("sha1").update(password).digest("hex").toUpperCase()

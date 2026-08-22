@@ -360,7 +360,7 @@ describe("IdempotencyInterceptor — reserva sem conflito", () => {
     const context = makeExecutionContext({ response: makeResponse(201) })
     await firstValueFrom(interceptor.intercept(context, next))
     expect(firstComplete(completed)).toEqual({
-      scope: "_:_",
+      scope: "_:ip:_",
       key: "k-1",
       status: "completed",
       responseStatus: 201,
@@ -473,7 +473,7 @@ describe("IdempotencyInterceptor — conflito na reserva", () => {
       interceptor.intercept(makeExecutionContext(), next)
     )
     expect(result).toEqual({ ok: true })
-    expect(reopenCalls).toEqual([{ scope: "_:_", key: "k-1" }])
+    expect(reopenCalls).toEqual([{ scope: "_:ip:_", key: "k-1" }])
     expect(firstComplete(completed).status).toBe("completed")
   })
 
@@ -504,7 +504,7 @@ describe("IdempotencyInterceptor — falha do handler", () => {
     )
     expect(error).toBe(thrown)
     expect(firstComplete(completed)).toEqual({
-      scope: "_:_",
+      scope: "_:ip:_",
       key: "k-1",
       status: "completed",
       responseStatus: 422,
@@ -522,7 +522,7 @@ describe("IdempotencyInterceptor — falha do handler", () => {
     )
     expect(error).toBe(thrown)
     expect(firstComplete(completed)).toEqual({
-      scope: "_:_",
+      scope: "_:ip:_",
       key: "k-1",
       status: "failed",
       responseStatus: 503,
@@ -540,7 +540,7 @@ describe("IdempotencyInterceptor — falha do handler", () => {
     )
     expect(error).toBe(thrown)
     expect(firstComplete(completed)).toEqual({
-      scope: "_:_",
+      scope: "_:ip:_",
       key: "k-1",
       status: "failed",
       responseStatus: 500,

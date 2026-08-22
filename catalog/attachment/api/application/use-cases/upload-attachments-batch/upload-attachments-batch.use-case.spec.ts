@@ -13,6 +13,7 @@ import { UploadAttachmentsBatchUseCase } from "./upload-attachments-batch.use-ca
 
 import type { Attachment } from "../../../domain/attachment.entity"
 import type { IncomingFile } from "../../../domain/incoming-file"
+import { type Mock, describe, expect, it, vi } from "vitest"
 
 const baseConfig = parseAttachmentConfig({
   ATTACHMENT_MULTI_MAX_FILE_BYTES: "100",
@@ -42,15 +43,15 @@ function makeUseCase(catalog = profiles) {
   const inserted: Attachment[] = []
   const stored = new Map<string, Buffer>()
   const repo = {
-    insertMany: jest.fn(async (rows: Attachment[]) => void inserted.push(...rows)),
+    insertMany: vi.fn(async (rows: Attachment[]) => void inserted.push(...rows)),
   }
   const storage = {
-    putStream: jest.fn(async (key: string, body: Readable) => {
+    putStream: vi.fn(async (key: string, body: Readable) => {
       const chunks: Buffer[] = []
       for await (const chunk of body) chunks.push(chunk as Buffer)
       stored.set(key, Buffer.concat(chunks))
     }),
-    delete: jest.fn(async (_key: string) => undefined),
+    delete: vi.fn(async (_key: string) => undefined),
   }
   const tx = { run: (fn: () => Promise<void>) => fn() }
   const useCase = new UploadAttachmentsBatchUseCase(
@@ -101,7 +102,7 @@ async function* iterate(...files: IncomingFile[]): AsyncGenerator<IncomingFile> 
   for (const item of files) yield item
 }
 
-function keysOf(mock: jest.Mock): unknown[] {
+function keysOf(mock: Mock): unknown[] {
   return mock.mock.calls.map((call) => call[0])
 }
 

@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { InFlightGate } from "./in-flight-gate"
 
 describe("InFlightGate", () => {

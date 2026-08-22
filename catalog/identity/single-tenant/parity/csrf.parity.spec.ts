@@ -15,6 +15,7 @@ import type { AccessRequirement } from "../../../shared/kernel/access/access-pol
 import type { CsrfConfig } from "../api/guards/csrf.guard"
 import type { Csrf } from "../domain/ports/csrf"
 import type { ExecutionContext } from "@nestjs/common"
+import { describe, expect, it } from "vitest"
 
 const WEB_ORIGIN = "https://app.example.com"
 

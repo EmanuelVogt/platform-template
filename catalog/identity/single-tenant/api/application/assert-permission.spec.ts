@@ -6,6 +6,7 @@ import { IDENTITY_ACCESS } from "./identity-context"
 
 import type { RequestContextStore } from "../../../shared/kernel/context/request-context"
 import type { PermissionKey } from "../domain/permissions/permission-catalog"
+import { describe, expect, it } from "vitest"
 
 function storeOf(): RequestContextStore {
   return {

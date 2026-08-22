@@ -362,7 +362,7 @@ describe("DrizzleAuthEventRepository (int)", () => {
           allowed: rateLimiterAllowed,
           retryAfterSeconds: 30,
         }),
-        reset: jest.fn().mockResolvedValue(undefined),
+        reset: vi.fn().mockResolvedValue(undefined),
       }
       const clock = { now: () => new Date("2026-05-30T00:00:00.000Z") }
       const outbox = { publish: vi.fn() }

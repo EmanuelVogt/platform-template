@@ -12,6 +12,7 @@ import { readMultipartFiles } from "./multipart-files"
 import type { MultipartLimits } from "./multipart-files"
 import type { IncomingFile } from "../../domain/incoming-file"
 import type { Request, Response } from "express"
+import { type Mock, describe, expect, it, vi } from "vitest"
 
 const BOUNDARY = "----teste"
 
@@ -19,11 +20,11 @@ const GENEROUS_LIMITS: MultipartLimits = { maxBytes: 1_000_000, maxFiles: 10 }
 
 interface FakeResponse {
   headersSent: boolean
-  setHeader: jest.Mock
+  setHeader: Mock
 }
 
 function fakeResponse(): FakeResponse {
-  return { headersSent: false, setHeader: jest.fn() }
+  return { headersSent: false, setHeader: vi.fn() }
 }
 
 function asResponse(res: FakeResponse): Response {

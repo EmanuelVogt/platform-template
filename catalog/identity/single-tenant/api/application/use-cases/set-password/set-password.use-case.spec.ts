@@ -10,6 +10,7 @@ import { fakeRequestContext } from "../../request-context.fixture"
 import { CreateSessionService } from "../../services/create-session.service"
 
 import { SetPasswordUseCase } from "./set-password.use-case"
+import { describe, expect, it, vi } from "vitest"
 
 const VALID_INPUT = {
   token: "raw",
@@ -46,17 +47,17 @@ function pendingUser(createdByUserId: string | null = null) {
 
 function makeSessionService() {
   const sessions = {
-    create: jest.fn().mockResolvedValue(undefined),
-    countByUser: jest.fn().mockResolvedValue(1),
-    deleteOldestOverCap: jest.fn().mockResolvedValue(undefined),
+    create: vi.fn().mockResolvedValue(undefined),
+    countByUser: vi.fn().mockResolvedValue(1),
+    deleteOldestOverCap: vi.fn().mockResolvedValue(undefined),
   }
   const devices = {
-    findByUserAndCookieHash: jest.fn().mockResolvedValue(null),
-    create: jest.fn().mockResolvedValue(undefined),
+    findByUserAndCookieHash: vi.fn().mockResolvedValue(null),
+    create: vi.fn().mockResolvedValue(undefined),
   }
   const tokens = {
-    generate: jest.fn().mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
-    hashOf: jest.fn().mockReturnValue("hash-of-raw"),
+    generate: vi.fn().mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
+    hashOf: vi.fn().mockReturnValue("hash-of-raw"),
   }
   const config = makeIdentityConfig()
   const ctx = fakeRequestContext(() => ({
@@ -74,21 +75,21 @@ function makeSessionService() {
 
 function makeDeps(over: Record<string, any> = {}) {
   const verificationTokens = over.verificationTokens ?? {
-    findActiveByHash: jest.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2099-01-01") }),
-    consumeByHash: jest.fn().mockResolvedValue({ userId: "u-1" }),
-    invalidateAllForUser: jest.fn().mockResolvedValue(undefined),
+    findActiveByHash: vi.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2099-01-01") }),
+    consumeByHash: vi.fn().mockResolvedValue({ userId: "u-1" }),
+    invalidateAllForUser: vi.fn().mockResolvedValue(undefined),
   }
   const users = over.users ?? {
-    findById: jest.fn().mockResolvedValue(pendingUser()),
-    update: jest.fn().mockResolvedValue(undefined),
-    findPermissions: jest.fn().mockResolvedValue([]),
+    findById: vi.fn().mockResolvedValue(pendingUser()),
+    update: vi.fn().mockResolvedValue(undefined),
+    findPermissions: vi.fn().mockResolvedValue([]),
   }
-  const hasher = over.hasher ?? { hash: jest.fn().mockResolvedValue("argon2-novo") }
-  const strength = over.strength ?? { score: jest.fn().mockReturnValue(4) }
-  const breach = over.breach ?? { check: jest.fn().mockResolvedValue("clear") }
-  const tokens = over.tokens ?? { hashOf: jest.fn().mockReturnValue("hash-of-raw") }
-  const outbox = over.outbox ?? { publish: jest.fn().mockResolvedValue(undefined) }
-  const authEvents = over.authEvents ?? { recordInTx: jest.fn().mockResolvedValue(undefined) }
+  const hasher = over.hasher ?? { hash: vi.fn().mockResolvedValue("argon2-novo") }
+  const strength = over.strength ?? { score: vi.fn().mockReturnValue(4) }
+  const breach = over.breach ?? { check: vi.fn().mockResolvedValue("clear") }
+  const tokens = over.tokens ?? { hashOf: vi.fn().mockReturnValue("hash-of-raw") }
+  const outbox = over.outbox ?? { publish: vi.fn().mockResolvedValue(undefined) }
+  const authEvents = over.authEvents ?? { recordInTx: vi.fn().mockResolvedValue(undefined) }
   const clock = over.clock ?? { now: () => new Date("2026-06-08T00:00:00.000Z") }
   const ctx = over.ctx ?? fakeRequestContext(() => ({
       ip: null,
@@ -104,7 +105,7 @@ function makeDeps(over: Record<string, any> = {}) {
   const attachments =
     "attachments" in over
       ? over.attachments
-      : { exists: jest.fn().mockResolvedValue(false) }
+      : { exists: vi.fn().mockResolvedValue(false) }
   const createSession = over.createSession ?? makeSessionService()
   const uc = new SetPasswordUseCase(
     verificationTokens,
@@ -148,9 +149,9 @@ describe("SetPasswordUseCase", () => {
   it("token inválido (findActive null) lança InvalidAccessLinkError sem consumir", async () => {
     const t = makeDeps({
       verificationTokens: {
-        findActiveByHash: jest.fn().mockResolvedValue(null),
-        consumeByHash: jest.fn(),
-        invalidateAllForUser: jest.fn(),
+        findActiveByHash: vi.fn().mockResolvedValue(null),
+        consumeByHash: vi.fn(),
+        invalidateAllForUser: vi.fn(),
       },
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidAccessLinkError)
@@ -161,9 +162,9 @@ describe("SetPasswordUseCase", () => {
   it("consume null na tx lança InvalidAccessLinkError", async () => {
     const t = makeDeps({
       verificationTokens: {
-        findActiveByHash: jest.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2099-01-01") }),
-        consumeByHash: jest.fn().mockResolvedValue(null),
-        invalidateAllForUser: jest.fn(),
+        findActiveByHash: vi.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2099-01-01") }),
+        consumeByHash: vi.fn().mockResolvedValue(null),
+        invalidateAllForUser: vi.fn(),
       },
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidAccessLinkError)
@@ -193,7 +194,7 @@ describe("SetPasswordUseCase", () => {
       pepperVersion: 1,
     })
     const t = makeDeps({
-      users: { findById: jest.fn().mockResolvedValue(active), update: jest.fn() },
+      users: { findById: vi.fn().mockResolvedValue(active), update: vi.fn() },
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidAccessLinkError)
     expect(t.users.update).not.toHaveBeenCalled()
@@ -202,9 +203,9 @@ describe("SetPasswordUseCase", () => {
   it("user criado por admin: publica password_set com recipient = admin", async () => {
     const t = makeDeps({
       users: {
-        findById: jest.fn().mockResolvedValue(pendingUser("admin-1")),
-        update: jest.fn().mockResolvedValue(undefined),
-        findPermissions: jest.fn().mockResolvedValue([]),
+        findById: vi.fn().mockResolvedValue(pendingUser("admin-1")),
+        update: vi.fn().mockResolvedValue(undefined),
+        findPermissions: vi.fn().mockResolvedValue([]),
       },
     })
     await t.uc.execute(VALID_INPUT)
@@ -227,7 +228,7 @@ describe("SetPasswordUseCase", () => {
   })
 
   it("senha fraca lança WeakPasswordError ANTES de consultar token", async () => {
-    const t = makeDeps({ strength: { score: jest.fn().mockReturnValue(0) } })
+    const t = makeDeps({ strength: { score: vi.fn().mockReturnValue(0) } })
     await expect(t.uc.execute({ ...VALID_INPUT, password: "123" })).rejects.toBeInstanceOf(WeakPasswordError)
     expect(t.verificationTokens.findActiveByHash).not.toHaveBeenCalled()
     expect(t.verificationTokens.consumeByHash).not.toHaveBeenCalled()
@@ -235,16 +236,16 @@ describe("SetPasswordUseCase", () => {
 
   it("senha vazada lança WeakPasswordError sem tocar no token", async () => {
     const verificationTokens = {
-      findActiveByHash: jest.fn(),
-      consumeByHash: jest.fn(),
-      invalidateAllForUser: jest.fn(),
+      findActiveByHash: vi.fn(),
+      consumeByHash: vi.fn(),
+      invalidateAllForUser: vi.fn(),
     }
     const t = makeDeps({
       config: makeIdentityConfig({
         BREACH_CHECK_ENABLED: true,
         BREACH_CHECK_MODE: "fail_closed",
       }),
-      breach: { check: jest.fn().mockResolvedValue("breached") },
+      breach: { check: vi.fn().mockResolvedValue("breached") },
       verificationTokens,
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(WeakPasswordError)
@@ -254,7 +255,7 @@ describe("SetPasswordUseCase", () => {
 
   it("avatar de outro dono cai de volta para o avatar atual (null)", async () => {
     const t = makeDeps({
-      attachments: { exists: jest.fn().mockResolvedValue(false) },
+      attachments: { exists: vi.fn().mockResolvedValue(false) },
     })
     await t.uc.execute({ ...VALID_INPUT, avatarAttachmentId: "att-third-party" })
     // O user atualizado não deve ter o avatar de terceiro
@@ -264,7 +265,7 @@ describe("SetPasswordUseCase", () => {
 
   it("avatar com ownership válida é mantido", async () => {
     const t = makeDeps({
-      attachments: { exists: jest.fn().mockResolvedValue(true) },
+      attachments: { exists: vi.fn().mockResolvedValue(true) },
     })
     await t.uc.execute({ ...VALID_INPUT, avatarAttachmentId: "att-own" })
     const updatedUser: User = t.users.update.mock.calls[0][0]
@@ -274,9 +275,9 @@ describe("SetPasswordUseCase", () => {
   it("user não encontrado (findById null) lança InvalidAccessLinkError sem consumir", async () => {
     const t = makeDeps({
       users: {
-        findById: jest.fn().mockResolvedValue(null),
-        update: jest.fn(),
-        findPermissions: jest.fn(),
+        findById: vi.fn().mockResolvedValue(null),
+        update: vi.fn(),
+        findPermissions: vi.fn(),
       },
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidAccessLinkError)
@@ -290,14 +291,14 @@ describe("SetPasswordUseCase", () => {
         BREACH_CHECK_ENABLED: true,
         BREACH_CHECK_MODE: "fail_closed",
       }),
-      breach: { check: jest.fn().mockResolvedValue("clear") },
+      breach: { check: vi.fn().mockResolvedValue("clear") },
     })
     await expect(t.uc.execute(VALID_INPUT)).resolves.toBeDefined()
     expect(t.verificationTokens.findActiveByHash).toHaveBeenCalled()
   })
 
   it("desabilitado: o breach check não é consultado", async () => {
-    const check = jest.fn().mockResolvedValue("breached")
+    const check = vi.fn().mockResolvedValue("breached")
     const t = makeDeps({
       config: makeIdentityConfig({
         BREACH_CHECK_ENABLED: false,
@@ -310,7 +311,7 @@ describe("SetPasswordUseCase", () => {
   })
 
   it("habilitado em fail_open: senha vazada é barrada (o modo não decide SE consulta)", async () => {
-    const check = jest.fn().mockResolvedValue("breached")
+    const check = vi.fn().mockResolvedValue("breached")
     const t = makeDeps({
       config: makeIdentityConfig({
         BREACH_CHECK_ENABLED: true,
@@ -328,7 +329,7 @@ describe("SetPasswordUseCase", () => {
         BREACH_CHECK_ENABLED: true,
         BREACH_CHECK_MODE: "fail_open",
       }),
-      breach: { check: jest.fn().mockResolvedValue("skipped") },
+      breach: { check: vi.fn().mockResolvedValue("skipped") },
     })
     await expect(t.uc.execute(VALID_INPUT)).resolves.toBeDefined()
     expect(t.authEvents.recordInTx).toHaveBeenCalledWith(
@@ -343,9 +344,9 @@ describe("SetPasswordUseCase", () => {
 
   it("fail_closed + consulta indisponível: 503 sobe e o token não é consumido", async () => {
     const verificationTokens = {
-      findActiveByHash: jest.fn(),
-      consumeByHash: jest.fn(),
-      invalidateAllForUser: jest.fn(),
+      findActiveByHash: vi.fn(),
+      consumeByHash: vi.fn(),
+      invalidateAllForUser: vi.fn(),
     }
     const t = makeDeps({
       config: makeIdentityConfig({
@@ -353,7 +354,7 @@ describe("SetPasswordUseCase", () => {
         BREACH_CHECK_MODE: "fail_closed",
       }),
       breach: {
-        check: jest.fn().mockRejectedValue(new BreachCheckUnavailableError()),
+        check: vi.fn().mockRejectedValue(new BreachCheckUnavailableError()),
       },
       verificationTokens,
     })
@@ -371,12 +372,12 @@ describe("SetPasswordUseCase", () => {
       pepperVersion: 1,
     })
     // Primeira chamada (pre-check fora da tx): retorna pending; segunda (dentro da tx): retorna active
-    const findById = jest
+    const findById = vi
       .fn()
       .mockResolvedValueOnce(pendingUser())
       .mockResolvedValueOnce(active)
     const t = makeDeps({
-      users: { findById, update: jest.fn(), findPermissions: jest.fn() },
+      users: { findById, update: vi.fn(), findPermissions: vi.fn() },
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidAccessLinkError)
     expect(t.users.update).not.toHaveBeenCalled()
@@ -407,12 +408,12 @@ describe("SetPasswordUseCase", () => {
       deletedAt: null,
       createdByUserId: null,
     })
-    const existsFn = jest.fn()
+    const existsFn = vi.fn()
     const t = makeDeps({
       users: {
-        findById: jest.fn().mockResolvedValue(userWithAvatar),
-        update: jest.fn().mockResolvedValue(undefined),
-        findPermissions: jest.fn().mockResolvedValue([]),
+        findById: vi.fn().mockResolvedValue(userWithAvatar),
+        update: vi.fn().mockResolvedValue(undefined),
+        findPermissions: vi.fn().mockResolvedValue([]),
       },
       attachments: { exists: existsFn },
     })

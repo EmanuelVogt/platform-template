@@ -4,6 +4,7 @@ import {
 } from "@nestjs/common/constants"
 import { APP_GUARD } from "@nestjs/core"
 import { EventEmitter2 } from "@nestjs/event-emitter"
+import { describe, expect, it } from "vitest"
 
 import { RedisModule } from "../../infra/redis/redis.module"
 import { LoggerFactory } from "../logging/logger.factory"

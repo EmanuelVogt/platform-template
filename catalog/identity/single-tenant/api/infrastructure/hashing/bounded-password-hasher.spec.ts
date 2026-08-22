@@ -3,22 +3,23 @@ import { PasswordHashingSaturatedError } from "../../domain/errors"
 import { BoundedPasswordHasher } from "./bounded-password-hasher"
 
 import type { PasswordHasher } from "../../domain/ports/password-hasher"
+import { type Mock, describe, expect, it, vi } from "vitest"
 
 /** Hasher interno cujas promessas só resolvem quando o teste mandar. */
 function pendingHasher() {
   const pending: Array<(value: never) => void> = []
   const inner: PasswordHasher & {
-    hash: jest.Mock
-    verify: jest.Mock
-    needsRehash: jest.Mock
+    hash: Mock
+    verify: Mock
+    needsRehash: Mock
   } = {
-    hash: jest.fn(
+    hash: vi.fn(
       () => new Promise<string>((resolve) => pending.push(resolve as never)),
     ),
-    verify: jest.fn(
+    verify: vi.fn(
       () => new Promise<boolean>((resolve) => pending.push(resolve as never)),
     ),
-    needsRehash: jest.fn().mockReturnValue(false),
+    needsRehash: vi.fn().mockReturnValue(false),
   }
   return { inner, pending }
 }
@@ -76,8 +77,8 @@ describe("BoundedPasswordHasher", () => {
 
   it("a vaga volta mesmo quando o hasher interno lança", async () => {
     const inner: PasswordHasher = {
-      hash: jest.fn().mockRejectedValue(new Error("argon2 explodiu")),
-      verify: jest.fn().mockResolvedValue(true),
+      hash: vi.fn().mockRejectedValue(new Error("argon2 explodiu")),
+      verify: vi.fn().mockResolvedValue(true),
       needsRehash: () => false,
     }
     const hasher = new BoundedPasswordHasher(inner, 1)

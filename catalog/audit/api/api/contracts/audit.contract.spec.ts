@@ -1,4 +1,5 @@
 import { listAuditEntriesQuerySchema } from "./audit.contract"
+import { describe, expect, it } from "vitest"
 
 describe("listAuditEntriesQuerySchema", () => {
   it("aceita from/to em ISO datetime válido", () => {

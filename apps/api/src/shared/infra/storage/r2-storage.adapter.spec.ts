@@ -1,6 +1,7 @@
 import { Readable } from "node:stream"
 
 import { S3Client } from "@aws-sdk/client-s3"
+import { type Mock, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { R2StorageAdapter } from "./r2-storage.adapter"
 import { StorageUnavailableError } from "./storage-unavailable.error"
@@ -11,14 +12,16 @@ import type * as AwsS3 from "@aws-sdk/client-s3"
 // Boundary S3-compat: testing.md proíbe mock de banco, não de SaaS externo.
 // Commands reais são necessários para o Upload do lib-storage montar o
 // multipart; só `send` é stub.
-jest.mock("@aws-sdk/client-s3", () => {
-  const actual = jest.requireActual("@aws-sdk/client-s3")
+vi.mock("@aws-sdk/client-s3", async () => {
+  const actual = await vi.importActual<typeof AwsS3>("@aws-sdk/client-s3")
   return {
     ...actual,
-    S3Client: jest.fn((config: AwsS3.S3ClientConfig) => {
+    // Function expression, não arrow: o adapter chama `new S3Client(...)` e
+    // uma arrow não é construtível.
+    S3Client: vi.fn(function (config: AwsS3.S3ClientConfig) {
       const client = new actual.S3Client(config)
-      const send = jest.fn()
-      ;(client as { send: jest.Mock }).send = send
+      const send = vi.fn()
+      ;(client as unknown as { send: Mock }).send = send
       return client
     }),
   }
@@ -42,13 +45,13 @@ function timeoutError(): Error {
 
 describe("R2StorageAdapter", () => {
   let adapter: R2StorageAdapter
-  let sendMock: jest.Mock
-  const S3ClientMock = S3Client as unknown as jest.Mock
+  let sendMock: Mock
+  const S3ClientMock = S3Client as unknown as Mock
 
   beforeEach(() => {
     S3ClientMock.mockClear()
     adapter = new R2StorageAdapter(cfg)
-    const client = S3ClientMock.mock.results[0]?.value as { send: jest.Mock }
+    const client = S3ClientMock.mock.results[0]?.value as { send: Mock }
     sendMock = client.send
   })
 
@@ -98,7 +101,7 @@ describe("R2StorageAdapter", () => {
   })
 
   it("getStream retorna o Body do GetObjectCommand sem passar abortSignal", async () => {
-    const fakeStream = { pipe: jest.fn() }
+    const fakeStream = { pipe: vi.fn() }
     sendMock.mockResolvedValue({ Body: fakeStream })
 
     const out = await adapter.getStream("k")

@@ -9,6 +9,7 @@ import { SESSION_REPOSITORY } from './session.repository';
 import { TOKEN_GENERATOR } from './token-generator';
 import { USER_REPOSITORY } from './user.repository';
 import { VERIFICATION_TOKEN_REPOSITORY } from './verification-token.repository';
+import { describe, expect, it } from "vitest"
 
 describe('ports — tokens de injeção', () => {
   const entries = [

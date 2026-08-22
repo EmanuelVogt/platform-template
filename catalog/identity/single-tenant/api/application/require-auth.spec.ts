@@ -5,6 +5,7 @@ import { IDENTITY_SESSION } from "./identity-context"
 import { requireAuth } from "./require-auth"
 
 import type { RequestContextStore } from "../../../shared/kernel/context/request-context"
+import { describe, expect, it } from "vitest"
 
 function storeOf(): RequestContextStore {
   return {

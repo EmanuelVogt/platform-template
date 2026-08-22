@@ -6,6 +6,7 @@ import type { RequestContext } from "../../../../../shared/kernel/context/reques
 import type { ConnectionRegistryPort } from "../../../domain/ports/connection-registry.port"
 import type { MessageEvent } from "@nestjs/common"
 import type { Request } from "express"
+import { describe, expect, it, vi } from "vitest"
 
 // WEB_ORIGIN em process.env vem de test/setup/unit-env.ts.
 const SAME_ORIGIN = "http://localhost:5173"
@@ -13,8 +14,8 @@ const SAME_ORIGIN = "http://localhost:5173"
 describe("SseController", () => {
   it("registra a conexão pro recipient autenticado e fecha no close do request", () => {
     const subject = new Subject<MessageEvent>()
-    const close = jest.fn()
-    const register = jest.fn().mockReturnValue({ stream: subject.asObservable(), close })
+    const close = vi.fn()
+    const register = vi.fn().mockReturnValue({ stream: subject.asObservable(), close })
     const registry = { register } as unknown as ConnectionRegistryPort
     const ctx = { getActor: () => ({ id: "u1", kind: "user" }) } as unknown as RequestContext
 
@@ -33,22 +34,22 @@ describe("SseController", () => {
   })
 
   it("sem userId no contexto → lança (rota exige sessão)", () => {
-    const registry = { register: jest.fn() } as unknown as ConnectionRegistryPort
+    const registry = { register: vi.fn() } as unknown as ConnectionRegistryPort
     const ctx = { getActor: () => null } as unknown as RequestContext
-    const req = { headers: {}, on: jest.fn() } as unknown as Request
+    const req = { headers: {}, on: vi.fn() } as unknown as Request
     expect(() => new SseController(registry, ctx).stream(req)).toThrow()
   })
 
   it("Origin igual a WEB_ORIGIN registra normalmente", () => {
     const subject = new Subject<MessageEvent>()
-    const register = jest
+    const register = vi
       .fn()
-      .mockReturnValue({ stream: subject.asObservable(), close: jest.fn() })
+      .mockReturnValue({ stream: subject.asObservable(), close: vi.fn() })
     const registry = { register } as unknown as ConnectionRegistryPort
     const ctx = { getActor: () => ({ id: "u1", kind: "user" }) } as unknown as RequestContext
     const req = {
       headers: { origin: SAME_ORIGIN },
-      on: jest.fn(),
+      on: vi.fn(),
     } as unknown as Request
 
     const stream = new SseController(registry, ctx).stream(req)
@@ -58,12 +59,12 @@ describe("SseController", () => {
   })
 
   it("Origin diferente de WEB_ORIGIN → 403, sem registrar a conexão", () => {
-    const register = jest.fn()
+    const register = vi.fn()
     const registry = { register } as unknown as ConnectionRegistryPort
     const ctx = { getActor: () => ({ id: "u1", kind: "user" }) } as unknown as RequestContext
     const req = {
       headers: { origin: "https://evil.example" },
-      on: jest.fn(),
+      on: vi.fn(),
     } as unknown as Request
 
     expect(() => new SseController(registry, ctx).stream(req)).toThrow(

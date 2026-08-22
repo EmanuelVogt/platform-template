@@ -9,6 +9,7 @@ import {
 import { fakeRequestContext } from "../../request-context.fixture"
 
 import { UpdateUserUseCase } from "./update-user.use-case"
+import { describe, expect, it, vi } from "vitest"
 
 const BASE_INPUT = {
   userId: "u-target",
@@ -50,18 +51,18 @@ function makeUser(over: Partial<UserProps> = {}): User {
 
 function makeDeps(over: Record<string, any> = {}) {
   const users = over.users ?? {
-    findByIdWithPermissions: jest.fn().mockResolvedValue({
+    findByIdWithPermissions: vi.fn().mockResolvedValue({
       user: makeUser(),
       permissions: [],
     }),
-    findProfessionalScope: jest
+    findProfessionalScope: vi
       .fn()
       .mockResolvedValue({ areaIds: [], serviceIds: [] }),
-    update: jest.fn().mockResolvedValue(undefined),
-    replacePermissions: jest.fn().mockResolvedValue(undefined),
-    replaceProfessionalAreas: jest.fn().mockResolvedValue(undefined),
-    replaceProfessionalServices: jest.fn().mockResolvedValue(undefined),
-    replaceSchedulingAreas: jest.fn().mockResolvedValue(undefined),
+    update: vi.fn().mockResolvedValue(undefined),
+    replacePermissions: vi.fn().mockResolvedValue(undefined),
+    replaceProfessionalAreas: vi.fn().mockResolvedValue(undefined),
+    replaceProfessionalServices: vi.fn().mockResolvedValue(undefined),
+    replaceSchedulingAreas: vi.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => new Date("2026-06-12T12:00:00.000Z") }
   const ctx = over.ctx ?? fakeRequestContext(() => ({
@@ -73,10 +74,10 @@ function makeDeps(over: Record<string, any> = {}) {
       access: { permissions: new Set<string>(), isMaster: true },
     }))
   const scope = over.scope ?? {
-    assertValid: jest.fn().mockResolvedValue(undefined),
+    assertValid: vi.fn().mockResolvedValue(undefined),
   }
   const commitments = over.commitments ?? {
-    listFuture: jest.fn().mockResolvedValue([]),
+    listFuture: vi.fn().mockResolvedValue([]),
   }
   const uc = new UpdateUserUseCase(users, clock, ctx, scope, commitments)
   return { uc, users, scope, commitments }
@@ -86,15 +87,15 @@ describe("UpdateUserUseCase", () => {
   it("atualiza nome, perfil e set do alvo", async () => {
     const { uc, users } = makeDeps({
       users: {
-        findByIdWithPermissions: jest.fn().mockResolvedValue({
+        findByIdWithPermissions: vi.fn().mockResolvedValue({
           user: makeUser({ accessProfile: "professional" }),
           permissions: [],
         }),
-        update: jest.fn().mockResolvedValue(undefined),
-        replacePermissions: jest.fn().mockResolvedValue(undefined),
-        replaceProfessionalAreas: jest.fn().mockResolvedValue(undefined),
-        replaceProfessionalServices: jest.fn().mockResolvedValue(undefined),
-        replaceSchedulingAreas: jest.fn().mockResolvedValue(undefined),
+        update: vi.fn().mockResolvedValue(undefined),
+        replacePermissions: vi.fn().mockResolvedValue(undefined),
+        replaceProfessionalAreas: vi.fn().mockResolvedValue(undefined),
+        replaceProfessionalServices: vi.fn().mockResolvedValue(undefined),
+        replaceSchedulingAreas: vi.fn().mockResolvedValue(undefined),
       },
     })
     await uc.execute({
@@ -115,12 +116,12 @@ describe("UpdateUserUseCase", () => {
   it("revogar do alvo chave que o ator não possui → 403, nada é gravado", async () => {
     const { uc, users } = makeDeps({
       users: {
-        findByIdWithPermissions: jest.fn().mockResolvedValue({
+        findByIdWithPermissions: vi.fn().mockResolvedValue({
           user: makeUser(),
           permissions: ["admin.users.read", "admin.tags.read"],
         }),
-        update: jest.fn(),
-        replacePermissions: jest.fn(),
+        update: vi.fn(),
+        replacePermissions: vi.fn(),
       },
       ctx: fakeRequestContext(() => ({
         correlationId: "c1",
@@ -143,15 +144,15 @@ describe("UpdateUserUseCase", () => {
   it("revogar do alvo chave que o ator possui → grava o novo conjunto", async () => {
     const { uc, users } = makeDeps({
       users: {
-        findByIdWithPermissions: jest.fn().mockResolvedValue({
+        findByIdWithPermissions: vi.fn().mockResolvedValue({
           user: makeUser(),
           permissions: ["admin.users.read", "admin.tags.read"],
         }),
-        update: jest.fn().mockResolvedValue(undefined),
-        replacePermissions: jest.fn().mockResolvedValue(undefined),
-        replaceProfessionalAreas: jest.fn().mockResolvedValue(undefined),
-        replaceProfessionalServices: jest.fn().mockResolvedValue(undefined),
-        replaceSchedulingAreas: jest.fn().mockResolvedValue(undefined),
+        update: vi.fn().mockResolvedValue(undefined),
+        replacePermissions: vi.fn().mockResolvedValue(undefined),
+        replaceProfessionalAreas: vi.fn().mockResolvedValue(undefined),
+        replaceProfessionalServices: vi.fn().mockResolvedValue(undefined),
+        replaceSchedulingAreas: vi.fn().mockResolvedValue(undefined),
       },
       ctx: fakeRequestContext(() => ({
         correlationId: "c1",
@@ -174,9 +175,9 @@ describe("UpdateUserUseCase", () => {
   it("alvo inexistente → UserNotFoundError", async () => {
     const { uc } = makeDeps({
       users: {
-        findByIdWithPermissions: jest.fn().mockResolvedValue(null),
-        update: jest.fn(),
-        replacePermissions: jest.fn(),
+        findByIdWithPermissions: vi.fn().mockResolvedValue(null),
+        update: vi.fn(),
+        replacePermissions: vi.fn(),
       },
     })
     await expect(uc.execute(BASE_INPUT)).rejects.toThrow(UserNotFoundError)
@@ -185,12 +186,12 @@ describe("UpdateUserUseCase", () => {
   it("alvo na lixeira → UserNotFoundError", async () => {
     const { uc } = makeDeps({
       users: {
-        findByIdWithPermissions: jest.fn().mockResolvedValue({
+        findByIdWithPermissions: vi.fn().mockResolvedValue({
           user: makeUser({ deletedAt: new Date() }),
           permissions: [],
         }),
-        update: jest.fn(),
-        replacePermissions: jest.fn(),
+        update: vi.fn(),
+        replacePermissions: vi.fn(),
       },
     })
     await expect(uc.execute(BASE_INPUT)).rejects.toThrow(UserNotFoundError)
@@ -199,12 +200,12 @@ describe("UpdateUserUseCase", () => {
   it("alvo master → ForbiddenError", async () => {
     const { uc, users } = makeDeps({
       users: {
-        findByIdWithPermissions: jest.fn().mockResolvedValue({
+        findByIdWithPermissions: vi.fn().mockResolvedValue({
           user: makeUser({ accessProfile: "master" }),
           permissions: [],
         }),
-        update: jest.fn(),
-        replacePermissions: jest.fn(),
+        update: vi.fn(),
+        replacePermissions: vi.fn(),
       },
     })
     await expect(uc.execute(BASE_INPUT)).rejects.toThrow(ForbiddenError)
@@ -214,12 +215,12 @@ describe("UpdateUserUseCase", () => {
   it("auto-edição de perfil → ForbiddenError", async () => {
     const { uc, users } = makeDeps({
       users: {
-        findByIdWithPermissions: jest.fn().mockResolvedValue({
+        findByIdWithPermissions: vi.fn().mockResolvedValue({
           user: makeUser({ accessProfile: "professional" }),
           permissions: ["admin.users.read"],
         }),
-        update: jest.fn(),
-        replacePermissions: jest.fn(),
+        update: vi.fn(),
+        replacePermissions: vi.fn(),
       },
       ctx: fakeRequestContext(() => ({ correlationId: "c1", locale: "pt-BR", userId: "u-target" })),
     })
@@ -230,12 +231,12 @@ describe("UpdateUserUseCase", () => {
   it("auto-edição de permissões → ForbiddenError", async () => {
     const { uc, users } = makeDeps({
       users: {
-        findByIdWithPermissions: jest.fn().mockResolvedValue({
+        findByIdWithPermissions: vi.fn().mockResolvedValue({
           user: makeUser(),
           permissions: ["admin.users.read"],
         }),
-        update: jest.fn(),
-        replacePermissions: jest.fn(),
+        update: vi.fn(),
+        replacePermissions: vi.fn(),
       },
       ctx: fakeRequestContext(() => ({ correlationId: "c1", locale: "pt-BR", userId: "u-target" })),
     })
@@ -251,18 +252,18 @@ describe("UpdateUserUseCase", () => {
   it("auto-edição só de nome → permitida", async () => {
     const { uc, users } = makeDeps({
       users: {
-        findByIdWithPermissions: jest.fn().mockResolvedValue({
+        findByIdWithPermissions: vi.fn().mockResolvedValue({
           user: makeUser(),
           permissions: ["admin.users.read"],
         }),
-        findProfessionalScope: jest
+        findProfessionalScope: vi
           .fn()
           .mockResolvedValue({ areaIds: [], serviceIds: [] }),
-        update: jest.fn().mockResolvedValue(undefined),
-        replacePermissions: jest.fn().mockResolvedValue(undefined),
-        replaceProfessionalAreas: jest.fn().mockResolvedValue(undefined),
-        replaceProfessionalServices: jest.fn().mockResolvedValue(undefined),
-        replaceSchedulingAreas: jest.fn().mockResolvedValue(undefined),
+        update: vi.fn().mockResolvedValue(undefined),
+        replacePermissions: vi.fn().mockResolvedValue(undefined),
+        replaceProfessionalAreas: vi.fn().mockResolvedValue(undefined),
+        replaceProfessionalServices: vi.fn().mockResolvedValue(undefined),
+        replaceSchedulingAreas: vi.fn().mockResolvedValue(undefined),
       },
       ctx: fakeRequestContext(() => ({
           correlationId: "c1",
@@ -298,15 +299,15 @@ describe("UpdateUserUseCase", () => {
   describe("tirar do atendimento a cliente", () => {
     function attendingUser() {
       return {
-        findByIdWithPermissions: jest.fn().mockResolvedValue({
+        findByIdWithPermissions: vi.fn().mockResolvedValue({
           user: makeUser({ servesClients: true }),
           permissions: [],
         }),
-        update: jest.fn().mockResolvedValue(undefined),
-        replacePermissions: jest.fn().mockResolvedValue(undefined),
-        replaceProfessionalAreas: jest.fn().mockResolvedValue(undefined),
-        replaceProfessionalServices: jest.fn().mockResolvedValue(undefined),
-        replaceSchedulingAreas: jest.fn().mockResolvedValue(undefined),
+        update: vi.fn().mockResolvedValue(undefined),
+        replacePermissions: vi.fn().mockResolvedValue(undefined),
+        replaceProfessionalAreas: vi.fn().mockResolvedValue(undefined),
+        replaceProfessionalServices: vi.fn().mockResolvedValue(undefined),
+        replaceSchedulingAreas: vi.fn().mockResolvedValue(undefined),
       }
     }
 
@@ -323,7 +324,7 @@ describe("UpdateUserUseCase", () => {
       const users = attendingUser()
       const { uc } = makeDeps({
         users,
-        commitments: { listFuture: jest.fn().mockResolvedValue([COMMITMENT]) },
+        commitments: { listFuture: vi.fn().mockResolvedValue([COMMITMENT]) },
       })
       await expect(
         uc.execute({ ...BASE_INPUT, servesClients: false })
@@ -335,7 +336,7 @@ describe("UpdateUserUseCase", () => {
     it("a recusa carrega a lista do que precisa ser remarcado", async () => {
       const { uc } = makeDeps({
         users: attendingUser(),
-        commitments: { listFuture: jest.fn().mockResolvedValue([COMMITMENT]) },
+        commitments: { listFuture: vi.fn().mockResolvedValue([COMMITMENT]) },
       })
       try {
         await uc.execute({ ...BASE_INPUT, servesClients: false })
@@ -372,7 +373,7 @@ describe("UpdateUserUseCase", () => {
     it("continuar atendendo não consulta a agenda", async () => {
       const { uc, commitments } = makeDeps({
         users: attendingUser(),
-        scope: { assertValid: jest.fn().mockResolvedValue(undefined) },
+        scope: { assertValid: vi.fn().mockResolvedValue(undefined) },
       })
       await uc.execute({
         ...BASE_INPUT,
@@ -405,18 +406,18 @@ describe("UpdateUserUseCase", () => {
       } = {}
     ) {
       const users = {
-        findByIdWithPermissions: jest.fn().mockResolvedValue({
+        findByIdWithPermissions: vi.fn().mockResolvedValue({
           user: makeUser(over.user),
           permissions: ["admin.users.read"],
         }),
-        findProfessionalScope: jest
+        findProfessionalScope: vi
           .fn()
           .mockResolvedValue(over.scope ?? { areaIds: [], serviceIds: [] }),
-        update: jest.fn().mockResolvedValue(undefined),
-        replacePermissions: jest.fn().mockResolvedValue(undefined),
-        replaceProfessionalAreas: jest.fn().mockResolvedValue(undefined),
-        replaceProfessionalServices: jest.fn().mockResolvedValue(undefined),
-        replaceSchedulingAreas: jest.fn().mockResolvedValue(undefined),
+        update: vi.fn().mockResolvedValue(undefined),
+        replacePermissions: vi.fn().mockResolvedValue(undefined),
+        replaceProfessionalAreas: vi.fn().mockResolvedValue(undefined),
+        replaceProfessionalServices: vi.fn().mockResolvedValue(undefined),
+        replaceSchedulingAreas: vi.fn().mockResolvedValue(undefined),
       }
       return makeDeps({
         users,
@@ -503,18 +504,18 @@ describe("UpdateUserUseCase", () => {
     it("a regra é só da auto-edição: master muda o escopo de outro usuário", async () => {
       const { uc, users } = makeDeps({
         users: {
-          findByIdWithPermissions: jest.fn().mockResolvedValue({
+          findByIdWithPermissions: vi.fn().mockResolvedValue({
             user: makeUser(),
             permissions: [],
           }),
-          findProfessionalScope: jest
+          findProfessionalScope: vi
             .fn()
             .mockResolvedValue({ areaIds: [], serviceIds: [] }),
-          update: jest.fn().mockResolvedValue(undefined),
-          replacePermissions: jest.fn().mockResolvedValue(undefined),
-          replaceProfessionalAreas: jest.fn().mockResolvedValue(undefined),
-          replaceProfessionalServices: jest.fn().mockResolvedValue(undefined),
-          replaceSchedulingAreas: jest.fn().mockResolvedValue(undefined),
+          update: vi.fn().mockResolvedValue(undefined),
+          replacePermissions: vi.fn().mockResolvedValue(undefined),
+          replaceProfessionalAreas: vi.fn().mockResolvedValue(undefined),
+          replaceProfessionalServices: vi.fn().mockResolvedValue(undefined),
+          replaceSchedulingAreas: vi.fn().mockResolvedValue(undefined),
         },
       })
 

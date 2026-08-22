@@ -1,4 +1,5 @@
 import { EventEmitter2 } from "@nestjs/event-emitter"
+import { type Mock, describe, expect, it, vi } from "vitest"
 
 import { InMemoryRateLimiter } from "./in-memory-rate-limiter"
 import { ResilientRateLimiter } from "./resilient-rate-limiter"
@@ -11,15 +12,15 @@ type Emitted = { name: string; payload: unknown }
 function makeHarness(): {
   limiter: ResilientRateLimiter
   fallback: InMemoryRateLimiter
-  primary: { consume: jest.Mock; reset: jest.Mock }
+  primary: { consume: Mock; reset: Mock }
   emitted: Emitted[]
   warns: Warn[]
 } {
   const primary = {
-    consume: jest
+    consume: vi
       .fn()
       .mockResolvedValue({ allowed: true, retryAfterSeconds: 0 }),
-    reset: jest.fn().mockResolvedValue(undefined),
+    reset: vi.fn().mockResolvedValue(undefined),
   }
   const fallback = new InMemoryRateLimiter()
   const emitter = new EventEmitter2()

@@ -13,6 +13,7 @@ import { ResetPasswordUseCase } from "./reset-password.use-case"
 import type { RequestContextStore } from "../../../../../shared/kernel/context/request-context"
 import type { BreachVerdict } from "../../../domain/ports/breach-check"
 import type { Pool } from "pg"
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
 const NOW = new Date("2026-06-10T12:00:00.000Z")
 
@@ -95,19 +96,19 @@ describe("ResetPasswordUseCase — breach fora da tx (R17)", () => {
     mode: "fail_open" | "fail_closed",
   ) {
     const verificationTokens = {
-      consumeByHash: jest
+      consumeByHash: vi
         .fn()
         .mockResolvedValue({ userId: "u-1", type: "password_reset" }),
-      invalidateAllForUser: jest.fn().mockResolvedValue(undefined),
+      invalidateAllForUser: vi.fn().mockResolvedValue(undefined),
     }
     const users = {
-      findById: jest.fn().mockResolvedValue(makeUser()),
-      update: jest.fn().mockResolvedValue(undefined),
+      findById: vi.fn().mockResolvedValue(makeUser()),
+      update: vi.fn().mockResolvedValue(undefined),
     }
-    const sessions = { deleteAllForUser: jest.fn().mockResolvedValue(undefined) }
+    const sessions = { deleteAllForUser: vi.fn().mockResolvedValue(undefined) }
     const authEvents = {
-      record: jest.fn().mockResolvedValue(undefined),
-      recordInTx: jest.fn().mockResolvedValue(undefined),
+      record: vi.fn().mockResolvedValue(undefined),
+      recordInTx: vi.fn().mockResolvedValue(undefined),
     }
     const uc = new ResetPasswordUseCase(
       verificationTokens as never,
@@ -117,7 +118,7 @@ describe("ResetPasswordUseCase — breach fora da tx (R17)", () => {
       { score: () => 4 },
       { check },
       { hashOf: () => "hash-of-raw" } as never,
-      { publish: jest.fn().mockResolvedValue(undefined) } as never,
+      { publish: vi.fn().mockResolvedValue(undefined) } as never,
       authEvents as never,
       { now: () => NOW },
       ctx,

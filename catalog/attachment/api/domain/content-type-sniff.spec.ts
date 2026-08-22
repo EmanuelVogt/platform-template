@@ -1,6 +1,7 @@
 import { Readable } from "node:stream"
 
 import { sniffImageContentType, sniffImageStream } from "./content-type-sniff"
+import { describe, expect, it } from "vitest"
 
 /** `Readable.from` é object mode por padrão — um stream de upload real não é;
  *  binário explícito pra `read(n)` acumular pushes pequenos como no busboy. */

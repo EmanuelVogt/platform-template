@@ -20,6 +20,7 @@ import { seedUser } from "../../identity/testing/seed-user"
 
 import type { ObjectStoragePort } from "../../../shared/infra/storage/object-storage.port"
 import type { Pool } from "pg"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 const ORIGIN = "http://localhost:5173"
 

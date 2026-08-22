@@ -7,6 +7,7 @@ import { ListTagsUseCase } from "./list-tags.use-case"
 
 import type { RequestContextStore } from "../../../../../shared/kernel/context/request-context"
 import type { TagUsageReader } from "../../../domain/ports/tag-usage.reader"
+import { type Mock, describe, expect, it, vi } from "vitest"
 
 const NOW = new Date("2026-07-27T10:00:00.000Z")
 
@@ -30,15 +31,15 @@ function makeReader(counts: Record<string, number>): TagUsageReader {
 function makeUseCase(readers: TagUsageReader[]): ListTagsUseCase {
   const registry = new TagUsageRegistry()
   for (const reader of readers) registry.register(reader)
-  const tags = { list: jest.fn().mockResolvedValue({ data: [ROW], page: PAGE }) }
+  const tags = { list: vi.fn().mockResolvedValue({ data: [ROW], page: PAGE }) }
   return new ListTagsUseCase(tags as never, registry)
 }
 
 function makeUseCaseWithSpy(): {
   uc: ListTagsUseCase
-  tags: { list: jest.Mock }
+  tags: { list: Mock }
 } {
-  const tags = { list: jest.fn().mockResolvedValue({ data: [ROW], page: PAGE }) }
+  const tags = { list: vi.fn().mockResolvedValue({ data: [ROW], page: PAGE }) }
   return {
     uc: new ListTagsUseCase(tags as never, new TagUsageRegistry()),
     tags,

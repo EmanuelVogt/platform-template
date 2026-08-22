@@ -13,6 +13,7 @@ import { ChangePasswordUseCase } from "./change-password.use-case"
 
 import type { RequestContextStore } from "../../../../../shared/kernel/context/request-context"
 import type { Pool } from "pg"
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
 function makeUser(): User {
   return User.fromProps({
@@ -86,21 +87,21 @@ describe("ChangePasswordUseCase — breach fora da tx (R17)", () => {
       },
     }
     const users = {
-      findById: jest.fn().mockResolvedValue(makeUser()),
-      findByIdForUpdate: jest.fn().mockResolvedValue(makeUser()),
-      update: jest.fn().mockResolvedValue(undefined),
+      findById: vi.fn().mockResolvedValue(makeUser()),
+      findByIdForUpdate: vi.fn().mockResolvedValue(makeUser()),
+      update: vi.fn().mockResolvedValue(undefined),
     }
-    const sessions = { deleteOthers: jest.fn().mockResolvedValue(undefined) }
+    const sessions = { deleteOthers: vi.fn().mockResolvedValue(undefined) }
     const hasher = {
       verify: () => Promise.resolve(true),
       hash: () => Promise.resolve("argon2-new"),
     }
     const strength = { score: () => 4 }
     const authEvents = {
-      record: jest.fn().mockResolvedValue(undefined),
-      recordInTx: jest.fn().mockResolvedValue(undefined),
+      record: vi.fn().mockResolvedValue(undefined),
+      recordInTx: vi.fn().mockResolvedValue(undefined),
     }
-    const outbox = { publish: jest.fn().mockResolvedValue(undefined) }
+    const outbox = { publish: vi.fn().mockResolvedValue(undefined) }
     const clock = { now: () => new Date("2026-06-10T12:00:00.000Z") }
 
     const uc = new ChangePasswordUseCase(
@@ -150,18 +151,18 @@ describe("ChangePasswordUseCase — breach fora da tx (R17)", () => {
 
   it("fail_open + consulta indisponível: a troca commita e o skip é auditado", async () => {
     const users = {
-      findById: jest.fn().mockResolvedValue(makeUser()),
-      findByIdForUpdate: jest.fn().mockResolvedValue(makeUser()),
-      update: jest.fn().mockResolvedValue(undefined),
+      findById: vi.fn().mockResolvedValue(makeUser()),
+      findByIdForUpdate: vi.fn().mockResolvedValue(makeUser()),
+      update: vi.fn().mockResolvedValue(undefined),
     }
-    const sessions = { deleteOthers: jest.fn().mockResolvedValue(undefined) }
+    const sessions = { deleteOthers: vi.fn().mockResolvedValue(undefined) }
     const hasher = {
       verify: () => Promise.resolve(true),
       hash: () => Promise.resolve("argon2-new"),
     }
     const authEvents = {
-      record: jest.fn().mockResolvedValue(undefined),
-      recordInTx: jest.fn().mockResolvedValue(undefined),
+      record: vi.fn().mockResolvedValue(undefined),
+      recordInTx: vi.fn().mockResolvedValue(undefined),
     }
     let inTxDuringSkipRecord: boolean | null = null
     authEvents.record.mockImplementation(() => {
@@ -175,7 +176,7 @@ describe("ChangePasswordUseCase — breach fora da tx (R17)", () => {
       hasher as never,
       { score: () => 4 },
       { check: () => Promise.resolve("skipped" as const) },
-      { publish: jest.fn().mockResolvedValue(undefined) } as never,
+      { publish: vi.fn().mockResolvedValue(undefined) } as never,
       authEvents as never,
       { now: () => new Date("2026-06-10T12:00:00.000Z") },
       ctx,

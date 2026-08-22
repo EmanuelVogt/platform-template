@@ -8,24 +8,25 @@ import { RateLimiterOutageListener } from "./rate-limiter-outage.listener"
 
 import type { LoggerFactory } from "../../../shared/kernel/logging/logger.factory"
 import type { RateLimiter } from "../../../shared/kernel/rate-limit/rate-limiter.port"
+import { describe, expect, it, vi } from "vitest"
 
 const SINCE = new Date("2026-08-22T10:00:00.000Z")
 
 const silentLoggerFactory = {
   forModule: () => ({
-    warn: jest.fn(),
-    info: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
   }),
 } as unknown as LoggerFactory
 
 function makeListener(over: { ctx?: unknown } = {}) {
   const authEvents = {
-    record: jest.fn().mockResolvedValue(undefined),
-    recordInTx: jest.fn().mockResolvedValue(undefined),
-    listByUser: jest.fn(),
-    deleteOlderThan: jest.fn(),
+    record: vi.fn().mockResolvedValue(undefined),
+    recordInTx: vi.fn().mockResolvedValue(undefined),
+    listByUser: vi.fn(),
+    deleteOlderThan: vi.fn(),
   }
   const ctx =
     over.ctx ??

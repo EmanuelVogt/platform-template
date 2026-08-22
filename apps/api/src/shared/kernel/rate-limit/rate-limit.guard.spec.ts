@@ -1,4 +1,5 @@
 import { Reflector } from "@nestjs/core"
+import { type Mock, describe, expect, it, vi } from "vitest"
 
 import { TooManyRequestsError } from "../errors/too-many-requests.error"
 
@@ -31,10 +32,10 @@ function makeContext(handler: () => void, ip = "1.2.3.4"): ExecutionContext {
 function makeLimiter(result: {
   allowed: boolean
   retryAfterSeconds: number
-}): RateLimiter & { consume: jest.Mock; reset: jest.Mock } {
+}): RateLimiter & { consume: Mock; reset: Mock } {
   return {
-    consume: jest.fn().mockResolvedValue(result),
-    reset: jest.fn().mockResolvedValue(undefined),
+    consume: vi.fn().mockResolvedValue(result),
+    reset: vi.fn().mockResolvedValue(undefined),
   }
 }
 
@@ -62,14 +63,16 @@ describe("RateLimitGuard (kernel)", () => {
       }
     }
     const guard = new RateLimitGuard(limiter, new Reflector())
-    try {
-      await guard.canActivate(makeContext(handlerOf(Ctrl.prototype, "h")))
-      throw new Error("deveria ter lançado")
-    } catch (err) {
-      expect(err).toBeInstanceOf(TooManyRequestsError)
-      expect((err as TooManyRequestsError).status).toBe(429)
-      expect((err as TooManyRequestsError).retryAfterSeconds).toBe(42)
-    }
+    // `null` quando resolve: a primeira asserção falha se o guard não rejeitar.
+    const rejection = await guard
+      .canActivate(makeContext(handlerOf(Ctrl.prototype, "h")))
+      .then(
+        () => null,
+        (err: unknown) => err
+      )
+    expect(rejection).toBeInstanceOf(TooManyRequestsError)
+    expect((rejection as TooManyRequestsError).status).toBe(429)
+    expect((rejection as TooManyRequestsError).retryAfterSeconds).toBe(42)
   })
 
   it("ignora rota sem @RateLimit", async () => {

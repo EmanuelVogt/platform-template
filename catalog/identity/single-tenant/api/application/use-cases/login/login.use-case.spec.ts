@@ -1,6 +1,6 @@
 import { Device } from "../../../domain/entities/device.entity"
 import { User, type UserProps } from "../../../domain/entities/user.entity"
-import { InvalidCredentialsError } from "../../../domain/errors"
+import { InvalidCredentialsError, RateLimitedError } from "../../../domain/errors"
 import { makeIdentityConfig } from "../../../identity.config.fixture"
 import { fakeRequestContext } from "../../request-context.fixture"
 import { CreateSessionService } from "../../services/create-session.service"
@@ -9,6 +9,22 @@ import { LoginUseCase } from "./login.use-case"
 
 
 const DUMMY_HASH = "argon2-dummy"
+const ACCOUNT_KEY = "login:acct:ana@example.com"
+const IP_KEY = "login:1.2.3.4:ana@example.com"
+
+/** Limiter que só nega as chaves listadas — separa o bucket de conta do de IP. */
+function limiterDenying(denied: Record<string, number>) {
+  return {
+    consume: jest.fn((key: string) =>
+      Promise.resolve(
+        key in denied
+          ? { allowed: false, retryAfterSeconds: denied[key] as number }
+          : { allowed: true, retryAfterSeconds: 0 },
+      ),
+    ),
+    reset: jest.fn().mockResolvedValue(undefined),
+  }
+}
 
 
 function makeUser(over: { props?: Partial<UserProps> } = {}): User {
@@ -63,6 +79,7 @@ function makeDeps(over: Record<string, any> = {}) {
   }
   const rateLimiter = over.rateLimiter ?? {
     consume: jest.fn().mockResolvedValue({ allowed: true, retryAfterSeconds: 0 }),
+    reset: jest.fn().mockResolvedValue(undefined),
   }
   const authEvents = over.authEvents ?? {
     record: jest.fn().mockResolvedValue(undefined),
@@ -130,13 +147,7 @@ describe("LoginUseCase", () => {
   })
 
   it("rate-limit estourado lança SEM chamar verify (pré-argon2)", async () => {
-    const t = makeDeps({
-      rateLimiter: {
-        consume: jest
-          .fn()
-          .mockResolvedValue({ allowed: false, retryAfterSeconds: 30 }),
-      },
-    })
+    const t = makeDeps({ rateLimiter: limiterDenying({ [IP_KEY]: 30 }) })
     await expect(
       t.uc.execute({
         email: "ana@example.com",
@@ -152,6 +163,127 @@ describe("LoginUseCase", () => {
       }),
     )
     expect(t.authEvents.recordInTx).not.toHaveBeenCalled()
+  })
+
+  describe("bucket por conta (REM-01..03)", () => {
+    it("estouro do bucket da conta é 429 antes do lookup, sem verify", async () => {
+      const t = makeDeps({ rateLimiter: limiterDenying({ [ACCOUNT_KEY]: 42 }) })
+
+      const error = await t.uc
+        .execute({ email: "ana@example.com", password: "x", rememberMe: false })
+        .then(() => null)
+        .catch((e: unknown) => e)
+      expect(error).toBeInstanceOf(RateLimitedError)
+      expect(error).toMatchObject({ status: 429, retryAfterSeconds: 42 })
+
+      expect(t.rateLimiter.consume).toHaveBeenNthCalledWith(
+        1,
+        ACCOUNT_KEY,
+        10,
+        900,
+        { critical: true },
+      )
+      expect(t.users.findByEmail).not.toHaveBeenCalled()
+      expect(t.hasher.verify).not.toHaveBeenCalled()
+      expect(t.authEvents.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          props: expect.objectContaining({
+            eventType: "rate_limited_burst",
+            userId: null,
+            metadata: { retryAfterSeconds: 42, scope: "account" },
+          }),
+        }),
+      )
+    })
+
+    it("e-mail desconhecido é negado de forma idêntica ao existente", async () => {
+      const known = makeDeps({ rateLimiter: limiterDenying({ [ACCOUNT_KEY]: 42 }) })
+      const unknownKey = "login:acct:nao-existe@example.com"
+      const unknown = makeDeps({
+        rateLimiter: limiterDenying({ [unknownKey]: 42 }),
+        users: { findByEmail: jest.fn().mockResolvedValue(null), update: jest.fn() },
+      })
+
+      const errorOf = async (t: ReturnType<typeof makeDeps>, email: string) =>
+        t.uc
+          .execute({ email, password: "x", rememberMe: false })
+          .then(() => null)
+          .catch((e: RateLimitedError) => ({
+            name: e.constructor.name,
+            status: e.status,
+            retryAfterSeconds: e.retryAfterSeconds,
+            message: e.message,
+          }))
+
+      expect(await errorOf(unknown, "nao-existe@example.com")).toEqual(
+        await errorOf(known, "ana@example.com"),
+      )
+      expect(unknown.users.findByEmail).not.toHaveBeenCalled()
+    })
+
+    it("a chave da conta usa o e-mail normalizado — o mesmo do repositório", async () => {
+      const t = makeDeps()
+      await t.uc.execute({
+        email: "  ANA@Example.COM  ",
+        password: "ok",
+        rememberMe: false,
+      })
+      expect(t.rateLimiter.consume.mock.calls[0]?.[0]).toBe(ACCOUNT_KEY)
+      expect(t.users.findByEmail).toHaveBeenCalledWith("ana@example.com")
+    })
+
+    it("login bem-sucedido limpa o bucket da conta", async () => {
+      const t = makeDeps()
+      await t.uc.execute({
+        email: "ana@example.com",
+        password: "ok",
+        rememberMe: false,
+      })
+      expect(t.rateLimiter.reset).toHaveBeenCalledWith(ACCOUNT_KEY)
+    })
+
+    it("login falho NÃO limpa o bucket da conta", async () => {
+      const t = makeDeps({
+        hasher: {
+          verify: jest.fn().mockResolvedValue(false),
+          needsRehash: () => false,
+          hash: jest.fn(),
+        },
+      })
+      await expect(
+        t.uc.execute({ email: "ana@example.com", password: "wrong", rememberMe: false }),
+      ).rejects.toBeInstanceOf(InvalidCredentialsError)
+      expect(t.rateLimiter.reset).not.toHaveBeenCalled()
+    })
+
+    it("os dois buckets negando devolve o 429 da conta (edge case)", async () => {
+      const t = makeDeps({
+        rateLimiter: limiterDenying({ [ACCOUNT_KEY]: 42, [IP_KEY]: 30 }),
+      })
+      await expect(
+        t.uc.execute({ email: "ana@example.com", password: "x", rememberMe: false }),
+      ).rejects.toMatchObject({ status: 429, retryAfterSeconds: 42 })
+      expect(t.authEvents.record).toHaveBeenCalledTimes(1)
+      expect(t.authEvents.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          props: expect.objectContaining({
+            metadata: { retryAfterSeconds: 42, scope: "account" },
+          }),
+        }),
+      )
+    })
+
+    it("o burst por IP é critical — o teto sobrevive à queda do Redis", async () => {
+      const t = makeDeps()
+      await t.uc.execute({
+        email: "ana@example.com",
+        password: "ok",
+        rememberMe: false,
+      })
+      expect(t.rateLimiter.consume).toHaveBeenNthCalledWith(2, IP_KEY, 30, 60, {
+        critical: true,
+      })
+    })
   })
 
   it("usuário inexistente: roda verify dummy e lança InvalidCredentialsError", async () => {

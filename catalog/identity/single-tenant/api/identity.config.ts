@@ -39,6 +39,14 @@ export const identityConfigSchema = z
       .default(2592000), // 30d
     SESSION_MAX_PER_USER: z.coerce.number().int().positive().default(20),
 
+    // --- throttle de login por conta (o teto vale somando todos os IPs) ---
+    LOGIN_ACCOUNT_MAX_FAILURES: z.coerce.number().int().positive().default(10),
+    LOGIN_ACCOUNT_WINDOW_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(900),
+
     // --- tokens ---
     RESET_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(3600),
     VERIFY_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(86400),

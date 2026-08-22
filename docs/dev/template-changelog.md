@@ -4,7 +4,7 @@ Version truth = git tag + this entry (AD-006); `package.json` is not bumped on
 release. Each version lists the contract-breaking changes and the steps for the child
 to apply on `copier update`.
 
-## Unreleased
+## v1.2.0
 
 Refactor of the platform tooling: the child layout, the install order and the child
 harness each get a single owner, the advisory gate now applies per commit in CI, and

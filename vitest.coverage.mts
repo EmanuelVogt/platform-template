@@ -30,6 +30,14 @@ export default defineConfig({
         "**/*.fixture.ts",
         "apps/api/src/main.ts",
         "apps/api/src/db/**",
+        // Entry-point de CLI que escreve openapi.json em disco — mesma
+        // natureza de apps/api/src/db/**; o builder que ele encapsula
+        // (openapi-config.ts) continua no denominador.
+        "apps/api/src/openapi/export-openapi.ts",
+        // Fixtures do contrato de coverage-metric, medidas pelo run aninhado
+        // que coverage-metric.contract.spec.ts dispara; if-else.sample.ts
+        // precisa ficar descoberto no run externo (COV-06).
+        "apps/api/src/shared/config/coverage-metric/*.sample.ts",
         "apps/web/src/main.tsx",
         "**/shared/test/**",
         "apps/api/test/**",

@@ -162,6 +162,8 @@ and no floor, so the inner loop does not depend on Docker.
 | `apps/web/src/main.tsx` | process bootstrap |
 | `**/shared/test/**` | test harness |
 | `apps/api/test/**` | e2e lives outside `src/**` |
+| `apps/api/src/openapi/export-openapi.ts` | CLI entry point (same nature as `apps/api/src/db/**`); the document builder it wraps stays in the denominator |
+| `apps/api/src/shared/config/coverage-metric/*.sample.ts` | fixtures of the coverage-metric contract, measured by its own nested run — `if-else.sample.ts` is required to stay uncovered here |
 
 One bar, 90 on every metric: a global threshold plus a 90 per glob (`apps/api/src/**`,
 `apps/web/src/**`) — statements, branches, functions and lines alike (AD-027). A floor is never

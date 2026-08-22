@@ -1,7 +1,9 @@
-import { parseEnv } from "./env"
+import { nodeEnvSchema, parseEnv } from "./env"
 
 const BASE = {
+  NODE_ENV: "test",
   DATABASE_URL: "postgres://u:p@localhost:5432/db",
+  DATABASE_SSL: "disable",
   WEB_ORIGIN: "http://localhost:5173",
   REDIS_URL: "redis://localhost:6379",
 } as NodeJS.ProcessEnv
@@ -9,12 +11,71 @@ const BASE = {
 describe("parseEnv", () => {
   it("aplica defaults quando opcionais ausentes", () => {
     const e = parseEnv(BASE)
-    expect(e.NODE_ENV).toBe("development")
     expect(e.PORT).toBe(3222)
     expect(e.DATABASE_POOL_MAX).toBe(10)
     expect(e.OTEL_SERVICE_NAME).toBe("api")
     expect(e.SERVICE_VERSION).toBe("0.0.1")
-    expect(e.TRUST_PROXY_HOPS).toBe(1)
+    expect(e.TRUST_PROXY_HOPS).toBe(0)
+    expect(e.REDIS_ALLOW_PLAINTEXT).toBe(false)
+    expect(e.DOCS_ENABLED).toBe(false)
+    expect(e.OUTBOX_DEAD_RETENTION_DAYS).toBe(30)
+    expect(e.DATABASE_SSL_CA).toBeUndefined()
+  })
+
+  it("falha (fail-fast) sem NODE_ENV", () => {
+    const { NODE_ENV: _omit, ...semNodeEnv } = BASE
+    expect(() => parseEnv(semNodeEnv)).toThrow(/NODE_ENV/)
+  })
+
+  it("falha (fail-fast) sem DATABASE_SSL", () => {
+    const { DATABASE_SSL: _omit, ...semSsl } = BASE
+    expect(() => parseEnv(semSsl)).toThrow(/DATABASE_SSL/)
+  })
+
+  it("desescapa \\n em DATABASE_SSL_CA", () => {
+    const e = parseEnv({
+      ...BASE,
+      DATABASE_SSL_CA: "-----BEGIN CERT-----\\nAAA\\n-----END CERT-----",
+    })
+    expect(e.DATABASE_SSL_CA).toBe(
+      "-----BEGIN CERT-----\nAAA\n-----END CERT-----"
+    )
+  })
+
+  it("recusa REDIS_URL redis:// em produção sem REDIS_ALLOW_PLAINTEXT", () => {
+    expect(() =>
+      parseEnv({ ...BASE, NODE_ENV: "production", DOCS_ENABLED: "true" })
+    ).toThrow(/REDIS_URL/)
+  })
+
+  it("aceita REDIS_URL redis:// em produção com REDIS_ALLOW_PLAINTEXT=true", () => {
+    const e = parseEnv({
+      ...BASE,
+      NODE_ENV: "production",
+      REDIS_ALLOW_PLAINTEXT: "true",
+      DOCS_ENABLED: "true",
+    })
+    expect(e.REDIS_URL).toBe(BASE.REDIS_URL)
+  })
+
+  it("aceita rediss:// em produção sem precisar de opt-in", () => {
+    const e = parseEnv({
+      ...BASE,
+      NODE_ENV: "production",
+      REDIS_URL: "rediss://h:6380",
+      DOCS_ENABLED: "true",
+    })
+    expect(e.REDIS_URL).toBe("rediss://h:6380")
+  })
+
+  it("aceita DOCS_ENABLED=true em produção", () => {
+    const e = parseEnv({
+      ...BASE,
+      NODE_ENV: "production",
+      REDIS_ALLOW_PLAINTEXT: "true",
+      DOCS_ENABLED: "true",
+    })
+    expect(e.DOCS_ENABLED).toBe(true)
   })
 
   it("coage PORT e DATABASE_POOL_MAX de string para número", () => {
@@ -83,5 +144,13 @@ describe("parseEnv", () => {
       OTEL_EXPORTER_OTLP_ENDPOINT: "",
     })
     expect(e.OTEL_EXPORTER_OTLP_ENDPOINT).toBe("")
+  })
+})
+
+describe("nodeEnvSchema", () => {
+  it("aceita development, test, staging e production", () => {
+    for (const value of ["development", "test", "staging", "production"]) {
+      expect(nodeEnvSchema.parse(value)).toBe(value)
+    }
   })
 })

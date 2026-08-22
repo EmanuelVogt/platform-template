@@ -4,6 +4,42 @@ Verdade da versão = tag git + esta entrada (AD-006); `package.json` não é inc
 no release. Cada versão lista as mudanças quebra-contrato e os passos para o filho
 aplicar no `copier update`.
 
+## Não publicado
+
+Refactor do tooling da plataforma: o layout do filho, a ordem de instalação e o
+harness de child ganham cada um um dono só, e o gate de advisory passa a valer por
+commit no CI. Sem mudança de contrato e sem migration.
+
+### Mudanças
+
+1. **Layout do filho num módulo (`scripts/platform/lib/child-layout.mjs`).** Onde uma
+   entrada aterrissa dentro do filho (`apps/api/src/modules/<name>`, `__parity__`,
+   `<webRoot>/entities/<name>`, `.env`, `platform-modules.ts`, `platform-schema.ts`,
+   `drizzle/migrations`) era recalculado em `plan.mjs`, `add.mjs`, `adopt.mjs` e
+   `migrations.mjs`. Agora todos consultam `childLayout(cwd)` / `webRootFor(name)`.
+2. **`catalog:typecheck` deixa de ser one-liner de shell.** O staging virou
+   `scripts/platform/catalog-stage.mjs`: descobre as entradas por `catalog/` (lista
+   escrita à mão eliminada), tem teardown, aceita `--keep` e sai 0 num checkout sem
+   `catalog/` — antes o pre-push do filho quebrava nesse passo.
+3. **Uma resolução de ordem de instalação.** `plan.resolveDeps` delega a
+   `catalog-graph.resolveInstallOrder`. Isso **corrige** `module add <entrada> --with-deps`
+   quando a dependência mora sob variante (`identity` em `identity/single-tenant/`),
+   que falhava com ENOENT em `catalog/identity/module.json`.
+4. **Harness de child (`scripts/platform/lib/child.mjs`, antes `render-child.mjs`).**
+   Absorve os defaults de env, o scratch dir, o teardown com `--keep`, o SIGINT e a
+   sequência `pnpm check && pnpm test`, que estavam duplicados entre `catalog:check` e
+   `template:smoke`. `template:smoke` passa a limpar o scratch dir ao receber SIGINT.
+5. **Gate de advisory por commit no CI.** `advisory-required.mjs` ganha `--range
+   <base>..<head>`; `.github/workflows/catalog.yml` chama o módulo em vez de
+   reimplementar a regra em shell. O `git reset --soft base` anterior julgava o diff
+   inteiro do PR contra a mensagem do head, então um trailer `Advisory: none` no último
+   commit isentava todos os outros (`.specs/LESSONS.md` L-009).
+
+### Passos de migração do filho
+
+1. `copier update` — nenhuma ação manual. Quem chamava `render-child.mjs` direto (não
+   há chamador conhecido fora do template) passa a importar `lib/child.mjs`.
+
 ## v1.1.1
 
 Só documentação: a entrada v1.1.0 deste changelog citava o escopo de pacote de um

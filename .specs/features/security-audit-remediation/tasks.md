@@ -1,7 +1,7 @@
 # Security Audit Remediation Tasks
 
 **Design**: `.specs/features/security-audit-remediation/design.md`
-**Spec**: `.specs/features/security-audit-remediation/spec.md` (REM-01..47)
+**Spec**: `.specs/features/security-audit-remediation/spec.md` (REM-01..51; REM-48..51 = the Jest → Vitest port added 2026-08-22, design § H)
 **Touches audit**: `.specs/features/security-audit-remediation/touches-audit.md` (§ 3 of this file, authored separately on 2026-08-22)
 **Status**: Draft
 
@@ -11,7 +11,9 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **If the skill cannot be activated, STOP and tell the user — do not proceed without it.**
 
-**Checkout**: `.worktrees/security-audit-remediation`, branch `feat/security-audit-remediation` off `main`. Never edit `.worktrees/vitest-migration/` (stale mirror of `catalog/**`).
+**Checkout**: `.worktrees/security-audit-remediation`, branch `feat/security-audit-remediation` off `main`. Never edit `.worktrees/vitest-migration/` (stale mirror of `catalog/**`). **Never run a command or edit a file in the primary checkout** `/Users/emanuelvogt/Developer/platform-template` — every path is under the worktree (a wave-2 worker strayed once; see the execution record).
+
+**Runner switch (2026-08-22)**: waves 1–2 are Jest (the tree the worktree had). Wave 3 (C12, T59–T62) merges the Vitest-only `main` in and ports the feature's specs. **From T59 on, the Jest commands in this file are void** — use § *Gate Check Commands — after T59 (Vitest)*; task bodies T51–T58 already carry the Vitest commands.
 
 **Advisory commit protocol**: the first commit of each entry cluster stages `docs/advisories/ADV-20260822-NN.md` with the code; every later commit touching the same entry carries the trailer `Advisory: none — covered by ADV-20260822-NN (security-audit-remediation)` (`advisory-required.mjs:8`).
 
@@ -54,11 +56,25 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Suite-cost rule (hard):** the complete e2e/integration suite and the full unit suite run exactly ONCE per feature, at the Final gate. Per-task gates stay path-filtered; the Build gate runs once per wave, never inside a worker.
 
+### Gate Check Commands — after T59 (Vitest)
+
+> Source: root `package.json:19-32` on `main` at `278dde0`; design § H. Applies to T60 onwards, waves 4–6 and the Verifier. `apps/api` has no `test*` script; `globals: false`.
+
+| Gate Level | When to Use | Command |
+| --- | --- | --- |
+| Quick | unit specs only | `pnpm vitest run --project api <path>` (one or more files/dirs); `pnpm test` for the whole unit suite |
+| Full (kernel) | kernel int/e2e proofs | `pnpm test:int` / `pnpm test:e2e` (whole project — Vitest's `--project` selection; add `<path>` to narrow); Docker up (Testcontainers via `apps/api/test/setup/global-setup.ts`) |
+| Full (entry) | any catalog entry unit/int/e2e proof | `pnpm catalog:check` — renders a child, `module add` each entry, runs `pnpm check && pnpm test && pnpm test:db` inside it; Docker up. `pnpm catalog:typecheck --keep` is `tsc` only — no test runs in `.catalog-stage` |
+| Build | once per wave, runner only | `pnpm check` (turbo lint + typecheck) + `pnpm test` + `src/modules/module-boundaries.spec.ts` named explicitly + `pnpm catalog:typecheck`; `full-unit` = the same (unit suite is already whole) |
+| Final | Verifier only | `pnpm --filter api build` + `pnpm check` + `pnpm test` + `pnpm test:int` + `pnpm test:e2e` + `pnpm test:coverage` (floors) + `pnpm test:scripts` + `pnpm catalog:lint` + `pnpm catalog:check` + `pnpm template:smoke` + `cd apps/api && pnpm audit --prod --audit-level=high`, plus the REM-26, REM-47 and REM-48 probes |
+
+**Staged-child constraint — superseded after T59**: the Jest-era "staged child" proof path above (`pnpm catalog:typecheck --keep` + jest in the stage) was only ever partial (wave 2 found the stage has no entry migrations → `schema "identity" does not exist`). On Vitest the entry proof is `pnpm catalog:check`, full stop.
+
 ---
 
 ## Wave Plan
 
-Waves run in order (barrier + Build gate between them). Clusters inside a wave run **in parallel**, one worker each; tasks inside a cluster run in the listed order. Wave 2 holds five clusters: four dispatch immediately, C8 is the FIFO tail (`serial-ok: FIFO tail`), one gate at the end.
+Waves run in order (barrier + Build gate between them). Clusters inside a wave run **in parallel**, one worker each; tasks inside a cluster run in the listed order. Wave 2 holds five clusters: four dispatch immediately, C8 is the FIFO tail (`serial-ok: FIFO tail`), one gate at the end. **Wave 3 (C12, added 2026-08-22) is the Jest → Vitest port** — exclusive, every file in play; the former waves 3/4/5 are now 4/5/6.
 
 | Wave | Cluster | Tasks (in order) | Files (union of Touches) | Notes |
 | --- | --- | --- | --- | --- |
@@ -70,16 +86,18 @@ Waves run in order (barrier + Build gate between them). Clusters inside a wave r
 | 2 | C6 | T31 → T32 → T33 → T34 → T35 → T36 → T37 → T38 | `catalog/identity/single-tenant/api/application/assert-permission.ts`, `catalog/identity/single-tenant/api/application/assert-permission.spec.ts`, `catalog/identity/single-tenant/api/application/access-policy.ts`, `catalog/identity/single-tenant/api/application/access-policy.spec.ts`, `catalog/identity/single-tenant/api/application/require-auth.ts`, `catalog/identity/single-tenant/api/application/require-auth.spec.ts`, `catalog/identity/single-tenant/api/application/use-cases/list-users/**`, `catalog/identity/single-tenant/api/application/use-cases/update-user/**`, `catalog/identity/single-tenant/api/application/use-cases/create-user/**`, `catalog/identity/single-tenant/api/application/use-cases/request-email-change/**`, `catalog/identity/single-tenant/api/api/middleware/auth.middleware.ts`, `catalog/identity/single-tenant/api/api/middleware/auth.middleware.spec.ts`, `catalog/identity/single-tenant/api/api/contracts/identity.contract.ts`, `catalog/identity/single-tenant/api/api/contracts/identity.contract.spec.ts`, `catalog/identity/single-tenant/api/api/controllers/admin/list-users.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/admin/delete-user.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/admin/resend-access-link.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/device/revoke-device.controller.ts`, `catalog/identity/single-tenant/api/domain/errors.ts`, `catalog/identity/single-tenant/api/domain/entities/user.entity.ts`, `catalog/identity/single-tenant/api/domain/entities/user.entity.spec.ts`, `catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-session.repository.ts`, `catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-session.repository.int-spec.ts`, `catalog/identity/single-tenant/api/domain/ports/session.repository.ts`, `catalog/identity/single-tenant/migrations/custom/03_audit_redact_token_hashes.sql`, `catalog/identity/single-tenant/parity/access-policy.parity.spec.ts`, `catalog/identity/single-tenant/api/__e2e__/authz.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/user-trash.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/devices.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/create-user-flow.e2e-spec.ts`, `catalog/tag/api/application/use-cases/list-tags/**`, `catalog/tag/api/api/controllers/tags/list-tags.controller.ts`, `catalog/tag/api/__e2e__/tags.e2e-spec.ts` | identity authz/input/session + tag trash · gate: full-unit |
 | 2 | C7 | T39 → T40 → T41 → T42 → T43 → T44 → T45 → T46 | `catalog/attachment/api/application/use-cases/get-attachment-for-download/**`, `catalog/attachment/api/application/use-cases/upload-attachment/**`, `catalog/attachment/api/application/use-cases/upload-attachments-batch/**`, `catalog/attachment/api/application/use-cases/confirm-uploads/**`, `catalog/attachment/api/application/use-cases/delete-attachment/delete-attachment.use-case.spec.ts`, `catalog/attachment/api/application/jobs/purge-pending-attachments.job.ts`, `catalog/attachment/api/application/jobs/purge-pending-attachments.job.spec.ts`, `catalog/attachment/api/api/facades/attachment.facade.ts`, `catalog/attachment/api/api/controllers/download-attachment.controller.ts`, `catalog/attachment/api/api/controllers/upload-attachments.controller.ts`, `catalog/attachment/api/api/controllers/multipart-files.ts`, `catalog/attachment/api/api/controllers/multipart-files.spec.ts`, `catalog/attachment/api/domain/content-type-sniff.ts`, `catalog/attachment/api/domain/content-type-sniff.spec.ts`, `catalog/attachment/api/domain/errors.ts`, `catalog/attachment/api/domain/ports/attachment.repository.ts`, `catalog/attachment/api/infrastructure/repositories/drizzle-attachment.repository.ts`, `catalog/attachment/api/infrastructure/repositories/drizzle-attachment.repository.int-spec.ts`, `catalog/attachment/api/attachment.config.ts`, `catalog/attachment/api/attachment.config.spec.ts`, `catalog/attachment/api/attachment.module.ts`, `catalog/attachment/api/__e2e__/attachment-download.e2e-spec.ts`, `catalog/attachment/api/__e2e__/attachment-upload.e2e-spec.ts`, `apps/api/src/shared/kernel/http/content-disposition.ts`, `apps/api/src/shared/kernel/http/content-disposition.spec.ts`, `apps/api/src/shared/infra/storage/r2-storage.adapter.ts`, `apps/api/src/shared/infra/storage/r2-storage.adapter.spec.ts`, `apps/api/src/shared/infra/storage/storage.config.ts`, `apps/api/src/shared/infra/storage/storage.config.spec.ts`, `apps/api/src/shared/infra/storage/storage.module.ts`, `apps/api/src/shared/infra/storage/object-storage.port.ts` | attachment vertical + kernel storage/HTTP helpers · gate: full-unit |
 | 2 | C8 | T47 → T48 → T49 → T50 | `catalog/notification/api/application/catalog/notification-catalog.ts`, `catalog/notification/api/application/catalog/notification-catalog.spec.ts`, `catalog/notification/api/api/controllers/stream/sse.controller.ts`, `catalog/notification/api/api/controllers/stream/sse.controller.spec.ts`, `catalog/notification/api/notification.config.ts`, `catalog/notification/api/notification.config.spec.ts`, `catalog/notification/api/infrastructure/delivery/delivery.dispatcher.ts`, `catalog/notification/api/infrastructure/delivery/delivery.dispatcher.spec.ts`, `catalog/audit/api/api/contracts/audit.contract.ts`, `catalog/audit/api/api/contracts/audit.contract.spec.ts` | notification + audit input hardening · `serial-ok: FIFO tail` · gate: full-unit |
-| 3 (exclusive) | C9 | T51 | `apps/api/package.json`, `package.json`, `pnpm-lock.yaml`, `catalog/identity/single-tenant/api/api/controllers/session/upload-avatar.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/auth/upload-access-link-avatar.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/session/upload-avatar.controller.spec.ts` | dependency bumps + `pnpm.overrides` + audit gate — lockfile, alone · gate: full-unit |
-| 4 (exclusive) | C10 | T52 | `openapi.json`, `packages/api-client/**`, `catalog/identity/single-tenant/parity/contract.parity.spec.ts`, `catalog/identity/single-tenant/web/core/session.types.ts`, `catalog/identity/single-tenant/web/core/route-access.ts` | contract regen + parity re-freeze — alone · gate: full-unit |
-| 5 | C11 | T53 → T54 → T55 → T56 → T57 → T58 | `catalog/identity/single-tenant/module.json`, `catalog/identity/single-tenant/CHANGELOG.md`, `catalog/identity/single-tenant/README.md`, `catalog/attachment/module.json`, `catalog/attachment/CHANGELOG.md`, `catalog/attachment/README.md`, `catalog/notification/module.json`, `catalog/notification/CHANGELOG.md`, `catalog/notification/README.md`, `catalog/audit/module.json`, `catalog/audit/CHANGELOG.md`, `catalog/audit/README.md`, `catalog/tag/module.json`, `catalog/tag/CHANGELOG.md`, `catalog/tag/README.md`, `docs/advisories/ADV-20260822-01.md`, `docs/advisories/ADV-20260822-02.md`, `docs/advisories/ADV-20260822-03.md`, `docs/advisories/ADV-20260822-04.md`, `docs/advisories/ADV-20260822-05.md`, `docs/dev/template-changelog.md`, `docs/dev/deploy.md.jinja`, `docs/dev/local-environment.md` | release plumbing: versions, advisories, docs · gate: scoped (docs/manifests → typecheck + lint + `pnpm catalog:lint`) |
+| 3 (exclusive) | C12 | T59 → T60 → T61 → T62 | **every file** — `git merge main` (349 files on the `main` side, 74 in conflict), then every spec file the feature authored (85: `apps/api/src/**/*.{spec,int-spec}.ts`, `apps/api/test/*.e2e-spec.ts`, `catalog/**/*.{spec,int-spec,e2e-spec}.ts`), `apps/api/test/setup/{unit,int,e2e}-env.ts`, `apps/api/package.json`, `apps/api/tsconfig.build.json`, `.github/workflows/ci.yml`, `scripts/platform/catalog-check.mjs`, `scripts/platform/lib/child.mjs` | Jest → Vitest port (design § H) — alone · gate: Vitest Build (`pnpm check` + `pnpm test` + `module-boundaries.spec.ts` + `catalog:typecheck`) |
+| 4 (exclusive) | C9 | T51 | `apps/api/package.json`, `package.json`, `pnpm-lock.yaml`, `catalog/identity/single-tenant/api/api/controllers/session/upload-avatar.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/auth/upload-access-link-avatar.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/session/upload-avatar.controller.spec.ts` | dependency bumps + `pnpm.overrides` + audit gate — lockfile, alone · gate: full-unit |
+| 5 (exclusive) | C10 | T52 | `openapi.json`, `packages/api-client/**`, `catalog/identity/single-tenant/parity/contract.parity.spec.ts`, `catalog/identity/single-tenant/web/core/session.types.ts`, `catalog/identity/single-tenant/web/core/route-access.ts` | contract regen + parity re-freeze — alone · gate: full-unit |
+| 6 | C11 | T53 → T54 → T55 → T56 → T57 → T58 | `catalog/identity/single-tenant/module.json`, `catalog/identity/single-tenant/CHANGELOG.md`, `catalog/identity/single-tenant/README.md`, `catalog/attachment/module.json`, `catalog/attachment/CHANGELOG.md`, `catalog/attachment/README.md`, `catalog/notification/module.json`, `catalog/notification/CHANGELOG.md`, `catalog/notification/README.md`, `catalog/audit/module.json`, `catalog/audit/CHANGELOG.md`, `catalog/audit/README.md`, `catalog/tag/module.json`, `catalog/tag/CHANGELOG.md`, `catalog/tag/README.md`, `docs/advisories/ADV-20260822-01.md`, `docs/advisories/ADV-20260822-02.md`, `docs/advisories/ADV-20260822-03.md`, `docs/advisories/ADV-20260822-04.md`, `docs/advisories/ADV-20260822-05.md`, `docs/dev/template-changelog.md`, `docs/dev/deploy.md.jinja`, `docs/dev/local-environment.md` | release plumbing: versions, advisories, docs · gate: scoped (docs/manifests → typecheck + lint + `pnpm catalog:lint`) |
 
 ```
 Wave 1:  [C1: T1→T7]  ∥ [C2: T8→T12]  ∥ [C3: T13→T18]
 Wave 2:  [C4: T19→T23] ∥ [C5: T24→T30] ∥ [C6: T31→T38] ∥ [C7: T39→T46] ∥ [C8: T47→T50 — FIFO tail]
-Wave 3:  [C9: T51]   (exclusive — lockfile)
-Wave 4:  [C10: T52]  (exclusive — contract regen)
-Wave 5:  [C11: T53→T58]
+Wave 3:  [C12: T59→T62] (exclusive — merge main + Jest→Vitest port; last Jest run is wave 2's gate)
+Wave 4:  [C9: T51]   (exclusive — lockfile)
+Wave 5:  [C10: T52]  (exclusive — contract regen)
+Wave 6:  [C11: T53→T58]
 ```
 
 **Kernel tag**: `v2.0.0` (user decision, 2026-08-22 — required env vars break every child's boot). All five entries bump `kernelRange` to `">=2.0.0 <3.0.0"` in T53–T56.
@@ -1293,7 +1311,7 @@ Wave 5:  [C11: T53→T58]
 **What**: Raise `multer`, add the transitive overrides and bound the avatar interceptors, until `pnpm audit --prod --audit-level=high` exits 0.
 **Where**: `apps/api/package.json`
 **Touches**: `apps/api/package.json`, `package.json`, `pnpm-lock.yaml`, `catalog/identity/single-tenant/api/api/controllers/session/upload-avatar.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/auth/upload-access-link-avatar.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/session/upload-avatar.controller.spec.ts`
-**Depends on**: T45
+**Depends on**: T45, T62 (Vitest tree — the lockfile already carries the Vitest deps)
 **Exclusive**: **yes** — lockfile and root manifest
 **Reuses**: `apps/api/package.json:64` (`multer ^2.1.1`), `:86` (`@types/multer ^2.1.0`); root `package.json` has no `pnpm.overrides` block yet
 **Requirement**: REM-39
@@ -1304,7 +1322,7 @@ Wave 5:  [C11: T53→T58]
 - [ ] `limits: { fields: 0 }` is set on both `FileInterceptor` configurations (`upload-avatar.controller.ts:47`, `upload-access-link-avatar.controller.ts:55`)
 - [ ] Remaining transitive high advisories are pinned through a root `pnpm.overrides` block, each entry carrying a one-line comment naming the advisory it closes
 - [ ] `packages/api-client`'s browser-side `axios` advisories are **not** touched (spec Out of Scope)
-- [ ] Gate check passes: `cd apps/api && pnpm audit --prod --audit-level=high` exits 0, and `pnpm --filter api test -- modules/identity`
+- [ ] Gate check passes: `cd apps/api && pnpm audit --prod --audit-level=high` exits 0, `pnpm install --frozen-lockfile` exits 0, and `pnpm vitest run --project api catalog/identity/single-tenant/api/api/controllers/session` (Vitest — see § *Gate Check Commands — after T59*)
 - [ ] Test count: the avatar controller and use-case specs still pass
 
 **Tests**: unit
@@ -1318,7 +1336,7 @@ Wave 5:  [C11: T53→T58]
 **What**: Regenerate the OpenAPI document and the typed client for the contract changes of T35 and T50, then re-freeze the parity specs.
 **Where**: `openapi.json`
 **Touches**: `openapi.json`, `packages/api-client/**`, `catalog/identity/single-tenant/parity/contract.parity.spec.ts`, `catalog/identity/single-tenant/web/core/session.types.ts`, `catalog/identity/single-tenant/web/core/route-access.ts`
-**Depends on**: T35, T50
+**Depends on**: T35, T50, T62 (Vitest tree)
 **Exclusive**: **yes** — regenerates the contract and the generated client
 **Reuses**: root `pnpm contract` (`pnpm --filter api contract && pnpm --filter @platform/api-client generate`); `contract.parity.spec.ts:26` (34-operation freeze), `:33` (openapi field parity)
 **Requirement**: REM-34, REM-35, REM-36, REM-37
@@ -1329,13 +1347,16 @@ Wave 5:  [C11: T53→T58]
 - [ ] `contract.parity.spec.ts` is updated: the operation count is unchanged (no route added or removed) and the field parity assertions match the regenerated document
 - [ ] The two web consumers still typecheck against the regenerated client
 - [ ] No behavioural edit rides along — this task regenerates and re-freezes only
-- [ ] Gate check passes: `pnpm check` and `pnpm --filter api test`
+- [ ] `contract.parity.spec.ts` was the one known red left by T61 (`pnpm catalog:check`); after this task `pnpm catalog:check` is fully green
+- [ ] Gate check passes: `pnpm check`, `pnpm test` and `pnpm catalog:check` (Vitest — see § *Gate Check Commands — after T59*)
 
 **Tests**: unit (parity)
 **Gate**: full
 **Commit**: `chore(contract): regenerate openapi and client for the input bounds`
 
 ---
+
+> **Version fold (T53–T57, decided at wave 6 dispatch — spec § Open questions, design § G)**: `vitest-migration` already moved every entry to `2.0.0` (unreleased) with `ADV-20260821-01..05`. Default = **fold**: the `version` lines below are already satisfied, the changelog items go into the existing `## [2.0.0]` section, `ADV-20260822-NN` is added beside the Vitest advisory, `kernelRange` moves to `">=2.0.0 <3.0.0"`. If the user picks "bump again", the orchestrator rewrites the version lines (identity 3.0.0, attachment/notification 2.1.0, audit/tag 2.0.1) before dispatching C11.
 
 ### T53: Identity 2.0.0 — manifest, changelog, advisory
 
@@ -1446,6 +1467,7 @@ Wave 5:  [C11: T53→T58]
 
 - [ ] A `v2.0.0` section lists, each with the child's action: `NODE_ENV`/`DATABASE_SSL` now required, `BREACH_CHECK_ENABLED` required (identity), `TRUST_PROXY_HOPS` default `0`, `redis://` refused in production without `REDIS_ALLOW_PLAINTEXT`, `/docs` off in production without `DOCS_ENABLED`, swc `ignore` for harness directories, the entrypoint seed glob, the `@RateLimit` import path move, the widened redaction list, `outbox-dead.purge` with `lockId` 3
 - [ ] The section states the tag is applied by the maintainer after merge (`git tag v2.0.0`), not by this task
+- [ ] The same `v2.0.0` section points at the Vitest migration's entry (the runner switch is part of the same kernel major — children's `copier update` gets both)
 - [ ] Gate check passes: `pnpm catalog:lint`
 
 **Tests**: none — docs
@@ -1478,18 +1500,115 @@ Wave 5:  [C11: T53→T58]
 
 ---
 
+### T59: Merge the Vitest-only `main` into the feature branch
+
+**What**: Bring `main` (`278dde0` or later — the `vitest-migration` merge) into `feat/security-audit-remediation` with one merge commit, resolving every conflict by the class table of design § H.
+**Where**: the feature branch (merge commit)
+**Touches**: every file on the `main` side (349) — in conflict: 68 spec files (take ours, codemod in T60), `.github/workflows/ci.yml`, `apps/api/package.json`, `apps/api/test/setup/unit-env.ts`, `apps/api/tsconfig.build.json`, `scripts/platform/catalog-check.mjs`, `scripts/platform/lib/child.mjs`; deleted on `main` and dropped here: `apps/api/test/jest-e2e.json`, `apps/api/test/jest-integration.json`, `apps/api/test/setup/global-teardown.ts`, `apps/api/test/setup/scalar-stub.ts`, `apps/api/scripts/coverage-all.sh`, `apps/api/test/tools/normalize-coverage.ts`
+**Depends on**: T50 (wave 2 complete and gated)
+**Exclusive**: **yes** — a merge touches the whole tree
+**Reuses**: design § H conflict table; `.specs/features/done/vitest-migration/design.md` (what moved where); `git merge main` (never rebase — 60+ commits would each re-conflict)
+**Requirement**: REM-48, REM-51
+
+**Done when**:
+
+- [ ] One merge commit `Merge main (vitest-migration) into feat/security-audit-remediation`; `git status` clean; no `<<<<<<<` marker anywhere
+- [ ] Every spec file in conflict is the feature's version (the new cases are intact — `git diff main...HEAD --stat` still lists all 85 spec files)
+- [ ] The six tooling files keep both intents: `ci.yml` = Vitest steps + T18 SHA pins + `permissions:`; `apps/api/package.json` = no `test*` script, Vitest deps, T13's build edits; `unit-env.ts`/`int-env.ts`/`e2e-env.ts` = `container-uris.ts` wiring + every variable the merged `env.ts` and `identity.config.ts` require (`BREACH_CHECK_ENABLED`, not the old `BREACH_CHECK_MODE`); `tsconfig.build.json` = T13 exclusion + `main`'s; `catalog-check.mjs` = `check → test → test:db` + T17's `pnpm catalog:lint` step; `child.mjs` = `main`'s `runGates` + T11's child env defaults
+- [ ] No Jest config or stub survives (the REM-48 probe's `ls`/`grep '"test'` halves are empty; the `jest.` half is T60's)
+- [ ] Gate check passes: `pnpm install --frozen-lockfile` exits 0 and `pnpm test:scripts` exits 0 (scripts are spec-independent; `typecheck`/`test` are expected red until T60)
+
+**Tests**: none — merge commit; proven by T60–T62 gates (matrix: gate only)
+**Gate**: quick
+**Commit**: the merge commit itself (no pathspec — the one allowed whole-tree commit of the feature)
+
+---
+
+### T60: Port every feature-authored spec to Vitest
+
+**What**: Run the codemod over the tree, fix its manual-review leftovers by hand, and bring `typecheck`, `lint` and the unit suite back to green.
+**Where**: `scripts/platform/jest-to-vitest.mjs` (consumer, not edited)
+**Touches**: the 85 spec files the feature authored or changed (`git diff --name-only 77d2a05...HEAD -- '*.spec.ts' '*.int-spec.ts' '*.e2e-spec.ts'`), plus any non-spec test helper under `apps/api/test/**` or `catalog/*/api/testing/**` the codemod flags
+**Depends on**: T59
+**Exclusive**: **yes** — same wave as T59, same worker
+**Reuses**: `node scripts/platform/jest-to-vitest.mjs apps/api/src apps/api/test catalog` (walks directories; `--check` reports without writing); `pnpm lint:fix` for import order; the migration's hand-fix list in `.specs/features/done/vitest-migration/design.md:200,207,289` (top-level `await` in setup files; `vi.mock` factories closing over an outer variable → `vi.hoisted`)
+**Requirement**: REM-48, REM-49
+
+**Done when**:
+
+- [ ] Codemod exits 0 on a second run (nothing left to rewrite); every leftover it reported was hand-fixed, never suppressed
+- [ ] `grep -rEn "\bjest\.|@jest/globals|ts-jest" apps/api/src apps/api/test catalog --include='*.ts'` is empty (REM-48 probe, first half)
+- [ ] Every touched spec imports what it uses from `vitest` (`globals: false`); no `// @ts-expect-error` or `any` added to make a mock type compile
+- [ ] No spec is deleted, `.skip`ped or `.todo`ed to pass; the unit count is ≥ wave 2's (kernel unit 395 + the entries' unit count recorded in the wave-2 gate)
+- [ ] Gate check passes: `pnpm check` exits 0 and `pnpm test` exits 0, with `src/modules/module-boundaries.spec.ts` in the run
+
+**Tests**: the ported specs themselves (matrix: import-path rewrite with no behaviour change → the moved spec keeps its cases)
+**Gate**: full
+**Commit**: `test: port the security-audit-remediation specs to vitest`
+
+---
+
+### T61: Integration, e2e and catalog proofs green on Vitest
+
+**What**: Make the feature's int/e2e specs run under the Testcontainers setup and the entry specs run inside the rendered child.
+**Where**: `apps/api/test/setup/`
+**Touches**: `apps/api/src/**/*.int-spec.ts`, `apps/api/test/*.e2e-spec.ts`, `apps/api/src/db/outbox-replay.int-spec.ts`, `catalog/**/*.int-spec.ts`, `catalog/**/__e2e__/*.e2e-spec.ts`, `apps/api/test/setup/{int-env,e2e-env,e2e-after-env}.ts` (env contract only — the Testcontainers wiring is `main`'s)
+**Depends on**: T60
+**Exclusive**: **yes** — same wave, same worker
+**Reuses**: `apps/api/test/setup/global-setup.ts:183-243` (`setup(project)` provides `postgresUri`/`redisUri`; worker DBs per `VITEST_POOL_ID`); `apps/api/test/setup/container-uris.ts:12`; `scripts/platform/catalog-check.mjs:189-217` (`module add` + `runGates`)
+**Requirement**: REM-49, REM-50
+
+**Done when**:
+
+- [ ] `pnpm test:int` and `pnpm test:e2e` exit 0 (Docker up) — the C4 outbox int-specs, the C2 `security-bootstrap.e2e-spec.ts`, the C5/C6 identity int-specs included
+- [ ] `pnpm catalog:check` runs every entry's unit + int + e2e inside the rendered child; the **only** red allowed is `catalog/identity/single-tenant/parity/contract.parity.spec.ts` (T52 re-freezes it — record the literal failure in the summary)
+- [ ] The wave-2 "entry e2e unrunnable in the staged child" finding is closed: no proof the feature wrote is left unrun
+- [ ] No int/e2e spec was weakened (no `.skip`, no assertion removed); a spec that cannot run under the provided URIs is fixed at its env/setup, not at its assertions
+- [ ] Gate check passes: `pnpm test:int`, `pnpm test:e2e`, `pnpm catalog:check` (the parity red excepted)
+
+**Tests**: the ported int/e2e specs (matrix: entry infrastructure + entry routes, now via `catalog:check`)
+**Gate**: full (entry)
+**Commit**: `test: run the remediation int/e2e proofs under vitest and catalog:check`
+
+---
+
+### T62: Coverage floors, pre-push chain and CI hold on the merged tree
+
+**What**: Prove the merged tree passes the gates `main` now enforces — coverage floors, pre-push chain, CI workflow — without lowering anything.
+**Where**: `vitest.coverage.mts` (read-only unless a floor must be *raised*)
+**Touches**: `vitest.coverage.mts` (raise-only), `.github/workflows/ci.yml` (only if T59's merge left a Vitest step and a pin inconsistent), `docs/test/testing.md` (one line if the feature's proof paths are not described)
+**Depends on**: T61
+**Exclusive**: **yes** — same wave, same worker
+**Reuses**: `vitest.coverage.mts:39-52` (per-glob thresholds, AD-027 ratchet-only); `.husky/pre-push` (migrations → typecheck → catalog-typecheck → test-coverage); REM-26 / REM-47 probes in `spec.md`
+**Requirement**: REM-51
+
+**Done when**:
+
+- [ ] `pnpm test:coverage` exits 0 with the floors as on `main` or higher — never lower; if the feature raised coverage, the floors MAY be ratcheted up and the new numbers recorded in the summary
+- [ ] The pre-push chain runs end to end on the branch (`migrations → typecheck → catalog-typecheck → test-coverage`) — run it as a command, not by pushing
+- [ ] REM-26 probe (`dist` carries no harness) and REM-47 probe (pinned actions + `permissions:`) are still empty after the merge
+- [ ] `pnpm catalog:lint` exits 0 (the merged manifests/advisories still validate)
+- [ ] Gate check passes: `pnpm test:coverage`, `pnpm test:scripts`, `pnpm catalog:lint`
+
+**Tests**: none — gate + probes (matrix: CI workflows / build output → probe only)
+**Gate**: full
+**Commit**: `chore(test): hold the coverage floors and CI on the merged vitest tree` (skip the commit if nothing changed — record "no-op" in the summary)
+
+---
+
 ## Wave Execution Map
 
 ```
 Wave 1:  [C1: T1→T2→T3→T4→T5→T6→T7]  ∥  [C2: T8→T9→T10→T11→T12]  ∥  [C3: T13→T14→T15→T16→T17→T18]
 Wave 2:  [C4: T19→T20→T21→T22→T23]  ∥  [C5: T24→T25→T26→T27→T28→T29→T30]
          ∥ [C6: T31→…→T38]  ∥  [C7: T39→…→T46]  ∥  [C8: T47→T48→T49→T50 — FIFO tail]
-Wave 3:  [C9:  T51]   (exclusive — lockfile + root manifest)
-Wave 4:  [C10: T52]   (exclusive — contract regen)
-Wave 5:  [C11: T53→T54→T55→T56→T57→T58]
+Wave 3:  [C12: T59→T60→T61→T62]   (exclusive — merge main + Jest→Vitest port)
+Wave 4:  [C9:  T51]   (exclusive — lockfile + root manifest)
+Wave 5:  [C10: T52]   (exclusive — contract regen)
+Wave 6:  [C11: T53→T54→T55→T56→T57→T58]
 ```
 
-At Execute the orchestrator never implements a cluster. Per wave it dispatches one worker per cluster in a single message (≤4 in flight, the rest FIFO), waits for every compact summary, runs the Build gate once through the runner, records results here, and moves on. After wave 5 it dispatches the Verifier (**opus** — auth, data integrity, P0). See `references/cards/orchestrator.md`.
+At Execute the orchestrator never implements a cluster. Per wave it dispatches one worker per cluster in a single message (≤4 in flight, the rest FIFO), waits for every compact summary, runs the Build gate once through the runner, records results here, and moves on. After wave 6 it dispatches the Verifier (**opus** — auth, data integrity, P0) on the Vitest tree. See `references/cards/orchestrator.md`.
 
 ### Execution record
 
@@ -1520,6 +1639,7 @@ Plan corrections from wave 1: (a) T6 `Touches` gains `catalog/identity/single-te
 | T20, T21, T22, T24, T25, T27, T28, T32, T33, T34, T39, T40, T43, T44, T47 | one behaviour, one owner file + spec | ✅ Granular |
 | T51, T52 | one exclusive operation each (lockfile, regen) | ✅ Granular |
 | T53–T58 | one release surface each (per entry / kernel / docs) | ✅ Granular |
+| T59, T60, T61, T62 (added 2026-08-22) | one operation each: merge · codemod + unit green · int/e2e/catalog green · coverage/CI hold | ✅ Granular (T59 is atomic by nature — a merge commit; T60 is one mechanical rewrite over an enumerated list, like T6) |
 
 No task creates more than one vertical slice; nothing needs splitting.
 
@@ -1637,11 +1757,12 @@ No task creates more than one vertical slice; nothing needs splitting.
 | 2 | C6 | T31→…→T38 | T7 (wave 1) | none — identity access-policy/assert-permission/require-auth/list-users/update-user/create-user/request-email-change/middleware/contract/session-repo/errors/user-entity + custom migration + tag | n/a | ✅ |
 | 2 | C7 | T39→…→T46 | none | none — attachment entry + kernel `http/content-disposition` + `infra/storage` (no sibling touches either kernel path) | n/a | ✅ |
 | 2 | C8 | T47→T48→T49→T50 | T8, T12 (wave 1) | none — notification entry + `audit.contract.ts` | n/a | ✅ |
-| 3 | C9 | T51 | T45 (wave 2) | none — alone in the wave | yes — only cluster in wave 3 | ✅ |
-| 4 | C10 | T52 | T35, T50 (wave 2) | none — alone in the wave | yes — only cluster in wave 4 | ✅ |
-| 5 | C11 | T53→…→T58 | T30, T32, T38, T46, T49, T50 (wave 2), T51 (wave 3), T52 (wave 4) | none — alone in the wave | n/a (not exclusive) | ✅ |
+| 3 | C12 | T59→T60→T61→T62 | T50 (wave 2 gated) | none — alone in the wave (every file is in play) | yes — only cluster in wave 3 | ✅ (added 2026-08-22) |
+| 4 | C9 | T51 | T45 (wave 2), T62 (wave 3) | none — alone in the wave | yes — only cluster in wave 4 | ✅ |
+| 5 | C10 | T52 | T35, T50 (wave 2), T62 (wave 3) | none — alone in the wave | yes — only cluster in wave 5 | ✅ |
+| 6 | C11 | T53→…→T58 | T30, T32, T38, T46, T49, T50 (wave 2), T51 (wave 4), T52 (wave 5) | none — alone in the wave | n/a (not exclusive) | ✅ |
 
-**Cluster sizes**: 7, 5, 6 · 5, 7, 8, 8, 4 · 1 (exclusive) · 1 (exclusive) · 6 — all within 4–8 except the two exclusive single-task waves, which the rules allow. No wave holds three or more single-task non-exclusive clusters. Wave 2 holds five clusters at one dependency level: that is one wave with a FIFO tail, not two waves.
+**Cluster sizes**: 7, 5, 6 · 5, 7, 8, 8, 4 · 4 (exclusive, one worker) · 1 (exclusive) · 1 (exclusive) · 6 — all within 4–8 except the two exclusive single-task waves, which the rules allow. No wave holds three or more single-task non-exclusive clusters. Wave 2 holds five clusters at one dependency level: that is one wave with a FIFO tail, not two waves. Wave 3 is one cluster of four exclusive tasks: one worker (opus — merge conflict resolution across tooling + spec semantics), one gate.
 
 **Shared files that forced the ordering** (design § *Execute notes*): `catalog/identity/single-tenant/api/domain/errors.ts` → additions in wave 1 (T7), removal in wave 2 by its only producer (T37). `apps/api/src/shared/kernel/redaction/sensitive-keys.ts` → created in wave 1 (T12) so C4 and C8 only consume it. `identity.module.ts` → C1 in wave 1, C5 in wave 2, never two clusters at once. `module.json` and `CHANGELOG.md` of every entry → wave 5 only, so no entry cluster owns a manifest.
 
@@ -1649,7 +1770,7 @@ No task creates more than one vertical slice; nothing needs splitting.
 
 ## Requirement Coverage
 
-All 47 requirements map to at least one task; every task names at least one requirement.
+All 51 requirements map to at least one task; every task names at least one requirement. REM-48..51 (Vitest port, added 2026-08-22): 48 → T59, T60 · 49 → T60, T61 · 50 → T61 · 51 → T59, T62.
 
 | REM | Task(s) | REM | Task(s) | REM | Task(s) |
 | --- | --- | --- | --- | --- | --- |

@@ -40,8 +40,9 @@ The 2026-08-22 white-box audit of the backend (kernel + the five catalog entries
 | Master bootstrap location | `bootstrap-master` → `api/seeds/` (production code); entrypoint runs every `dist/modules/*/seeds/bootstrap.js`; dev seed reads `SEED_MASTER_PASSWORD` or prints a generated one | `testing/**` stays spec-importable (AD-023) but unemitted; kernel cannot name a module path | n |
 | Permission delta rule | Every key in the symmetric difference of the target's current vs requested sets must be held by the actor (master exempt) | Closes revocation without a hierarchy concept | n |
 | Child migration | Fixes reach children through advisories (`detect`/`fix`) + entry versions; no auto code change | AD-019 | y |
+| Runner (added 2026-08-22) | `vitest-migration` merged into `main` (`278dde0`) during wave 2; the feature ports itself to Vitest in an exclusive wave right after wave 2 (merge `main` in, codemod the 85 Jest-authored specs, re-gate), so waves 4–6 and the Verifier run on the Vitest tree | A branch that cannot merge is not done; porting early keeps later conflicts (lockfile, changelogs, manifests) out of the way | y (user, 2026-08-22: "add the port to this spec") |
 
-**Open questions:** none — all resolved or logged above.
+**Open questions:** one, for release (wave 6) — `vitest-migration` already moved the five entries to `2.0.0` (`ADV-20260821-01..05`, unreleased, no kernel tag). Default: **fold** — entries stay `2.0.0` with a second advisory each (`ADV-20260822-NN`), `kernelRange` → `">=2.0.0 <3.0.0"`, kernel tag `v2.0.0` covers Vitest + security. Alternative: bump again (identity 3.0.0, attachment/notification 2.1.0, audit/tag 2.0.1). Orchestrator proceeds with the default unless the user says otherwise before wave 6.
 
 ---
 
@@ -159,6 +160,24 @@ The 2026-08-22 white-box audit of the backend (kernel + the five catalog entries
 
 ---
 
+### P1: The feature lands on the Vitest-only `main` (added 2026-08-22, user decision)
+
+**User Story**: As the template maintainer, I want this branch to merge into `main` after `vitest-migration` landed there, so that no Jest artifact survives and every proof this feature wrote runs in the runner the template ships.
+
+**Why P1**: `main` moved to Vitest (`278dde0`, merge of `feat/vitest-migration`) while waves 1–2 were authored in Jest. Without the port the branch cannot merge, none of its 85 spec files run, and the Final gate would validate nothing.
+
+**Acceptance Criteria**:
+
+1. WHEN `main` (`278dde0` or later) is merged into `feat/security-audit-remediation` THEN the tree SHALL carry no Jest artifact: no `jest.` call and no `@jest/globals` / `ts-jest` import under `apps/api/src`, `apps/api/test`, `catalog/**`; no `apps/api/test/jest-*.json`; no `test*` script in `apps/api/package.json`.
+2. WHEN a spec authored by this feature runs THEN it SHALL import `describe/it/expect/vi` from `vitest` (`globals: false`) and `pnpm test`, `pnpm test:int`, `pnpm test:e2e` SHALL exit 0 with at least the wave-2 test count carried over (no spec deleted or skipped to pass).
+3. WHEN `pnpm catalog:check` runs (Docker up) THEN every entry's unit, integration and e2e specs SHALL pass inside the rendered child — this is the only place entry `int-spec`/`__e2e__` proofs execute.
+4. WHEN `pnpm test:coverage` runs THEN the per-glob floors in `vitest.coverage.mts` SHALL hold; the feature never lowers a floor (AD-027, ratchet-only).
+5. WHEN the feature's fail-closed env contract (REM-21..24) meets `main`'s `apps/api/test/setup/{unit,int,e2e}-env.ts` THEN the merged setup files SHALL set every variable the merged `env.ts` and `identity.config.ts` require explicitly, and the six tooling files changed on both sides (`.github/workflows/ci.yml`, `apps/api/package.json`, `apps/api/test/setup/unit-env.ts`, `apps/api/tsconfig.build.json`, `scripts/platform/catalog-check.mjs`, `scripts/platform/lib/child.mjs`) SHALL keep both intents (REM-26, REM-47 probes still empty; `pnpm test:scripts` green).
+
+**Independent Test**: probe for AC 1; the four root gates for ACs 2–4; `pnpm test:scripts` + the two probes for AC 5.
+
+---
+
 ## Edge Cases
 
 - WHEN the in-memory fallback is active and Redis returns THEN the Redis bucket SHALL take over, fallback state discarded (no double-count).
@@ -222,6 +241,10 @@ The 2026-08-22 white-box audit of the backend (kernel + the five catalog entries
 | REM-45 | AUTH-9 | P3 | test | Tasks | Pending |
 | REM-46 | NOTIF-1 | P3 | test | Tasks | Pending |
 | REM-47 | SUPPLY-6/7, KERNEL-7 | P3 | probe: `grep -En "uses: .*@v[0-9]" .github/workflows/*.yml \| grep -v '#' ; grep -L "^permissions:" .github/workflows/*.yml` (both empty) | Tasks | Pending |
+| REM-48 | — (Vitest port, AC 1) | P1 Port | probe: `grep -rEn "\bjest\.|@jest/globals|ts-jest" apps/api/src apps/api/test catalog --include='*.ts' ; ls apps/api/test/jest-*.json ; grep -n '"test' apps/api/package.json` (all empty) | Tasks | Pending |
+| REM-49 | — (Vitest port, AC 2) | P1 Port | gate: `pnpm test && pnpm test:int && pnpm test:e2e` | Tasks | Pending |
+| REM-50 | — (Vitest port, AC 3) | P1 Port | gate: `pnpm catalog:check` | Tasks | Pending |
+| REM-51 | — (Vitest port, ACs 4–5) | P1 Port | gate: `pnpm test:coverage` + `pnpm test:scripts`; probes REM-26, REM-47 | Tasks | Pending |
 
 Proofs: `test` = assertion in a spec/int-spec/e2e file of the owning entry or kernel; 1 gate; 2 probes.
 

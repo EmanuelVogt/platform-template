@@ -35,7 +35,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6",
-    "@vitest/coverage-v8": "^4.1.9",
+    "@vitest/coverage-v8": "^4.1.10",
     "@workspace/eslint-config": "workspace:*",
     "@workspace/typescript-config": "workspace:*",
     "eslint": "^10",
@@ -43,6 +43,6 @@
     "msw": "^2.14.6",
     "typescript": "~6",
     "vite": "^8",
-    "vitest": "^4.1.7"
+    "vitest": "^4.1.10"
   }
 }

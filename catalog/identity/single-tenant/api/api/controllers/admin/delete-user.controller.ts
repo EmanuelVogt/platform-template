@@ -3,6 +3,7 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger"
 
 import { RequirePermission } from "../../../../../shared/kernel/access/decorators"
 import { DeleteUserUseCase } from "../../../application/use-cases/delete-user/delete-user.use-case"
+import { IdParamDto } from "../../contracts/identity.contract"
 import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 @ApiTags("Admin")
@@ -15,7 +16,7 @@ export class DeleteUserController {
   @Delete(":id")
   @RateLimit({ limit: 20, windowSeconds: 60 })
   @HttpCode(HttpStatus.NO_CONTENT)
-  async handle(@Param("id") id: string): Promise<void> {
-    await this.deleteUser.execute({ userId: id })
+  async handle(@Param() params: IdParamDto): Promise<void> {
+    await this.deleteUser.execute({ userId: params.id })
   }
 }

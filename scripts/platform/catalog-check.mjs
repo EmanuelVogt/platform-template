@@ -17,6 +17,9 @@ import {
 } from "./lib/child.mjs";
 import { readLatestChangelogVersion, writeSimulatedKernelVersion } from "./lib/kernel-version.mjs";
 
+// Gate final do child: check -> test -> test:db (runGates, lib/child.mjs). Sem
+// Docker, "test:db" falha rápido com a mensagem de ensureDockerRuntimeEnv
+// (apps/api/test/setup/global-setup.ts) em vez de travar — não é um hang.
 const DEFAULT_STEP_TIMEOUT_MS = 10 * 60 * 1000; // render/install/gate final
 const DEFAULT_CONTRACT_TIMEOUT_MS = 3 * 60 * 1000; // pnpm contract dentro de module add
 
@@ -202,7 +205,7 @@ export async function runCatalogCheck({
       }
     }
 
-    log("catalog:check — gate final: pnpm check && pnpm test");
+    log("catalog:check — gate final: pnpm check && pnpm test && pnpm test:db");
     const gate = runGates(timedRun, { cwd: childDir });
     if (!gate.ok) {
       if (gate.result.timedOut) return timeoutFailure(log, gate.step, stepTimeoutMs);

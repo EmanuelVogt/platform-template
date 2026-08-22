@@ -83,7 +83,7 @@ describe("jobs do próprio kernel", () => {
     })
     expect(maintenanceRegistry.require("outbox-dead.purge")).toEqual({
       cron: "45 3 * * *",
-      lockId: 3,
+      lockId: 4,
     })
   })
 

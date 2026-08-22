@@ -12,7 +12,6 @@ import { User } from "../../../domain/entities/user.entity"
 import { VerificationToken } from "../../../domain/entities/verification-token.entity"
 import {
   EmailAlreadyInUseError,
-  EmailBelongsToDeletedUserError,
   EmailUnchangedError,
   InvalidCredentialsError,
   RateLimitedError,
@@ -102,9 +101,11 @@ export class RequestEmailChangeUseCase
     // a garantia definitiva é o índice de `email` no swap da confirmação.
     const existing = await this.users.findByEmail(newEmail)
     if (existing) {
-      throw existing.isDeleted()
-        ? new EmailBelongsToDeletedUserError()
-        : new EmailAlreadyInUseError()
+      // Cooldown gravado ANTES de recusar, e um único 409 para endereço em uso
+      // ou de usuário excluído: sem isso, a recusa era um oráculo de e-mails
+      // grátis e sem espera.
+      await this.users.update(user.recordEmailChangeAttempt(now))
+      throw new EmailAlreadyInUseError()
     }
 
     await this.applyInTx(user, newEmail, now)

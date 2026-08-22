@@ -16,6 +16,7 @@ import {
   EmailUnchangedError,
   InvalidCredentialsError,
   InvalidEmailChangeTokenError,
+  RateLimitedError,
 } from "../../../domain/errors"
 import { parseIdentityConfig } from "../../../identity.config"
 import { Argon2PasswordHasher } from "../../../infrastructure/hashing/argon2-password-hasher"
@@ -287,6 +288,36 @@ describe("Fluxo de troca de e-mail (int)", () => {
         }),
       ),
     ).rejects.toBeInstanceOf(EmailAlreadyInUseError)
+  })
+
+  it("caso 4b: recusa persiste o cooldown e a segunda tentativa bate em 429", async () => {
+    const user = await seedActiveUser(usersRepo, hasher)
+    await seedActiveUser(usersRepo, hasher, "outro@example.com")
+
+    await expect(
+      ctx.run(authedStore(user.props.id), () =>
+        requestEmailChange.execute({
+          currentPassword: PASSWORD,
+          newEmail: "outro@example.com",
+        }),
+      ),
+    ).rejects.toBeInstanceOf(EmailAlreadyInUseError)
+
+    // o carimbo ficou no banco, sem iniciar troca nenhuma
+    const after = await usersRepo.findById(user.props.id)
+    expect(after?.props.lastEmailChangeRequestedAt).not.toBeNull()
+    expect(after?.props.pendingEmail).toBeNull()
+    expect(after?.props.status).toBe("active")
+
+    // sondar outro endereço logo em seguida custa a espera do cooldown
+    await expect(
+      ctx.run(authedStore(user.props.id), () =>
+        requestEmailChange.execute({
+          currentPassword: PASSWORD,
+          newEmail: "terceiro@example.com",
+        }),
+      ),
+    ).rejects.toBeInstanceOf(RateLimitedError)
   })
 
   it("caso 5: confirmação com token válido → email promovido, pending_email cleared, sessão criada", async () => {

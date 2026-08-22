@@ -9,7 +9,6 @@ import {
   PasswordHashingSaturatedError,
   BreachCheckUnavailableError,
   PermissionGrantNotAllowedError,
-  EmailBelongsToDeletedUserError,
 } from './errors';
 
 describe('errors de domínio identity', () => {
@@ -100,12 +99,6 @@ describe('errors de domínio identity', () => {
     expect(err.status).toBe(403);
     expect(err.type).toBe('https://errors.example.com/identity/permission-grant-not-allowed');
     expect(err.retryAfterSeconds).toBeUndefined();
-  });
-
-  it('EmailBelongsToDeletedUserError segue no catálogo (sai só em T37)', () => {
-    const err = new EmailBelongsToDeletedUserError();
-    expect(err.status).toBe(409);
-    expect(err.type).toBe('https://errors.example.com/identity/email-belongs-to-deleted-user');
   });
 
   it('os três types novos são únicos entre si e distintos dos existentes', () => {

@@ -94,14 +94,15 @@ describe("Lixeira de usuários (e2e)", () => {
     expect(trash.body.data).toHaveLength(1)
     expect(trash.body.data[0].deletedAt).not.toBeNull()
 
-    // e-mail preso: 409 com o type novo
+    // e-mail preso: 409 igual ao de e-mail já em uso — a lixeira não é contada
+    // ao chamador
     const conflict = await request(app.getHttpServer())
       .post("/v1/admin/users")
       .set("Origin", ORIGIN).set("Cookie", cookie!)
       .set("Idempotency-Key", "trash-create-2")
       .send({ name: "Bia 2", email: "bia@example.com", accessProfile: "admin", permissions: ["admin.users.read"] })
       .expect(409)
-    expect(conflict.body.type).toMatch(/email-belongs-to-deleted-user$/)
+    expect(conflict.body.type).toMatch(/email-already-in-use$/)
 
     // restore → volta ao default
     const restored = await request(app.getHttpServer())

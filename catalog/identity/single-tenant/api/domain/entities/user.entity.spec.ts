@@ -383,6 +383,25 @@ describe('User — troca de e-mail self-service', () => {
     expect(user.props.status).toBe('active'); // imutabilidade
   });
 
+  it('recordEmailChangeAttempt só carimba o cooldown, sem mexer na conta', () => {
+    const user = buildUser({ email: 'ana@x.test' });
+    const attempted = user.recordEmailChangeAttempt(now);
+    expect(attempted).not.toBe(user);
+    expect(attempted.props.lastEmailChangeRequestedAt).toEqual(now);
+    expect(attempted.props.updatedAt).toEqual(now);
+    expect(attempted.props.email).toBe('ana@x.test');
+    expect(attempted.props.pendingEmail).toBeNull();
+    expect(attempted.props.status).toBe('active');
+    expect(attempted.props.emailVerified).toBe(user.props.emailVerified);
+    expect(attempted.hasPendingEmailChange()).toBe(false);
+    expect(user.props.lastEmailChangeRequestedAt).toBeNull(); // imutabilidade
+  });
+
+  it('recordEmailChangeAttempt vale para conta não-active (a recusa também paga)', () => {
+    const pending = User.create({ name: 'Ana', email: 'ana@x.test', accessProfile: 'admin' });
+    expect(pending.recordEmailChangeAttempt(now).props.lastEmailChangeRequestedAt).toEqual(now);
+  });
+
   it('requestEmailChange em conta não-active lança InvalidAccountStateError', () => {
     const pending = User.create({ name: 'Ana', email: 'ana@x.test', accessProfile: 'admin' });
     expect(() => pending.requestEmailChange('nova@x.test', now)).toThrow(InvalidAccountStateError);

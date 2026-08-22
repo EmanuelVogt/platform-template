@@ -1,6 +1,5 @@
 import {
   EmailAlreadyInUseError,
-  EmailBelongsToDeletedUserError,
   InvalidPermissionSetError,
   InvalidProfessionalScopeError,
 } from "../../../domain/errors"
@@ -70,7 +69,7 @@ describe("CreateUserUseCase", () => {
     expect(t.outbox.publish).not.toHaveBeenCalled()
   })
 
-  it("e-mail de usuário soft-deleted → EmailBelongsToDeletedUserError", async () => {
+  it("e-mail de usuário soft-deleted → EmailAlreadyInUseError (409 único)", async () => {
     const t = makeDeps({
       users: {
         findByEmail: jest.fn().mockResolvedValue({ isDeleted: () => true, props: { id: "u-x" } }),
@@ -78,7 +77,7 @@ describe("CreateUserUseCase", () => {
       },
     })
     await expect(t.uc.execute({ name: "Novo", email: "morta@example.com", ...BASE_ACCESS })).rejects.toBeInstanceOf(
-      EmailBelongsToDeletedUserError,
+      EmailAlreadyInUseError,
     )
     expect(t.users.insert).not.toHaveBeenCalled()
     expect(t.outbox.publish).not.toHaveBeenCalled()

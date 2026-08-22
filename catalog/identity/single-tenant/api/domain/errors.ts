@@ -89,16 +89,6 @@ export class EmailAlreadyInUseError extends DomainError {
   }
 }
 
-/** E-mail pertence a um usuário soft-deleted — resolver na lixeira (restore/purge). */
-export class EmailBelongsToDeletedUserError extends DomainError {
-  readonly status = 409;
-  readonly type = `${TYPE_BASE}/email-belongs-to-deleted-user`;
-
-  constructor() {
-    super('Este e-mail pertence a um usuário excluído. Restaure-o ou exclua definitivamente na lixeira.');
-  }
-}
-
 /** Purge exige alvo soft-deleted — não existe hard delete direto. */
 export class UserNotInTrashError extends DomainError {
   readonly status = 409;

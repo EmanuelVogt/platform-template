@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { and, asc, eq, ne, sql } from "drizzle-orm"
+import { and, asc, eq, lte, ne, sql } from "drizzle-orm"
 
 import { TransactionManager } from "../../../../shared/kernel/transactional/transaction-manager"
 import { Session } from "../../domain/entities/session.entity"
@@ -43,12 +43,17 @@ export class DrizzleSessionRepository implements SessionRepository {
     return this.toEntity(row)
   }
 
-  /** UPDATE condicional throttled: o intervalo é decidido no use-case (Plano 4). */
-  async touch(id: string, lastSeenAt: Date, expiresAt: Date): Promise<void> {
+  /** UPDATE condicional throttled: o intervalo é decidido no caller (Plano 4). */
+  async touch(
+    id: string,
+    lastSeenAt: Date,
+    expiresAt: Date,
+    touchBefore: Date
+  ): Promise<void> {
     await this.db
       .update(sessions)
       .set({ lastSeenAt, expiresAt })
-      .where(eq(sessions.id, id))
+      .where(and(eq(sessions.id, id), lte(sessions.lastSeenAt, touchBefore)))
   }
 
   async listByUser(userId: string): Promise<Session[]> {

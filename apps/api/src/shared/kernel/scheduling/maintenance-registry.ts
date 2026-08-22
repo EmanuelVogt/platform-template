@@ -85,6 +85,7 @@ export function registerMaintenanceJob(entry: MaintenanceJobEntry): void {
 export const KERNEL_MAINTENANCE_JOBS = [
   { name: "outbox.purge", cron: "0 3 * * *", lockId: 1 },
   { name: "idempotency.purge", cron: "15 3 * * *", lockId: 2 },
+  { name: "outbox-dead.purge", cron: "45 3 * * *", lockId: 3 },
 ] as const satisfies readonly MaintenanceJobEntry[]
 
 for (const job of KERNEL_MAINTENANCE_JOBS) {

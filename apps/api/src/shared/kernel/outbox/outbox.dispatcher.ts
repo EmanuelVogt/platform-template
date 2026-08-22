@@ -9,6 +9,7 @@ import { Interval } from "@nestjs/schedule"
 import { SpanStatusCode, trace } from "@opentelemetry/api"
 import { and, asc, eq, inArray, isNotNull, isNull, lt, lte, sql } from "drizzle-orm"
 
+import { env } from "../../config/env"
 import { DedicatedClientFactory } from "../../infra/database/dedicated-client.factory"
 import { DRIZZLE, type DrizzleDb } from "../../infra/database/drizzle.provider"
 import { ManagedDedicatedClient } from "../../infra/database/managed-dedicated-client"
@@ -101,6 +102,19 @@ export class OutboxDispatcher implements OnModuleInit, OnApplicationShutdown {
       .where(and(isNotNull(outbox.publishedAt), lt(outbox.publishedAt, cutoff)))
       .returning({ eventId: outbox.eventId })
     this.log.info("outbox.purge", { removed: deleted.length })
+  }
+
+  @MaintenanceJob("outbox-dead.purge")
+  async purgeDeadLetters(): Promise<void> {
+    const cutoff = new Date(
+      Date.now() - env().OUTBOX_DEAD_RETENTION_DAYS * 86_400_000
+    )
+    const deleted = await this.txm
+      .getExecutor()
+      .delete(outboxDead)
+      .where(lt(outboxDead.deadLetteredAt, cutoff))
+      .returning({ eventId: outboxDead.eventId })
+    this.log.info("outbox-dead.purge", { removed: deleted.length })
   }
 
   // Conexão dedicada pode cair (restart do Postgres, blip de rede): o

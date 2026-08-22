@@ -144,6 +144,11 @@ describe("Outbox (integração)", () => {
   let dedicatedClients: DedicatedClientFactory
 
   beforeAll(() => {
+    // purgeDeadLetters lê a retenção de env(), que exige as chaves obrigatórias
+    // no process.env — o setup de integração só resolve a conexão por helper.
+    process.env.DATABASE_URL ??= testDatabaseUrl()
+    process.env.WEB_ORIGIN ??= "http://localhost:5173"
+    process.env.REDIS_URL ??= "redis://localhost:6379"
     pool = createTestPool()
     db = createTestDb(pool)
     const test = makeTestLogger()
@@ -894,5 +899,38 @@ describe("Outbox (integração)", () => {
     expect(stored.token).toBe("[REDACTED]")
     expect(stored.recipientId).toBe("user-2")
     expect(JSON.stringify(dead[0]?.payload)).not.toContain("cru-456")
+  })
+  it("purgeDeadLetters remove dead>retenção e preserva o recente (REM-17)", async () => {
+    const retentionDays = connectionEnv().OUTBOX_DEAD_RETENTION_DAYS
+    const insertDead = (eventId: string, deadLetteredAt: Date) =>
+      db.insert(outboxDead).values({
+        eventId,
+        eventName: "x.event",
+        eventVersion: 1,
+        aggregateId: "a",
+        aggregateType: "t",
+        payload: {
+          eventName: "x.event",
+          eventId,
+          correlationId: "c",
+          causationId: null,
+          tenantId: null,
+          traceparent: null,
+          payload: {},
+        },
+        correlationId: "c",
+        occurredAt: new Date(),
+        attempts: MAX_ATTEMPTS,
+        lastError: "explodiu",
+        deadLetteredAt,
+      })
+    const dayMs = 86_400_000
+    await insertDead("dead-old", new Date(Date.now() - (retentionDays + 1) * dayMs))
+    await insertDead("dead-new", new Date(Date.now() - (retentionDays - 1) * dayMs))
+
+    await dispatcher.purgeDeadLetters()
+
+    const remaining = (await db.select().from(outboxDead)).map((r) => r.eventId)
+    expect(remaining).toEqual(["dead-new"])
   })
 })

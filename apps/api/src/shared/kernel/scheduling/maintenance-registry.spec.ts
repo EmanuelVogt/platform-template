@@ -81,6 +81,10 @@ describe("jobs do próprio kernel", () => {
       cron: "15 3 * * *",
       lockId: 2,
     })
+    expect(maintenanceRegistry.require("outbox-dead.purge")).toEqual({
+      cron: "45 3 * * *",
+      lockId: 3,
+    })
   })
 
   // Colisão de lockId silencia um job para sempre: o advisory lock fica com

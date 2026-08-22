@@ -3,7 +3,11 @@ import { readFileSync } from "node:fs";
 import { EXIT_CODES } from "./lib/exit-codes.mjs";
 import { parseAdvisory } from "./lib/frontmatter.mjs";
 
-const CODE_PATH_RE = /^catalog\/((?:[^/]+\/)?[^/]+)\/(api|web|migrations|parity)\//;
+// Lazy optional prefix: tenta primeiro o segmento único (entrada sem variante); só recua para o
+// par "variant/entry" quando o segmento único não é seguido por um tier válido — assim uma
+// entrada com tier aninhado na própria raiz (catalog/<entry>/api/api/**) resolve para <entry>,
+// não para "<entry>/api".
+const CODE_PATH_RE = /^catalog\/((?:[^/]+\/)??[^/]+)\/(api|web|migrations|parity)\//;
 const ADVISORY_PATH_RE = /^docs\/advisories\/ADV-.*\.md$/;
 const TRAILER_RE = /^Advisory: none — .+$/m;
 

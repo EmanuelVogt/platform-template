@@ -1,5 +1,6 @@
 import { User } from "../../../domain/entities/user.entity"
 import {
+  BreachCheckUnavailableError,
   InvalidAccessLinkError,
   ProfileImageStoreMissingError,
   WeakPasswordError,
@@ -232,14 +233,17 @@ describe("SetPasswordUseCase", () => {
     expect(t.verificationTokens.consumeByHash).not.toHaveBeenCalled()
   })
 
-  it("BREACH_CHECK_MODE fail_closed + senha vazada lança WeakPasswordError sem tocar no token", async () => {
+  it("senha vazada lança WeakPasswordError sem tocar no token", async () => {
     const verificationTokens = {
       findActiveByHash: jest.fn(),
       consumeByHash: jest.fn(),
       invalidateAllForUser: jest.fn(),
     }
     const t = makeDeps({
-      config: makeIdentityConfig({ BREACH_CHECK_MODE: "fail_closed" }),
+      config: makeIdentityConfig({
+        BREACH_CHECK_ENABLED: true,
+        BREACH_CHECK_MODE: "fail_closed",
+      }),
       breach: { check: jest.fn().mockResolvedValue("breached") },
       verificationTokens,
     })
@@ -280,13 +284,83 @@ describe("SetPasswordUseCase", () => {
     expect(t.verificationTokens.consumeByHash).not.toHaveBeenCalled()
   })
 
-  it("BREACH_CHECK_MODE fail_closed + senha não-vazada prossegue normalmente", async () => {
+  it("senha não-vazada prossegue normalmente", async () => {
     const t = makeDeps({
-      config: makeIdentityConfig({ BREACH_CHECK_MODE: "fail_closed" }),
+      config: makeIdentityConfig({
+        BREACH_CHECK_ENABLED: true,
+        BREACH_CHECK_MODE: "fail_closed",
+      }),
       breach: { check: jest.fn().mockResolvedValue("clear") },
     })
     await expect(t.uc.execute(VALID_INPUT)).resolves.toBeDefined()
     expect(t.verificationTokens.findActiveByHash).toHaveBeenCalled()
+  })
+
+  it("desabilitado: o breach check não é consultado", async () => {
+    const check = jest.fn().mockResolvedValue("breached")
+    const t = makeDeps({
+      config: makeIdentityConfig({
+        BREACH_CHECK_ENABLED: false,
+        BREACH_CHECK_MODE: "fail_closed",
+      }),
+      breach: { check },
+    })
+    await expect(t.uc.execute(VALID_INPUT)).resolves.toBeDefined()
+    expect(check).not.toHaveBeenCalled()
+  })
+
+  it("habilitado em fail_open: senha vazada é barrada (o modo não decide SE consulta)", async () => {
+    const check = jest.fn().mockResolvedValue("breached")
+    const t = makeDeps({
+      config: makeIdentityConfig({
+        BREACH_CHECK_ENABLED: true,
+        BREACH_CHECK_MODE: "fail_open",
+      }),
+      breach: { check },
+    })
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(WeakPasswordError)
+    expect(check).toHaveBeenCalledWith(VALID_INPUT.password)
+  })
+
+  it("fail_open + consulta indisponível: ativação segue e grava breach_check_skipped", async () => {
+    const t = makeDeps({
+      config: makeIdentityConfig({
+        BREACH_CHECK_ENABLED: true,
+        BREACH_CHECK_MODE: "fail_open",
+      }),
+      breach: { check: jest.fn().mockResolvedValue("skipped") },
+    })
+    await expect(t.uc.execute(VALID_INPUT)).resolves.toBeDefined()
+    expect(t.authEvents.recordInTx).toHaveBeenCalledWith(
+      expect.objectContaining({
+        props: expect.objectContaining({
+          eventType: "breach_check_skipped",
+          metadata: { mode: "fail_open" },
+        }),
+      }),
+    )
+  })
+
+  it("fail_closed + consulta indisponível: 503 sobe e o token não é consumido", async () => {
+    const verificationTokens = {
+      findActiveByHash: jest.fn(),
+      consumeByHash: jest.fn(),
+      invalidateAllForUser: jest.fn(),
+    }
+    const t = makeDeps({
+      config: makeIdentityConfig({
+        BREACH_CHECK_ENABLED: true,
+        BREACH_CHECK_MODE: "fail_closed",
+      }),
+      breach: {
+        check: jest.fn().mockRejectedValue(new BreachCheckUnavailableError()),
+      },
+      verificationTokens,
+    })
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      BreachCheckUnavailableError,
+    )
+    expect(verificationTokens.consumeByHash).not.toHaveBeenCalled()
   })
 
   it("TOCTOU: usuário ativado entre pre-check e tx lança InvalidAccessLinkError sem salvar", async () => {

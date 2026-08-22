@@ -35,7 +35,7 @@ const transcripts = () => {
 const CATEGORIAS = [
   ["busca (grep/find/ls)", /\b(grep|rg|find|ls|fd)\b/],
   ["leitura via shell (cat/sed/head)", /\b(cat|sed|head|tail|awk)\b/],
-  ["testes", /\b(test|jest|vitest)\b/],
+  ["testes", /\b(test|vitest)\b/],
   ["typecheck/build/lint", /\b(typecheck|tsc|build|lint|check)\b/],
   ["git", /\bgit\b/],
   ["contract/kubb", /\b(contract|kubb|openapi)\b/],

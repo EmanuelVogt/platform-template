@@ -282,7 +282,7 @@ test("runTemplateSmoke returns TEST_FAILURE when the RULE C spec fails on the ch
     "docker port cid123": { status: 0, stdout: "0.0.0.0:32000\n", stderr: "" },
     "pnpm --filter api run db:migrate": { status: 0, stdout: "", stderr: "" },
     "docker exec cid123 psql": { status: 0, stdout: "_kernel\ndrizzle\n", stderr: "" },
-    "pnpm --filter api exec jest src/modules/module-boundaries.spec.ts": { status: 1, stdout: "", stderr: "" },
+    "pnpm vitest run --project api apps/api/src/modules/module-boundaries.spec.ts": { status: 1, stdout: "", stderr: "" },
   });
   const code = await runTemplateSmoke({
     scratchDir: "/tmp/template-smoke-test-rule-c",
@@ -305,7 +305,7 @@ test("runTemplateSmoke returns OK when all four checks are green", async () => {
     "docker port cid123": { status: 0, stdout: "0.0.0.0:32000\n", stderr: "" },
     "pnpm --filter api run db:migrate": { status: 0, stdout: "", stderr: "" },
     "docker exec cid123 psql": { status: 0, stdout: "_kernel\ndrizzle\n", stderr: "" },
-    "pnpm --filter api exec jest src/modules/module-boundaries.spec.ts": { status: 0, stdout: "", stderr: "" },
+    "pnpm vitest run --project api apps/api/src/modules/module-boundaries.spec.ts": { status: 0, stdout: "", stderr: "" },
   });
   const code = await runTemplateSmoke({
     scratchDir: "/tmp/template-smoke-test-ok",

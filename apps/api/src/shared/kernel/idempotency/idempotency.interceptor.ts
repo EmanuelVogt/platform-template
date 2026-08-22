@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 
 import {
+  BadRequestException,
   type CallHandler,
   ConflictException,
   type ExecutionContext,
@@ -24,6 +25,8 @@ import {
 } from "./idempotent.decorator"
 
 import type { Request, Response } from "express"
+
+const KEY_FORMAT = /^[A-Za-z0-9_-]{1,200}$/
 
 function firstHeader(value: string | string[] | undefined): string | null {
   if (Array.isArray(value)) {
@@ -84,6 +87,11 @@ export class IdempotencyInterceptor implements NestInterceptor {
     if (!key) {
       return next.handle()
     }
+    if (!KEY_FORMAT.test(key)) {
+      throw new BadRequestException(
+        "Idempotency-Key inválida: use até 200 caracteres [A-Za-z0-9_-]"
+      )
+    }
     return from(this.process(executionContext, next, opts, key))
   }
 
@@ -99,7 +107,10 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
     const requestHash = hashRequest(req)
     const ctx = this.ctx.tryGet()
-    const scope = `${ctx?.tenantId ?? "_"}:${ctx?.actor?.id ?? "_"}`
+    // Anônimo cai no IP: sem isso todo chamador sem ator dividiria um único
+    // bucket e uma chave qualquer bloquearia a requisição de outra pessoa.
+    const principal = ctx?.actor?.id ?? `ip:${req.ip ?? "_"}`
+    const scope = `${ctx?.tenantId ?? "_"}:${principal}`
     const endpoint = `${req.method} ${req.originalUrl.split("?")[0] ?? ""}`
     const expiresAt = new Date(Date.now() + opts.ttlHours * 3_600_000)
 

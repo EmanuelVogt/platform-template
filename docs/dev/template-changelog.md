@@ -67,8 +67,11 @@ commit no CI, e o produto deixa de receber o ferramental que só existe com
    novas em `.specs/STATE.md`: AD-027 (gate de pre-push = `test:coverage`, pisos de
    cobertura por glob, calibração única e depois só ratchet) e AD-028 (Vitest
    `projects` é o único runner do monorepo, nada fora dele).
-   `pisos da api: calibrados na T29` — a task de calibração troca essa linha pelos
-   números medidos.
+   Pisos da api calibrados na T29 a partir da árvore migrada final
+   (`pnpm test:coverage`, `apps/api/src/**`): medido statements 87.69% /
+   branches 74.21% / functions 91.3% / lines 88.43%; piso = medido − 1,5 pt,
+   arredondado para baixo em uma casa decimal → statements 86.1 / branches 72.7
+   / functions 89.8 / lines 86.9. Web permanece 64/56/61/64.
 
 ### Passos de migração do filho
 

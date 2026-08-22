@@ -37,7 +37,14 @@ export default defineConfig({
       // Ratchet por glob, sem barra global: não baixar para passar no gate —
       // subir só com teste novo.
       thresholds: {
-        // "apps/api/src/**": calibrated once at the migration (AD-027)
+        // calibrado uma vez na migração (AD-027): medido − 1,5 pt, arredondado
+        // para baixo em uma casa decimal; ratchet só para cima a partir daqui.
+        "apps/api/src/**": {
+          statements: 86.1,
+          branches: 72.7,
+          functions: 89.8,
+          lines: 86.9,
+        },
         "apps/web/src/**": {
           statements: 64,
           branches: 56,

@@ -54,6 +54,9 @@ function makeDeps(over: Record<string, any> = {}) {
       user: makeUser(),
       permissions: [],
     }),
+    findProfessionalScope: jest
+      .fn()
+      .mockResolvedValue({ areaIds: [], serviceIds: [] }),
     update: jest.fn().mockResolvedValue(undefined),
     replacePermissions: jest.fn().mockResolvedValue(undefined),
     replaceProfessionalAreas: jest.fn().mockResolvedValue(undefined),
@@ -252,6 +255,9 @@ describe("UpdateUserUseCase", () => {
           user: makeUser(),
           permissions: ["admin.users.read"],
         }),
+        findProfessionalScope: jest
+          .fn()
+          .mockResolvedValue({ areaIds: [], serviceIds: [] }),
         update: jest.fn().mockResolvedValue(undefined),
         replacePermissions: jest.fn().mockResolvedValue(undefined),
         replaceProfessionalAreas: jest.fn().mockResolvedValue(undefined),
@@ -389,5 +395,142 @@ describe("UpdateUserUseCase", () => {
     await expect(
       uc.execute({ ...BASE_INPUT, permissions: [] })
     ).rejects.toThrow(InvalidPermissionSetError)
+  })
+
+  describe("auto-edição não amplia o próprio escopo", () => {
+    function selfDeps(
+      over: {
+        user?: Partial<UserProps>
+        scope?: { areaIds: string[]; serviceIds: string[] }
+      } = {}
+    ) {
+      const users = {
+        findByIdWithPermissions: jest.fn().mockResolvedValue({
+          user: makeUser(over.user),
+          permissions: ["admin.users.read"],
+        }),
+        findProfessionalScope: jest
+          .fn()
+          .mockResolvedValue(over.scope ?? { areaIds: [], serviceIds: [] }),
+        update: jest.fn().mockResolvedValue(undefined),
+        replacePermissions: jest.fn().mockResolvedValue(undefined),
+        replaceProfessionalAreas: jest.fn().mockResolvedValue(undefined),
+        replaceProfessionalServices: jest.fn().mockResolvedValue(undefined),
+        replaceSchedulingAreas: jest.fn().mockResolvedValue(undefined),
+      }
+      return makeDeps({
+        users,
+        ctx: fakeRequestContext(() => ({
+          correlationId: "c1",
+          locale: "pt-BR",
+          userId: "u-target",
+          access: {
+            permissions: new Set(["admin.users.read"]),
+            isMaster: false,
+          },
+        })),
+      })
+    }
+
+    it("marcar-se como atendente → 403 e nada é gravado", async () => {
+      const { uc, users } = selfDeps()
+
+      await expect(
+        uc.execute({ ...BASE_INPUT, servesClients: true, areaIds: ["a-1"] })
+      ).rejects.toThrow(ForbiddenError)
+      expect(users.update).not.toHaveBeenCalled()
+      expect(users.replaceProfessionalAreas).not.toHaveBeenCalled()
+    })
+
+    it("mudar as próprias áreas de atuação → 403", async () => {
+      const { uc, users } = selfDeps({
+        user: { servesClients: true },
+        scope: { areaIds: ["a-1"], serviceIds: [] },
+      })
+
+      await expect(
+        uc.execute({
+          ...BASE_INPUT,
+          servesClients: true,
+          areaIds: ["a-1", "a-2"],
+        })
+      ).rejects.toThrow(ForbiddenError)
+      expect(users.update).not.toHaveBeenCalled()
+    })
+
+    it("mudar os próprios serviços de atuação → 403", async () => {
+      const { uc, users } = selfDeps({
+        user: { servesClients: true },
+        scope: { areaIds: ["a-1"], serviceIds: ["s-1"] },
+      })
+
+      await expect(
+        uc.execute({
+          ...BASE_INPUT,
+          servesClients: true,
+          areaIds: ["a-1"],
+          serviceIds: ["s-1", "s-2"],
+        })
+      ).rejects.toThrow(ForbiddenError)
+      expect(users.update).not.toHaveBeenCalled()
+    })
+
+    it("carregar área de agendamento na auto-edição → 403", async () => {
+      const { uc, users } = selfDeps()
+
+      await expect(
+        uc.execute({ ...BASE_INPUT, schedulingAreaIds: ["area-1"] })
+      ).rejects.toThrow(ForbiddenError)
+      expect(users.update).not.toHaveBeenCalled()
+    })
+
+    it("reenviar o mesmo escopo (no-op) passa", async () => {
+      const { uc, users } = selfDeps({
+        user: { servesClients: true },
+        scope: { areaIds: ["a-1"], serviceIds: ["s-1"] },
+      })
+
+      await uc.execute({
+        ...BASE_INPUT,
+        servesClients: true,
+        areaIds: ["a-1"],
+        serviceIds: ["s-1"],
+      })
+
+      expect(users.update).toHaveBeenCalledTimes(1)
+    })
+
+    it("a regra é só da auto-edição: master muda o escopo de outro usuário", async () => {
+      const { uc, users } = makeDeps({
+        users: {
+          findByIdWithPermissions: jest.fn().mockResolvedValue({
+            user: makeUser(),
+            permissions: [],
+          }),
+          findProfessionalScope: jest
+            .fn()
+            .mockResolvedValue({ areaIds: [], serviceIds: [] }),
+          update: jest.fn().mockResolvedValue(undefined),
+          replacePermissions: jest.fn().mockResolvedValue(undefined),
+          replaceProfessionalAreas: jest.fn().mockResolvedValue(undefined),
+          replaceProfessionalServices: jest.fn().mockResolvedValue(undefined),
+          replaceSchedulingAreas: jest.fn().mockResolvedValue(undefined),
+        },
+      })
+
+      await uc.execute({
+        ...BASE_INPUT,
+        servesClients: true,
+        areaIds: ["a-1"],
+        schedulingAreaIds: ["area-1"],
+      })
+
+      expect(users.replaceProfessionalAreas).toHaveBeenCalledWith("u-target", [
+        "a-1",
+      ])
+      expect(users.replaceSchedulingAreas).toHaveBeenCalledWith("u-target", [
+        "area-1",
+      ])
+    })
   })
 })

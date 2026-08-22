@@ -126,4 +126,18 @@ describe("ConfirmUploadsUseCase", () => {
       }),
     ).rejects.toBeInstanceOf(UploadQuotaExceededError)
   })
+
+  // REM-41: `ids` maior que o maior `maxFiles` entre os perfis de rota (100,
+  // do perfil "multi" neste catálogo de defaults) nunca pode virar consulta —
+  // findByIds precisa continuar intocado.
+  it("recusa ids.length acima do maior maxFiles entre os perfis de rota, antes de consultar o banco", async () => {
+    const { useCase, repo } = makeUseCase([], { sizeBytes: 1, etag: '"a"' })
+    const tooMany = Array.from({ length: 101 }, (_, i) => `id-${String(i)}`)
+
+    await expect(
+      useCase.execute({ ids: tooMany, profile: "multi", ownerUserId: "user-1" }),
+    ).rejects.toBeInstanceOf(UploadQuotaExceededError)
+
+    expect(repo.findByIds).not.toHaveBeenCalled()
+  })
 })

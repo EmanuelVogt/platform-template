@@ -19,6 +19,7 @@ import {
   type AttachmentRepository,
 } from "../../../domain/ports/attachment.repository"
 import {
+  ROUTE_UPLOAD_PROFILE_NAMES,
   UPLOAD_PROFILES,
   type UploadProfileCatalog,
 } from "../../../domain/upload-profiles"
@@ -37,6 +38,18 @@ export class ConfirmUploadsUseCase {
   @Traced({ name: "attachment.confirmUploads" })
   async execute(input: ConfirmUploadsInput): Promise<void> {
     if (input.ids.length === 0) return
+
+    // Teto absoluto antes de qualquer ida ao banco: um `ids` gigante não pode
+    // virar um `IN (...)` gigante só porque o perfil informado aceitaria
+    // menos — vale o maior `maxFiles` entre todos os perfis de rota.
+    const maxFilesAcrossProfiles = Math.max(
+      ...ROUTE_UPLOAD_PROFILE_NAMES.map((name) => this.profiles[name].maxFiles),
+    )
+    if (input.ids.length > maxFilesAcrossProfiles) {
+      throw new UploadQuotaExceededError(
+        `Máximo de ${String(maxFilesAcrossProfiles)} arquivos por confirmação.`,
+      )
+    }
 
     const profile = this.profiles[input.profile]
     const found = await this.repo.findByIds(input.ids)

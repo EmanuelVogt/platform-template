@@ -60,7 +60,7 @@ export class PurgePendingAttachmentsJob {
         })
       }
     }
-    await this.repo.deleteByIds(stale.map((a) => a.props.id))
+    await this.repo.deletePendingByIds(stale.map((a) => a.props.id))
     this.log.info("attachment.pending_purged", { count: stale.length })
   }
 }

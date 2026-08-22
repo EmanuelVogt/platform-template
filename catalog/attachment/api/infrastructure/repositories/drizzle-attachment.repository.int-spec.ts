@@ -159,4 +159,26 @@ describe("DrizzleAttachmentRepository", () => {
   it("sumPendingBytesByOwner devolve 0 quando o dono não tem pendente", async () => {
     expect(await repo.sumPendingBytesByOwner("sem-pendente")).toBe(0)
   })
+
+  it("deletePendingByIds só apaga quem ainda está pending — linha que virou ready sobrevive", async () => {
+    const stillPending = Attachment.createPending({
+      contentType: "application/pdf", sizeBytes: 10, originalFilename: null,
+      profile: "multi", visibility: "restricted", ownerUserId: "user-1",
+    })
+    const turnedReady = Attachment.createPending({
+      contentType: "application/pdf", sizeBytes: 10, originalFilename: null,
+      profile: "multi", visibility: "restricted", ownerUserId: "user-1",
+    })
+    await repo.insertMany([stillPending, turnedReady])
+    // Simula a corrida: confirmUploads mudou o status pra 'ready' entre a
+    // seleção do job (findPendingOlderThan) e o delete.
+    await pool.query(`UPDATE attachment.attachments SET status = 'ready' WHERE id = $1`, [
+      turnedReady.props.id,
+    ])
+
+    await repo.deletePendingByIds([stillPending.props.id, turnedReady.props.id])
+
+    expect(await repo.findById(stillPending.props.id)).toBeNull()
+    expect((await repo.findById(turnedReady.props.id))?.props.status).toBe("ready")
+  })
 })

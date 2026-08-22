@@ -5,6 +5,7 @@ const BASE = {
   PASSWORD_PEPPER: "x".repeat(32),
   CSRF_SECRET: "y".repeat(32),
   BREACH_CHECK_MODE: "fail_open",
+  BREACH_CHECK_ENABLED: "false",
 } as NodeJS.ProcessEnv
 
 describe("parseIdentityConfig", () => {
@@ -82,12 +83,53 @@ describe("parseIdentityConfig", () => {
     ).toThrow(/COOKIE_SECURE/)
   })
 
-  it("BREACH_CHECK_ENABLED coage 'true'/'false'; default false", () => {
+  it("BREACH_CHECK_ENABLED coage 'true'/'false' (sem default)", () => {
     expect(parseIdentityConfig(BASE).BREACH_CHECK_ENABLED).toBe(false)
     expect(
       parseIdentityConfig({ ...BASE, BREACH_CHECK_ENABLED: "true" })
         .BREACH_CHECK_ENABLED,
     ).toBe(true)
+  })
+
+  it("exige BREACH_CHECK_ENABLED: ausente falha nomeando a variável", () => {
+    const { BREACH_CHECK_ENABLED: _omit, ...semEnabled } = BASE
+    expect(() => parseIdentityConfig(semEnabled)).toThrow(
+      /BREACH_CHECK_ENABLED/,
+    )
+  })
+
+  it("rejeita BREACH_CHECK_ENABLED com valor fora do literal", () => {
+    expect(() =>
+      parseIdentityConfig({ ...BASE, BREACH_CHECK_ENABLED: "sim" }),
+    ).toThrow(/BREACH_CHECK_ENABLED/)
+  })
+
+  it("aplica os defaults dos limites de login e de hashing", () => {
+    const c = parseIdentityConfig(BASE)
+    expect(c.LOGIN_ACCOUNT_MAX_FAILURES).toBe(10)
+    expect(c.LOGIN_ACCOUNT_WINDOW_SECONDS).toBe(900)
+    expect(c.PASSWORD_HASH_MAX_IN_FLIGHT).toBe(8)
+  })
+
+  it("coage os três limites novos de string para número", () => {
+    const c = parseIdentityConfig({
+      ...BASE,
+      LOGIN_ACCOUNT_MAX_FAILURES: "3",
+      LOGIN_ACCOUNT_WINDOW_SECONDS: "60",
+      PASSWORD_HASH_MAX_IN_FLIGHT: "2",
+    })
+    expect(c.LOGIN_ACCOUNT_MAX_FAILURES).toBe(3)
+    expect(c.LOGIN_ACCOUNT_WINDOW_SECONDS).toBe(60)
+    expect(c.PASSWORD_HASH_MAX_IN_FLIGHT).toBe(2)
+  })
+
+  it("rejeita limite de login zero ou negativo (desligaria o teto em silêncio)", () => {
+    expect(() =>
+      parseIdentityConfig({ ...BASE, LOGIN_ACCOUNT_MAX_FAILURES: "0" }),
+    ).toThrow(/LOGIN_ACCOUNT_MAX_FAILURES/)
+    expect(() =>
+      parseIdentityConfig({ ...BASE, PASSWORD_HASH_MAX_IN_FLIGHT: "-1" }),
+    ).toThrow(/PASSWORD_HASH_MAX_IN_FLIGHT/)
   })
 })
 

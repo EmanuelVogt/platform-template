@@ -8,6 +8,10 @@ const boolFromEnv = (def: "true" | "false") =>
     .default(def)
     .transform((v) => v === "true")
 
+/** Sem default: a variável tem de ser declarada, e o Zod nomeia qual falta. */
+const requiredBoolFromEnv = () =>
+  z.enum(["true", "false"]).transform((v) => v === "true")
+
 /** Schema das env vars consumidas pelo módulo identity (auth). */
 export const identityConfigSchema = z
   .object({
@@ -74,8 +78,8 @@ export const identityConfigSchema = z
 
     // --- breach check (sem default — força decisão consciente) ---
     BREACH_CHECK_MODE: z.enum(["fail_open", "fail_closed"]),
-    // Liga o adapter real (HIBP). Default off em dev; true em prod para checar.
-    BREACH_CHECK_ENABLED: boolFromEnv("false"),
+    // Sem default: "esqueci de configurar" não pode virar "não checa vazamento".
+    BREACH_CHECK_ENABLED: requiredBoolFromEnv(),
 
     // --- verificação / csrf / auditoria ---
     REQUIRE_EMAIL_VERIFICATION: boolFromEnv("false"),

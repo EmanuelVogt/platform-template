@@ -80,7 +80,7 @@ export class ResetPasswordUseCase
       zxcvbnScore: this.strength.score(password),
     })
     if (this.config.BREACH_CHECK_MODE === "fail_closed") {
-      if (await this.breach.isBreached(password)) {
+      if ((await this.breach.check(password)) === "breached") {
         throw new WeakPasswordError(
           "Esta senha apareceu em vazamentos conhecidos.",
         )

@@ -55,7 +55,7 @@ function makeDeps(over: Record<string, any> = {}) {
     score: jest.fn().mockReturnValue(4),
   }
   const breach = over.breach ?? {
-    isBreached: jest.fn().mockResolvedValue(false),
+    check: jest.fn().mockResolvedValue("clear"),
   }
   const outbox = over.outbox ?? {
     publish: jest.fn().mockResolvedValue(undefined),
@@ -196,7 +196,7 @@ describe("ChangePasswordUseCase", () => {
     const config = makeIdentityConfig({ BREACH_CHECK_MODE: "fail_closed" })
     const t = makeDeps({
       config,
-      breach: { isBreached: jest.fn().mockResolvedValue(true) },
+      breach: { check: jest.fn().mockResolvedValue("breached") },
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(WeakPasswordError)
     expect(t.users.update).not.toHaveBeenCalled()
@@ -207,7 +207,7 @@ describe("ChangePasswordUseCase", () => {
     const config = makeIdentityConfig({ BREACH_CHECK_MODE: "fail_open" })
     const t = makeDeps({ config })
     await t.uc.execute(VALID_INPUT)
-    expect(t.breach.isBreached).not.toHaveBeenCalled()
+    expect(t.breach.check).not.toHaveBeenCalled()
     expect(t.users.update).toHaveBeenCalledTimes(1)
   })
 
@@ -220,10 +220,10 @@ describe("ChangePasswordUseCase", () => {
 
   it("fail_closed: senha não-breachada prossegue normalmente e persiste a troca", async () => {
     const config = makeIdentityConfig({ BREACH_CHECK_MODE: "fail_closed" })
-    const breach = { isBreached: jest.fn().mockResolvedValue(false) }
+    const breach = { check: jest.fn().mockResolvedValue("clear") }
     const t = makeDeps({ config, breach })
     await t.uc.execute(VALID_INPUT)
-    expect(breach.isBreached).toHaveBeenCalledWith(VALID_INPUT.newPassword)
+    expect(breach.check).toHaveBeenCalledWith(VALID_INPUT.newPassword)
     expect(t.users.update).toHaveBeenCalledTimes(1)
     expect(t.sessions.deleteOthers).toHaveBeenCalledWith("u-1", "sess-1")
     expect(t.authEvents.recordInTx).toHaveBeenCalledTimes(1)
@@ -256,7 +256,7 @@ describe("ChangePasswordUseCase", () => {
     expect(t.outbox.publish).not.toHaveBeenCalled()
   })
 
-  it("senha atual inválida: breach.isBreached e users.update NÃO são chamados", async () => {
+  it("senha atual inválida: breach.check e users.update NÃO são chamados", async () => {
     const t = makeDeps({
       hasher: {
         verify: jest.fn().mockResolvedValue(false),
@@ -264,7 +264,7 @@ describe("ChangePasswordUseCase", () => {
       },
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidCredentialsError)
-    expect(t.breach.isBreached).not.toHaveBeenCalled()
+    expect(t.breach.check).not.toHaveBeenCalled()
     expect(t.authEvents.recordInTx).not.toHaveBeenCalled()
   })
 })

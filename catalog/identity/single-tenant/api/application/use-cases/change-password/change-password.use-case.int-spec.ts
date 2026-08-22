@@ -80,9 +80,9 @@ describe("ChangePasswordUseCase — breach fora da tx (R17)", () => {
   it("o breach-check roda com isInTransaction() === false", async () => {
     let inTxDuringBreach: boolean | null = null
     const breach = {
-      isBreached: () => {
+      check: () => {
         inTxDuringBreach = txm.isInTransaction()
-        return Promise.resolve(false)
+        return Promise.resolve("clear" as const)
       },
     }
     const users = {

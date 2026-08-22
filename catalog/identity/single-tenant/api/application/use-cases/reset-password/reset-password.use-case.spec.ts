@@ -45,7 +45,7 @@ function makeDeps(over: Record<string, any> = {}) {
   }
   const hasher = over.hasher ?? { hash: jest.fn().mockResolvedValue("argon2-new") }
   const strength = over.strength ?? { score: jest.fn().mockReturnValue(4) }
-  const breach = over.breach ?? { isBreached: jest.fn().mockResolvedValue(false) }
+  const breach = over.breach ?? { check: jest.fn().mockResolvedValue("clear") }
   const tokens = over.tokens ?? {
     hashOf: jest.fn().mockReturnValue("hash-of-raw"),
   }
@@ -145,26 +145,26 @@ describe("ResetPasswordUseCase", () => {
 
   it("senha vazada (fail_closed) lança WeakPasswordError ANTES de tocar o banco", async () => {
     const t = makeDeps({
-      breach: { isBreached: jest.fn().mockResolvedValue(true) },
+      breach: { check: jest.fn().mockResolvedValue("breached") },
       config: makeIdentityConfig({ BREACH_CHECK_MODE: "fail_closed" }),
     })
     await expect(
       t.uc.execute({ token: "tok", password: "nova-senha-forte-1" }),
     ).rejects.toBeInstanceOf(WeakPasswordError)
     // breach é pré-condição: o token não chega a ser consumido nem a senha trocada.
-    expect(t.breach.isBreached).toHaveBeenCalled()
+    expect(t.breach.check).toHaveBeenCalled()
     expect(t.verificationTokens.consumeByHash).not.toHaveBeenCalled()
     expect(t.users.update).not.toHaveBeenCalled()
   })
 
   it("modo fail_open: breach NÃO é consultado mesmo que senha esteja vazada", async () => {
-    const isBreached = jest.fn().mockResolvedValue(true)
+    const check = jest.fn().mockResolvedValue("breached")
     const t = makeDeps({
-      breach: { isBreached },
+      breach: { check },
       config: makeIdentityConfig({ BREACH_CHECK_MODE: "fail_open" }),
     })
     await t.uc.execute({ token: "tok", password: "nova-senha-forte-1" })
-    expect(isBreached).not.toHaveBeenCalled()
+    expect(check).not.toHaveBeenCalled()
     expect(t.users.update).toHaveBeenCalledTimes(1)
   })
 

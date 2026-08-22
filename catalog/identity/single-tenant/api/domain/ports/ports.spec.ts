@@ -1,7 +1,7 @@
 import { RATE_LIMITER } from '../../../../shared/kernel/rate-limit/rate-limiter.port';
 
 import { AUTH_EVENT_REPOSITORY } from './auth-event.repository';
-import { BREACH_CHECK } from './breach-check';
+import { BREACH_CHECK, type BreachVerdict } from './breach-check';
 import { CSRF } from './csrf';
 import { PASSWORD_HASHER } from './password-hasher';
 import { PASSWORD_STRENGTH } from './password-strength';
@@ -43,4 +43,22 @@ describe('ports — tokens de injeção', () => {
       expect(token.description).toBe(expectedDescription);
     },
   );
+});
+
+describe('BreachCheck — veredito de três estados', () => {
+  // Record exaustivo: acrescentar ou remover um estado quebra a compilação
+  // antes de quebrar quem faz switch sobre o veredito.
+  const HANDLED: Record<BreachVerdict, true> = {
+    clear: true,
+    breached: true,
+    skipped: true,
+  };
+
+  it('tem exatamente clear | breached | skipped (nunca um boolean)', () => {
+    expect(Object.keys(HANDLED).sort()).toEqual([
+      'breached',
+      'clear',
+      'skipped',
+    ]);
+  });
 });

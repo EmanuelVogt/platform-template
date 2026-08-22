@@ -84,7 +84,7 @@ function makeDeps(over: Record<string, any> = {}) {
   }
   const hasher = over.hasher ?? { hash: jest.fn().mockResolvedValue("argon2-novo") }
   const strength = over.strength ?? { score: jest.fn().mockReturnValue(4) }
-  const breach = over.breach ?? { isBreached: jest.fn().mockResolvedValue(false) }
+  const breach = over.breach ?? { check: jest.fn().mockResolvedValue("clear") }
   const tokens = over.tokens ?? { hashOf: jest.fn().mockReturnValue("hash-of-raw") }
   const outbox = over.outbox ?? { publish: jest.fn().mockResolvedValue(undefined) }
   const authEvents = over.authEvents ?? { recordInTx: jest.fn().mockResolvedValue(undefined) }
@@ -240,7 +240,7 @@ describe("SetPasswordUseCase", () => {
     }
     const t = makeDeps({
       config: makeIdentityConfig({ BREACH_CHECK_MODE: "fail_closed" }),
-      breach: { isBreached: jest.fn().mockResolvedValue(true) },
+      breach: { check: jest.fn().mockResolvedValue("breached") },
       verificationTokens,
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(WeakPasswordError)
@@ -283,7 +283,7 @@ describe("SetPasswordUseCase", () => {
   it("BREACH_CHECK_MODE fail_closed + senha não-vazada prossegue normalmente", async () => {
     const t = makeDeps({
       config: makeIdentityConfig({ BREACH_CHECK_MODE: "fail_closed" }),
-      breach: { isBreached: jest.fn().mockResolvedValue(false) },
+      breach: { check: jest.fn().mockResolvedValue("clear") },
     })
     await expect(t.uc.execute(VALID_INPUT)).resolves.toBeDefined()
     expect(t.verificationTokens.findActiveByHash).toHaveBeenCalled()

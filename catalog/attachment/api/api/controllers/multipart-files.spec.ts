@@ -1,13 +1,21 @@
 import { PassThrough, Readable } from "node:stream"
 
-import { InvalidMultipartRequestError, UploadInterruptedError } from "../../domain/errors"
+import {
+  InvalidMultipartRequestError,
+  PayloadTooLargeError,
+  UnexpectedMultipartFieldError,
+  UploadInterruptedError,
+} from "../../domain/errors"
 
 import { readMultipartFiles } from "./multipart-files"
 
+import type { MultipartLimits } from "./multipart-files"
 import type { IncomingFile } from "../../domain/incoming-file"
 import type { Request, Response } from "express"
 
 const BOUNDARY = "----teste"
+
+const GENEROUS_LIMITS: MultipartLimits = { maxBytes: 1_000_000, maxFiles: 10 }
 
 interface FakeResponse {
   headersSent: boolean
@@ -27,6 +35,13 @@ function partOf(file: { field: string; filename: string; content: string }): str
     `--${BOUNDARY}\r\n` +
     `Content-Disposition: form-data; name="${file.field}"; filename="${file.filename}"\r\n` +
     `Content-Type: text/plain\r\n\r\n${file.content}\r\n`
+  )
+}
+
+function fieldPartOf(field: { name: string; value: string }): string {
+  return (
+    `--${BOUNDARY}\r\n` +
+    `Content-Disposition: form-data; name="${field.name}"\r\n\r\n${field.value}\r\n`
   )
 }
 
@@ -65,9 +80,10 @@ function streamingRequest(): { req: Request; socket: PassThrough } {
 async function collect(
   req: Request,
   res: FakeResponse,
+  limits: MultipartLimits = GENEROUS_LIMITS,
 ): Promise<{ filename: string; content: string }[]> {
   const out: { filename: string; content: string }[] = []
-  for await (const file of readMultipartFiles(req, asResponse(res), "file")) {
+  for await (const file of readMultipartFiles(req, asResponse(res), "file", limits)) {
     const chunks: Buffer[] = []
     for await (const chunk of file.stream) chunks.push(chunk as Buffer)
     out.push({ filename: file.filename, content: Buffer.concat(chunks).toString() })
@@ -90,7 +106,7 @@ async function nextFile(files: AsyncGenerator<IncomingFile>): Promise<IncomingFi
 }
 
 describe("readMultipartFiles", () => {
-  it("entrega os arquivos do campo pedido na ordem do corpo", async () => {
+  it("entrega os arquivos do campo pedido na ordem do corpo — lote limpo dentro dos limites", async () => {
     const req = fakeRequest(
       bodyWith([
         { field: "file", filename: "a.txt", content: "primeiro" },
@@ -104,17 +120,56 @@ describe("readMultipartFiles", () => {
     ])
   })
 
-  it("ignora arquivo de outro campo", async () => {
+  it("recusa parte de campo diferente do esperado (400 UnexpectedMultipartFieldError)", async () => {
     const req = fakeRequest(
       bodyWith([
-        { field: "outro", filename: "x.txt", content: "descartado" },
-        { field: "file", filename: "a.txt", content: "mantido" },
+        { field: "outro", filename: "x.txt", content: "estranho" },
+        { field: "file", filename: "a.txt", content: "nunca chega" },
       ]),
     )
 
-    expect(await collect(req, fakeResponse())).toEqual([
-      { filename: "a.txt", content: "mantido" },
-    ])
+    await expect(collect(req, fakeResponse())).rejects.toBeInstanceOf(
+      UnexpectedMultipartFieldError,
+    )
+  })
+
+  it("recusa parte que não é arquivo (fieldsLimit: 0 campos não-arquivo aceitos)", async () => {
+    const req = fakeRequest(
+      Buffer.from(
+        `${fieldPartOf({ name: "description", value: "oi" })}--${BOUNDARY}--\r\n`,
+      ),
+    )
+
+    await expect(collect(req, fakeResponse())).rejects.toBeInstanceOf(
+      InvalidMultipartRequestError,
+    )
+  })
+
+  it("recusa arquivo acima do fileSize do perfil (413 PayloadTooLargeError)", async () => {
+    const req = fakeRequest(
+      bodyWith([{ field: "file", filename: "a.txt", content: "0123456789" }]),
+    )
+
+    await expect(
+      collect(req, fakeResponse(), { maxBytes: 4, maxFiles: 10 }),
+    ).rejects.toBeInstanceOf(PayloadTooLargeError)
+  })
+
+  // `files` e `parts` recebem o MESMO `profile.maxFiles` (fields: 0 já barra
+  // qualquer parte não-arquivo antes dela contar) — nesta config as duas
+  // bordas do busboy disparam juntas para um lote maior que `maxFiles`; um
+  // teste só já prova as duas passagens de `limits` ao parser.
+  it("recusa lote acima de maxFiles — files e parts do busboy compartilham o mesmo teto (413)", async () => {
+    const req = fakeRequest(
+      bodyWith([
+        { field: "file", filename: "a.txt", content: "um" },
+        { field: "file", filename: "b.txt", content: "dois" },
+      ]),
+    )
+
+    await expect(
+      collect(req, fakeResponse(), { maxBytes: 1_000_000, maxFiles: 1 }),
+    ).rejects.toBeInstanceOf(PayloadTooLargeError)
   })
 
   it("devolve nada quando o corpo não tem arquivo", async () => {
@@ -144,7 +199,7 @@ describe("readMultipartFiles", () => {
     )
 
     const seen: IncomingFile[] = []
-    for await (const file of readMultipartFiles(req, asResponse(res), "file")) {
+    for await (const file of readMultipartFiles(req, asResponse(res), "file", GENEROUS_LIMITS)) {
       seen.push(file)
       break
     }
@@ -161,7 +216,7 @@ describe("readMultipartFiles", () => {
   it("acorda o laço quando o cliente desliga no meio do envio", async () => {
     const { req, socket } = streamingRequest()
     const res = fakeResponse()
-    const files = readMultipartFiles(req, asResponse(res), "file")
+    const files = readMultipartFiles(req, asResponse(res), "file", GENEROUS_LIMITS)
 
     socket.write(
       `--${BOUNDARY}\r\n` +
@@ -190,6 +245,7 @@ describe("readMultipartFiles", () => {
           req,
           asResponse(fakeResponse()),
           "file",
+          GENEROUS_LIMITS,
         )) {
           seen.push(file.stream)
           for await (const chunk of file.stream) {
@@ -215,7 +271,7 @@ describe("readMultipartFiles", () => {
 
   it("acorda o laço quando o cliente desliga sem nenhum arquivo completo", async () => {
     const { req, socket } = streamingRequest()
-    const files = readMultipartFiles(req, asResponse(fakeResponse()), "file")
+    const files = readMultipartFiles(req, asResponse(fakeResponse()), "file", GENEROUS_LIMITS)
 
     const pending = files.next()
     socket.write(`--${BOUNDARY}\r\n`)

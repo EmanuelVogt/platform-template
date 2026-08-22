@@ -1,14 +1,33 @@
 import busboy from "busboy"
 
-import { InvalidMultipartRequestError, UploadInterruptedError } from "../../domain/errors"
+import {
+  InvalidMultipartRequestError,
+  PayloadTooLargeError,
+  UnexpectedMultipartFieldError,
+  UploadInterruptedError,
+} from "../../domain/errors"
 
 import type { IncomingFile } from "../../domain/incoming-file"
 import type { Request, Response } from "express"
 import type { Readable } from "node:stream"
 
-function createParser(req: Request): ReturnType<typeof busboy> {
+/** Bordas do perfil de upload que o parser precisa pra bloquear cedo, sem
+ *  confiar no que o cliente declara no corpo. */
+export interface MultipartLimits {
+  readonly maxBytes: number
+  readonly maxFiles: number
+}
+
+function createParser(req: Request, limits: MultipartLimits): ReturnType<typeof busboy> {
   try {
-    return busboy({ headers: req.headers })
+    return busboy({
+      headers: req.headers,
+      // `parts` no teto de `files`: só arquivos do campo esperado passam por
+      // aqui (campo estranho é rejeitado antes de contar), então parts/files
+      // colapsam no mesmo número. `fields` em 0 — a rota não aceita nenhum
+      // campo não-arquivo.
+      limits: { fileSize: limits.maxBytes, files: limits.maxFiles, parts: limits.maxFiles, fields: 0 },
+    })
   } catch {
     // Content-type ausente ou fora do multipart: pedido malformado, não falha
     // do servidor.
@@ -25,8 +44,9 @@ export async function* readMultipartFiles(
   req: Request,
   res: Response,
   fieldName: string,
+  limits: MultipartLimits,
 ): AsyncGenerator<IncomingFile> {
-  const parser = createParser(req)
+  const parser = createParser(req, limits)
   const queue: IncomingFile[] = []
   let finished = false
   let failure: Error | null = null
@@ -61,15 +81,28 @@ export async function* readMultipartFiles(
     // stream de erro sem ouvinte derruba o processo inteiro.
     stream.on("error", () => undefined)
     if (name !== fieldName) {
-      stream.resume()
+      stream.destroy()
+      fail(new UnexpectedMultipartFieldError())
       return
     }
+    stream.on("limit", () => {
+      fail(new PayloadTooLargeError())
+    })
     queue.push({
       filename: info.filename,
       contentType: info.mimeType,
       stream,
     })
     notify()
+  })
+  parser.on("filesLimit", () => {
+    fail(new PayloadTooLargeError())
+  })
+  parser.on("partsLimit", () => {
+    fail(new PayloadTooLargeError())
+  })
+  parser.on("fieldsLimit", () => {
+    fail(new InvalidMultipartRequestError())
   })
   parser.on("close", () => {
     finished = true

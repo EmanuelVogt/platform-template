@@ -2,6 +2,7 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
+  Inject,
   Post,
   Query,
   Req,
@@ -18,6 +19,7 @@ import {
 import { SelfService } from "../../../../shared/kernel/access/decorators"
 import { RequestContext } from "../../../../shared/kernel/context/request-context"
 import { UploadAttachmentsBatchUseCase } from "../../application/use-cases/upload-attachments-batch/upload-attachments-batch.use-case"
+import { UPLOAD_PROFILES, type UploadProfileCatalog } from "../../domain/upload-profiles"
 import {
   UploadAttachmentsQueryDto,
   UploadAttachmentsResponseDto,
@@ -33,6 +35,7 @@ export class UploadAttachmentsController {
   constructor(
     private readonly upload: UploadAttachmentsBatchUseCase,
     private readonly ctx: RequestContext,
+    @Inject(UPLOAD_PROFILES) private readonly profiles: UploadProfileCatalog,
   ) {}
 
   @ApiOperation({
@@ -64,10 +67,14 @@ export class UploadAttachmentsController {
     // necessária para encerrar a conexão quando o corpo é cortado no meio.
     @Res({ passthrough: true }) res: Response,
   ): Promise<UploadAttachmentsResponseDto> {
+    const profile = this.profiles[query.profile]
     return this.upload.execute({
       profile: query.profile,
       ownerUserId: this.ctx.getActor()?.id ?? null,
-      files: readMultipartFiles(req, res, "file"),
+      files: readMultipartFiles(req, res, "file", {
+        maxBytes: profile.maxBytes,
+        maxFiles: profile.maxFiles,
+      }),
     })
   }
 }

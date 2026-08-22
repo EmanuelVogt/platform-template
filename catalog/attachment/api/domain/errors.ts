@@ -63,6 +63,17 @@ export class InvalidMultipartRequestError extends DomainError {
   }
 }
 
+/** Parte multipart cujo campo não é o esperado — cliente enviando algo fora
+ *  do contrato da rota. */
+export class UnexpectedMultipartFieldError extends DomainError {
+  readonly status = 400
+  readonly type = `${TYPE_BASE}/unexpected-multipart-field`
+
+  constructor() {
+    super("Campo de envio inesperado", "O único campo de arquivo aceito é `file`.")
+  }
+}
+
 /** Conexão caiu antes de o corpo terminar de chegar — nada foi guardado. */
 export class UploadInterruptedError extends DomainError {
   readonly status = 400

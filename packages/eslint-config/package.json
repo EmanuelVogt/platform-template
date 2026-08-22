@@ -7,17 +7,19 @@
     "./base": "./base.js",
     "./react": "./react.js",
     "./nest": "./nest.js",
-    "./fsd": "./fsd.js"
+    "./fsd": "./fsd.js",
+    "./vitest": "./vitest.js"
   },
   "files": [
     "base.js",
     "react.js",
     "nest.js",
     "fsd.js",
+    "vitest.js",
     "rules"
   ],
   "scripts": {
-    "test": "node --test rules/*.test.js"
+    "test": "node --test rules/*.test.js vitest.test.js"
   },
   "dependencies": {
     "@eslint/js": "^10",

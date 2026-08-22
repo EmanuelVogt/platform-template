@@ -5,6 +5,7 @@ import {
   detachIdentityTables,
   reattachIdentityTables,
 } from "../testing/reattach-identity-tables"
+import { detachTagTables, reattachTagTables } from "../testing/reattach-tag-tables"
 
 import { AUDITED, EXEMPT, MODULE_SCHEMAS } from "./audit-coverage"
 
@@ -30,6 +31,14 @@ describe("audit coverage enforcement (int)", () => {
     // migration custom do identity roda antes de `audit.attach` existir num
     // `catalog:check audit`; simula o passo manual que um produto reaplicaria.
     await reattachIdentityTables(pool)
+    // SPEC_DEVIATION: reattaches tag.tags before measuring coverage, when the
+    // tag entry is installed alongside audit.
+    // Reason: same class as the identity block above — tag's custom migration
+    // runs before `audit.attach` exists in a child that installs both (install
+    // order between the two siblings is not forced by dependsOn), so its guard
+    // skips the attach. Both entries document the remedy as a manual re-apply
+    // and refuse automatic retro-attach; this simulates that manual step.
+    await reattachTagTables(pool)
 
     const { rows: tables } = await pool.query<{ schema: string; table: string }>(
       `SELECT table_schema AS schema, table_name AS table
@@ -55,6 +64,7 @@ describe("audit coverage enforcement (int)", () => {
 
   afterAll(async () => {
     await detachIdentityTables(pool)
+    await detachTagTables(pool)
     await pool.end()
   })
 

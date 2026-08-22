@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process"
+import { execFileSync } from "node:child_process"
 import { mkdtempSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -8,13 +8,19 @@ type FileCoverage = {
   b?: Record<string, number[]>
 }
 
-const DEFAULT_IGNORE = [
-  "/node_modules/",
-  "\\.int-spec\\.ts$",
-  "\\.e2e-spec\\.ts$",
-] as const
+type BranchTally = { total: number; uncovered: number }
 
-function branchPercent(coverageFinalPath: string, sourceSuffix: string): number {
+/**
+ * SPEC_DEVIATION: o contrato passa a contar branches, e não mais o % delas.
+ * Reason: sob o remapeamento AST-aware do v8 no Vitest 4 o optional chaining
+ * não gera NENHUMA branch (`branchMap: {}`) — o percentual vira 0/0, indefinido,
+ * enquanto o que COV-05 assevera ("o transpiler não inventa branch descoberta")
+ * é exatamente `uncovered === 0`. COV-06 continua exigindo o else contado.
+ */
+function branchTally(
+  coverageFinalPath: string,
+  sourceSuffix: string,
+): BranchTally {
   const map = JSON.parse(readFileSync(coverageFinalPath, "utf8")) as Record<
     string,
     FileCoverage
@@ -23,61 +29,68 @@ function branchPercent(coverageFinalPath: string, sourceSuffix: string): number 
   if (!entry) {
     throw new Error(`coverage entry not found for ${sourceSuffix}`)
   }
-  const hits = entry[1].b ?? {}
-  const totalBranches = Object.values(hits).reduce((sum, arr) => sum + arr.length, 0)
-  if (totalBranches === 0) {
-    throw new Error(`no branches recorded for ${sourceSuffix}`)
+  const hits = Object.values(entry[1].b ?? {})
+  return {
+    total: hits.reduce((sum, arr) => sum + arr.length, 0),
+    uncovered: hits.reduce(
+      (sum, arr) => sum + arr.filter((hit) => hit === 0).length,
+      0,
+    ),
   }
-  const coveredBranches = Object.values(hits).reduce(
-    (sum, arr) => sum + arr.filter((hit) => hit > 0).length,
-    0,
-  )
-  return (coveredBranches / totalBranches) * 100
 }
 
+/**
+ * Roda o tier unitário só sobre o spec-fixture, com cobertura restrita ao
+ * fonte-fixture, e devolve a contagem de branches do provider v8. O
+ * `--exclude` sobrescreve o do `vitest.config.mts` (que tira o fixture
+ * descoberto do run normal) sem afetar os demais tiers.
+ */
 function runFixtureCoverage(args: {
-  collectFrom: string
-  testPattern: string
-  allowIgnoredSpec?: boolean
-}): number {
+  source: string
+  spec: string
+}): BranchTally {
   const outDir = mkdtempSync(join(tmpdir(), "cov-metric-"))
   const apiRoot = join(__dirname, "../../../..")
-  const ignoreFlags = (args.allowIgnoredSpec ? DEFAULT_IGNORE : DEFAULT_IGNORE)
-    .flatMap((pattern) => [`--testPathIgnorePatterns=${pattern}`])
-  execSync(
+  execFileSync(
+    "pnpm",
     [
-      "pnpm",
       "exec",
-      "jest",
-      "--coverage",
-      `--coverageDirectory=${outDir}`,
-      `--collectCoverageFrom=${args.collectFrom}`,
-      `--testPathPattern=${args.testPattern}`,
-      ...ignoreFlags,
-      "--coverageProvider=v8",
+      "vitest",
+      "run",
+      "--project=api",
+      args.spec,
+      "--coverage.enabled=true",
+      "--coverage.provider=v8",
+      "--coverage.reporter=json",
+      `--coverage.reportsDirectory=${outDir}`,
+      `--coverage.include=${args.source}`,
       "--silent",
-    ].join(" "),
-    { cwd: apiRoot, stdio: "pipe" },
+    ],
+    {
+      cwd: apiRoot,
+      stdio: "pipe",
+      env: { ...process.env, COVERAGE_METRIC_FIXTURE: "1" },
+    },
   )
-  const suffix = args.collectFrom.replace(/^.*\//, "")
-  return branchPercent(join(outDir, "coverage-final.json"), suffix)
+  const suffix = args.source.replace(/^.*\//, "")
+  return branchTally(join(outDir, "coverage-final.json"), suffix)
 }
 
 describe("coverage-metric contract", () => {
-  it("optional-chain fixture reports 100% branch (COV-05)", () => {
-    const pct = runFixtureCoverage({
-      collectFrom: "shared/config/coverage-metric/optional-chain.sample.ts",
-      testPattern: "optional-chain.sample.spec",
+  it("optional-chain não deixa branch descoberta (COV-05)", () => {
+    const branches = runFixtureCoverage({
+      source: "src/shared/config/coverage-metric/optional-chain.sample.ts",
+      spec: "src/shared/config/coverage-metric/optional-chain.sample.spec.ts",
     })
-    expect(pct).toBe(100)
+    expect(branches.uncovered).toBe(0)
   })
 
-  it("if/else with only true path reports branch below 100% (COV-06)", () => {
-    const pct = runFixtureCoverage({
-      collectFrom: "shared/config/coverage-metric/if-else.sample.ts",
-      testPattern: "if-else.sample.uncovered.spec",
-      allowIgnoredSpec: true,
+  it("if/else só com o caminho true deixa branch descoberta (COV-06)", () => {
+    const branches = runFixtureCoverage({
+      source: "src/shared/config/coverage-metric/if-else.sample.ts",
+      spec: "src/shared/config/coverage-metric/if-else.sample.uncovered.spec.ts",
     })
-    expect(pct).toBeLessThan(100)
+    expect(branches.total).toBeGreaterThan(0)
+    expect(branches.uncovered).toBeGreaterThan(0)
   })
 })

@@ -15,7 +15,10 @@ vi.mock("@aws-sdk/client-s3", async () => {
   const actual = await vi.importActual<typeof AwsS3>("@aws-sdk/client-s3")
   return {
     ...actual,
-    S3Client: vi.fn((config: AwsS3.S3ClientConfig) => {
+    // `function` e não arrow: o mock é chamado com `new` pelo adapter, e o
+    // Vitest constrói a implementação com `Reflect.construct` — arrow não é
+    // construtor (o `jest.fn` antigo aceitava as duas formas).
+    S3Client: vi.fn(function (config: AwsS3.S3ClientConfig) {
       const client = new actual.S3Client(config)
       const send = vi.fn()
       ;(client as unknown as { send: Mock }).send = send

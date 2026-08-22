@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm"
 import { Pool } from "pg"
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   createTestDb,
@@ -26,7 +27,6 @@ import type {
   DrizzleExecutor,
 } from "../../infra/database/drizzle.provider"
 import type { PoolClient } from "pg"
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 function connectionEnv(overrides: Record<string, string> = {}): Env {
   return parseEnv({

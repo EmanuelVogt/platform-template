@@ -2,9 +2,10 @@ import "reflect-metadata"
 
 import { join, relative } from "node:path"
 
+import { beforeAll, describe, expect, it } from "vitest"
+
 import { ACCESS_REQUIREMENT } from "../shared/kernel/access/decorators"
 import { endsWith, listFilePaths } from "../shared/test/unit/source-survey"
-import { beforeAll, describe, expect, it } from "vitest"
 
 // Constants do Nest fora do exports map — mesma razão do operation-id.spec.ts.
 const PATH_METADATA = "path"

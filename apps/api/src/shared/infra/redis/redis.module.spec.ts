@@ -1,8 +1,9 @@
+import { type Mock, describe, expect, it, vi } from "vitest"
+
 import { RedisConnection } from "./redis.module"
 
 import type { LoggerFactory } from "../../kernel/logging/logger.factory"
 import type Redis from "ioredis"
-import { type Mock, describe, expect, it, vi } from "vitest"
 
 function makeConnection(quit: Mock): {
   conn: RedisConnection

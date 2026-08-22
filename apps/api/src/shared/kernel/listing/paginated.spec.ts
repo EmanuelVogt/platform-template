@@ -1,7 +1,7 @@
+import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
 import { makePaginatedSchema, toPaginated } from "./paginated"
-import { describe, expect, it } from "vitest"
 
 describe("toPaginated", () => {
   it("calcula totalPages com ceil", () => {

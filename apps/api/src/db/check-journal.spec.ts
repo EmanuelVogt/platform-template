@@ -1,10 +1,11 @@
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 
+import { describe, expect, it } from "vitest"
+
 import { checkAgainstBase, checkWhenOrdering, parseJournal } from "./check-journal"
 
 import type { JournalEntry } from "./check-journal"
-import { describe, expect, it } from "vitest"
 
 // Journal publicado em origin/main na v0.2, transcrito: a cadeia que o reset de
 // baseline da v1 substitui. Maior `when` = 1797072480194 (0005).

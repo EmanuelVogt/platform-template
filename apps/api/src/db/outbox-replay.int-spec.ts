@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm"
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 import {
   createTestDb,
@@ -11,7 +12,6 @@ import { replayByEventId, replaySince } from "./outbox-replay"
 
 import type { DrizzleDb } from "../shared/infra/database/drizzle.provider"
 import type { Pool } from "pg"
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 function envelope(eventId: string) {
   return {

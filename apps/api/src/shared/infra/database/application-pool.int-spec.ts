@@ -1,6 +1,7 @@
 import { performance } from "node:perf_hooks"
 
 import { Pool } from "pg"
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   createTestDb,
@@ -21,7 +22,6 @@ import type { DrizzleDb } from "./drizzle.provider"
 import type { Env } from "../../config/env"
 import type { AppLogger } from "../../kernel/logging/logger.factory"
 import type { PoolClient } from "pg"
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 describe("ApplicationPool (integração)", () => {
   let pool: ApplicationPool
@@ -88,9 +88,11 @@ describe("ApplicationPool (integração)", () => {
     it("pool.query rejeita a promise em vez de lançar síncrono", async () => {
       await txm.run(async () => {
         let pending: Promise<unknown> | undefined
-        expect(() => {
+        const acquire = (): void => {
           pending = pool.query("SELECT 1")
-        }).not.toThrow()
+        }
+
+        expect(acquire).not.toThrow()
         await expect(pending).rejects.toThrow(NestedAcquisitionError)
       })
     })
@@ -108,9 +110,11 @@ describe("ApplicationPool (integração)", () => {
     it("pool.connect rejeita a promise em vez de lançar síncrono", async () => {
       await txm.run(async () => {
         let pending: Promise<PoolClient> | undefined
-        expect(() => {
+        const acquire = (): void => {
           pending = pool.connect()
-        }).not.toThrow()
+        }
+
+        expect(acquire).not.toThrow()
         await expect(pending).rejects.toThrow(NestedAcquisitionError)
       })
     })
@@ -142,40 +146,40 @@ describe("ApplicationPool (integração)", () => {
 
     it("onCommit gravando na raiz passa (o ALS já esvaziou)", async () => {
       await txm.run(async () => {
-        await insert("na-tx")
-        txm.onCommit(async () => {
+        const insertAfterCommit = async (): Promise<void> => {
           await db
             .insert(processedEvents)
             .values({ eventId: "pos-commit", consumer: "c" })
-        })
+        }
+
+        await insert("na-tx")
+        txm.onCommit(insertAfterCommit)
       })
       expect(await ids()).toEqual(["na-tx", "pos-commit"])
     })
 
     it("requires_new segue em SAVEPOINT sem pedir conexão ao pool", async () => {
       await txm.run(async () => {
+        const insertChild = async (): Promise<void> => {
+          await insert("filho")
+        }
+
         await insert("pai")
-        await txm.run(
-          async () => {
-            await insert("filho")
-          },
-          { propagation: "requires_new" }
-        )
+        await txm.run(insertChild, { propagation: "requires_new" })
       })
       expect(await ids()).toEqual(["filho", "pai"])
     })
 
     it("rollback do SAVEPOINT não derruba o pai (mesma conexão)", async () => {
       await txm.run(async () => {
+        const insertThenFail = async (): Promise<void> => {
+          await insert("descartado")
+          throw new Error("falha interna")
+        }
+
         await insert("sobrevive")
         await expect(
-          txm.run(
-            async () => {
-              await insert("descartado")
-              throw new Error("falha interna")
-            },
-            { propagation: "requires_new" }
-          )
+          txm.run(insertThenFail, { propagation: "requires_new" })
         ).rejects.toThrow("falha interna")
       })
       expect(await ids()).toEqual(["sobrevive"])

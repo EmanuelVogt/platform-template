@@ -21,14 +21,7 @@
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "typecheck": "tsc --noEmit",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:cov": "jest --coverage",
-    "test:cov:all": "bash scripts/coverage-all.sh",
-    "test:int": "jest --config ./test/jest-integration.json",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
-    "test:all": "pnpm test && pnpm test:int && pnpm test:e2e"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1098.0",
@@ -104,50 +97,5 @@
     "typescript": "~6",
     "unplugin-swc": "^1.5.11",
     "vitest": "^4.1.10"
-  },
-  "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": "src",
-    "setupFiles": [
-      "<rootDir>/../test/setup/unit-env.ts"
-    ],
-    "testRegex": ".*\\.spec\\.ts$",
-    "testPathIgnorePatterns": [
-      "/node_modules/",
-      "\\.int-spec\\.ts$",
-      "\\.e2e-spec\\.ts$",
-      "if-else\\.sample\\.uncovered\\.spec\\.ts$"
-    ],
-    "passWithNoTests": true,
-    "maxWorkers": 4,
-    "transform": {
-      "^.+\\.(t|j)s$": "@swc/jest"
-    },
-    "collectCoverageFrom": [
-      "**/*.ts",
-      "!**/*.spec.ts",
-      "!**/*.int-spec.ts",
-      "!**/*.e2e-spec.ts",
-      "!**/*.d.ts",
-      "!**/main.ts",
-      "!**/product-permission-catalogs.ts",
-      "!**/product-access-profiles.ts",
-      "!**/product-upload-profiles.ts"
-    ],
-    "coverageDirectory": "../coverage",
-    "coverageThreshold": {
-      "global": {
-        "statements": 43,
-        "branches": 35,
-        "functions": 40,
-        "lines": 45
-      }
-    },
-    "testEnvironment": "node",
-    "coverageProvider": "v8"
   }
 }

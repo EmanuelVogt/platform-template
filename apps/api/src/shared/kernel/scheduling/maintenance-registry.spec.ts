@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs"
 import { join, sep } from "node:path"
 
 import { Cron } from "@nestjs/schedule"
+import { describe, expect, it, vi } from "vitest"
 
 import { MaintenanceJob } from "./maintenance-job.decorator"
 import {
@@ -12,7 +13,6 @@ import {
 } from "./maintenance-registry"
 
 import type { MaintenanceJobEntry } from "./maintenance-registry"
-import { describe, expect, it, vi } from "vitest"
 
 vi.mock("@nestjs/schedule", () => ({
   Cron: vi.fn(() => (): void => undefined),

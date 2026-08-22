@@ -1,7 +1,7 @@
 import { pgTable, timestamp } from "drizzle-orm/pg-core"
+import { describe, expect, it } from "vitest"
 
 import { bucketOf } from "./bucket-sql"
-import { describe, expect, it } from "vitest"
 
 const t = pgTable("sample", { at: timestamp("at") })
 

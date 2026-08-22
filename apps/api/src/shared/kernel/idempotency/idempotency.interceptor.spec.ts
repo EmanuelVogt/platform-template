@@ -1,4 +1,5 @@
 import { firstValueFrom, of } from "rxjs"
+import { describe, expect, it, vi } from "vitest"
 
 import { buildJobContextStore } from "../context/job-context"
 import {
@@ -14,7 +15,6 @@ import type {
 } from "./idempotency.repository"
 import type { CallHandler, ExecutionContext } from "@nestjs/common"
 import type { Reflector } from "@nestjs/core"
-import { describe, expect, it, vi } from "vitest"
 
 function makeStore(tenantId: string | null = null): RequestContextStore {
   return { ...buildJobContextStore({ tenantId }), origin: "http" }

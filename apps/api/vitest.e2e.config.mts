@@ -13,7 +13,8 @@ export default defineConfig({
     setupFiles: ["./test/setup/e2e-env.ts", "./test/setup/e2e-after-env.ts"],
     // Um arquivo por vez, no banco base — as suítes bootam o AppModule inteiro
     // e truncam tabelas. `pool: "forks"` e `isolate` ficam no default: fork
-    // novo por arquivo, o que aposenta o `workerIdleMemoryLimit` do Jest.
+    // novo por arquivo, o que aposenta o teto de memória por worker do runner
+    // anterior.
     fileParallelism: false,
     maxWorkers: 1,
     // Grupo próprio: `maxWorkers` diferente do dos outros projetos.

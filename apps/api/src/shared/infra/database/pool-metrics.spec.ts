@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { makeTestLogger } from "../../../../test/setup/test-logger"
 
 import {
@@ -9,7 +11,6 @@ import {
 
 import type { AcquireObserver, MeteredPool } from "./application-pool"
 import type { PoolPoint } from "./pool-metrics"
-import { describe, expect, it } from "vitest"
 
 class StubPool implements MeteredPool {
   observer?: AcquireObserver

@@ -1,6 +1,7 @@
+import { describe, expect, it } from "vitest"
+
 import { buildJobContextStore } from "./job-context"
 import { RequestContext } from "./request-context"
-import { describe, expect, it } from "vitest"
 
 describe("buildJobContextStore", () => {
   it("abre um contexto de job sem ator quando nada foi enfileirado", () => {

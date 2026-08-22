@@ -1,6 +1,7 @@
+import { describe, expect, it } from "vitest"
+
 import { DomainError } from "./domain.error"
 import { ForbiddenError } from "./forbidden.error"
-import { describe, expect, it } from "vitest"
 
 describe("ForbiddenError do kernel", () => {
   it("estende DomainError: status 403, type único sem namespace de módulo, título pt-BR", () => {

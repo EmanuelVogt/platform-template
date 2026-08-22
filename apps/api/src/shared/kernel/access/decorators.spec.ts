@@ -1,5 +1,7 @@
 import "reflect-metadata"
 
+import { describe, expect, it } from "vitest"
+
 import {
   ACCESS_REQUIREMENT,
   Authenticated,
@@ -9,7 +11,6 @@ import {
   RequirePermission,
   SelfService,
 } from "./decorators"
-import { describe, expect, it } from "vitest"
 
 function handlerOf<T extends object, K extends keyof T>(
   proto: T,

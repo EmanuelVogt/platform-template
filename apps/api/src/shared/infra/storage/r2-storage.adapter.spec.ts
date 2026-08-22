@@ -1,12 +1,12 @@
 import { Readable } from "node:stream"
 
 import { S3Client } from "@aws-sdk/client-s3"
+import { type Mock, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { R2StorageAdapter } from "./r2-storage.adapter"
 
 import type { StorageConfig } from "./storage.config"
 import type * as AwsS3 from "@aws-sdk/client-s3"
-import { type Mock, beforeEach, describe, expect, it, vi } from "vitest"
 
 // Boundary S3-compat: testing.md proíbe mock de banco, não de SaaS externo.
 // Commands reais são necessários para o Upload do lib-storage montar o
@@ -17,7 +17,7 @@ vi.mock("@aws-sdk/client-s3", async () => {
     ...actual,
     // `function` e não arrow: o mock é chamado com `new` pelo adapter, e o
     // Vitest constrói a implementação com `Reflect.construct` — arrow não é
-    // construtor (o `jest.fn` antigo aceitava as duas formas).
+    // construtor (o mock do runner anterior aceitava as duas formas).
     S3Client: vi.fn(function (config: AwsS3.S3ClientConfig) {
       const client = new actual.S3Client(config)
       const send = vi.fn()

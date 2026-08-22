@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import {
   effectiveWindowsByDay,
   intersectSpans,
@@ -7,7 +9,6 @@ import {
   validateWeeklySlots,
   type WeeklySlot,
 } from './weekly-slot';
-import { describe, expect, it } from "vitest"
 
 const slot = (over: Partial<WeeklySlot> = {}): WeeklySlot => ({
   type: 'available',

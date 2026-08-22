@@ -1,11 +1,11 @@
 import { ServiceUnavailableException } from "@nestjs/common"
+import { type Mock, describe, expect, it, vi } from "vitest"
 
 import { HealthController } from "./health.controller"
 
 import type { DedicatedClientFactory } from "../../infra/database/dedicated-client.factory"
 import type { LoggerFactory } from "../logging/logger.factory"
 import type { Client } from "pg"
-import { type Mock, describe, expect, it, vi } from "vitest"
 
 function makeController(query: () => Promise<unknown>): {
   ctrl: HealthController

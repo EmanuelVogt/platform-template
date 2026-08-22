@@ -1,8 +1,9 @@
 import { existsSync, readFileSync } from "node:fs"
 import { dirname, join, relative, resolve, sep } from "node:path"
 
-import { endsWith, listFiles } from "../shared/test/unit/source-survey"
 import { describe, expect, it } from "vitest"
+
+import { endsWith, listFiles } from "../shared/test/unit/source-survey"
 
 const SRC_DIR = resolve(__dirname, "..")
 const SCHEMA_FILE = join(__dirname, "schema.ts")

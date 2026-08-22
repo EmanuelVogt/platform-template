@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { makeTestLogger } from "../../../../test/setup/test-logger"
 import { NestedAcquisitionError } from "../errors/nested-acquisition.error"
 
@@ -13,7 +15,6 @@ import type {
   DrizzleDb,
   DrizzleExecutor,
 } from "../../infra/database/drizzle.provider"
-import { describe, expect, it } from "vitest"
 
 function makeScope(): TxScope {
   return { executor: {} as unknown as DrizzleExecutor, onCommit: [] }

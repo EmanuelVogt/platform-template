@@ -1,3 +1,5 @@
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest"
+
 import { createTestDb, createTestPool } from "../../../../test/setup/test-db"
 
 import {
@@ -10,7 +12,6 @@ import {
 
 import type { DrizzleDb } from "../../infra/database/drizzle.provider"
 import type { Pool, PoolClient } from "pg"
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 describe("advisoryXactLock (integração)", () => {
   let pool: Pool
@@ -34,27 +35,44 @@ describe("advisoryXactLock (integração)", () => {
   }
 
   it("resolve imediatamente quando destravado", async () => {
-    await db.transaction(async (tx) => {
-      await advisoryXactLock(
-        tx,
-        SCHEDULING_LOCK_NAMESPACE,
-        hashLockId("guest-uncontended")
-      )
-    })
+    const lockId = hashLockId("guest-uncontended")
+    const acquisitions: string[] = []
+    const take = async (label: string): Promise<void> => {
+      await db.transaction(async (tx) => {
+        await advisoryXactLock(tx, SCHEDULING_LOCK_NAMESPACE, lockId)
+        acquisitions.push(label)
+      })
+    }
+
+    // Duas passagens seguidas pelo mesmo id: a segunda só entra porque o lock
+    // é xact-scoped e saiu no COMMIT da primeira — segurar aqui trava, não
+    // atrasa.
+    await take("primeira")
+    await take("segunda")
+
+    expect(acquisitions).toEqual(["primeira", "segunda"])
   })
 
   it("ids diferentes não bloqueiam entre si", async () => {
-    const aHold = deferred()
-    const bAcquired = deferred()
+    const aHolding = deferred()
+    const releaseA = deferred()
+    let aFinished = false
 
-    const pA = db.transaction(async (tx) => {
-      await advisoryXactLock(
-        tx,
-        SCHEDULING_LOCK_NAMESPACE,
-        hashLockId("guest-a", "reservation-1")
-      )
-      await aHold.promise
-    })
+    const pA = db
+      .transaction(async (tx) => {
+        await advisoryXactLock(
+          tx,
+          SCHEDULING_LOCK_NAMESPACE,
+          hashLockId("guest-a", "reservation-1")
+        )
+        aHolding.resolve()
+        await releaseA.promise
+      })
+      .then(() => {
+        aFinished = true
+      })
+
+    await aHolding.promise
 
     const pB = db.transaction(async (tx) => {
       await advisoryXactLock(
@@ -62,14 +80,16 @@ describe("advisoryXactLock (integração)", () => {
         SCHEDULING_LOCK_NAMESPACE,
         hashLockId("guest-b", "reservation-1")
       )
-      bAcquired.resolve()
     })
-
-    await bAcquired.promise
-
-    aHold.resolve()
-    await pA
     await pB
+
+    // B commitou com A ainda segurando o lock dela: ids distintos não
+    // serializam (com o mesmo id, `await pB` só sairia depois de releaseA).
+    expect(aFinished).toBe(false)
+
+    releaseA.resolve()
+    await pA
+    expect(aFinished).toBe(true)
   })
 
   it("mesmo id serializa: a 2ª tx só progride após a 1ª commitar", async () => {

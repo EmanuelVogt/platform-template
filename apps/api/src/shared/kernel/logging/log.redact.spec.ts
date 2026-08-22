@@ -1,7 +1,7 @@
 import pino from "pino"
+import { describe, expect, it } from "vitest"
 
 import { redactConfig, redactValue, SENSITIVE_FIELDS } from "./log.redact"
-import { describe, expect, it } from "vitest"
 
 const FIELDS = ["email", "cpf", "phone", "password", "token", "creditCard"]
 

@@ -32,8 +32,8 @@ export const apiDefaults: InlineConfig = {
 
 /**
  * Tiers que falam com container: subir Postgres/Redis e aplicar as migrations
- * cabe nos hooks, e o `hookTimeout` do Vitest é 10s (o `testTimeout: 120000`
- * do Jest cobria hook e teste com um número só).
+ * cabe nos hooks, e o `hookTimeout` do Vitest é 10s (o runner anterior cobria
+ * hook e teste com um número só).
  */
 export const dbTierDefaults: InlineConfig = {
   ...apiDefaults,

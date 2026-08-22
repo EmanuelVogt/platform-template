@@ -1,11 +1,11 @@
 import { ulid } from "ulid"
+import { describe, expect, it } from "vitest"
 
 import { RequestContext } from "./request-context"
 import { createRequestContextMiddleware } from "./request-context.middleware"
 
 import type { RequestContextStore } from "./request-context"
 import type { Request, Response } from "express"
-import { describe, expect, it } from "vitest"
 
 function runWith(correlationHeader: string | undefined): RequestContextStore {
   const ctx = new RequestContext()

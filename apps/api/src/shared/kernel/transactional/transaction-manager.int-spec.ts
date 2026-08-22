@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm"
-
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 import {
   createTestDb,
@@ -14,7 +14,6 @@ import { TransactionManager } from "./transaction-manager"
 
 import type { DrizzleDb } from "../../infra/database/drizzle.provider"
 import type { Pool } from "pg"
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 describe("TransactionManager (integração)", () => {
   let pool: Pool
@@ -142,13 +141,14 @@ describe("TransactionManager (integração)", () => {
 
   it("requires_new: onCommit defere até o COMMIT do pai", async () => {
     let ran = false
+    const markRan = (): void => {
+      ran = true
+    }
     await txm.run(async () => {
       await txm.run(
         async () => {
           await insert("inner")
-          txm.onCommit(() => {
-            ran = true
-          })
+          txm.onCommit(markRan)
         },
         { propagation: "requires_new" }
       )
@@ -192,14 +192,15 @@ describe("TransactionManager (integração)", () => {
 
   it("requires_new: rollback do pai cancela onCommit deferido", async () => {
     let ran = false
+    const markRan = (): void => {
+      ran = true
+    }
     await expect(
       txm.run(async () => {
         await txm.run(
           async () => {
             await insert("inner")
-            txm.onCommit(() => {
-              ran = true
-            })
+            txm.onCommit(markRan)
           },
           { propagation: "requires_new" }
         )

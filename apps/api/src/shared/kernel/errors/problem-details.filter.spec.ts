@@ -1,5 +1,6 @@
 import { type ArgumentsHost, HttpException, HttpStatus } from "@nestjs/common"
 import pino from "pino"
+import { describe, expect, it } from "vitest"
 
 import { RequestContext } from "../context/request-context"
 import { LoggerFactory } from "../logging/logger.factory"
@@ -10,7 +11,6 @@ import { PoolSaturatedError } from "./pool-saturated.error"
 import { ProblemDetailsFilter } from "./problem-details.filter"
 
 import type { RequestContextStore } from "../context/request-context"
-import { describe, expect, it } from "vitest"
 
 function makeHost(captured: {
   status?: number

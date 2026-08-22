@@ -1,6 +1,7 @@
 import "reflect-metadata"
 
 import { Reflector } from "@nestjs/core"
+import { type Mock, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ForbiddenError } from "../errors/forbidden.error"
 
@@ -16,7 +17,6 @@ import {
 
 import type { AccessPolicy, AccessRequirement } from "./access-policy.port"
 import type { ExecutionContext } from "@nestjs/common"
-import { type Mock, beforeEach, describe, expect, it, vi } from "vitest"
 
 // SPEC_DEVIATION: `vi.hoisted` instead of `await vi.importMock` — see
 // tracing.setup.spec.ts. Reason: CommonJS output rejects top-level `await`.

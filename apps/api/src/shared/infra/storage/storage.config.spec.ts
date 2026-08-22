@@ -1,5 +1,6 @@
-import { parseStorageConfig } from "./storage.config"
 import { describe, expect, it } from "vitest"
+
+import { parseStorageConfig } from "./storage.config"
 
 const valid = {
   R2_ACCOUNT_ID: "acc",

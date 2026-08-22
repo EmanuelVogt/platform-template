@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm"
 import { PgDialect, boolean, pgTable, text, timestamp  } from "drizzle-orm/pg-core"
+import { describe, expect, it } from "vitest"
 
 import {
   buildListingClauses,
@@ -8,7 +9,6 @@ import {
 } from "./apply-listing"
 
 import type { SQL } from "drizzle-orm"
-import { describe, expect, it } from "vitest"
 
 
 const dialect = new PgDialect()

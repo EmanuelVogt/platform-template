@@ -1,6 +1,7 @@
 import { type INestApplication, VersioningType } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { AppModule } from "../src/app.module"
 import { parseEnv } from "../src/shared/config/env"
@@ -12,7 +13,6 @@ import { createRequestContextMiddleware } from "../src/shared/kernel/context/req
 import { makeTestLogger } from "./setup/test-logger"
 
 import type { Pool, PoolClient } from "pg"
-import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 async function bootAppWithUnreachableReadiness(): Promise<INestApplication> {
   const { loggerFactory } = makeTestLogger()

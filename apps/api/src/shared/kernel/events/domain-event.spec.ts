@@ -1,5 +1,6 @@
-import { DomainEvent } from "./domain-event.base"
 import { describe, expect, it } from "vitest"
+
+import { DomainEvent } from "./domain-event.base"
 
 class SampleEvent extends DomainEvent<{ x: number }> {
   readonly eventName = "sample.happened"

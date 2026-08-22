@@ -1,8 +1,8 @@
 import * as OtelApi from "@opentelemetry/api"
 import { SpanStatusCode } from "@opentelemetry/api"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Traced } from "./traced.decorator"
-import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const { mockSpan } = vi.hoisted(() => {
   const mockSpan = {
@@ -14,7 +14,7 @@ const { mockSpan } = vi.hoisted(() => {
 })
 
 // Mock do tracer global: o @Traced captura `trace.getTracer(...)` no load do
-// módulo, então o mock (hoisted pelo jest acima dos imports) é o que ele usa.
+// módulo, então o mock (hoisted pelo runner acima dos imports) é o que ele usa.
 vi.mock("@opentelemetry/api", async () => {
   const actual = await vi.importActual<typeof OtelApi>("@opentelemetry/api")
   return Object.assign({}, actual, {

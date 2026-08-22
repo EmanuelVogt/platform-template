@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 
-import { listFiles } from "../shared/test/unit/source-survey"
 import { describe, expect, it } from "vitest"
+
+import { listFiles } from "../shared/test/unit/source-survey"
 
 const MODULES_DIR = join(__dirname, "..", "modules")
 

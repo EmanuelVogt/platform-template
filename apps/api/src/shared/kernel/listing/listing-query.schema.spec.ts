@@ -1,5 +1,6 @@
-import { baseListingQuerySchema, zBoolQuery } from "./listing-query.schema"
 import { describe, expect, it } from "vitest"
+
+import { baseListingQuerySchema, zBoolQuery } from "./listing-query.schema"
 
 describe("zBoolQuery", () => {
   it('"false" vira false (z.coerce.boolean estaria errado aqui)', () => {

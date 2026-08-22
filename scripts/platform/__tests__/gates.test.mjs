@@ -10,6 +10,7 @@ const ROOT_DIR = path.join(TESTS_DIR, "../../..");
 const ROOT_PACKAGE_JSON_PATH = path.join(ROOT_DIR, "package.json");
 const TURBO_JSON_PATH = path.join(ROOT_DIR, "turbo.json");
 const WEB_PACKAGE_JSON_PATH = path.join(ROOT_DIR, "apps/web/package.json");
+const API_PACKAGE_JSON_PATH = path.join(ROOT_DIR, "apps/api/package.json");
 const LEFTHOOK_PATH = path.join(ROOT_DIR, "lefthook.yml");
 const LEFTHOOK_LOCAL_PATH = path.join(ROOT_DIR, "lefthook-local.yml");
 const CI_WORKFLOW_PATH = path.join(ROOT_DIR, ".github/workflows/ci.yml");
@@ -43,6 +44,13 @@ test("GAT-07: apps/web/package.json não tem mais nenhum script test*", () => {
   const { scripts } = readJson(WEB_PACKAGE_JSON_PATH);
   const testScripts = Object.keys(scripts).filter((name) => name.startsWith("test"));
   assert.deepEqual(testScripts, []);
+});
+
+test("GAT-07: apps/api/package.json não tem mais nenhum script test* nem o bloco jest", () => {
+  const manifest = readJson(API_PACKAGE_JSON_PATH);
+  const testScripts = Object.keys(manifest.scripts).filter((name) => name.startsWith("test"));
+  assert.deepEqual(testScripts, []);
+  assert.equal(manifest.jest, undefined);
 });
 
 test("GAT-05: lefthook.yml pre-push é piped e roda migrations → typecheck → test-coverage nessa ordem", () => {

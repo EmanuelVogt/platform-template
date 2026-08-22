@@ -1,5 +1,6 @@
-import { readBar } from "./optional-chain.sample"
 import { describe, expect, it } from "vitest"
+
+import { readBar } from "./optional-chain.sample"
 
 describe("optional-chain sample", () => {
   it("returns bar when present", () => {

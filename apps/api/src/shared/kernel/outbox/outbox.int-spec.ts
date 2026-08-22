@@ -1,6 +1,6 @@
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { eq } from "drizzle-orm"
-
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 import {
   createTestDb,
@@ -30,7 +30,6 @@ import type {
 import type { EventEnvelope } from "../events/domain-event.base"
 import type { LoggerFactory } from "../logging/logger.factory"
 import type { Client, Pool } from "pg"
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 function connectionEnv(): Env {
   return parseEnv({
@@ -593,6 +592,8 @@ describe("Outbox (integração)", () => {
         async () => (await publishedAt("listen-wake-1")) !== null,
         "NOTIFY acordar o dispatch"
       )
+
+      expect(await publishedAt("listen-wake-1")).toBeInstanceOf(Date)
     })
 
     it("após pg_terminate_backend no client do LISTEN, ele se recria e volta a acordar", async () => {

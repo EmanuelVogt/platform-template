@@ -1,10 +1,10 @@
 import { type INestApplication, VersioningType } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { AppModule } from "../src/app.module"
 import { applySecurity } from "../src/main"
-import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 describe("Security bootstrap (e2e)", () => {
   let app: INestApplication

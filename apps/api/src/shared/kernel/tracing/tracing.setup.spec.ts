@@ -1,5 +1,6 @@
-import { signalPipelines } from "./tracing.setup"
 import { describe, expect, it, vi } from "vitest"
+
+import { signalPipelines } from "./tracing.setup"
 
 // SPEC_DEVIATION: `vi.hoisted` instead of the `await vi.importMock` the task
 // prescribed. Reason: the api compiles as CommonJS, so top-level `await` fails

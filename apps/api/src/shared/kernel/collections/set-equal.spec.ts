@@ -1,5 +1,6 @@
-import { sameUnorderedKeys } from "./set-equal"
 import { describe, expect, it } from "vitest"
+
+import { sameUnorderedKeys } from "./set-equal"
 
 describe("sameUnorderedKeys", () => {
   it("retorna true para mesmas chaves em ordem diferente", () => {

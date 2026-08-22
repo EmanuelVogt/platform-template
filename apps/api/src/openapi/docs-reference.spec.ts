@@ -10,7 +10,8 @@ const MINIMAL_DOCUMENT = {
 } as unknown as OpenAPIObject
 
 /**
- * RUN-04: o pacote do Scalar é ESM puro e sob Jest (CJS) precisava de um stub —
+ * RUN-04: o pacote do Scalar é ESM puro e sob o runner CJS anterior precisava
+ * de um stub —
  * `test/setup/scalar-stub.ts`, que não existe mais. Sob o Vitest ele carrega
  * nativamente, então o import de verdade é parte da asserção.
  */

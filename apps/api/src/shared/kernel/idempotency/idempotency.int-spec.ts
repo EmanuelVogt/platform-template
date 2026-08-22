@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm"
-
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 import {
   createTestDb,
@@ -14,7 +14,6 @@ import { idempotencyKeys } from "./idempotency.table"
 
 import type { DrizzleDb } from "../../infra/database/drizzle.provider"
 import type { Pool } from "pg"
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 const inOneHour = (): Date => new Date(Date.now() + 3_600_000)
 const oneSecondAgo = (): Date => new Date(Date.now() - 1_000)

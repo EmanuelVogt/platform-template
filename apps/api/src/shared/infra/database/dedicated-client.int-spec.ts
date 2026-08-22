@@ -1,3 +1,5 @@
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+
 import { createTestPool, testDatabaseUrl } from "../../../../test/setup/test-db"
 import { makeTestLogger } from "../../../../test/setup/test-logger"
 import { parseEnv } from "../../config/env"
@@ -8,7 +10,6 @@ import { ManagedDedicatedClient } from "./managed-dedicated-client"
 import type { ApplicationPool } from "./application-pool"
 import type { Env } from "../../config/env"
 import type { Client } from "pg"
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 function connectionEnv(): Env {
   return parseEnv({

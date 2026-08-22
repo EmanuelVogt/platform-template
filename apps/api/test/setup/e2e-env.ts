@@ -2,11 +2,13 @@ import { containerPostgresUri, containerRedisUri } from "./container-uris"
 
 // Roda antes do test framework em cada worker: aponta o app para os containers.
 process.env.DATABASE_URL = containerPostgresUri()
+process.env.DATABASE_SSL = "disable"
 // Redis efêmero do globalSetup: parte limpo a cada run (sem fail-open por
 // ausência de Redis, sem estado de rate-limit vazando entre runs).
 process.env.REDIS_URL = containerRedisUri()
 process.env.NODE_ENV = "test"
 process.env.LOG_LEVEL = "silent"
+process.env.BREACH_CHECK_ENABLED = "false"
 process.env.OTEL_EXPORTER_OTLP_ENDPOINT = ""
 process.env.OTEL_SDK_DISABLED = "true"
 process.env.WEB_ORIGIN = "http://localhost:5173"

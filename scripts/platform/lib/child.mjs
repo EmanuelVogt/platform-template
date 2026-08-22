@@ -12,6 +12,10 @@ const DEFAULT_ANSWERS = {
 // que nenhum gate usa de verdade: sem elas o passo falha por falta de env, não
 // por travar. Nunca sobrescrevem um valor já presente no ambiente do processo.
 export const CHILD_ENV_DEFAULTS = {
+  NODE_ENV: "test",
+  DATABASE_SSL: "disable",
+  TRUST_PROXY_HOPS: "0",
+  BREACH_CHECK_ENABLED: "false",
   WEB_ORIGIN: "http://localhost:3000",
   R2_ACCOUNT_ID: "placeholder",
   R2_ACCESS_KEY_ID: "placeholder",

@@ -5,6 +5,8 @@ import request from "supertest"
 import { AppModule } from "../src/app.module"
 import { applySecurity } from "../src/main"
 
+import type { Express } from "express"
+
 describe("Security bootstrap (e2e)", () => {
   let app: INestApplication
 
@@ -15,6 +17,13 @@ describe("Security bootstrap (e2e)", () => {
     app = moduleRef.createNestApplication()
     app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
     applySecurity(app)
+    // Registrada antes do app.init(): o router do Nest, montado no init,
+    // responde 404 pra qualquer path que ele não conheça — uma rota crua
+    // adicionada depois nunca seria alcançada.
+    const server = app.getHttpAdapter().getInstance() as Express
+    server.get("/__trust-proxy-probe", (req, res) => {
+      res.json({ ip: req.ip })
+    })
     await app.init()
   })
 
@@ -40,5 +49,14 @@ describe("Security bootstrap (e2e)", () => {
       .get("/health")
       .set("Origin", "http://evil.example")
     expect(bad.headers["access-control-allow-origin"]).toBeUndefined()
+  })
+
+  it("com TRUST_PROXY_HOPS não definido, req.ip é o endereço do socket e ignora X-Forwarded-For", async () => {
+    const res = await request(app.getHttpServer())
+      .get("/__trust-proxy-probe")
+      .set("X-Forwarded-For", "203.0.113.7")
+
+    expect(res.body.ip).not.toBe("203.0.113.7")
+    expect(res.body.ip).toMatch(/^(::1|127\.0\.0\.1|::ffff:127\.0\.0\.1)$/)
   })
 })

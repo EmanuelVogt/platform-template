@@ -59,6 +59,10 @@ services:
     env_file:
       - apps/api/.env
     environment:
+      # NODE_ENV/DATABASE_SSL perderam o default no boot (Zod fail-fast);
+      # explícitos aqui em vez de depender só do apps/api/.env herdado.
+      NODE_ENV: development
+      DATABASE_SSL: disable
       # Dentro da rede do compose o host é o nome do service, não localhost.
       DATABASE_URL: postgres://devuser:devpassword@postgres:5432/devdb
       REDIS_URL: redis://:redis@redis:6379

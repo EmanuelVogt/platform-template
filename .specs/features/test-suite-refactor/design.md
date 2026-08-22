@@ -11,7 +11,7 @@ Three layers, one direction of import. Nothing below imports from anything above
 
 ```mermaid
 graph TD
-  RUN["apps/api/test/** — runner plumbing<br/>jest configs, containers, env, global setup"] --> JEST[jest runtime]
+  RUN["apps/api/test/** — runner plumbing<br/>containers, env, global setup"] --> JEST[vitest runtime]
   KRN["apps/api/src/shared/test/{unit,int,e2e,parity,hygiene}<br/>kernel vocabulary only"] --> RUN
   ENT["catalog/&lt;entry&gt;/api/testing/**<br/>seedUser, loginAs, FakeMailer, make&lt;Entity&gt;"] --> KRN
   SPEC["*.spec.ts · *.int-spec.ts · *.e2e-spec.ts"] --> KRN
@@ -41,16 +41,16 @@ Two import rules, both enforced by a spec rather than by review:
 | Web harness | `apps/web/src/shared/test/{render-with-providers.tsx,msw-server.ts}` | kept and extended; `fixed-clock.ts` has no consumer and is deleted |
 | Boundaries spec | `apps/api/src/modules/module-boundaries.spec.ts` | host for RULE D |
 | Entry install gate | `scripts/platform/catalog-check.mjs` (`pnpm catalog:check`) | proves `module.json.files` really ships `testing/**` — the entry is installed into a scratch child and its tests run there |
-| Coverage merge | `apps/api/scripts/coverage-all.sh` | unchanged; only the denominator excludes change |
+| Coverage merge | `vitest.coverage.mts` (one run over the four projects, v8) | unchanged; only the denominator excludes change (`coverage-all.sh` and nyc no longer exist — AD-027) |
 
 ### Integration points
 
 | System | Integration |
 | --- | --- |
-| jest (api) | new `roots`/`coveragePathIgnorePatterns` entries for `src/shared/test/**`; `--randomize` becomes the default for the e2e project in CI |
+| vitest (api) | new `exclude` entries for `**/shared/test/**` in `vitest.coverage.mts`; `sequence.shuffle` becomes the default for the `api-e2e` project in CI |
 | vitest (web) | harness exports only; thresholds raised by the ratchet task |
-| lefthook | pre-push stays Docker-free; the api task switches `test` → `test:cov` in the last task |
-| turbo | `test:cov`, `test:cov:all`, `test:watch` declared with `outputs: ["coverage/**"]`, `cache: false` on Docker-bound tasks |
+| lefthook | pre-push is `migrations → typecheck → catalog-typecheck → test-coverage` (AD-027, needs Docker); this feature only raises the floors in `vitest.coverage.mts` |
+| turbo | untouched — `turbo.json` carries no `test*` task, tests run outside Turbo (AD-028) |
 | GitHub Actions | `.github/workflows/ci.yml` added beside the existing `catalog.yml`; both use `.nvmrc` + `packageManager` |
 | copier | `apps/api/src/shared/test/**` ships with the template; entry `testing/**` ships through `module.json.files` |
 
@@ -62,7 +62,7 @@ Two import rules, both enforced by a spec rather than by review:
 **Files**: `mock-of.ts`, `clock.ts`, `request-context.ts`, `logger.ts`, `constants.ts`, `index.ts`.
 **Interfaces**:
 
-- `mockOf<T>(partial?: Partial<jest.Mocked<T>>): jest.Mocked<T>` — every method not supplied is a `jest.fn()` that **rejects** with `Error("<method> not stubbed")`.
+- `mockOf<T>(partial?: Partial<Mocked<T>>): Mocked<T>` (`Mocked` from `"vitest"`) — every method not supplied is a `vi.fn()` that **rejects** with `Error("<method> not stubbed")`.
 - `fixedClock(iso = FIXED_NOW): Clock`
 - `fakeRequestContext(partial?: Partial<RequestContextStore>): RequestContext` — kernel defaults `correlationId: "c1"`, `userAgent: "jest"`, `actor: null`.
 - `fakeLogger(): { logger, loggerFactory, lines }`
@@ -145,20 +145,20 @@ Two import rules, both enforced by a spec rather than by review:
 ### 7. Test lint — `packages/eslint-config/`
 
 **Purpose**: the mechanical half of "every test proves a value".
-**Interfaces**: `eslint-plugin-jest` on api test globs; `@vitest/eslint-plugin` + `eslint-plugin-testing-library` + `eslint-plugin-jest-dom` on web test globs; the local rule `rules/no-existence-only-assert.js` registered the way `sr-only-requires-positioned-ancestor` is (`react.js:9,13,66`), with a `RuleTester` suite beside it.
+**Interfaces**: `@vitest/eslint-plugin` already covers the api and web test globs (vitest-migration); this feature adds `eslint-plugin-jest-dom` on the web test globs (`eslint-plugin-testing-library` is already there); the local rule `rules/no-existence-only-assert.js` registered the way `sr-only-requires-positioned-ancestor` is (`react.js:9,13,66`), with a `RuleTester` suite beside it.
 **Rule semantics**: report when **every** `expect` chain in the test body ends in an existence-only matcher (`toBeDefined`, `toBeUndefined`, `toBeTruthy`, `toBeFalsy`, `resolves/rejects.toBeDefined`, argument-less `not.toThrow`); exempt a body that also asserts a concrete value, that declares `expect.assertions(n)`, or that passes a matcher to `not.toThrow(...)`.
 **Proof that the plugin set is active**: a config test resolving `calculateConfigForFile` for one api and one web test file and asserting the four rule severities — a rule that is configured but not reachable would otherwise pass unnoticed.
 
 ### 8. Runner plumbing — `apps/api/test/`
 
-**Purpose**: what jest needs and no spec imports.
-**Allow-list after the refactor**: `global-setup.ts`, `global-teardown.ts`, `e2e-env.ts`, `int-env.ts`, `unit-env.ts` (importing the shared env block instead of duplicating it), `e2e-after-env.ts`, `container-uris.ts`, `docker-runtime.ts`, `scalar-stub.ts`, `global.d.ts`, the `jest-*.json` files and the two kernel e2e specs (`openapi-contract`, `security-bootstrap`).
+**Purpose**: what the runner needs and no spec imports.
+**Allow-list after the refactor**: `global-setup.ts`, `global-teardown.ts`, `e2e-env.ts`, `int-env.ts`, `unit-env.ts` (importing the shared env block instead of duplicating it), `e2e-after-env.ts`, `container-uris.ts`, `docker-runtime.ts`, `global.d.ts`, the `vitest.*.mts` configs and the two kernel e2e specs (`openapi-contract`, `security-bootstrap`).
 **Removed from here**: `app-factory.ts`, `cookies.ts`, `test-db.ts`, `test-logger.ts` (moved into the harness).
 
 ### 9. Gates — `.github/workflows/`, `turbo.json`, `lefthook.yml`
 
 **Purpose**: run what the handbook claims is run.
-**Interfaces**: `ci.yml` with `check`, `unit`, `int`, `e2e` (`--randomize`), `contract`, `coverage-all`; `catalog.yml` untouched except where a job would be duplicated. Pre-push stays Docker-free. Turbo declares the three test pipelines.
+**Interfaces**: `ci.yml` already exists (vitest-migration) — this feature only extends it where a job is missing; `catalog.yml` untouched except where a job would be duplicated. Pre-push is the AD-027 gate (`pnpm test:coverage`, Docker). Turbo declares no test task (AD-028).
 
 ### 10. Count baseline — `scripts/platform/it-count.mjs`
 
@@ -202,9 +202,9 @@ No persistence, no migration: every model above lives for the duration of a test
 | RULE D could invert an existing edge | attachment/tag/audit e2e need identity's `loginAs` | a `testing/` import that closes a cycle would violate AD-021/AD-025 | the DAG is `notification → identity → {audit, attachment}`, `tag` isolated; the four `notifications-*` e2e already live in identity (AD-026), so no new edge is needed |
 | Enabling the lint plugins turns existing files red | `packages/eslint-config` | a wave lands with a repo-wide red lint | the lint wave runs **after** the migration and strengthening waves; no allow-list, no `eslint-disable` |
 | Child repositories run the guard spec too | installed entries at `apps/api/src/modules/<entry>/testing/**` | the template's own paths do not exist in a child | the scan globs both layouts and asserts on whichever is present |
-| Coverage bar and the shrinking denominator | jest/vitest config | excluding the harness raises the effective bar on real code | the fills (COV-11) run before the ratchet, never the other way around |
+| Coverage bar and the shrinking denominator | `vitest.coverage.mts` | excluding the harness raises the effective bar on real code | the fills (COV-11) run before the ratchet, never the other way around |
 | ESLint flat-config compatibility of the four plugins | `packages/eslint-config/{base,react}.js` | a plugin without flat-config support blocks the lint wave | the lint wave's first task pins versions and proves resolution with the config test (component 7) before any rule is switched on |
-| `.only` could still reach `main` between waves | any test file | the ban is not active until the lint wave | the guard spec (wave 3) and CI (`--randomize` + lint) both fail on it; the window is inside the feature branch only |
+| `.only` could still reach `main` between waves | any test file | the ban is not active until the lint wave | the guard spec (wave 3) and CI (`--sequence.shuffle` + lint) both fail on it; the window is inside the feature branch only |
 
 ## Tech Decisions
 
@@ -232,7 +232,7 @@ Audit of 2026-08-19, re-measured against `main` after the v1 merge (`8bb606d`). 
 | --- | --- | --- |
 | Files containing `Test.createTestingModule` | 25 | HRN-01 → 1 |
 | `createTestPool(` call sites | 89 | HRN-05 |
-| `jest.fn(` sites | 736 | UNT-01 (`mockOf` covers the port mocks, not all of them) |
+| mock-factory sites (`jest.fn(` at audit time, `vi.fn(` after vitest-migration) | 736 | UNT-01 (`mockOf` covers the port mocks, not all of them) |
 | `Record<string, any>` in `*.spec.ts` | 24 | UNT-01 → 0 |
 | `as unknown as` + `as never` in test files | 166 | UNT-01 → only under `shared/test/**` |
 | `User.fromProps({` in specs | 45 | UNT-03 → 0 |

@@ -1,6 +1,16 @@
 # Test Suite Refactor Context
 
 **Gathered**: 2026-08-19 (test-quality audit), re-baselined 2026-08-21 after the v1 merge (`8bb606d`)
+
+> **Runner re-baseline (2026-08-22, after `vitest-migration` merged).** The decisions below were
+> recorded against Jest and are kept verbatim as the record of what the owner chose. What the
+> merge changed, and what `spec.md` / `design.md` / `tasks.md` now carry: runner plumbing is the
+> `vitest.*.mts` configs (no `jest-*.json`, no scalar stub — Vite loads the ESM package natively);
+> the api lint globs already resolve `@vitest/eslint-plugin` and the web ones also
+> `eslint-plugin-testing-library`, so only `eslint-plugin-jest-dom` and the local rule are left to
+> add; `.github/workflows/ci.yml` exists with `quality`, `test-unit` and `test-coverage`, so the
+> gap is the `contract` job and the shuffled e2e; and the coverage bar is the per-glob floors of
+> `vitest.coverage.mts` (AD-027), not nyc. The 736 mock-factory sites are `vi.fn(` today.
 **Spec**: `.specs/features/test-suite-refactor/spec.md`
 **Status**: defaults set by the agent — the owner flips any row on the spec before Design is approved
 

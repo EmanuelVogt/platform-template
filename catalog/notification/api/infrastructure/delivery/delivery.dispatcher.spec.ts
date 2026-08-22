@@ -18,4 +18,9 @@ describe("redactPayload", () => {
   it("payload sem link passa intacto", () => {
     expect(redactPayload({ email: "a@b.com" })).toEqual({ email: "a@b.com" })
   })
+  it("redige token e link juntos, não só link", () => {
+    expect(
+      redactPayload({ email: "a@b.com", link: "https://x/?token=raw", token: "raw-secret" })
+    ).toEqual({ email: "a@b.com", link: "[REDACTED]", token: "[REDACTED]" })
+  })
 })

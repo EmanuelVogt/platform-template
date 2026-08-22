@@ -26,4 +26,8 @@ describe("notificationConfig", () => {
     expect(parseNotificationConfig({ DELIVERY_MAX_ATTEMPTS: "3" }).DELIVERY_MAX_ATTEMPTS).toBe(3)
     expect(() => parseNotificationConfig({ DELIVERY_MAX_ATTEMPTS: "0" })).toThrow()
   })
+
+  it("NODE_ENV=staging parseia (mesmo enum do kernel)", () => {
+    expect(parseNotificationConfig({ NODE_ENV: "staging" }).NODE_ENV).toBe("staging")
+  })
 })

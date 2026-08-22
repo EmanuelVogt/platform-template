@@ -17,7 +17,7 @@ export class ForgotPasswordController {
   @ApiOperation({ operationId: "forgotPassword" })
   @Public()
   @Post("forgot-password")
-  @RateLimit({ limit: 3, windowSeconds: 60 })
+  @RateLimit({ limit: 3, windowSeconds: 60, critical: true })
   @HttpCode(HttpStatus.ACCEPTED) // 202 sempre (spec §8)
   @Idempotent({ ttlHours: 1 })
   async handle(@Body() dto: ForgotPasswordDto): Promise<void> {

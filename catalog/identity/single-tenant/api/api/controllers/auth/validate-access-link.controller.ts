@@ -19,7 +19,7 @@ export class ValidateAccessLinkController {
   @ApiOperation({ operationId: "validateAccessLink" })
   @Public()
   @Get("access-link")
-  @RateLimit({ limit: 20, windowSeconds: 60 })
+  @RateLimit({ limit: 20, windowSeconds: 60, critical: true })
   @HttpCode(HttpStatus.OK)
   @ListQuery(validateAccessLinkQuerySchema)
   @ApiOkResponse({ type: AccessLinkInfoDto })

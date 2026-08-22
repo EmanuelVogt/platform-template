@@ -9,7 +9,9 @@ import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
 import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
 import { PASSWORD_HASHER } from "../domain/ports/password-hasher"
+import { InMemoryRateLimiter } from "../../../shared/kernel/rate-limit/in-memory-rate-limiter"
 import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
+import { allowAllRateLimiter } from "../testing/allow-all-rate-limiter"
 import {
   IDENTITY_CONFIG,
   parseIdentityConfig,
@@ -20,9 +22,6 @@ import type { Pool } from "pg"
 const ORIGIN = "http://localhost:5173"
 const EMAIL = "csrf-none@example.com"
 
-const allowAll = {
-  consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
-}
 const fakeHasher = {
   hash: () => Promise.resolve("argon2-fake"),
   verify: () => Promise.resolve(true),
@@ -77,7 +76,7 @@ describe("CSRF double-submit sob SameSite=none (e2e)", () => {
       .overrideProvider(PASSWORD_HASHER)
       .useValue(fakeHasher)
       .overrideProvider(RATE_LIMITER)
-      .useValue(allowAll)
+      .useValue(allowAllRateLimiter)
       .compile()
 
     app = moduleRef.createNestApplication()
@@ -141,5 +140,71 @@ describe("CSRF double-submit sob SameSite=none (e2e)", () => {
       .set("Origin", ORIGIN)
       .set("Cookie", `rit_session=${sessionCookie}`)
       .expect(200)
+  })
+})
+
+describe("Origin forjada não gasta bucket (e2e)", () => {
+  let app: INestApplication
+  let pool: Pool
+  let consumed: string[]
+
+  beforeAll(async () => {
+    pool = createTestPool()
+    await truncateIdentity(pool)
+    await truncateKernel(pool)
+
+    const inner = new InMemoryRateLimiter()
+    consumed = []
+    const spyingLimiter = {
+      consume: (
+        key: string,
+        limit: number,
+        windowSeconds: number,
+      ): ReturnType<InMemoryRateLimiter["consume"]> => {
+        consumed.push(key)
+        return inner.consume(key, limit, windowSeconds)
+      },
+      reset: (key: string) => inner.reset(key),
+    }
+
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(PASSWORD_HASHER)
+      .useValue(fakeHasher)
+      .overrideProvider(RATE_LIMITER)
+      .useValue(spyingLimiter)
+      .compile()
+
+    app = moduleRef.createNestApplication()
+    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
+    applySecurity(app)
+    app.use(createRequestContextMiddleware(app.get(RequestContext)))
+    await app.init()
+  })
+
+  afterAll(async () => {
+    await app.close()
+    await pool.end()
+  })
+
+  it("Origin de outro site é 403 e o bucket segue intacto para o pedido legítimo", async () => {
+    const forgotPassword = (origin: string, i: number) =>
+      request(app.getHttpServer())
+        .post("/v1/auth/forgot-password")
+        .set("Origin", origin)
+        .set("Idempotency-Key", `csrf-bucket-${origin}-${i}`)
+        .send({ email: "bucket@example.com" })
+
+    // O limite de forgot-password é 3/min: cinco tentativas forjadas o
+    // estourariam se o rate limiter rodasse antes do CSRF.
+    for (let i = 0; i < 5; i++) {
+      await forgotPassword("http://evil.example.com", i).expect(403)
+    }
+    expect(consumed).toEqual([])
+
+    for (let i = 0; i < 3; i++) {
+      const res = await forgotPassword(ORIGIN, i)
+      expect(res.status).not.toBe(429)
+    }
+    expect(consumed).toHaveLength(3)
   })
 })

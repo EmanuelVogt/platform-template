@@ -14,7 +14,7 @@ export class VerifyEmailController {
   @ApiOperation({ operationId: "verifyEmail" })
   @Public()
   @Post("verify-email")
-  @RateLimit({ limit: 5, windowSeconds: 60 })
+  @RateLimit({ limit: 5, windowSeconds: 60, critical: true })
   @HttpCode(HttpStatus.NO_CONTENT) // 204
   async handle(@Body() dto: VerifyEmailDto): Promise<void> {
     await this.verifyEmail.execute({ token: dto.token })

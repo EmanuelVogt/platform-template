@@ -45,7 +45,7 @@ export class SetPasswordController {
   @ApiOperation({ operationId: "setPassword" })
   @Public()
   @Post("set-password")
-  @RateLimit({ limit: 10, windowSeconds: 60 })
+  @RateLimit({ limit: 10, windowSeconds: 60, critical: true })
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: CurrentUserResponseDto })
   async handle(

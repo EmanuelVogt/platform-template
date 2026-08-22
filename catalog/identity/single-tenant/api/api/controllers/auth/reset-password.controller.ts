@@ -15,7 +15,7 @@ export class ResetPasswordController {
   @ApiOperation({ operationId: "resetPassword" })
   @Public()
   @Post("reset-password")
-  @RateLimit({ limit: 10, windowSeconds: 60 })
+  @RateLimit({ limit: 10, windowSeconds: 60, critical: true })
   @HttpCode(HttpStatus.NO_CONTENT) // 204
   @Idempotent({ ttlHours: 1 })
   async handle(@Body() dto: ResetPasswordDto): Promise<void> {

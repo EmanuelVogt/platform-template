@@ -15,7 +15,7 @@ export class ResendVerificationController {
   @ApiOperation({ operationId: "resendVerification" })
   @SelfService()
   @Post("resend-verification")
-  @RateLimit({ limit: 5, windowSeconds: 60 })
+  @RateLimit({ limit: 5, windowSeconds: 60, critical: true })
   @HttpCode(HttpStatus.ACCEPTED) // 202 — autenticado; lê o usuário do contexto.
   async handle(): Promise<void> {
     await this.resendVerification.execute({})

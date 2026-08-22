@@ -43,7 +43,7 @@ export class LoginController {
   @ApiOperation({ operationId: "login" })
   @Public()
   @Post("login")
-  @RateLimit({ limit: 30, windowSeconds: 60 })
+  @RateLimit({ limit: 30, windowSeconds: 60, critical: true })
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: CurrentUserResponseDto })
   async handle(

@@ -4,9 +4,11 @@ import { RequestMethod } from "@nestjs/common"
 import { METHOD_METADATA, PATH_METADATA } from "@nestjs/common/constants"
 
 import { ACCESS_REQUIREMENT } from "../../../shared/kernel/access/decorators"
+import { RATE_LIMIT_KEY } from "../../../shared/kernel/rate-limit/rate-limit.decorator"
 import { CONTROLLERS } from "../api/controllers"
 
 import type { AccessRequirement } from "../../../shared/kernel/access/access-policy.port"
+import type { RateLimitConfig } from "../../../shared/kernel/rate-limit/rate-limiter.port"
 
 const VERBS: Record<number, string> = {
   [RequestMethod.GET]: "GET",
@@ -76,9 +78,24 @@ const SELF_SERVICE = [
   "GET access-catalog",
 ]
 
+/** Rotas não autenticadas cujo teto continua valendo com o Redis fora
+ *  (`critical`): são as que um atacante alcança sem sessão. Marcar uma rota
+ *  autenticada aqui gastaria a janela local de graça. */
+const CRITICAL_ROUTES = [
+  "POST auth/login",
+  "POST auth/forgot-password",
+  "POST auth/reset-password",
+  "POST auth/verify-email",
+  "POST auth/set-password",
+  "POST auth/resend-verification",
+  "GET auth/access-link",
+  "POST auth/access-link/cancel",
+]
+
 type Route = {
   key: string
   explicit: AccessRequirement | undefined
+  rateLimit: RateLimitConfig | undefined
 }
 
 function trim(segment: string): string {
@@ -101,6 +118,7 @@ function collectRoutes(): Route[] {
       routes.push({
         key: `${VERBS[verb]} ${path}`,
         explicit: Reflect.getMetadata(ACCESS_REQUIREMENT, handler) as AccessRequirement | undefined,
+        rateLimit: Reflect.getMetadata(RATE_LIMIT_KEY, handler) as RateLimitConfig | undefined,
       })
     }
   }
@@ -133,5 +151,21 @@ describe("paridade de acesso das rotas do identity", () => {
       .map((route) => route.key)
 
     expect(authenticated.sort()).toEqual([...SELF_SERVICE].sort())
+  })
+
+  it("exatamente as rotas não autenticadas de auth são critical", () => {
+    const critical = routes
+      .filter((route) => route.rateLimit?.critical === true)
+      .map((route) => route.key)
+
+    expect(critical.sort()).toEqual([...CRITICAL_ROUTES].sort())
+  })
+
+  it("as demais rotas com rate-limit seguem sem critical (fail open na queda)", () => {
+    const nonCritical = routes.filter(
+      (route) => route.rateLimit !== undefined && route.rateLimit.critical !== true,
+    )
+
+    expect(nonCritical).toHaveLength(19)
   })
 })

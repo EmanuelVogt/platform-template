@@ -15,7 +15,7 @@ export class CancelAccessLinkController {
   @ApiOperation({ operationId: "cancelAccessLink" })
   @Public()
   @Post("access-link/cancel")
-  @RateLimit({ limit: 5, windowSeconds: 60 })
+  @RateLimit({ limit: 5, windowSeconds: 60, critical: true })
   @HttpCode(HttpStatus.NO_CONTENT)
   async handle(@Body() dto: CancelAccessLinkDto): Promise<void> {
     await this.cancel.execute({ token: dto.token })

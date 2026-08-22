@@ -269,8 +269,11 @@ export class IdentityModule implements NestModule {
         // do SharedKernelModule (importado antes) e rodaria antes de qualquer
         // guard registrado aqui. Middleware roda antes de todos eles.
         { provide: ACCESS_POLICY, useClass: IdentityAccessPolicy },
-        { provide: APP_GUARD, useClass: RateLimitGuard },
+        // Ordem: guards globais rodam na ordem de registro. O CSRF vem antes
+        // porque uma requisição de Origin forjada não pode gastar bucket —
+        // seria um DoS de graça sobre a conta ou o IP da vítima.
         { provide: APP_GUARD, useClass: CsrfGuard },
+        { provide: APP_GUARD, useClass: RateLimitGuard },
       ],
       exports: [
         // O AccessGuard vive no SharedKernelModule: a policy precisa sair daqui

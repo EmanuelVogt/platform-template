@@ -21,6 +21,37 @@ declare module "vitest" {
 }
 
 /**
+ * Roda um bloco com um Pool efêmero de setup e devolve a conexão em qualquer
+ * saída. Duas garantias das quais o run inteiro depende:
+ *
+ * - `error` no pool: quando o servidor derruba um client ocioso — parar o
+ *   container manda SIGTERM aos backends, que respondem `FATAL 57P01
+ *   terminating connection due to administrator command` — o pg-pool reemite o
+ *   erro do client como `error` do pool. Sem listener, o Node mata o processo
+ *   do runner ("Unhandled 'error' event") e a falha real do setup nunca chega
+ *   ao relatório.
+ * - `finally`: um pool vazado no caminho de erro deixa um backend vivo até o
+ *   container parar — e é essa parada, já dentro do tratamento da falha
+ *   original, que dispara o FATAL acima.
+ */
+async function withSetupPool<T>(
+  connectionString: string,
+  use: (pool: Pool) => Promise<T>
+): Promise<T> {
+  const pool = new Pool({ connectionString, max: 1 })
+  // Erro de client ocioso não pertence a nenhuma query em voo: o que falhou sai
+  // pelo `await` do bloco. Aqui basta não derrubar o processo.
+  pool.on("error", () => undefined)
+  try {
+    return await use(pool)
+  } finally {
+    // Fechar não pode substituir a causa: com o backend já morto `end()`
+    // rejeita, e o erro que importa é o do bloco.
+    await pool.end().catch(() => undefined)
+  }
+}
+
+/**
  * Aplica cada arquivo de migration em sua própria transação (BEGIN/COMMIT).
  * Necessário porque `ALTER TYPE ... ADD VALUE` não pode ser usada na mesma
  * transação em que foi adicionada — o migrator padrão do drizzle usa uma
@@ -103,14 +134,11 @@ async function createWorkerDatabases(
 ): Promise<void> {
   const adminUrl = new URL(uri)
   adminUrl.pathname = "/postgres"
-  const admin = new Pool({ connectionString: adminUrl.toString(), max: 1 })
-  try {
+  await withSetupPool(adminUrl.toString(), async (admin) => {
     for (let worker = 1; worker <= maxWorkers; worker++) {
       await admin.query(`CREATE DATABASE test_w${worker} TEMPLATE "${templateDb}"`)
     }
-  } finally {
-    await admin.end()
-  }
+  })
 }
 
 /**
@@ -179,9 +207,9 @@ export default async function setup(
   let redisContainer: StartedTestContainer | undefined
   try {
     const uri = pgContainer.getConnectionUri()
-    const pool = new Pool({ connectionString: uri })
-    await runMigrations(pool, join(__dirname, "..", "..", "drizzle", "migrations"))
-    await pool.end()
+    await withSetupPool(uri, (pool) =>
+      runMigrations(pool, join(__dirname, "..", "..", "drizzle", "migrations"))
+    )
     await createWorkerDatabases(
       uri,
       pgContainer.getDatabase(),
@@ -201,9 +229,10 @@ export default async function setup(
     )
   } catch (err) {
     // Qualquer falha depois do primeiro start para o que já subiu: sem isto o
-    // container fica órfão até o Ryuk recolher.
-    await redisContainer?.stop()
-    await pgContainer.stop()
+    // container fica órfão até o Ryuk recolher. Falhar ao parar não pode
+    // substituir a causa — quem diagnostica precisa do erro original.
+    await redisContainer?.stop().catch(() => undefined)
+    await pgContainer.stop().catch(() => undefined)
     throw err
   }
 

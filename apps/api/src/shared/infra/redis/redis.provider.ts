@@ -22,5 +22,9 @@ export function createRedis(): Redis {
     maxRetriesPerRequest: 1,
     enableOfflineQueue: false,
     lazyConnect: true,
+    // Um Redis black-holed (firewall dropando pacotes) travaria o comando sem
+    // erro nem timeout do próprio ioredis; isto dá ao limitador resiliente um
+    // erro para agir (fail-open) em vez de um wait aberto.
+    commandTimeout: 2000,
   })
 }

@@ -7,7 +7,9 @@ import {
 } from "./connection-config"
 
 const BASE = {
+  NODE_ENV: "test",
   DATABASE_URL: "postgres://u:p@localhost:5432/db",
+  DATABASE_SSL: "disable",
   WEB_ORIGIN: "http://localhost:5173",
   REDIS_URL: "redis://localhost:6379",
 } as NodeJS.ProcessEnv
@@ -38,11 +40,25 @@ describe("connection-config", () => {
       expect(config.ssl).toBe(false)
     })
 
-    it("exige certificado válido com DATABASE_SSL=require", () => {
+    it("exige certificado válido com DATABASE_SSL=require, sem CA", () => {
       const config = baseConnectionConfig(
         parseEnv({ ...BASE, DATABASE_SSL: "require" })
       )
       expect(config.ssl).toEqual({ rejectUnauthorized: true })
+    })
+
+    it("usa DATABASE_SSL_CA como CA confiável com DATABASE_SSL=require", () => {
+      const config = baseConnectionConfig(
+        parseEnv({
+          ...BASE,
+          DATABASE_SSL: "require",
+          DATABASE_SSL_CA: "-----BEGIN CERT-----\\nAAA\\n-----END CERT-----",
+        })
+      )
+      expect(config.ssl).toEqual({
+        rejectUnauthorized: true,
+        ca: "-----BEGIN CERT-----\nAAA\n-----END CERT-----",
+      })
     })
 
     it("não carrega chaves de pool (é config de client)", () => {

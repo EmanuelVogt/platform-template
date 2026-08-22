@@ -1,170 +1,174 @@
 <p align="center">
-  <img src="/.github/assets/banner.svg" alt="platform-template — kernel NestJS + front React headless, catálogo de módulos versionado e harness de agentes" width="100%">
+  <img src="/.github/assets/banner.svg" alt="platform-template — NestJS kernel + headless React front, versioned module catalog and agent harness" width="100%">
 </p>
 
 <p align="center">
   <a href="https://github.com/EmanuelVogt/platform-template/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/EmanuelVogt/platform-template/ci.yml?branch=main&label=CI&logo=githubactions&logoColor=white"></a>
-  <a href="https://github.com/EmanuelVogt/platform-template/tags"><img alt="Última versão" src="https://img.shields.io/github/v/tag/EmanuelVogt/platform-template?sort=semver&label=vers%C3%A3o&color=6366f1"></a>
-  <a href="/LICENSE"><img alt="Licença MIT" src="https://img.shields.io/github/license/EmanuelVogt/platform-template?color=22d3ee"></a>
+  <a href="https://github.com/EmanuelVogt/platform-template/tags"><img alt="Latest version" src="https://img.shields.io/github/v/tag/EmanuelVogt/platform-template?sort=semver&label=version&color=6366f1"></a>
+  <a href="/LICENSE"><img alt="MIT license" src="https://img.shields.io/github/license/EmanuelVogt/platform-template?color=22d3ee"></a>
   <img alt="Node 22" src="https://img.shields.io/badge/node-22-5FA04E?logo=node.js&logoColor=white">
   <img alt="pnpm 10" src="https://img.shields.io/badge/pnpm-10-F69220?logo=pnpm&logoColor=white">
-  <img alt="copier 9.4 ou superior" src="https://img.shields.io/badge/copier-%E2%89%A5%209.4-0ea5e9">
+  <img alt="copier 9.4 or newer" src="https://img.shields.io/badge/copier-%E2%89%A5%209.4-0ea5e9">
 </p>
 
 <p align="center">
-  Template <a href="https://copier.readthedocs.io">copier</a> de uma plataforma de produto: monorepo pnpm + Turbo com
-  <strong>kernel NestJS</strong>, <strong>front React/Vite headless</strong>, <strong>catálogo de módulos versionado</strong>
-  e <strong>harness de agentes</strong>. Um comando gera o produto; uma tag semver o atualiza.
+  A <a href="https://copier.readthedocs.io">copier</a> template for a product platform: a pnpm + Turbo monorepo with a
+  <strong>NestJS kernel</strong>, a <strong>headless React/Vite front end</strong>, a <strong>versioned module catalog</strong>
+  and an <strong>agent harness</strong>. One command generates the product; one semver tag updates it.
 </p>
 
 ---
 
-## Visão geral
+## Overview
 
-O template distribui **só o kernel** — a parte que todo produto precisa e nenhum deveria
-reescrever. O que é específico de cada produto (módulos de negócio, telas, kit de UI,
-ADRs) nasce no repositório gerado e nunca colide com as atualizações da plataforma.
+The template ships **only the kernel** — the part every product needs and none should
+rewrite. Whatever is specific to a product (business modules, screens, UI kit, ADRs) is
+born in the generated repository and never collides with platform updates.
 
-| Pilar                   | O que entrega                                                                                                                                            |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Kernel da API**       | Monólito modular NestJS 11: transação, outbox, ator via ALS, tracing OpenTelemetry, idempotência, listagem, health, storage S3, guard de acesso.         |
-| **Contrato HTTP**       | Zod é a verdade → `openapi.json` → cliente TypeScript gerado (Kubb) consumido pelo front. Nunca se retipa um contrato à mão.                             |
-| **Front headless**      | React 19 + Vite 8, TanStack Router/Query, Zustand: transporte, CSRF, guard de acesso e layout sem estilo. O kit de UI é decisão do produto.              |
-| **Catálogo de módulos** | Entradas versionadas em `catalog/` (identity, attachment, audit, notification, tag…), instaladas com `pnpm platform module add`. Correção vira advisory. |
-| **Harness de agentes**  | `AGENTS.md`, hooks, skills e agentes para Claude Code/Cursor, com handbooks de arquitetura, testes e workflow.                                           |
-| **Operação**            | CI em GitHub Actions (lint, typecheck, unit, integração e e2e com testcontainers), Dockerfiles, Docker Compose local e guia de deploy.                   |
+| Pillar             | What it delivers                                                                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **API kernel**     | NestJS 11 modular monolith: transactions, outbox, actor via ALS, OpenTelemetry tracing, idempotency, listing, health, S3 storage, access guard.              |
+| **HTTP contract**  | Zod is the source of truth → `openapi.json` → generated TypeScript client (Kubb) consumed by the front end. A contract is never retyped by hand.             |
+| **Headless front** | React 19 + Vite 8, TanStack Router/Query, Zustand: transport, CSRF, access guard and an unstyled layout. The UI kit is the product's choice.                 |
+| **Module catalog** | Versioned entries in `catalog/` (identity, attachment, audit, notification, tag…), installed with `pnpm platform module add`. Every fix becomes an advisory. |
+| **Agent harness**  | `AGENTS.md`, hooks, skills and agents for Claude Code/Cursor, plus handbooks for architecture, testing and workflow.                                         |
+| **Operations**     | GitHub Actions CI (lint, typecheck, unit, integration and e2e with testcontainers), Dockerfiles, local Docker Compose and a deploy guide.                    |
 
 ```mermaid
 flowchart LR
-  T["platform-template<br/>kernel + harness"] -- "copier copy" --> P["seu produto"]
-  C[("catalog/<br/>entradas versionadas")] -- "pnpm platform module add" --> P
-  T -- "tag semver → copier update" --> P
+  T["platform-template<br/>kernel + harness"] -- "copier copy" --> P["your product"]
+  C[("catalog/<br/>versioned entries")] -- "pnpm platform module add" --> P
+  T -- "semver tag → copier update" --> P
 ```
 
-## Começar
+## Getting started
 
-### Requisitos
+### Requirements
 
-- **Node 22** (`.nvmrc`) e **pnpm 10** via corepack (`corepack enable`)
-- **Docker** para Postgres e Redis locais
-- **copier ≥ 9.4**: `uv tool install copier` ou `pipx install copier`
+- **Node 22** (`.nvmrc`) and **pnpm 10** via corepack (`corepack enable`)
+- **Docker** for local Postgres and Redis
+- **copier ≥ 9.4**: `uv tool install copier` or `pipx install copier`
 
-O repositório é público: `copier` e o instalador do catálogo clonam por **HTTPS** — não é
-preciso configurar chave SSH nem token.
+The repository is public: `copier` and the catalog installer clone over **HTTPS** — no
+SSH key or token to configure.
 
-### Gerar o produto
+### Generate the product
 
 ```bash
-copier copy --trust gh:EmanuelVogt/platform-template ./meu-produto
+copier copy --trust gh:EmanuelVogt/platform-template ./my-product
 ```
 
-O `--trust` autoriza as tarefas pós-cópia (`git init`, `pnpm install`, sync das skills).
-Por padrão o copier usa a **última tag** publicada; `--vcs-ref HEAD` pega o `main`.
+`--trust` authorizes the post-copy tasks (`git init`, `pnpm install`, skills sync). By
+default copier uses the **latest published tag**; `--vcs-ref HEAD` takes `main`.
 
-O copier pergunta nome do produto, slug, organização/repositório no GitHub e domínios —
-tudo com defaults sensatos. Depois:
+Copier asks for the product name, slug, GitHub organization/repository and domains — all
+with sensible defaults. Then:
 
 ```bash
-cd meu-produto
-cp apps/api/.env.example apps/api/.env        # preencha os segredos
+cd my-product
+cp apps/api/.env.example apps/api/.env        # fill in the secrets
 docker compose up -d                           # Postgres + Redis
 pnpm --filter api db:migrate:run
 pnpm --filter api db:bootstrap
 pnpm dev
 ```
 
-Front em `http://localhost:5173`, API em `http://localhost:3000`, referência da API
-(Scalar) em `/docs`.
+Front end at `http://localhost:5173`, API at `http://localhost:3000`, API reference
+(Scalar) at `/docs`.
 
-### O que nasce no produto
+### What the product is born with
 
 ```
-meu-produto/
+my-product/
 ├── apps/
-│   ├── api/                 # NestJS — kernel em src/shared, módulos em src/modules
-│   └── web/                 # React/Vite headless — transporte, guard, layout sem estilo
+│   ├── api/                 # NestJS — kernel in src/shared, modules in src/modules
+│   └── web/                 # headless React/Vite — transport, guard, unstyled layout
 ├── packages/
-│   └── api-client/          # cliente gerado a partir de openapi.json
+│   └── api-client/          # client generated from openapi.json
 ├── docs/                    # handbooks, ADRs, advisories
-├── .claude/  .agents/       # harness de agentes (hooks, skills, agentes)
-├── AGENTS.md                # regras de leitura obrigatória (CLAUDE.md é symlink)
-└── .copier-answers.yml      # versão do template — nunca editar à mão
+├── .claude/  .agents/       # agent harness (hooks, skills, agents)
+├── AGENTS.md                # mandatory-reading rules (CLAUDE.md is a symlink)
+└── .copier-answers.yml      # template version — never edit by hand
 ```
 
-A regra que mantém o `copier update` sem conflito: **o produto adiciona arquivos; não
-edita arquivos da plataforma**. Onde a plataforma precisa ser estendida, ela expõe uma
-entrada do catálogo ou uma porta do kernel — nunca um ponto de edição.
+The rule that keeps `copier update` conflict-free: **the product adds files; it never
+edits platform files**. Where the platform needs extending, it exposes a catalog entry or
+a kernel port — never an edit point.
 
-## Catálogo de módulos
+## Module catalog
 
-Os módulos de plataforma não vêm copiados: vivem como entradas versionadas em
-`catalog/<entrada>[/<variante>]/` e entram no produto sob demanda.
+Platform modules are not copied in: they live as versioned entries in
+`catalog/<entry>[/<variant>]/` and enter the product on demand.
 
-| Comando                                          | O que faz                                                                                                            |
-| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| `pnpm platform module add <entrada> [--variant]` | copia a entrada para o produto, resolve `dependsOn`, gera as migrations, roda `pnpm contract` e os testes da entrada |
-| `pnpm platform module list`                      | compara a versão instalada (`.platform-modules.lock`) com a HEAD do catálogo                                         |
-| `pnpm platform module update <entrada>`          | imprime o roteiro de porte — a atualização de uma entrada é tarefa de agente, guiada pela skill `port-module-update` |
-| `pnpm platform module adopt <entrada>`           | registra no lock uma entrada que o produto já tinha antes do catálogo existir                                        |
+| Command                                        | What it does                                                                                                              |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm platform module add <entry> [--variant]` | copies the entry into the product, resolves `dependsOn`, generates migrations, runs `pnpm contract` and the entry's tests |
+| `pnpm platform module list`                    | compares the installed version (`.platform-modules.lock`) with the catalog HEAD                                           |
+| `pnpm platform module update <entry>`          | prints the porting guide — updating an entry is an agent task, driven by the `port-module-update` skill                   |
+| `pnpm platform module adopt <entry>`           | records in the lock an entry the product already had before the catalog existed                                           |
 
-Correções em entradas já publicadas viram **advisories** (`docs/advisories/ADV-*.md`);
-o produto recebe o arquivo no `copier update` e um hook de início de sessão avisa o que
-ainda não foi aplicado. Detalhes em [`docs/catalog/catalog.md`](/docs/catalog/catalog.md).
+Fixes to already-published entries become **advisories** (`docs/advisories/ADV-*.md`);
+the product receives the file on `copier update`, and a session-start hook reports what
+has not been applied yet. Details in [`docs/catalog/catalog.md`](/docs/catalog/catalog.md).
 
-## Receber atualizações da plataforma
+## Receiving platform updates
 
-Toda mudança que os produtos devem receber vira uma tag semver neste repositório. No
-produto, com a working tree limpa:
+Every change products should receive becomes a semver tag in this repository. In the
+product, with a clean working tree:
 
 ```bash
-copier update                       # template@_commit → última tag, merge de 3 vias
-copier update --vcs-ref vX.Y.Z      # pular para uma versão específica
-copier update --pretend --diff      # ver o que mudaria sem tocar no disco
+copier update                       # template@_commit → latest tag, three-way merge
+copier update --vcs-ref vX.Y.Z      # jump to a specific version
+copier update --pretend --diff      # see what would change without touching disk
 ```
 
-Mudanças que exigem ação do produto estão listadas, por versão, em
+Changes that require action from the product are listed, per version, in
 [`docs/dev/template-changelog.md`](/docs/dev/template-changelog.md).
 
 ## Stack
 
-| Camada      | Tecnologias                                                                                                    |
-| ----------- | -------------------------------------------------------------------------------------------------------------- |
-| API         | NestJS 11 · Express 5 · Drizzle ORM + PostgreSQL · Redis (ioredis) · Zod 4 / nestjs-zod · OpenTelemetry · pino |
-| Front       | React 19 · Vite 8 · TanStack Router + Query · Zustand · react-hook-form + Zod                                  |
-| Contrato    | Zod → OpenAPI 3 → Kubb (`packages/api-client`) · Scalar em `/docs`                                             |
-| Testes      | Jest + supertest + testcontainers (API) · Vitest + Testing Library + MSW (web)                                 |
-| Ferramental | pnpm 10 · Turbo 2 · TypeScript 6 · ESLint 10 · Prettier · lefthook                                             |
-| Operação    | Docker · GitHub Actions · Dokploy (guia em `docs/dev/deploy.md`)                                               |
+| Layer      | Technologies                                                                                                   |
+| ---------- | -------------------------------------------------------------------------------------------------------------- |
+| API        | NestJS 11 · Express 5 · Drizzle ORM + PostgreSQL · Redis (ioredis) · Zod 4 / nestjs-zod · OpenTelemetry · pino |
+| Front end  | React 19 · Vite 8 · TanStack Router + Query · Zustand · react-hook-form + Zod                                  |
+| Contract   | Zod → OpenAPI 3 → Kubb (`packages/api-client`) · Scalar at `/docs`                                             |
+| Tests      | Jest + supertest + testcontainers (API) · Vitest + Testing Library + MSW (web)                                 |
+| Tooling    | pnpm 10 · Turbo 2 · TypeScript 6 · ESLint 10 · Prettier · lefthook                                             |
+| Operations | Docker · GitHub Actions · Dokploy (guide in `docs/dev/deploy.md`)                                              |
 
-## Documentação
+## Documentation
 
-| Para…                                           | Leia                                                                |
+| For…                                            | Read                                                                |
 | ----------------------------------------------- | ------------------------------------------------------------------- |
-| Fronteira plataforma × produto, `copier update` | [`docs/dev/template.md`](/docs/dev/template.md)                     |
-| Catálogo, advisories, autoria de entrada        | [`docs/catalog/catalog.md`](/docs/catalog/catalog.md)               |
-| Arquitetura da API                              | [`docs/back/back-arch.md`](/docs/back/back-arch.md)                 |
-| Arquitetura do front                            | [`docs/front/front-arch.md`](/docs/front/front-arch.md)             |
-| Testes                                          | [`docs/test/testing.md`](/docs/test/testing.md)                     |
-| Qualidade de código                             | [`docs/code-quality.md`](/docs/code-quality.md)                     |
-| Agentes: workflow, harness, comunicação, infra  | [`docs/agents/`](/docs/agents)                                      |
+| Platform × product boundary, `copier update`    | [`docs/dev/template.md`](/docs/dev/template.md)                     |
+| Catalog, advisories, authoring an entry         | [`docs/catalog/catalog.md`](/docs/catalog/catalog.md)               |
+| API architecture                                | [`docs/back/back-arch.md`](/docs/back/back-arch.md)                 |
+| Front-end architecture                          | [`docs/front/front-arch.md`](/docs/front/front-arch.md)             |
+| Testing                                         | [`docs/test/testing.md`](/docs/test/testing.md)                     |
+| Code quality                                    | [`docs/code-quality.md`](/docs/code-quality.md)                     |
+| Agents: workflow, harness, communication, infra | [`docs/agents/`](/docs/agents)                                      |
 | Deploy                                          | [`docs/dev/deploy.md`](/docs/dev/deploy.md)                         |
-| Changelog do template                           | [`docs/dev/template-changelog.md`](/docs/dev/template-changelog.md) |
+| Template changelog                              | [`docs/dev/template-changelog.md`](/docs/dev/template-changelog.md) |
 
-## Manutenção do template
+Handbooks and changelog are written in Brazilian Portuguese — the working language of
+the products built on this platform.
 
-Quem evolui o template (e não um produto) lê [`TEMPLATE.md`](/TEMPLATE.md). O essencial:
+## Maintaining the template
+
+Whoever evolves the template (rather than a product) reads [`TEMPLATE.md`](/TEMPLATE.md).
+The essentials:
 
 ```bash
-pnpm template:smoke                 # renderiza um produto kernel-only e roda check + testes
-pnpm catalog:check [entrada…]       # gate pré-tag do catálogo: instala cada entrada e testa
-git tag vX.Y.Z && git push --tags   # publica a versão que os produtos vão receber
+pnpm template:smoke                 # renders a kernel-only product and runs check + tests
+pnpm catalog:check [entry…]         # catalog pre-tag gate: installs each entry and tests it
+git tag vX.Y.Z && git push --tags   # publishes the version products will receive
 ```
 
-Regras da casa: nada de produto entra no template (sem marca, domínio ou negócio fora
-dos placeholders Jinja); só docs e manifests levam `.jinja`; o kernel nunca importa uma
-entrada do catálogo; correção em `catalog/**` sem advisory não é aceita.
+House rules: nothing product-specific enters the template (no brand, domain or business
+outside the Jinja placeholders); only docs and manifests carry `.jinja`; the kernel never
+imports a catalog entry; a fix in `catalog/**` without an advisory is not accepted.
 
-## Licença
+## License
 
-Distribuído sob a licença [MIT](/LICENSE). O produto gerado **não** recebe este arquivo:
-a licença do seu produto é decisão sua.
+Released under the [MIT](/LICENSE) license. The generated product does **not** receive
+this file: your product's license is your decision.

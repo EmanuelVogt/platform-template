@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-labelledby="banner-title banner-desc">
   <title id="banner-title">platform-template</title>
-  <desc id="banner-desc">Kernel NestJS + front React headless, catálogo de módulos versionado e harness de agentes, distribuído como template copier.</desc>
+  <desc id="banner-desc">NestJS kernel + headless React front end, versioned module catalog and agent harness, shipped as a copier template.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#0b1020"/>
@@ -45,12 +45,12 @@
 
   <!-- texto -->
   <g font-family="ui-sans-serif, -apple-system, 'Segoe UI', Inter, Roboto, Helvetica, Arial, sans-serif">
-    <text x="64" y="70" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" letter-spacing="3" fill="#8b93b8">COPIER TEMPLATE · KERNEL + CATÁLOGO</text>
+    <text x="64" y="70" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" letter-spacing="3" fill="#8b93b8">COPIER TEMPLATE · KERNEL + CATALOG</text>
 
     <text x="62" y="140" font-size="64" font-weight="800" letter-spacing="-1.5" fill="url(#title)">platform<tspan fill="#818cf8">-</tspan>template</text>
 
-    <text x="64" y="180" font-size="19" fill="#aab2d5">Kernel NestJS + front React headless, catálogo de módulos versionado</text>
-    <text x="64" y="206" font-size="19" fill="#aab2d5">e harness de agentes. Um <tspan font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="17" fill="#c7d2fe">copier copy</tspan> e o produto nasce pronto.</text>
+    <text x="64" y="180" font-size="19" fill="#aab2d5">NestJS kernel + headless React front end, a versioned module catalog</text>
+    <text x="64" y="206" font-size="19" fill="#aab2d5">and an agent harness. One <tspan font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="17" fill="#c7d2fe">copier copy</tspan> and the product is ready.</text>
 
     <!-- pílulas da stack -->
     <g font-family="ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#dfe3f5" text-anchor="middle">

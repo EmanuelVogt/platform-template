@@ -45,15 +45,15 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 | Wave | Cluster | Tasks (in order) | Files (union of Touches) | Notes |
 | --- | --- | --- | --- | --- |
 | 1 | C1 — kernel harness | T1 → T2 → T3 → T4 → T5 → T6 | `scripts/platform/it-count.mjs`, `scripts/platform/__tests__/it-count.test.mjs`, `.specs/features/test-suite-refactor/baseline.json`, `apps/api/src/shared/test/{unit,int,e2e}/**`, `apps/api/test/**`, `apps/api/vitest.*.mts`, `vitest.coverage.mts`, `catalog/identity/single-tenant/api/testing/**` | `gate: full-unit`; tier **opus** — harness API is the contract every other cluster reuses, and RULE C is decided here |
-| 1 | C2 — web vertical | T7 → T8 → T9 → T10 | `apps/web/src/shared/test/**`, `apps/web/src/**/*.test.ts(x)`, `apps/web/src/**` (coverage fill), `apps/web/vitest.config.ts` (excludes only) | `gate: scoped`; tier **sonnet**; no file in common with C1 |
+| 1 | C2 — web vertical | T7 → T8 → T9 → T10 | `apps/web/src/shared/test/**`, `apps/web/src/**/*.test.ts(x)`, `apps/web/src/**` (coverage fill) | `gate: scoped`; tier **sonnet**; no file in common with C1 |
 | 2 | C3 — identity | T11 → T12 → T13 → T14 → T15 → T16 | `catalog/identity/single-tenant/api/**` | `gate: full-unit` (wave); tier **sonnet**, T12/T14 **opus** if the chain split touches domain invariants |
 | 2 | C4 — notification + attachment | T17 → T18 → T19 → T20 → T21 → T22 | `catalog/notification/api/**`, `catalog/attachment/api/**` | tier **sonnet** |
 | 2 | C5 — tag + audit | T23 → T24 → T25 → T26 → T27 | `catalog/tag/api/**`, `catalog/audit/api/**` | tier **sonnet** |
 | 2 | C6 — kernel specs | T28 → T29 → T30 | `apps/api/src/**` excluding `src/shared/test/**` and `src/modules/**` | tier **sonnet**; single vertical over the kernel's own specs |
 | 3 | C7 — enforcement | T31 → T32 → T33 → T34 | `packages/eslint-config/**`, `apps/api/src/shared/test/hygiene/**`, `apps/api/src/modules/module-boundaries.spec.ts`, `scripts/platform/catalog-lint.mjs` | `gate: full-unit`; tier **opus** for T33/T34 (RULE C/D semantics), **sonnet** for T31/T32 |
 | 3 | C8 — docs and formatting | T35 → T36 | `docs/test/testing.md`, `catalog/*/README.md`, `packages/api-client/package.json`, formatting-only edits across spec files | tier **sonnet**; touches no file owned by C7 |
-| 4 | C9 — root gates (exclusive) | T37 → T38 | `turbo.json`, `.github/workflows/ci.yml`, `scripts/platform/__tests__/gates.test.mjs` | `Exclusive: yes` — alone in its wave; `gate: scoped`; tier **sonnet** |
-| 5 | C10 — ratchet and closure (exclusive) | T39 → T40 | `apps/api/package.json`, `apps/web/vitest.config.ts`, `lefthook.yml`, `.specs/STATE.md`, `.specs/features/test-suite-refactor/**` | `Exclusive: yes`; `gate: full-unit` — this wave *is* the coverage gate; tier **sonnet** |
+| 4 | C9 — root gates (exclusive) | T37 → T38 | `.github/workflows/ci.yml`, `scripts/platform/__tests__/gates.test.mjs` | `Exclusive: yes` — alone in its wave; `gate: scoped`; tier **sonnet** |
+| 5 | C10 — ratchet and closure (exclusive) | T39 → T40 | `vitest.coverage.mts`, `.specs/STATE.md`, `.specs/features/test-suite-refactor/**` | `Exclusive: yes`; `gate: full-unit` — this wave *is* the coverage gate; tier **sonnet** |
 
 ```
 Wave 1: [C1: T1→T2→T3→T4→T5→T6]  ∥  [C2: T7→T8→T9→T10]

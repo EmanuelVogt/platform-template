@@ -46,10 +46,11 @@ Checkout for every worker: `/Users/emanuelvogt/Developer/platform-template/.work
 
 | Measure | Value |
 | --- | --- |
-| `apps/api` unit files / tests (jest) | _T1_ |
+| `apps/api` unit files / tests (jest) | 51 suites / 330 tests (`pnpm --filter api test`, 2026-08-21; the 52nd `*.spec.ts` of Deviation 1 is `coverage-metric.contract.spec.ts`, not collected by the jest block — T15 must collect it) |
 | `apps/api` int files / e2e files | 8 / 3 (audit 2026-08-21; all int under `src/`, all e2e under `test/`) |
-| `apps/web` tests (vitest) | _T1_ |
-| `pnpm test:scripts` tests | _T1_ |
+| `apps/web` tests (vitest) | 24 files / 68 tests |
+| `pnpm test:scripts` tests | 192 (0 fail) |
+| Pre-flight | `catalog-stage.mjs` tracked ✅ · Docker 29.5.2 ✅ · tree clean ✅ · `pnpm install --frozen-lockfile` up to date ✅ |
 | `jest.` sites | `apps/api`: 54 in 12 files · `catalog`: 753 (identity 608, attachment 76, notification 51, audit 10, tag 8) |
 
 ## Deviations recorded at Tasks
@@ -733,4 +734,6 @@ RUN-01 T15 · RUN-02 T16 · RUN-03 T17 · RUN-04 T17 · RUN-05 T14, T15 · GAT-0
 
 | Wave | Clusters (tier) | Result | Commits |
 | --- | --- | --- | --- |
-| 0 | — | pending | — |
+| 0 | C0 (runner, sonnet) | PASS — baseline recorded above | — |
+| 1 | C1 T2 (haiku) | DONE · gate PASS (`pnpm install --frozen-lockfile` 0, vitest 4.1.11 at root/api/web, diff = the five owned files, nothing removed) | `baf4e6e` |
+| 2 | C2 T3→T5 (sonnet) ∥ C3 T6→T8 (sonnet) ∥ C4 T9→T11 (sonnet) ∥ C5 T12→T13 (sonnet) | in flight | — |

@@ -1,3 +1,4 @@
+import http from "node:http"
 import { Readable } from "node:stream"
 
 import { type INestApplication, VersioningType } from "@nestjs/common"
@@ -36,15 +37,23 @@ const PNG_1PX = Buffer.from(
   "base64",
 )
 
-/** Storage em memória: substitui o adapter R2 no teste (sem IO externo). */
-function makeInMemoryStorage(): ObjectStoragePort {
+/**
+ * Storage em memória: substitui o adapter R2 no teste (sem IO externo).
+ * `getStream` conta chamadas — o que prova que 304 nunca toca o storage.
+ */
+function makeInMemoryStorage(): {
+  storage: ObjectStoragePort
+  getStreamCallCount: () => number
+} {
   const objects = new Map<string, { body: Buffer; contentType: string }>()
-  return {
+  let callCount = 0
+  const storage: ObjectStoragePort = {
     put: (key, body, contentType) => {
       objects.set(key, { body, contentType })
       return Promise.resolve()
     },
     getStream: (key) => {
+      callCount += 1
       const o = objects.get(key)
       if (o === undefined) throw new Error(`objeto inexistente: ${key}`)
       return Promise.resolve(Readable.from(o.body))
@@ -69,6 +78,25 @@ function makeInMemoryStorage(): ObjectStoragePort {
       objects.set(key, { body: Buffer.concat(chunks), contentType })
     },
   }
+  return { storage, getStreamCallCount: () => callCount }
+}
+
+/** Storage cujo `getStream` recusa passar de `maxSockets` chamadas simultâneas. */
+function makeSocketLimitedStorage(base: ObjectStoragePort, maxSockets: number): ObjectStoragePort {
+  const originalGetStream = base.getStream.bind(base)
+  let inFlight = 0
+  return {
+    ...base,
+    getStream: async (key) => {
+      if (inFlight >= maxSockets) throw new Error("sem socket livre")
+      inFlight += 1
+      try {
+        return await originalGetStream(key)
+      } finally {
+        inFlight -= 1
+      }
+    },
+  }
 }
 
 /** Semeia attachment 'ready' + ACL direto no banco (não há mais rota de upload). */
@@ -80,18 +108,20 @@ async function seedAttachment(
     visibility: "public" | "authenticated" | "restricted"
     profile?: string
     originalFilename?: string
+    contentType?: string
   },
 ): Promise<string> {
   const id = ulid()
   const storageKey = `e2e/${id}.png`
   const profile = opts.profile ?? "legacy"
   const originalFilename = opts.originalFilename ?? "avatar.png"
-  await storage.put(storageKey, PNG_1PX, "image/png")
+  const contentType = opts.contentType ?? "image/png"
+  await storage.put(storageKey, PNG_1PX, contentType)
   await pool.query(
     `insert into attachment.attachments
        (id, storage_key, content_type, size_bytes, checksum, original_filename, owner_user_id, status, profile)
-     values ($1, $2, 'image/png', $3, 'checksum-e2e', $4, $5, 'ready', $6)`,
-    [id, storageKey, PNG_1PX.byteLength, originalFilename, opts.ownerUserId, profile],
+     values ($1, $2, $3, $4, 'checksum-e2e', $5, $6, 'ready', $7)`,
+    [id, storageKey, contentType, PNG_1PX.byteLength, originalFilename, opts.ownerUserId, profile],
   )
   await pool.query(
     "insert into attachment.attachment_acls (attachment_id, visibility) values ($1, $2)",
@@ -104,6 +134,7 @@ describe("Attachment (e2e): download com ACL", () => {
   let app: INestApplication
   let pool: Pool
   let storage: ObjectStoragePort
+  let getStreamCallCount: () => number
 
   beforeAll(async () => {
     pool = createTestPool()
@@ -111,7 +142,7 @@ describe("Attachment (e2e): download com ACL", () => {
     await truncateKernel(pool)
     await truncateAttachment(pool)
 
-    storage = makeInMemoryStorage()
+    ;({ storage, getStreamCallCount } = makeInMemoryStorage())
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(RATE_LIMITER)
       .useValue(allowAll)
@@ -205,7 +236,7 @@ describe("Attachment (e2e): download com ACL", () => {
       .expect(404)
   })
 
-  it("força download e nosniff em anexo de perfil de tipo livre", async () => {
+  it("content_type fora do allowlist inline força octet-stream + nosniff, independente do perfil", async () => {
     const userId = await seedUser(app, pool, {
       email: "att-force-dl@example.com",
       name: "Force",
@@ -221,8 +252,8 @@ describe("Attachment (e2e): download com ACL", () => {
     const id = await seedAttachment(pool, storage, {
       ownerUserId: userId,
       visibility: "restricted",
-      profile: "document",
       originalFilename: "log.txt",
+      contentType: "text/html",
     })
 
     const res = await request(app.getHttpServer())
@@ -238,7 +269,7 @@ describe("Attachment (e2e): download com ACL", () => {
     expect(res.headers["cache-control"]).toBe("private, max-age=300")
   })
 
-  it("perfil desconhecido (removido/renomeado) falha alto em vez de servir octet-stream", async () => {
+  it("perfil desconhecido (removido/renomeado) não bloqueia mais o download — decisão é só pelo content_type", async () => {
     const userId = await seedUser(app, pool, {
       email: "att-unknown-profile@example.com",
       name: "Legado",
@@ -255,16 +286,46 @@ describe("Attachment (e2e): download com ACL", () => {
       ownerUserId: userId,
       visibility: "restricted",
       profile: "legacy-profile",
-      originalFilename: "antigo.txt",
+      originalFilename: "antigo.png",
     })
 
     const res = await request(app.getHttpServer())
       .get(`/v1/attachments/${id}`)
       .set("Cookie", cookies!)
-      .expect(404)
+      .expect(200)
 
-    expect(res.body.type).toMatch(/\/not-found$/)
+    expect(res.headers["content-type"]).toBe("image/png")
     expect(res.headers["content-disposition"]).toBeUndefined()
+    expect(res.headers["x-content-type-options"]).toBe("nosniff")
+  })
+
+  it("perfil 'legacy' com content_type image/png segue inline (allowlist, não perfil)", async () => {
+    const userId = await seedUser(app, pool, {
+      email: "att-legacy-inline@example.com",
+      name: "Legacy",
+      password: "Senha-Att-Muito-Forte-2026!",
+    })
+    const loginRes = await request(app.getHttpServer())
+      .post("/v1/auth/login")
+      .set("Origin", ORIGIN)
+      .send({ email: "att-legacy-inline@example.com", password: "Senha-Att-Muito-Forte-2026!" })
+      .expect(200)
+    const cookies = loginRes.headers["set-cookie"]
+
+    const id = await seedAttachment(pool, storage, {
+      ownerUserId: userId,
+      visibility: "restricted",
+      profile: "legacy",
+    })
+
+    const res = await request(app.getHttpServer())
+      .get(`/v1/attachments/${id}`)
+      .set("Cookie", cookies!)
+      .expect(200)
+
+    expect(res.headers["content-type"]).toBe("image/png")
+    expect(res.headers["content-disposition"]).toBeUndefined()
+    expect(res.headers["x-content-type-options"]).toBe("nosniff")
   })
 
   it("mantém avatar inline", async () => {
@@ -293,6 +354,7 @@ describe("Attachment (e2e): download com ACL", () => {
 
     expect(res.headers["content-type"]).toBe("image/png")
     expect(res.headers["content-disposition"]).toBeUndefined()
+    expect(res.headers["x-content-type-options"]).toBe("nosniff")
     expect(res.headers["cache-control"]).toBe(
       "private, max-age=86400, immutable",
     )
@@ -333,5 +395,137 @@ describe("Attachment (e2e): download com ACL", () => {
     expect(responses.map((res) => res.status)).toEqual(
       Array<number>(simultaneos).fill(200),
     )
+  })
+
+  it("If-None-Match casando responde 304 sem abrir stream de storage", async () => {
+    const userId = await seedUser(app, pool, {
+      email: "att-304@example.com",
+      name: "Cache",
+      password: "Senha-Att-Muito-Forte-2026!",
+    })
+    const loginRes = await request(app.getHttpServer())
+      .post("/v1/auth/login")
+      .set("Origin", ORIGIN)
+      .send({ email: "att-304@example.com", password: "Senha-Att-Muito-Forte-2026!" })
+      .expect(200)
+    const cookies = loginRes.headers["set-cookie"]
+
+    const id = await seedAttachment(pool, storage, {
+      ownerUserId: userId,
+      visibility: "restricted",
+    })
+
+    const firstRes = await request(app.getHttpServer())
+      .get(`/v1/attachments/${id}`)
+      .set("Cookie", cookies!)
+      .expect(200)
+    const etag = firstRes.headers.etag as string
+    const callsAfterFirst = getStreamCallCount()
+    expect(callsAfterFirst).toBeGreaterThan(0)
+
+    await request(app.getHttpServer())
+      .get(`/v1/attachments/${id}`)
+      .set("Cookie", cookies!)
+      .set("If-None-Match", etag)
+      .expect(304)
+
+    expect(getStreamCallCount()).toBe(callsAfterFirst)
+  })
+
+  it("50 requisições If-None-Match contra storage com maxSockets:2 — a 51ª ainda responde", async () => {
+    const userId = await seedUser(app, pool, {
+      email: "att-304-burst@example.com",
+      name: "Burst",
+      password: "Senha-Att-Muito-Forte-2026!",
+    })
+    const loginRes = await request(app.getHttpServer())
+      .post("/v1/auth/login")
+      .set("Origin", ORIGIN)
+      .send({ email: "att-304-burst@example.com", password: "Senha-Att-Muito-Forte-2026!" })
+      .expect(200)
+    const cookies = loginRes.headers["set-cookie"]
+
+    const id = await seedAttachment(pool, storage, {
+      ownerUserId: userId,
+      visibility: "restricted",
+    })
+    const firstRes = await request(app.getHttpServer())
+      .get(`/v1/attachments/${id}`)
+      .set("Cookie", cookies!)
+      .expect(200)
+    const etag = firstRes.headers.etag as string
+
+    const originalGetStream = storage.getStream
+    storage.getStream = makeSocketLimitedStorage(storage, 2).getStream
+    try {
+      const responses = await Promise.all(
+        Array.from({ length: 51 }, () =>
+          request(app.getHttpServer())
+            .get(`/v1/attachments/${id}`)
+            .set("Cookie", cookies!)
+            .set("If-None-Match", etag),
+        ),
+      )
+      expect(responses.map((res) => res.status)).toEqual(Array<number>(51).fill(304))
+    } finally {
+      storage.getStream = originalGetStream
+    }
+  })
+
+  it("abort do cliente no meio do corpo destrói o stream de origem", async () => {
+    const userId = await seedUser(app, pool, {
+      email: "att-abort@example.com",
+      name: "Abort",
+      password: "Senha-Att-Muito-Forte-2026!",
+    })
+    const loginRes = await request(app.getHttpServer())
+      .post("/v1/auth/login")
+      .set("Origin", ORIGIN)
+      .send({ email: "att-abort@example.com", password: "Senha-Att-Muito-Forte-2026!" })
+      .expect(200)
+    const setCookie: unknown = loginRes.headers["set-cookie"]
+    const cookies = Array.isArray(setCookie) ? setCookie.join("; ") : String(setCookie)
+
+    const id = await seedAttachment(pool, storage, {
+      ownerUserId: userId,
+      visibility: "restricted",
+    })
+
+    // Stream lento e controlável: dá tempo do teste abortar antes do fim do corpo.
+    let slowStream: Readable | undefined
+    const originalGetStream = storage.getStream
+    storage.getStream = () => {
+      slowStream = new Readable({
+        read() {
+          setTimeout(() => this.push(Buffer.alloc(1024, "x")), 20)
+        },
+      })
+      return Promise.resolve(slowStream)
+    }
+
+    const server = app.getHttpServer() as Server
+    if (!server.listening) {
+      await new Promise<void>((resolve) => server.listen(0, resolve))
+    }
+    const address = server.address()
+    const port = typeof address === "object" && address !== null ? address.port : 0
+
+    try {
+      await new Promise<void>((resolve) => {
+        const req = http.request(
+          { host: "127.0.0.1", port, path: `/v1/attachments/${id}`, headers: { cookie: cookies } },
+          (res) => {
+            res.once("data", () => req.destroy())
+          },
+        )
+        req.on("error", () => resolve())
+        req.on("close", () => resolve())
+        req.end()
+      })
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(slowStream?.destroyed).toBe(true)
+    } finally {
+      storage.getStream = originalGetStream
+    }
   })
 })

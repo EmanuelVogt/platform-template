@@ -58,6 +58,12 @@ commit no CI, e o produto deixa de receber o ferramental que só existe com
    Virou `/catalog`, sem barra final: o copier testa o destino como `Path`, que nunca traz
    a barra, então `/catalog/` deixava o diretório-raiz escapar e nascer vazio no filho.
    `docs/catalog/README-contract.md` continua fora, agora por entrada explícita.
+8. **Repositório público, com cara pública.** O template passa a ser público no GitHub —
+   `copier copy` e o clone do catálogo no `module add` já eram HTTPS, então o produto
+   deixa de precisar de chave SSH. Entram `.github/README.md` (a página do repositório,
+   já que a raiz só tem `README.md.jinja`, que renderiza o README do produto),
+   `.github/assets/banner.svg` e `LICENSE` (MIT). Os três estão no `_exclude`: o produto
+   escreve o próprio README e decide a própria licença.
 
 ### Passos de migração do filho
 
@@ -168,7 +174,7 @@ renderizado), instaladas com `pnpm platform module add` — ver
 
 1. `git status` limpo, depois `copier update` (ou `copier update --vcs-ref v1.0.0`).
 2. Para cada módulo da plataforma já presente no produto: `pnpm platform module adopt
-   <entry> --version <versão-atual>` — registra o `.platform-modules.lock` sem tocar em
+<entry> --version <versão-atual>` — registra o `.platform-modules.lock` sem tocar em
    arquivo.
 3. Resolva o merge de `_journal.json` como de praxe (ver
    [`numeração de migrations`](template.md#migrations-ad-015)).

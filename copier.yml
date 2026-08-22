@@ -6,6 +6,11 @@ _exclude:
   - copier.yml
   - CLAUDE.md
   - TEMPLATE.md
+  # cara pública do repositório do template: o produto escreve o próprio README
+  # (`README.md.jinja`) e decide a própria licença
+  - LICENSE
+  - .github/README.md
+  - .github/assets
   - "~*"
   - "*.py[co]"
   - __pycache__

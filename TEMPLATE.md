@@ -6,10 +6,15 @@ vivem fora do copier, como entradas versionadas em `catalog/`, e entram no produ
 `pnpm platform module add` (ver [`docs/dev/template.md`](docs/dev/template.md)). Correção
 numa entrada do catálogo sem advisory correspondente (`docs/advisories/ADV-*.md` ou o
 trailer `Advisory: none — <motivo>` no commit) não é aceita. Este arquivo e o `CLAUDE.md`
-existem só no repositório do template (excluídos no `copier.yml`); o produto gerado recebe
-`README.md` e `AGENTS.md`/`CLAUDE.md` próprios.
+existem só no repositório do template (excluídos no `copier.yml`), assim como a cara
+pública do repositório — [`.github/README.md`](.github/README.md), `.github/assets/` e
+`LICENSE`; o produto gerado recebe `README.md` e `AGENTS.md`/`CLAUDE.md` próprios e
+decide a própria licença.
 
 ## Gerar um produto
+
+O passo a passo para quem consome o template está no [README](.github/README.md). O
+repositório é público: `copier` e `module add` clonam por HTTPS, sem chave SSH.
 
 ```
 pipx install copier              # ou uv tool install copier

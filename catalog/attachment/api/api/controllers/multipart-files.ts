@@ -1,5 +1,8 @@
+import { Inject, Injectable } from "@nestjs/common"
 import busboy from "busboy"
 
+import { InFlightGate } from "../../../../shared/kernel/collections/in-flight-gate"
+import { ATTACHMENT_CONFIG, type AttachmentConfig } from "../../attachment.config"
 import {
   InvalidMultipartRequestError,
   PayloadTooLargeError,
@@ -10,6 +13,21 @@ import {
 import type { IncomingFile } from "../../domain/incoming-file"
 import type { Request, Response } from "express"
 import type { Readable } from "node:stream"
+
+/** Vagas de upload concorrente, na instância — 503 antes de ler o corpo
+ *  quando não sobra nenhuma; a liberação é responsabilidade de quem adquire. */
+@Injectable()
+export class UploadGate {
+  private readonly gate: InFlightGate
+
+  constructor(@Inject(ATTACHMENT_CONFIG) config: AttachmentConfig) {
+    this.gate = new InFlightGate(config.ATTACHMENT_MAX_CONCURRENT_UPLOADS)
+  }
+
+  tryAcquire(): (() => void) | null {
+    return this.gate.tryAcquire()
+  }
+}
 
 /** Bordas do perfil de upload que o parser precisa pra bloquear cedo, sem
  *  confiar no que o cliente declara no corpo. */

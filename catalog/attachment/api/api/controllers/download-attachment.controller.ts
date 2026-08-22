@@ -5,6 +5,7 @@ import { pipeline } from "node:stream/promises"
 import { OptionalAuth } from "../../../../shared/kernel/access/decorators"
 import { buildContentDisposition } from "../../../../shared/kernel/http/content-disposition"
 import { type AppLogger, LoggerFactory } from "../../../../shared/kernel/logging/logger.factory"
+import { RateLimit } from "../../../../shared/kernel/rate-limit/rate-limit.decorator"
 import { GetAttachmentForDownloadUseCase } from "../../application/use-cases/get-attachment-for-download/get-attachment-for-download.use-case"
 import { AttachmentIdParamDto } from "../contracts/attachment.contract"
 
@@ -45,6 +46,7 @@ export class DownloadAttachmentController {
 
   @ApiOperation({ operationId: "downloadAttachment" })
   @OptionalAuth()
+  @RateLimit({ limit: 300, windowSeconds: 60 })
   @Get(":id")
   async handle(
     @Param() params: AttachmentIdParamDto,

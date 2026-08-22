@@ -7,6 +7,8 @@ describe("attachment.config", () => {
     expect(c.ATTACHMENT_ACCESS_LOG_RETENTION_DAYS).toBe(180)
     expect(c.ATTACHMENT_MULTI_MAX_FILE_BYTES).toBe(524288000)
     expect(c.ATTACHMENT_MULTI_MAX_TOTAL_BYTES).toBe(524288000)
+    expect(c.ATTACHMENT_PENDING_QUOTA_BYTES).toBe(2_147_483_648)
+    expect(c.ATTACHMENT_MAX_CONCURRENT_UPLOADS).toBe(16)
   })
 
   it("coage valores de env", () => {
@@ -14,6 +16,12 @@ describe("attachment.config", () => {
     expect(
       parseAttachmentConfig({ ATTACHMENT_MULTI_MAX_FILE_BYTES: "2048" }).ATTACHMENT_MULTI_MAX_FILE_BYTES,
     ).toBe(2048)
+    expect(
+      parseAttachmentConfig({ ATTACHMENT_PENDING_QUOTA_BYTES: "1000" }).ATTACHMENT_PENDING_QUOTA_BYTES,
+    ).toBe(1000)
+    expect(
+      parseAttachmentConfig({ ATTACHMENT_MAX_CONCURRENT_UPLOADS: "4" }).ATTACHMENT_MAX_CONCURRENT_UPLOADS,
+    ).toBe(4)
   })
 
   it("não conhece mais os envs antigos de feedback/report", () => {

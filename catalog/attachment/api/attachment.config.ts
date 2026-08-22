@@ -20,6 +20,15 @@ export const attachmentConfigSchema = z.object({
     .int()
     .positive()
     .default(524288000),
+  // 2 GiB: teto de bytes pendentes (ainda não confirmados) por dono — cota
+  // contra esgotar o storage com uploads nunca finalizados.
+  ATTACHMENT_PENDING_QUOTA_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(2_147_483_648),
+  // Uploads em voo, na instância — teto de memória/handles concorrentes.
+  ATTACHMENT_MAX_CONCURRENT_UPLOADS: z.coerce.number().int().positive().default(16),
 })
 
 export type AttachmentConfig = z.infer<typeof attachmentConfigSchema>

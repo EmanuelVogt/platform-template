@@ -63,6 +63,27 @@ export class InvalidMultipartRequestError extends DomainError {
   }
 }
 
+/** Instância sem vaga pra mais um upload concorrente — estado transitório. */
+export class UploadsSaturatedError extends DomainError {
+  readonly status = 503
+  readonly type = `${TYPE_BASE}/uploads-saturated`
+  override readonly retryAfterSeconds = 2
+
+  constructor() {
+    super("Muitos envios simultâneos", "Tente novamente em alguns segundos.")
+  }
+}
+
+/** Bytes pendentes do dono somados ao envio atual estourariam a cota. */
+export class PendingQuotaExceededError extends DomainError {
+  readonly status = 413
+  readonly type = `${TYPE_BASE}/pending-quota-exceeded`
+
+  constructor(detail: string) {
+    super("Cota de envios pendentes excedida", detail)
+  }
+}
+
 /** Parte multipart cujo campo não é o esperado — cliente enviando algo fora
  *  do contrato da rota. */
 export class UnexpectedMultipartFieldError extends DomainError {

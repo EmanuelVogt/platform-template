@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { and, eq, inArray, lt } from "drizzle-orm"
+import { and, eq, inArray, lt, sql } from "drizzle-orm"
 
 import { TransactionManager } from "../../../../shared/kernel/transactional/transaction-manager"
 import { Attachment } from "../../domain/attachment.entity"
@@ -98,6 +98,14 @@ export class DrizzleAttachmentRepository implements AttachmentRepository {
     if (ids.length === 0) return
     await this.db.delete(attachmentAcls).where(inArray(attachmentAcls.attachmentId, ids))
     await this.db.delete(attachments).where(inArray(attachments.id, ids))
+  }
+
+  async sumPendingBytesByOwner(ownerId: string): Promise<number> {
+    const [row] = await this.db
+      .select({ total: sql<string>`coalesce(sum(${attachments.sizeBytes}), 0)` })
+      .from(attachments)
+      .where(and(eq(attachments.status, "pending"), eq(attachments.ownerUserId, ownerId)))
+    return Number(row?.total ?? 0)
   }
 
   private toEntity(row: AttachmentRow, acl: AttachmentAclRow): Attachment {

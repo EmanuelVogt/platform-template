@@ -130,4 +130,33 @@ describe("DrizzleAttachmentRepository", () => {
     const found = await repo.findById(id)
     expect(found?.props.profile).toBe("multi")
   })
+
+  it("sumPendingBytesByOwner soma só os pendentes do dono, ignora prontos e de outro dono", async () => {
+    const pendingA = Attachment.createPending({
+      contentType: "application/pdf", sizeBytes: 100, originalFilename: null,
+      profile: "multi", visibility: "restricted", ownerUserId: "owner-1",
+    })
+    const pendingB = Attachment.createPending({
+      contentType: "application/pdf", sizeBytes: 50, originalFilename: null,
+      profile: "multi", visibility: "restricted", ownerUserId: "owner-1",
+    })
+    const readyOwner1 = Attachment.create({
+      storageKey: "attachments/ready-owner1", contentType: "image/png", sizeBytes: 999,
+      checksum: "z", originalFilename: null, profile: "avatar",
+      visibility: "restricted", ownerUserId: "owner-1",
+    })
+    const pendingOtherOwner = Attachment.createPending({
+      contentType: "application/pdf", sizeBytes: 777, originalFilename: null,
+      profile: "multi", visibility: "restricted", ownerUserId: "owner-2",
+    })
+    await repo.insertMany([pendingA, pendingB, pendingOtherOwner])
+    await repo.insert(readyOwner1)
+
+    expect(await repo.sumPendingBytesByOwner("owner-1")).toBe(150)
+    expect(await repo.sumPendingBytesByOwner("owner-2")).toBe(777)
+  })
+
+  it("sumPendingBytesByOwner devolve 0 quando o dono não tem pendente", async () => {
+    expect(await repo.sumPendingBytesByOwner("sem-pendente")).toBe(0)
+  })
 })

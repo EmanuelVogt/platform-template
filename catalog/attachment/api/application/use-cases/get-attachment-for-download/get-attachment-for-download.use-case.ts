@@ -19,7 +19,7 @@ import {
 import type { UploadProfileName } from "../../../domain/upload-profiles"
 
 export interface DownloadResult {
-  stream: NodeJS.ReadableStream
+  openStream(): Promise<NodeJS.ReadableStream>
   contentType: string
   sizeBytes: number
   checksum: string
@@ -67,9 +67,9 @@ export class GetAttachmentForDownloadUseCase {
     }
 
     await this.log(input.id, "allowed", store, actorId)
-    const stream = await this.storage.getStream(attachment.props.storageKey)
+    const storageKey = attachment.props.storageKey
     return {
-      stream,
+      openStream: () => this.storage.getStream(storageKey),
       contentType: attachment.props.contentType,
       sizeBytes: attachment.props.sizeBytes,
       checksum: attachment.props.checksum,

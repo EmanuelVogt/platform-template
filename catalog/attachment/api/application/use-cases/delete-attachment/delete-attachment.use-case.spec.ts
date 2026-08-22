@@ -20,6 +20,7 @@ function makeDeps(found: Attachment | null) {
     saveMany: jest.fn(),
     findPendingOlderThan: jest.fn(),
     deleteByIds: jest.fn(),
+    sumPendingBytesByOwner: jest.fn(),
   }
   const log = {
     record: jest.fn(),

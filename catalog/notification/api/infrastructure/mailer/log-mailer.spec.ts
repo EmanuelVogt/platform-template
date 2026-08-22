@@ -1,11 +1,13 @@
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
 import { LogMailer } from "./log-mailer"
 
 import type { LoggerFactory } from "../../../../shared/kernel/logging/logger.factory"
 
 describe("LogMailer", () => {
-  const info = jest.fn()
+  const info = vi.fn()
   const loggerFactory = {
-    forModule: () => ({ info, warn: jest.fn(), error: jest.fn() }),
+    forModule: () => ({ info, warn: vi.fn(), error: vi.fn() }),
   } as unknown as LoggerFactory
 
   beforeEach(() => info.mockClear())

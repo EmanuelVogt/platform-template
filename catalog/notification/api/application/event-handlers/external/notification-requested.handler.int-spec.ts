@@ -1,4 +1,5 @@
 import { ulid } from "ulid"
+import { type Mocked, afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { createTestDb, createTestPool } from "../../../../../../test/setup/test-db"
 import { makeTestLogger } from "../../../../../../test/setup/test-logger"
@@ -40,8 +41,8 @@ describe("NotificationRequestedHandler (int)", () => {
   let db: DrizzleDb
   let handler: NotificationRequestedHandler
   let notifications: DrizzleNotificationRepository
-  const publishNew = jest.fn().mockResolvedValue(undefined)
-  const realtime: jest.Mocked<RealtimePublisherPort> = { publishNew }
+  const publishNew = vi.fn().mockResolvedValue(undefined)
+  const realtime: Mocked<RealtimePublisherPort> = { publishNew }
 
   beforeAll(() => {
     pool = createTestPool()

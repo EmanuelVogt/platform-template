@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
 import { NOTIFICATION_TYPES } from "../../api/events/notification-requested.event"

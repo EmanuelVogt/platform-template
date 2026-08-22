@@ -1,3 +1,5 @@
+import { type Mocked, describe, expect, it, vi } from "vitest"
+
 import { Notification } from "../../../domain/entities/notification.entity"
 
 import { MarkReadUseCase } from "./mark-read.use-case"
@@ -19,16 +21,16 @@ describe("MarkReadUseCase", () => {
       metadata: {},
       locale: "pt-BR",
     })
-    const findByIdForRecipient = jest.fn().mockResolvedValue(n)
+    const findByIdForRecipient = vi.fn().mockResolvedValue(n)
     let saved: Notification | undefined
-    const update = jest.fn((notification: Notification) => {
+    const update = vi.fn((notification: Notification) => {
       saved = notification
       return Promise.resolve()
     })
     const repo = {
       findByIdForRecipient,
       update,
-    } as unknown as jest.Mocked<NotificationRepositoryPort>
+    } as unknown as Mocked<NotificationRepositoryPort>
 
     await new MarkReadUseCase(repo, ctx, clock).execute({ id: n.props.id })
 
@@ -38,11 +40,11 @@ describe("MarkReadUseCase", () => {
   })
 
   it("id alheio/inexistente → no-op silencioso (sem oráculo de existência)", async () => {
-    const update = jest.fn()
+    const update = vi.fn()
     const repo = {
-      findByIdForRecipient: jest.fn().mockResolvedValue(null),
+      findByIdForRecipient: vi.fn().mockResolvedValue(null),
       update,
-    } as unknown as jest.Mocked<NotificationRepositoryPort>
+    } as unknown as Mocked<NotificationRepositoryPort>
     await new MarkReadUseCase(repo, ctx, clock).execute({ id: "alheio" })
     expect(update).not.toHaveBeenCalled()
   })

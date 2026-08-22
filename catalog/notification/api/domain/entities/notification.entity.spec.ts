@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { Notification } from "./notification.entity"
 
 const base = () =>

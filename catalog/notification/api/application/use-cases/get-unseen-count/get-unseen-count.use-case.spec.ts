@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { GetUnseenCountUseCase } from "./get-unseen-count.use-case"
 
 import type { RequestContext } from "../../../../../shared/kernel/context/request-context"
@@ -5,7 +7,7 @@ import type { NotificationRepositoryPort } from "../../../domain/ports/notificat
 
 describe("GetUnseenCountUseCase", () => {
   it("conta não-vistas do recipient logado", async () => {
-    const countUnseen = jest.fn().mockResolvedValue(3)
+    const countUnseen = vi.fn().mockResolvedValue(3)
     const repo = { countUnseen } as unknown as NotificationRepositoryPort
     const ctx = { getActor: () => ({ id: "u1", kind: "user" }) } as unknown as RequestContext
 

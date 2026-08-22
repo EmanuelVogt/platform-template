@@ -263,7 +263,7 @@ describe("Attachment (e2e): download com ACL", () => {
 
     expect(res.headers["content-type"]).toBe("application/octet-stream")
     expect(res.headers["content-disposition"]).toBe(
-      "attachment; filename*=UTF-8''log.txt",
+      `attachment; filename="log.txt"; filename*=UTF-8''log.txt`,
     )
     expect(res.headers["x-content-type-options"]).toBe("nosniff")
     expect(res.headers["cache-control"]).toBe("private, max-age=300")

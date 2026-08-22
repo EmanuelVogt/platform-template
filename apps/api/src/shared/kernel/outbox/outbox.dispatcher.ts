@@ -15,6 +15,7 @@ import { ManagedDedicatedClient } from "../../infra/database/managed-dedicated-c
 import { buildEventContextStore } from "../context/event-context"
 import { RequestContext } from "../context/request-context"
 import { type AppLogger, LoggerFactory } from "../logging/logger.factory"
+import { redactSensitive } from "../redaction/sensitive-keys"
 import { MaintenanceJob } from "../scheduling/maintenance-job.decorator"
 import { remoteSpanContextFromTraceparent } from "../tracing/event-trace-propagation"
 import { TransactionManager } from "../transactional/transaction-manager"
@@ -210,9 +211,16 @@ export class OutboxDispatcher implements OnModuleInit, OnApplicationShutdown {
     }
     try {
       await this.emitWithinTrace(envelope)
+      // Publicada, a linha vira arquivo: nenhum segredo do envelope pode
+      // sobreviver nela. Sem match, `payload` fica fora do SET — a linha
+      // intocada não é reescrita.
+      const redacted = redactSensitive(row.payload)
       await this.db
         .update(outbox)
-        .set({ publishedAt: new Date() })
+        .set({
+          publishedAt: new Date(),
+          ...(redacted.changed && { payload: redacted.value }),
+        })
         .where(eq(outbox.eventId, row.eventId))
       this.log.info("outbox.dispatched", {
         eventId: row.eventId,
@@ -266,7 +274,9 @@ export class OutboxDispatcher implements OnModuleInit, OnApplicationShutdown {
           eventVersion: row.eventVersion,
           aggregateId: row.aggregateId,
           aggregateType: row.aggregateType,
-          payload: row.payload,
+          // Dead letter é o arquivo mais longevo da fila: o envelope inteiro é
+          // varrido (o payload de domínio aninha em payload.payload).
+          payload: redactSensitive(row.payload).value,
           correlationId: row.correlationId,
           causationId: row.causationId,
           tenantId: row.tenantId,

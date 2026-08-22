@@ -20,6 +20,6 @@ function encodeRfc5987(value: string): string {
 export function buildContentDisposition(filename: string | null): string {
   const clean = (filename ?? "").replaceAll(/[\r\n"]/g, "").trim()
   const safe = clean.length > 0 ? clean : "arquivo"
-  const ascii = safe.replaceAll(/[^\x00-\x7F]/g, "").trim() || "arquivo"
+  const ascii = safe.replaceAll(/[^\x20-\x7E]/g, "").trim() || "arquivo"
   return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeRfc5987(safe)}`
 }

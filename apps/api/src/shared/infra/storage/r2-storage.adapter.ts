@@ -1,3 +1,5 @@
+import https from "node:https"
+
 import {
   DeleteObjectCommand,
   GetObjectCommand,
@@ -6,7 +8,6 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3"
 import { Upload } from "@aws-sdk/lib-storage"
-import https from "node:https"
 
 import { StorageUnavailableError } from "./storage-unavailable.error"
 
@@ -134,6 +135,8 @@ export class R2StorageAdapter implements ObjectStoragePort {
 
 function buildAbortController(timeoutMs: number): AbortController {
   const controller = new AbortController()
-  AbortSignal.timeout(timeoutMs).addEventListener("abort", () => controller.abort())
+  AbortSignal.timeout(timeoutMs).addEventListener("abort", () => {
+    controller.abort()
+  })
   return controller
 }

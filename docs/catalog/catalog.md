@@ -72,7 +72,7 @@ Para manter as entradas portáveis entre apps filhos com stacks web diferentes (
 ## Lint e checks
 
 - **`pnpm catalog:lint`** (`scripts/platform/catalog-lint.mjs`), acionado pelo hook lefthook
-  **pre-commit** em `catalog/**` e `docs/advisories/**`, valida: `module.json` contra o schema;
+  **pre-commit** de `lefthook-local.yml` em `catalog/**` e `docs/advisories/**`, valida: `module.json` contra o schema;
   presença e ordem das seções do README conforme `README-contract.md`; allow-list de imports em
   `web/**`; existência de um título de versão no `CHANGELOG.md` correspondente a
   `module.json.version`; e o frontmatter das advisories.
@@ -80,8 +80,9 @@ Para manter as entradas portáveis entre apps filhos com stacks web diferentes (
   `catalog/<entry>/(api|web|migrations|parity)/**`, precisa existir um
   `docs/advisories/ADV-*.md` com `module: <entry>` no mesmo commit, ou a mensagem desse commit
   precisa carregar o trailer `Advisory: none — <motivo>`; caso contrário falha (exit 1) com a
-  regra impressa. Dois acionadores, um só módulo: o hook lefthook **commit-msg** (commit local,
-  arquivos staged) e o job `gates` de `.github/workflows/catalog.yml`, que chama
+  regra impressa. Dois acionadores, um só módulo: o hook lefthook **commit-msg** de
+  `lefthook-local.yml` (commit local, arquivos staged) e o job `gates` de
+  `.github/workflows/catalog.yml`, que chama
   `--range <base>..<head>` e julga **cada commit do PR pela própria mensagem** — um trailer no
   último commit não isenta os anteriores.
 - **`pnpm catalog:check [entry…]`** (`scripts/platform/catalog-check.mjs`) não é hook de git

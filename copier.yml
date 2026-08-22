@@ -18,12 +18,29 @@ _exclude:
   - "*.tsbuildinfo"
   - .worktrees
   - .specs
-  - catalog/
+  # âncora obrigatória: `catalog/` casaria qualquer diretório com esse nome em
+  # qualquer profundidade e levava junto `docs/catalog/`. Sem a barra final porque
+  # o copier testa o caminho de destino como Path, que nunca traz a barra — com ela
+  # o diretório-raiz escapa e é criado vazio no filho
+  - /catalog
   - .github/workflows/catalog.yml
   - .claude/settings.local.json
   - apps/api/.env
   - apps/web/.env.local
   - .claude/skills
+  # ferramental que só existe com `catalog/` presente — como o catálogo não é
+  # copiado, nada disso roda no filho. Os hooks correspondentes moram em
+  # `lefthook-local.yml`, também fora da cópia.
+  - lefthook-local.yml
+  - scripts/template-smoke.mjs
+  - scripts/platform/catalog-check.mjs
+  - scripts/platform/catalog-lint.mjs
+  - scripts/platform/catalog-stage.mjs
+  - scripts/platform/advisory-required.mjs
+  - scripts/platform/lib/child.mjs
+  - scripts/platform/lib/lint.mjs
+  - scripts/platform/__tests__
+  - docs/catalog/README-contract.md
 
 _skip_if_exists:
   - README.md
@@ -33,6 +50,14 @@ _skip_if_exists:
   - docs/advisories/APPLIED.md
 
 _tasks:
+  # O manifest é copiado literal: `_exclude` casa pelo caminho de DESTINO, então um
+  # `package.json.jinja` renderiza para o mesmo `package.json` do template e não há
+  # como excluir um sem matar o outro. Daí a poda aqui — idempotente, roda também no
+  # update. A lista espelha os scripts que dependem de `catalog/`
+  # (`scripts/platform/__tests__/child-manifest.test.mjs` barra divergência).
+  - command: >-
+      node -e "const fs=require('fs'),f='package.json',p=JSON.parse(fs.readFileSync(f,'utf8'));p.name='{{ project_slug }}';for(const k of ['catalog:check','catalog:lint','catalog:typecheck','template:smoke','test:scripts'])delete p.scripts[k];fs.writeFileSync(f,JSON.stringify(p,null,2)+'\n')"
+    when: "{{ not _copier_conf.pretend }}"
   - command: git init -q
     when: "{{ _copier_operation == 'copy' and not _copier_conf.pretend }}"
   - command: ln -sfn AGENTS.md CLAUDE.md

@@ -7,8 +7,9 @@ aplicar no `copier update`.
 ## Não publicado
 
 Refactor do tooling da plataforma: o layout do filho, a ordem de instalação e o
-harness de child ganham cada um um dono só, e o gate de advisory passa a valer por
-commit no CI. Sem mudança de contrato e sem migration.
+harness de child ganham cada um um dono só, o gate de advisory passa a valer por
+commit no CI, e o produto deixa de receber o ferramental que só existe com
+`catalog/` presente. Sem mudança de contrato e sem migration.
 
 ### Mudanças
 
@@ -34,11 +35,39 @@ commit no CI. Sem mudança de contrato e sem migration.
    reimplementar a regra em shell. O `git reset --soft base` anterior julgava o diff
    inteiro do PR contra a mensagem do head, então um trailer `Advisory: none` no último
    commit isentava todos os outros (`.specs/LESSONS.md` L-009).
+6. **O ferramental de catálogo para de vazar para o filho.** `catalog/` já estava fora
+   da cópia, mas os scripts que só existem por causa dele não: `catalog-check.mjs`,
+   `catalog-lint.mjs`, `catalog-stage.mjs`, `advisory-required.mjs`, `template-smoke.mjs`,
+   `lib/child.mjs`, `lib/lint.mjs`, `scripts/platform/__tests__/**` e
+   `docs/catalog/README-contract.md` entraram no `_exclude`. O que **quebrava**: o
+   `lefthook.yml` do produto chamava `catalog:typecheck` no `pre-push`, `catalog:lint` no
+   `pre-commit` (com glob em `docs/advisories/**`, que o filho tem) e `advisory-required`
+   no `commit-msg` — gates do template rodando em todo commit e push do produto. Esses três
+   passaram para `lefthook-local.yml` (mesclado pelo lefthook, fora da cópia) e chamam o
+   módulo direto em vez do script de `package.json`. O manifest do filho é podado por um
+   `_task` novo, antes do `pnpm install`: saem os scripts `catalog:*`, `template:smoke` e
+   `test:scripts`, e `name` passa a ser o `project_slug` — antes todo produto nascia com
+   `"name": "platform-template"` na raiz. Não dá para resolver isso com um
+   `package.json.jinja`: o `_exclude` do copier casa pelo caminho de **destino**, e os dois
+   arquivos desembocam no mesmo `package.json`. `child-manifest.test.mjs` barra script novo
+   dependente de `catalog/` que fique fora da lista de poda.
+7. **`_exclude: catalog/` levava junto `docs/catalog/`.** Padrão gitignore sem `/` no
+   início não é âncorado: casava qualquer diretório chamado `catalog` em qualquer
+   profundidade. O filho nunca recebeu `docs/catalog/catalog.md` — que o próprio
+   `AGENTS.md` dele lista como handbook de "instalar/atualizar uma entrada do catálogo".
+   Virou `/catalog`, sem barra final: o copier testa o destino como `Path`, que nunca traz
+   a barra, então `/catalog/` deixava o diretório-raiz escapar e nascer vazio no filho.
+   `docs/catalog/README-contract.md` continua fora, agora por entrada explícita.
 
 ### Passos de migração do filho
 
 1. `copier update` — nenhuma ação manual. Quem chamava `render-child.mjs` direto (não
    há chamador conhecido fora do template) passa a importar `lib/child.mjs`.
+2. O `copier update` apaga do produto os arquivos que entraram no `_exclude`, reescreve
+   `lefthook.yml` e poda o `package.json`. Se você tinha editado algum dos dois à mão, o
+   copier pergunta antes de sobrescrever. O `name` do pacote raiz muda de
+   `platform-template` para o `project_slug` — o próprio `_task` roda `pnpm install`
+   depois disso.
 
 ## v1.1.1
 

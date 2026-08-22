@@ -77,6 +77,8 @@ pnpm --filter web test        vitest (jsdom)
 
 # raiz
 pnpm test                     turbo: roda o `test` (unit) de cada app — NÃO cobre catalog/**
+
+# raiz, só no repositório do template: o produto não recebe `catalog/` nem estes scripts
 pnpm test:scripts             node --test em scripts/platform/__tests__/*.test.mjs
 pnpm catalog:lint             lint de catalog/** e docs/advisories/** (hook pre-commit)
 pnpm catalog:typecheck        só compila as entradas (espelho staged, não roda spec nenhum)

@@ -88,7 +88,8 @@ aí o porte é manual.
 
 ### Gate antes de cortar uma tag de entrada
 
-`pnpm catalog:check [entrada…]` renderiza um produto kernel-only num diretório descartável,
+`pnpm catalog:check [entrada…]`, no repositório do template (o produto não recebe o
+comando), renderiza um produto kernel-only num diretório descartável,
 instala cada entrada em ordem topológica e roda os testes; é o gate de pré-tag do catálogo
 (minutos — não é hook de commit).
 

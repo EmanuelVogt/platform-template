@@ -10,7 +10,9 @@ export const zBoolQuery = z
   .transform((v) => v === "true")
 
 export const baseListingQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
+  // Teto de page: sem ele, um OFFSET fundo faz o banco ordenar a tabela inteira
+  // por requisição — negação de serviço barata.
+  page: z.coerce.number().int().min(1).max(10_000).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
   q: z.string().trim().min(1).optional(),
   // Sem default: a direção default é decidida por recurso

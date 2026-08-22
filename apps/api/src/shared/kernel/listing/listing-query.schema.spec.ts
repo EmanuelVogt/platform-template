@@ -41,6 +41,15 @@ describe("baseListingQuerySchema", () => {
     expect(baseListingQuerySchema.safeParse({ page: "0" }).success).toBe(false)
   })
 
+  it("aceita page=10000 e rejeita page=10001 (REM-33)", () => {
+    expect(baseListingQuerySchema.parse({ page: "10000" })).toMatchObject({
+      page: 10_000,
+    })
+    expect(baseListingQuerySchema.safeParse({ page: "10001" }).success).toBe(
+      false
+    )
+  })
+
   it("order é opcional, sem default (direção é por recurso)", () => {
     expect(baseListingQuerySchema.parse({}).order).toBeUndefined()
   })

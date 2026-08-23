@@ -92,6 +92,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: catalog/audit/api/domain/audit-coverage.int-spec.ts:34-38 (SPEC_DEVIATION) / tasks.md Deviation 27 (catalog)
 - last seen: 2026-08-22T22:14:32Z
 
+### L-014 — A worker's scoped gate that runs only typecheck + the test file leaves lint to the wave gate, so a whole wave's specs land before the first lint error is seen; put the package's lint in the cluster gate whenever the cluster writes test files.
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: api-coverage-to-90
+- evidence: 9ff5e57 (wave-2 Build gate: pnpm check exit 1, 6 eslint errors) (testing)
+- last seen: 2026-08-23T00:06:13Z
+
+### L-015 — @typescript-eslint/no-unnecessary-condition firing on a ?? or ?. inside a test is a vacuity detector, not a style nit: an always-nullish operand usually means control-flow narrowing proved the assertion cannot see the value (a let mutated inside a nested closure), so the test asserts nothing. Fix by returning the value out of the awaited chain, never by an eslint-disable.
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: api-coverage-to-90
+- evidence: transaction-manager.int-spec.ts:285 (pre-9ff5e57) (testing)
+- last seen: 2026-08-23T00:06:13Z
+
 ## Quarantined (failed when applied — ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

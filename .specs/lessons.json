@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 14,
+  "next_id": 16,
   "lessons": [
     {
       "id": "L-001",
@@ -239,6 +239,42 @@
       ],
       "created": "2026-08-22T22:14:32Z",
       "last_seen": "2026-08-22T22:14:32Z"
+    },
+    {
+      "id": "L-014",
+      "key": "gate_fail::a worker s scoped gate that runs only typecheck the test file leaves lint to the wave gate so a whole wave s specs land before the first lint error is seen put the package s lint in the cluster gate whenever the cluster writes test files",
+      "text": "A worker's scoped gate that runs only typecheck + the test file leaves lint to the wave gate, so a whole wave's specs land before the first lint error is seen; put the package's lint in the cluster gate whenever the cluster writes test files.",
+      "signal": "gate_fail",
+      "scope": "testing",
+      "status": "candidate",
+      "features": [
+        "api-coverage-to-90"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "9ff5e57 (wave-2 Build gate: pnpm check exit 1, 6 eslint errors) (testing)"
+      ],
+      "created": "2026-08-23T00:06:13Z",
+      "last_seen": "2026-08-23T00:06:13Z"
+    },
+    {
+      "id": "L-015",
+      "key": "gate_fail::typescript eslint no unnecessary condition firing on a or inside a test is a vacuity detector not a style nit an always nullish operand usually means control flow narrowing proved the assertion cannot see the value a let mutated inside a nested closure so the test asserts nothing fix by returning the value out of the awaited chain never by an eslint disable",
+      "text": "@typescript-eslint/no-unnecessary-condition firing on a ?? or ?. inside a test is a vacuity detector, not a style nit: an always-nullish operand usually means control-flow narrowing proved the assertion cannot see the value (a let mutated inside a nested closure), so the test asserts nothing. Fix by returning the value out of the awaited chain, never by an eslint-disable.",
+      "signal": "gate_fail",
+      "scope": "testing",
+      "status": "candidate",
+      "features": [
+        "api-coverage-to-90"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "transaction-manager.int-spec.ts:285 (pre-9ff5e57) (testing)"
+      ],
+      "created": "2026-08-23T00:06:13Z",
+      "last_seen": "2026-08-23T00:06:13Z"
     }
   ]
 }

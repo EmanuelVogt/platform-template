@@ -127,4 +127,42 @@ describe('weekly-slot', () => {
       { startMinute: 780, endMinute: 1200 },
     ]);
   });
+
+  it('subtractSpans pula corte já consumido por outro e corte fora da janela', () => {
+    expect(
+      subtractSpans(
+        [{ startMinute: 0, endMinute: 100 }],
+        [
+          { startMinute: 10, endMinute: 50 },
+          { startMinute: 20, endMinute: 30 },
+          { startMinute: 200, endMinute: 300 },
+        ],
+      ),
+    ).toEqual([
+      { startMinute: 0, endMinute: 10 },
+      { startMinute: 50, endMinute: 100 },
+    ]);
+  });
+
+  it('subtractSpans zera a janela quando o corte cobre tudo, sem sobra ao final', () => {
+    expect(
+      subtractSpans(
+        [{ startMinute: 0, endMinute: 100 }],
+        [
+          { startMinute: 0, endMinute: 100 },
+          { startMinute: 150, endMinute: 300 },
+        ],
+      ),
+    ).toEqual([]);
+  });
+
+  it('effectiveWindowsByDay preserva dia sem bloqueio e omite dia zerado', () => {
+    const map = effectiveWindowsByDay([
+      slot({ dayOfWeek: 2, type: 'available', startMinute: 480, endMinute: 600 }),
+      slot({ dayOfWeek: 3, type: 'available', startMinute: 480, endMinute: 600 }),
+      slot({ dayOfWeek: 3, type: 'lunch', startMinute: 480, endMinute: 600 }),
+    ]);
+    expect(map.get(2)).toEqual([{ startMinute: 480, endMinute: 600 }]);
+    expect(map.has(3)).toBe(false);
+  });
 });

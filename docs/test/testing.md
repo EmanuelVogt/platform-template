@@ -167,10 +167,11 @@ and no floor, so the inner loop does not depend on Docker.
 
 One bar, 90 on every metric: a global threshold plus a 90 per glob (`apps/api/src/**`,
 `apps/web/src/**`) — statements, branches, functions and lines alike (AD-027). A floor is never
-lowered to make a push pass; the way past a red gate is covering the code. The api does not
-clear the bar yet (branches 74.21 % at the time of writing), so the coverage step is red on
-purpose until `test-suite-refactor` closes the gap — `pnpm test` stays the green inner loop
-meanwhile.
+lowered to make a push pass; the way past a red gate is covering the code. The api now clears the
+bar on all four metrics — statements 96.69 % (965/998), branches 95.33 % (449/471), functions
+94.92 % (280/295), lines 96.84 % (920/950), measured on 2026-08-22 — so `pnpm test:coverage` is
+green and the pre-push gate enforces the floor instead of reporting a known failure. `pnpm test`
+stays the Docker-free inner loop.
 
 ## Performance
 

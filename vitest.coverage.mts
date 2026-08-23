@@ -50,9 +50,9 @@ export default defineConfig({
         branches: 90,
         functions: 90,
         lines: 90,
-        // A api ainda não alcança a barra (branches 74.21% em 2026-08-22): o
-        // pre-push fica vermelho de propósito até a test-suite-refactor cobrir
-        // a lacuna. É a barra que puxa o teste, não o contrário.
+        // Ambos os globs agora alcançam 90 (api em 2026-08-22: 96.69 / 95.33 /
+        // 94.92 / 96.84). A barra nunca é baixada para passar — o caminho é
+        // cobrir, nunca afrouxar.
         "apps/api/src/**": {
           statements: 90,
           branches: 90,

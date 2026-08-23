@@ -158,6 +158,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: REM-48 probe, spec.md:244 vs apps/api/package.json:88 (spec)
 - last seen: 2026-08-23T16:53:38Z
 
+### L-025 — A GitHub Actions job-level 'if:' guard makes a wrong-ref dispatch SKIP (neutral/green), not FAIL — when a spec says the workflow SHALL fail on a bad condition, gate that condition inside a run step (exit non-zero) instead of a job-level if, or the run shows no red at all.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `ci` · harmful: 0
+- features: template-update-contract
+- evidence: REL-01 / .github/workflows/release.yml:19 (ci)
+- last seen: 2026-08-23T20:38:43Z
+
+### L-026 — An AC whose only real guarantee is a workflow's job-dependency graph (needs:) cannot be proven by a unit test — declare its traceability Proof as probe/workflow-review, not test, or it will show as zero evidence at verification.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `ci` · harmful: 0
+- features: template-update-contract
+- evidence: REL-02 (ci)
+- last seen: 2026-08-23T20:38:43Z
+
+### L-027 — An AC that requires a doc file to state specific content, declared Proof: test, needs an actual grep-style assertion on that file's text — correct prose with no assertion guarding it is zero evidence and can drift silently.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `docs` · harmful: 0
+- features: template-update-contract
+- evidence: DOC-03 / docs/advisories/README.md (docs)
+- last seen: 2026-08-23T20:38:43Z
+
 ## Quarantined (failed when applied — ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

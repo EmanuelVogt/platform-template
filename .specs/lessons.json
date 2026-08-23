@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 25,
+  "next_id": 28,
   "lessons": [
     {
       "id": "L-001",
@@ -437,6 +437,60 @@
       ],
       "created": "2026-08-23T16:53:38Z",
       "last_seen": "2026-08-23T16:53:38Z"
+    },
+    {
+      "id": "L-025",
+      "key": "ac_gap::a github actions job level if guard makes a wrong ref dispatch skip neutral green not fail when a spec says the workflow shall fail on a bad condition gate that condition inside a run step exit non zero instead of a job level if or the run shows no red at all",
+      "text": "A GitHub Actions job-level 'if:' guard makes a wrong-ref dispatch SKIP (neutral/green), not FAIL — when a spec says the workflow SHALL fail on a bad condition, gate that condition inside a run step (exit non-zero) instead of a job-level if, or the run shows no red at all.",
+      "signal": "ac_gap",
+      "scope": "ci",
+      "status": "candidate",
+      "features": [
+        "template-update-contract"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "REL-01 / .github/workflows/release.yml:19 (ci)"
+      ],
+      "created": "2026-08-23T20:38:43Z",
+      "last_seen": "2026-08-23T20:38:43Z"
+    },
+    {
+      "id": "L-026",
+      "key": "spec_precision_gap::an ac whose only real guarantee is a workflow s job dependency graph needs cannot be proven by a unit test declare its traceability proof as probe workflow review not test or it will show as zero evidence at verification",
+      "text": "An AC whose only real guarantee is a workflow's job-dependency graph (needs:) cannot be proven by a unit test — declare its traceability Proof as probe/workflow-review, not test, or it will show as zero evidence at verification.",
+      "signal": "spec_precision_gap",
+      "scope": "ci",
+      "status": "candidate",
+      "features": [
+        "template-update-contract"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "REL-02 (ci)"
+      ],
+      "created": "2026-08-23T20:38:43Z",
+      "last_seen": "2026-08-23T20:38:43Z"
+    },
+    {
+      "id": "L-027",
+      "key": "spec_precision_gap::an ac that requires a doc file to state specific content declared proof test needs an actual grep style assertion on that file s text correct prose with no assertion guarding it is zero evidence and can drift silently",
+      "text": "An AC that requires a doc file to state specific content, declared Proof: test, needs an actual grep-style assertion on that file's text — correct prose with no assertion guarding it is zero evidence and can drift silently.",
+      "signal": "spec_precision_gap",
+      "scope": "docs",
+      "status": "candidate",
+      "features": [
+        "template-update-contract"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "DOC-03 / docs/advisories/README.md (docs)"
+      ],
+      "created": "2026-08-23T20:38:43Z",
+      "last_seen": "2026-08-23T20:38:43Z"
     }
   ]
 }

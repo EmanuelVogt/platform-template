@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
@@ -28,6 +28,24 @@ export function expandGitShorthand(source) {
 
 function hashRef(ref) {
   return createHash("sha1").update(ref).digest("hex").slice(0, 12);
+}
+
+function gitSucceeds(args, cwd) {
+  try {
+    execFileSync("git", args, { cwd, stdio: "pipe" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// `clone --branch <tag>` deixa HEAD destacado; `--branch <branch>` (ou sem --branch)
+// deixa HEAD simbólico. HEAD destacado ⇒ o ref era imutável e o cache vale como está;
+// simbólico ⇒ ref móvel, que pode ter andado no origin — o chamador descarta e reclona.
+function isReusableCache(dest) {
+  if (!existsSync(path.join(dest, "catalog"))) return false;
+  if (!gitSucceeds(["rev-parse", "--git-dir"], dest)) return false;
+  return !gitSucceeds(["symbolic-ref", "-q", "HEAD"], dest);
 }
 
 // Uma fonte pode vir como "<source>#<ref>" (ex.: _src_path + _commit do copier).
@@ -76,6 +94,18 @@ export function resolveCatalog(
   }
 
   const dest = path.join(cacheRoot, hashRef(resolvedRef));
+
+  // `dest` é cache (issue #10): a segunda chamada com o mesmo ref deve reaproveitá-lo,
+  // não deixar o clone tropeçar no diretório ocupado e virar um falso "catálogo
+  // inacessível". Reusa direto quando é um clone íntegro de ref imutável (tag);
+  // qualquer outro estado — ref móvel (branch/default), clone corrompido ou pela
+  // metade — é descartado e clonado de novo, que é a revalidação mais forte.
+  if (existsSync(dest)) {
+    if (isReusableCache(dest)) {
+      return { kind: "git", root: path.join(dest, "catalog"), ref: resolvedRef };
+    }
+    rmSync(dest, { recursive: true, force: true });
+  }
 
   try {
     execFileSync(

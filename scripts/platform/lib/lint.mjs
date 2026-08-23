@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
+import semver from "semver";
 import { AdvisoryParseError, parseAdvisory } from "./frontmatter.mjs";
 import { ManifestValidationError, validateManifest } from "./manifest.mjs";
 
@@ -113,6 +114,16 @@ export function lintManifest(manifest) {
     if (err instanceof ManifestValidationError) return err.errors;
     throw err;
   }
+}
+
+// A versão mais recente do changelog é a que catalog:check simula e a que a próxima tag
+// carrega (AD-006): um range que a exclui só aparece no child, como exit 8 (issue #9).
+export function lintKernelRange(manifest, kernelVersion) {
+  if (!manifest.kernelRange || !semver.validRange(manifest.kernelRange)) return [];
+  if (semver.satisfies(kernelVersion, manifest.kernelRange)) return [];
+  return [
+    `kernelRange "${manifest.kernelRange}" não aceita o kernel ${kernelVersion} (versão mais recente de docs/dev/template-changelog.md) — nenhum child nessa versão consegue instalar a entrada; abra o range junto com o bump`,
+  ];
 }
 
 export function lintAdvisoryFrontmatter(content, filePath) {

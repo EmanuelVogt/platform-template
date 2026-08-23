@@ -72,10 +72,12 @@ To keep entries portable across child apps with different web stacks (Vite, Next
 ## Lint and checks
 
 - **`pnpm catalog:lint`** (`scripts/platform/catalog-lint.mjs`), triggered by the lefthook
-  **pre-commit** hook in `lefthook-local.yml` on `catalog/**` and `docs/advisories/**`, validates:
-  `module.json` against the schema; presence and order of the README sections per
-  `README-contract.md`; the import allow-list in `web/**`; the existence of a version title in
-  `CHANGELOG.md` matching `module.json.version`; and the advisories' frontmatter.
+  **pre-commit** hook in `lefthook-local.yml` on `catalog/**`, `docs/advisories/**` and
+  `docs/dev/template-changelog.md`, validates: `module.json` against the schema; that every
+  `kernelRange` accepts the latest `## vX.Y.Z` of the template changelog (the kernel the next
+  tag carries — issue #9); presence and order of the README sections per `README-contract.md`;
+  the import allow-list in `web/**`; the existence of a version title in `CHANGELOG.md`
+  matching `module.json.version`; and the advisories' frontmatter.
 - **advisory-required rule** (`scripts/platform/advisory-required.mjs`): if any path is under
   `catalog/<entry>/(api|web|migrations|parity)/**`, a
   `docs/advisories/ADV-*.md` with `module: <entry>` must exist in the same commit, or that

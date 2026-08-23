@@ -9,14 +9,18 @@ import {
   extractContractHeadings,
   lintAdvisoryFrontmatter,
   lintChangelogVersion,
+  lintKernelRange,
   lintManifest,
   lintProductionTestingImports,
   lintReadmeHeadings,
   lintWebImports,
 } from "../lib/lint.mjs";
+import { readLatestChangelogVersion } from "../lib/kernel-version.mjs";
+import { runLint } from "../catalog-lint.mjs";
 
 const ROOT = path.dirname(path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url)))));
 const CONTRACT_PATH = path.join(ROOT, "docs/catalog/README-contract.md");
+const CHANGELOG_PATH = path.join(ROOT, "docs/dev/template-changelog.md");
 const FIXTURES_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures/catalog");
 
 const EXPECTED_CONTRACT_HEADINGS = [
@@ -209,6 +213,73 @@ test("lintManifest falha e reporta o campo obrigatório ausente", () => {
   const manifest = { name: "alpha", version: "1.0.0" };
   const errors = lintManifest(manifest);
   assert.ok(errors.some((error) => error.includes("campo obrigatório ausente: kernelRange")));
+});
+
+test("lintKernelRange reproduz a v2.0.0 (issue #9): entrada 2.0.0 com kernelRange 1.x não aceita o kernel 2.0.0", () => {
+  const manifest = { name: "audit", version: "2.0.0", kernelRange: ">=1.0.0 <2.0.0" };
+  const errors = lintKernelRange(manifest, "2.0.0");
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], />=1\.0\.0 <2\.0\.0/);
+  assert.match(errors[0], /kernel 2\.0\.0/);
+});
+
+test("lintKernelRange passa quando o range aberto no bump cobre o kernel atual e os minors seguintes", () => {
+  const manifest = { name: "audit", version: "2.0.0", kernelRange: ">=2.0.0 <3.0.0" };
+  assert.deepEqual(lintKernelRange(manifest, "2.0.0"), []);
+  assert.deepEqual(lintKernelRange(manifest, "2.2.0"), []);
+});
+
+test("lintKernelRange não duplica o erro de um kernelRange ausente ou inválido (já é de lintManifest)", () => {
+  assert.deepEqual(lintKernelRange({ name: "audit", version: "2.0.0" }, "2.0.0"), []);
+  assert.deepEqual(lintKernelRange({ name: "audit", version: "2.0.0", kernelRange: "not-a-range" }, "2.0.0"), []);
+});
+
+test("toda entrada do catálogo real aceita a versão mais recente de docs/dev/template-changelog.md", () => {
+  const kernelVersion = readLatestChangelogVersion(CHANGELOG_PATH);
+  for (const entryDir of discoverEntries(path.join(ROOT, "catalog"))) {
+    const manifest = JSON.parse(readFileSync(path.join(entryDir, "module.json"), "utf8"));
+    assert.deepEqual(lintKernelRange(manifest, kernelVersion), [], `${entryDir} vs kernel ${kernelVersion}`);
+  }
+});
+
+function writeCatalogRepo({ kernelRange, changelogVersion }) {
+  const root = mkdtempSync(path.join(tmpdir(), "lint-kernel-range-"));
+  const entryDir = path.join(root, "catalog/alpha");
+  writeEntryFile(
+    entryDir,
+    "module.json",
+    JSON.stringify({ name: "alpha", version: "2.0.0", kernelRange, apiModule: { export: "AlphaModule", path: "modules/alpha/alpha.module" } }),
+  );
+  writeEntryFile(entryDir, "README.md", "# alpha\n");
+  writeEntryFile(entryDir, "CHANGELOG.md", "## [2.0.0] - 2026-08-21\n\n- bump\n");
+  const changelogPath = path.join(root, "docs/dev/template-changelog.md");
+  writeEntryFile(root, "docs/dev/template-changelog.md", `# Template changelog\n\n## v${changelogVersion}\n\ntexto.\n`);
+  return {
+    options: {
+      catalogRoot: path.join(root, "catalog"),
+      contractPath: path.join(root, "missing-contract.md"),
+      advisoriesDir: path.join(root, "missing-advisories"),
+      changelogPath,
+    },
+  };
+}
+
+test("runLint (pnpm catalog:lint) sai vermelho no estado da tag v2.0.0 e verde com o range aberto", () => {
+  const broken = writeCatalogRepo({ kernelRange: ">=1.0.0 <2.0.0", changelogVersion: "2.0.0" });
+  const errors = runLint(broken.options);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /catalog\/alpha\/module\.json: kernelRange ">=1\.0\.0 <2\.0\.0" não aceita o kernel 2\.0\.0/);
+
+  const fixed = writeCatalogRepo({ kernelRange: ">=2.0.0 <3.0.0", changelogVersion: "2.0.0" });
+  assert.deepEqual(runLint(fixed.options), []);
+});
+
+test("runLint reporta um changelog sem versão em vez de pular a conferência em silêncio", () => {
+  const repo = writeCatalogRepo({ kernelRange: ">=2.0.0 <3.0.0", changelogVersion: "2.0.0" });
+  writeFileSync(repo.options.changelogPath, "# Template changelog\n\nsem seções.\n");
+  const errors = runLint(repo.options);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /template-changelog\.md: nenhuma seção/);
 });
 
 test("lintAdvisoryFrontmatter passa para um advisory com frontmatter válido", () => {

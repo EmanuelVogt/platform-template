@@ -1,11 +1,13 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { isAdvisoryFilename } from "./lib/advisories.mjs";
+import { ChangelogVersionMissingError, readLatestChangelogVersion } from "./lib/kernel-version.mjs";
 import {
   discoverEntries,
   extractContractHeadings,
   lintAdvisoryFrontmatter,
   lintChangelogVersion,
+  lintKernelRange,
   lintManifest,
   lintProductionTestingImports,
   lintReadmeHeadings,
@@ -34,7 +36,7 @@ function readWebLayer(entryDir, layer) {
   }));
 }
 
-function lintEntry(entryDir, contractHeadings) {
+function lintEntry(entryDir, contractHeadings, kernelVersion) {
   const errors = [];
   const manifestPath = path.join(entryDir, "module.json");
   let manifest;
@@ -44,6 +46,9 @@ function lintEntry(entryDir, contractHeadings) {
     return [`${manifestPath}: JSON inválido — ${err.message}`];
   }
   errors.push(...lintManifest(manifest).map((error) => `${manifestPath}: ${error}`));
+  if (kernelVersion) {
+    errors.push(...lintKernelRange(manifest, kernelVersion).map((error) => `${manifestPath}: ${error}`));
+  }
 
   const readmePath = path.join(entryDir, "README.md");
   if (!existsSync(readmePath)) {
@@ -86,15 +91,27 @@ function lintAdvisories(dir) {
   return errors;
 }
 
+function readKernelVersion(changelogPath, errors) {
+  try {
+    return readLatestChangelogVersion(changelogPath);
+  } catch (err) {
+    if (!(err instanceof ChangelogVersionMissingError)) throw err;
+    errors.push(`${changelogPath}: ${err.message} — sem versão do kernel, o kernelRange das entradas não é conferido`);
+    return undefined;
+  }
+}
+
 export function runLint({
   catalogRoot = "catalog",
   contractPath = "docs/catalog/README-contract.md",
   advisoriesDir = "docs/advisories",
+  changelogPath = "docs/dev/template-changelog.md",
 } = {}) {
   const contractHeadings = existsSync(contractPath) ? extractContractHeadings(readFileSync(contractPath, "utf8")) : [];
   const errors = [];
+  const kernelVersion = readKernelVersion(changelogPath, errors);
   for (const entryDir of discoverEntries(catalogRoot)) {
-    errors.push(...lintEntry(entryDir, contractHeadings));
+    errors.push(...lintEntry(entryDir, contractHeadings, kernelVersion));
   }
   errors.push(...lintAdvisories(advisoriesDir));
   return errors;

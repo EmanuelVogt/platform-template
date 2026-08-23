@@ -12,7 +12,9 @@ pre-push:
 pre-commit:
   commands:
     catalog-lint:
-      glob: "{catalog/**,docs/advisories/**}"
+      # o changelog entra porque o seu heading mais recente é a versão do kernel que
+      # toda entrada tem de aceitar no kernelRange (issue #9)
+      glob: "{catalog/**,docs/advisories/**,docs/dev/template-changelog.md}"
       run: node scripts/platform/catalog-lint.mjs
 
 commit-msg:

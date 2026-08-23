@@ -31,6 +31,12 @@ was born with is repaired. No contract change and no migration; one manual step.
    v2.1.0 cannot `copier update` ("Question project_name is required") and
    `module add` cloned the catalog at v1.0.0. The fixture is renamed;
    `copier-answers-leak.test.mjs` guards it.
+5. **Guard for issue #9 (`kernelRange` not opened on the bump).** `v2.0.0` shipped the
+   five entries at `2.0.0` with `kernelRange ">=1.0.0 <2.0.0"`, so no `v2.0.0` child
+   could `module add` anything (exit 8); `v2.1.0` already carries `">=2.0.0 <3.0.0"`.
+   `pnpm catalog:lint` now fails when an entry's `kernelRange` excludes the latest
+   version of this changelog (the version `catalog:check` simulates and the next tag
+   carries); the pre-commit glob includes this file. Template-only, nothing for the child.
 
 ### Child migration steps
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -20,6 +20,60 @@ function runHook({ projectDir, hookEventName = "SessionStart", sessionId = rando
     encoding: "utf8",
     env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir },
   });
+}
+
+const KERNEL_ADVISORY_MD = [
+  "---",
+  'id: "ADV-20260823-01"',
+  'kind: "bug"',
+  'module: "kernel"',
+  'affects: ">=2.0.0 <2.1.0"',
+  'severity: "high"',
+  'detect: "pnpm platform status"',
+  'fix: "copier update para >= v2.1.0"',
+  'parity: "scripts/platform/__tests__/lint.test.mjs"',
+  "---",
+  "Contexto, impacto e passos em pt-BR.",
+  "",
+].join("\n");
+
+const ENTRY_ADVISORY_MD = [
+  "---",
+  'id: "ADV-20260901-01"',
+  'kind: "security"',
+  'module: "identity/single-tenant"',
+  'affects: ">=1.0.0 <1.2.0"',
+  'severity: "high"',
+  'detect: "pnpm platform advisory detect ADV-20260901-01"',
+  'fix: "resumo + link para CHANGELOG"',
+  'parity: "apps/api/src/modules/identity/__parity__/sessions.parity.spec.ts"',
+  "---",
+  "Contexto, impacto e passos em pt-BR.",
+  "",
+].join("\n");
+
+// Escrito em runtime (nunca commitado) — um `.copier-answers.yml` rastreado no git é o
+// vazamento que ADV-20260823-02 descreve; `copier-answers-leak.test.mjs` barra isso.
+function makeKernelProjectDir({ commit, withLock = false }) {
+  const dir = mkdtempSync(path.join(tmpdir(), "pending-advisories-kernel-"));
+  writeFileSync(
+    path.join(dir, ".copier-answers.yml"),
+    `_src_path: gh:example/platform-template\n_commit: ${commit}\n`,
+  );
+  mkdirSync(path.join(dir, "docs", "advisories"), { recursive: true });
+  writeFileSync(path.join(dir, "docs", "advisories", "APPLIED.md"), "# Advisories aplicados\n");
+  writeFileSync(path.join(dir, "docs", "advisories", "ADV-20260823-01.md"), KERNEL_ADVISORY_MD);
+  if (withLock) {
+    writeFileSync(
+      path.join(dir, ".platform-modules.lock"),
+      JSON.stringify({
+        catalog: { source: "gh:example/template", ref: "v1.0.0" },
+        modules: { identity: { variant: "single-tenant", version: "1.1.0", installedAt: "2026-08-19T00:00:00.000Z" } },
+      }),
+    );
+    writeFileSync(path.join(dir, "docs", "advisories", "ADV-20260901-01.md"), ENTRY_ADVISORY_MD);
+  }
+  return dir;
 }
 
 test("sem .platform-modules.lock: emite a linha de no-lock alinhada ao spec.md ADV-02 (sem prefixo pnpm)", () => {
@@ -50,7 +104,8 @@ test("lock presente com advisory pendente: emite uma linha `ADV-… <kind> <seve
 });
 
 test("kernel sem lock: a linha de kernel aparece mesmo sem .platform-modules.lock, antes do aviso de no-lock", () => {
-  const result = runHook({ projectDir: path.join(FIXTURES_DIR, "kernel-no-lock") });
+  const projectDir = makeKernelProjectDir({ commit: "v2.0.0", withLock: false });
+  const result = runHook({ projectDir });
   assert.equal(result.status, 0);
   const payload = JSON.parse(result.stdout);
   assert.equal(
@@ -60,7 +115,8 @@ test("kernel sem lock: a linha de kernel aparece mesmo sem .platform-modules.loc
 });
 
 test("kernel com lock: linhas de kernel vêm antes das linhas de entrada", () => {
-  const result = runHook({ projectDir: path.join(FIXTURES_DIR, "kernel-with-lock") });
+  const projectDir = makeKernelProjectDir({ commit: "v2.0.0", withLock: true });
+  const result = runHook({ projectDir });
   assert.equal(result.status, 0);
   const payload = JSON.parse(result.stdout);
   assert.equal(

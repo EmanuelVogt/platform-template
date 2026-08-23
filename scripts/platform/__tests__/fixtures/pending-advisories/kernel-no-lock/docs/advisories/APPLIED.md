@@ -1,1 +1,0 @@
-# Advisories aplicados

@@ -3,6 +3,7 @@ import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
+import { readTemplateVersion } from "../lib/commands/add.mjs";
 import { collectStatus } from "../lib/commands/status.mjs";
 import {
   buildTemplateBehindReport,
@@ -212,4 +213,35 @@ test("collectStatus outside a generated product reports the missing answers file
   const status = collectStatus({ cwd, fetchTags: () => assert.fail("must not fetch") });
   assert.equal(status.template.source, undefined);
   assert.match(status.template.error, /copier-answers/);
+});
+
+function answersFixture(body) {
+  const dir = mkdtempSync(path.join(tmpdir(), "read-template-version-"));
+  if (body !== undefined) writeFileSync(path.join(dir, ".copier-answers.yml"), body);
+  return dir;
+}
+
+test("readTemplateVersion resolves a plain tag to its bare semver", () => {
+  const cwd = answersFixture("_commit: v2.2.1\n_src_path: gh:acme/platform-template\n");
+  assert.equal(readTemplateVersion(cwd), "2.2.1");
+});
+
+test("readTemplateVersion resolves a describe-style (off-tag) _commit to the base tag, through parseInstalledVersion (TOOL-03)", () => {
+  const cwd = answersFixture("_commit: v2.2.1-4-gabc1234\n_src_path: gh:acme/platform-template\n");
+  assert.equal(readTemplateVersion(cwd), "2.2.1");
+});
+
+test("readTemplateVersion returns undefined for a dirty ref it cannot parse, instead of a garbage semver", () => {
+  const cwd = answersFixture("_commit: v2.2.1-4-gabc1234-dirty\n_src_path: gh:acme/platform-template\n");
+  assert.equal(readTemplateVersion(cwd), undefined);
+});
+
+test("readTemplateVersion returns undefined when _commit is absent from the answers file", () => {
+  const cwd = answersFixture("_src_path: gh:acme/platform-template\n");
+  assert.equal(readTemplateVersion(cwd), undefined);
+});
+
+test("readTemplateVersion returns undefined for a non-semver _commit", () => {
+  const cwd = answersFixture("_commit: abc1234\n_src_path: gh:acme/platform-template\n");
+  assert.equal(readTemplateVersion(cwd), undefined);
 });

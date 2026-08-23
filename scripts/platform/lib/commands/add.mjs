@@ -27,17 +27,19 @@ import {
   planCopy,
   resolveDeps,
 } from "../plan.mjs";
+import { parseInstalledVersion } from "../template-version.mjs";
 
 function defaultRun(command, args, options) {
   const result = spawnSync(command, args, { encoding: "utf8", ...options });
   return { status: result.status ?? 0, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
 }
 
-function readTemplateVersion(cwd) {
+export function readTemplateVersion(cwd) {
   const answersPath = childLayout(cwd).copierAnswersPath;
   if (!existsSync(answersPath)) return undefined;
   const answers = parseYaml(readFileSync(answersPath, "utf8")) ?? {};
-  return answers._commit ? String(answers._commit).replace(/^v/, "") : undefined;
+  const parsed = parseInstalledVersion(answers._commit);
+  return parsed ? parsed.version.replace(/^v/, "") : undefined;
 }
 
 function registryEntry(manifest) {

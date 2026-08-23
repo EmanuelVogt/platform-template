@@ -3,7 +3,7 @@
   "variant": "single-tenant",
   "version": "2.0.0",
   "description": "Autenticação e autorização de tenant único: login por cookie de sessão, dispositivos, tokens de e-mail/senha, perfis de acesso e catálogo de permissões. Liga a porta ACCESS_POLICY do kernel.",
-  "kernelRange": ">=1.0.0 <2.0.0",
+  "kernelRange": ">=2.0.0 <3.0.0",
   "dependsOn": [{ "name": "notification", "range": ">=2.0.0 <3.0.0" }],
   "apiModule": { "export": "IdentityModule", "path": "modules/identity/identity.module" },
   "schemaExports": [
@@ -21,7 +21,11 @@
     "modules/identity/infrastructure/tables/verification-token.table",
     "modules/identity/infrastructure/tables/auth-event.table"
   ],
-  "customMigrations": ["01_auth_events_append_only.sql", "02_audit_attach.sql"],
+  "customMigrations": [
+    "01_auth_events_append_only.sql",
+    "02_audit_attach.sql",
+    "03_audit_redact_token_hashes.sql"
+  ],
   "env": [
     {
       "name": "WEB_ORIGIN",
@@ -108,6 +112,18 @@
       "doc": "Sessões simultâneas por usuário; a mais antiga cai."
     },
     {
+      "name": "LOGIN_ACCOUNT_MAX_FAILURES",
+      "example": "10",
+      "required": false,
+      "doc": "Falhas de login toleradas por conta dentro da janela, somando todos os IPs de origem."
+    },
+    {
+      "name": "LOGIN_ACCOUNT_WINDOW_SECONDS",
+      "example": "900",
+      "required": false,
+      "doc": "Janela deslizante do throttle de login por conta."
+    },
+    {
       "name": "RESET_TOKEN_TTL_SECONDS",
       "example": "3600",
       "required": false,
@@ -180,6 +196,12 @@
       "doc": "Tamanho do salt em bytes. Piso 16."
     },
     {
+      "name": "PASSWORD_HASH_MAX_IN_FLIGHT",
+      "example": "8",
+      "required": false,
+      "doc": "Teto de hashes argon2 em voo simultaneamente; acima dele o pool do libuv trava o processo todo."
+    },
+    {
       "name": "PASSWORD_MIN_ZXCVBN_SCORE",
       "example": "3",
       "required": false,
@@ -188,8 +210,8 @@
     {
       "name": "BREACH_CHECK_ENABLED",
       "example": "false",
-      "required": false,
-      "doc": "Liga o adapter real de consulta de vazamento (HIBP)."
+      "required": true,
+      "doc": "Liga o adapter real de consulta de vazamento (HIBP). Sem default: esquecer de configurar não pode virar \"não checa vazamento\"."
     },
     {
       "name": "REQUIRE_EMAIL_VERIFICATION",
@@ -202,6 +224,12 @@
       "example": "180",
       "required": false,
       "doc": "Retenção de identity.auth_events; o job de purge liga o GUC app.auth_events_purge."
+    },
+    {
+      "name": "SEED_MASTER_PASSWORD",
+      "example": "",
+      "required": false,
+      "doc": "Senha do usuário master gerada pelo seed de teste/dev (api/testing/seeds). Vazia gera uma senha aleatória e a imprime uma única vez no boot do seed."
     }
   ],
   "web": { "defaultRoot": "apps/web/src/entities/identity", "react": true },

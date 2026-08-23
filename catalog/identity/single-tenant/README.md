@@ -73,6 +73,7 @@ Todo evento sai pelo outbox do kernel (`notification.requested`, consumido pela 
 | `access/decorators` (`@Public`, `@SelfService`, `@RequirePermission`, `@MachineToMachine`) | metadata de acesso das 34 rotas |
 | `context/request-context` (`setActor`, `setExtension`) | `AuthMiddleware` publica `Actor` + `IDENTITY_SESSION` / `IDENTITY_ACCESS` |
 | `clock/clock`, `clock/bucket-sql` | TTLs de sessão/token e janelas de rate limit |
+| `rate-limit/rate-limiter.port` (`RATE_LIMITER`) | `RateLimitGuard` (`@RateLimit` em 27 rotas) e o throttle de login por conta; limiter resiliente composto (Redis + fallback local), ligado pelo `RateLimitModule` `@Global()` |
 | `outbox/outbox.publisher` | `notification.requested` na mesma transação do caso de uso |
 | `transactional/*`, `use-case/*`, `idempotency/idempotent.decorator` | transação, decorators de caso de uso e idempotência |
 | `listing/*` (`apply-listing`, `listing-query.schema`, `paginated`) | paginação de `listUsers`, `accessHistory`, `listPermissionTemplates` |
@@ -103,7 +104,7 @@ Tipos de `identity.auth_events.type`: `login_success`, `login_failed`, `logout`,
 `password_changed`, `password_set`, `password_reset_requested`, `password_reset_completed`,
 `email_verified`, `email_change_requested`, `email_changed`, `access_link_sent`,
 `access_link_resent`, `access_link_cancelled`, `device_revoked`, `sessions_revoked_all`,
-`rate_limited_burst`, `user_deleted`, `user_restored`, `user_purged`.
+`rate_limited_burst`, `rate_limiter_degraded`, `user_deleted`, `user_restored`, `user_purged`.
 
 Migrações manuais (`migrations/custom/`, aplicadas nesta ordem, depois das tabelas):
 
@@ -172,8 +173,9 @@ sem nunca rejeitar; quem rejeita é o `AccessGuard` do kernel delegando a `Ident
 **Contexto**: vários e2e são testes de integração ENTRE entradas — precisam de usuário semeado
 com hash real e de sessão por `/v1/auth/login`, que só o identity entrega. Espalhados, eles
 fechavam o único ciclo do grafo de entradas: cinco e2e do `notification` e um do `tag`
-importavam `RATE_LIMITER` do identity, e o identity importa `NotificationRequested` do
-`notification` em dez use-cases de produção.
+importavam `RATE_LIMITER`, que na época morava nesta entrada (hoje é porta do kernel, §
+Portas do kernel consumidas), e o identity importa `NotificationRequested` do `notification`
+em dez use-cases de produção.
 **Decisão**: um e2e cruzado fica na entrada que **depende**, nunca na dependência. Como
 `identity → notification` é a direção do DAG, os quatro e2e cruzados que viviam no
 `notification` (`notifications-email`, `notifications-feed`, `notifications-inapp`,
@@ -270,11 +272,13 @@ kernel — o que a RULE C proíbe. O que continua verdade é que **publicar** no
 consumidor: sem a entrada instalada o evento fica sem quem o processe.
 
 Variáveis de ambiente (campo `env` do `module.json`, anexadas ao `.env.example` pelo
-`module add`). Obrigatórias: `WEB_ORIGIN`, `PASSWORD_PEPPER` (≥32 caracteres) e
-`BREACH_CHECK_MODE` (`fail_open` | `fail_closed`, sem default de propósito). `CSRF_SECRET` passa
-a ser obrigatória quando `COOKIE_SAMESITE=none`. As demais (cookie, TTLs de sessão e token,
-cooldowns, parâmetros do argon2, política de senha, retenção da trilha) têm default e estão
-documentadas uma a uma no `module.json`.
+`module add`). Obrigatórias: `WEB_ORIGIN`, `PASSWORD_PEPPER` (≥32 caracteres),
+`BREACH_CHECK_MODE` (`fail_open` | `fail_closed`, sem default de propósito) e
+`BREACH_CHECK_ENABLED` (sem default: esquecer de configurar não pode virar "não checa
+vazamento"). `CSRF_SECRET` passa a ser obrigatória quando `COOKIE_SAMESITE=none`. As demais
+(cookie, TTLs de sessão e token, throttle de login por conta, cooldowns, parâmetros do argon2,
+teto de hashes em voo, política de senha, retenção da trilha, seed do usuário master) têm
+default e estão documentadas uma a uma no `module.json`.
 
 ## Parte web
 

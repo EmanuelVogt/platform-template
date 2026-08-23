@@ -13,6 +13,26 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
   `await vi.importActual`, tipos `jest.Mock*`/`jest.SpyInstance` → `Mock`/`Mocked`/
   `MockedFunction`/`MockInstance` de `"vitest"`. `dependsOn` notification sobe para
   `>=2.0.0 <3.0.0`. Filhos em `>=1.0.0 <2.0.0` precisam rodar o codemod antes de atualizar.
+- `BREACH_CHECK_ENABLED` deixa de ter default e passa a ser obrigatória: esquecer de configurar
+  não pode mais virar silenciosamente "não checa vazamento" (auditoria 2026-08-22, AUTH-1,
+  ADV-20260822-01).
+- A porta `RATE_LIMITER` sai desta entrada e sobe para o kernel
+  (`shared/kernel/rate-limit/rate-limiter.port`), com o limiter resiliente composto (Redis +
+  fallback local) ligado pelo `RateLimitModule` `@Global()`. Todo importador do antigo
+  `domain/ports/rate-limiter.ts` local re-aponta para o token do kernel — mecânico, sem mudança
+  de comportamento para quem só injeta `RATE_LIMITER`.
+- `BreachCheck.check` formaliza o veredito em três estados (`BreachVerdict`: `clear` | `breached`
+  | `skipped`), separando "não vazada" de "não deu para saber" — a falha do provedor HIBP sob
+  `fail_open` já não se confunde com "senha limpa".
+- `EmailBelongsToDeletedUserError` foi removida: `request-email-change` (AUTH-10) unifica os dois
+  tipos de 409 que a v2.0.0 anterior distinguia, e o cooldown por conta passa a valer também na
+  falha, não só no sucesso.
+- `identity.auth_events.type` ganha o literal `rate_limiter_degraded`, emitido quando o
+  `RateLimiterOutageListener` detecta o composite em modo de fallback.
+- O bootstrap do usuário master de cada módulo instalado passa a rodar via um glob descoberto
+  pelo entrypoint do kernel (`dist/modules/*/seeds/bootstrap.js`), não mais por um script único
+  do template; esta entrada contribui `api/seeds/bootstrap.ts`, compilado para
+  `dist/modules/identity/seeds/bootstrap.js`.
 
 ### Fixed
 

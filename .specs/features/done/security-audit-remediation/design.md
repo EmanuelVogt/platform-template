@@ -135,6 +135,8 @@ graph LR
 | 46 | notification | `sse.controller.ts:26-34`: `Origin` present and ≠ kernel `env().WEB_ORIGIN` → 403. |
 | 47 | repo root | Pin `actions/checkout`, `pnpm/action-setup`, `actions/setup-node`, `anthropics/claude-code-action` to SHAs (`@<sha> # vX.Y.Z`); `permissions: { contents: read }` in `ci.yml`, `catalog.yml`; `openapi-config.ts:28-29` attributes CSRF to the identity entry. |
 
+**REM-40 — corrected at wave 8 (T69, AD-032).** The original plan (a guarded `03_audit_redact_token_hashes.sql` in identity) could never run: audit depends on identity, so audit installs last and the guard is dead code — a fresh child had no identity trail at all. Shipped design: identity `migrations/custom/04_audit_attach_hook.sql` declares `identity.attach_audit()` (14 tables, 4 redacted columns) and self-`PERFORM`s it when audit is already present; audit `migrations/custom/02_attach_module_hooks.sql` defines `audit.attach_module_hooks()`, which runs every installed `<schema>.attach_audit()` at the end of audit's install. Proof: `catalog/audit/api/infrastructure/trail/audit-trigger.int-spec.ts` through the shipped statement only (Verifier mutant 7 dies).
+
 ### G. Release plumbing
 
 - **Entry versions (AD-016)**: `identity/single-tenant` → **2.0.0** (required `BREACH_CHECK_ENABLED`, `RATE_LIMITER` path, `BreachCheck` port, 409 type removed); `attachment` → 1.1.0; `notification` → 1.1.0; `audit` → 1.0.1; `tag` → 1.0.1; all five bump `kernelRange` to the new kernel major.

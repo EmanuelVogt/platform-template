@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-labelledby="banner-title banner-desc">
   <title id="banner-title">platform-template</title>
-  <desc id="banner-desc">NestJS kernel + headless React front end, versioned module catalog and agent harness, shipped as a copier template.</desc>
+  <desc id="banner-desc">A NestJS + React kernel whose boundaries, authorization, transactions and HTTP contract are enforced by tests, extended through a versioned module catalog.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#0b1020"/>
@@ -45,12 +45,12 @@
 
   <!-- texto -->
   <g font-family="ui-sans-serif, -apple-system, 'Segoe UI', Inter, Roboto, Helvetica, Arial, sans-serif">
-    <text x="64" y="70" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" letter-spacing="3" fill="#8b93b8">COPIER TEMPLATE · KERNEL + CATALOG</text>
+    <text x="64" y="70" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" letter-spacing="3" fill="#8b93b8">ARCHITECTURE ENFORCED BY TESTS · KERNEL + CATALOG</text>
 
     <text x="62" y="140" font-size="64" font-weight="800" letter-spacing="-1.5" fill="url(#title)">platform<tspan fill="#818cf8">-</tspan>template</text>
 
-    <text x="64" y="180" font-size="19" fill="#aab2d5">NestJS kernel + headless React front end, a versioned module catalog</text>
-    <text x="64" y="206" font-size="19" fill="#aab2d5">and an agent harness. One <tspan font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="17" fill="#c7d2fe">copier copy</tspan> and the product is ready.</text>
+    <text x="64" y="180" font-size="19" fill="#aab2d5">A NestJS + React kernel whose boundaries, authorization, transactions</text>
+    <text x="64" y="206" font-size="19" fill="#aab2d5">and HTTP contract are <tspan fill="#c7d2fe">enforced by tests</tspan> — not by convention or code review.</text>
 
     <!-- pílulas da stack -->
     <g font-family="ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#dfe3f5" text-anchor="middle">
@@ -65,7 +65,7 @@
       <rect x="440" y="232" width="120" height="30" rx="15" fill="#ffffff" fill-opacity="0.07" stroke="#ffffff" stroke-opacity="0.16"/>
       <text x="500" y="251.5">pnpm · Turbo</text>
       <rect x="570" y="232" width="120" height="30" rx="15" fill="#ffffff" fill-opacity="0.07" stroke="#ffffff" stroke-opacity="0.16"/>
-      <text x="630" y="251.5">copier ≥ 9.4</text>
+      <text x="630" y="251.5">TypeScript 6</text>
     </g>
   </g>
 

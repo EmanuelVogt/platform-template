@@ -125,3 +125,8 @@ build. Self-installs on `pnpm install` (`prepare` script). Emergency escape:
 testcontainers, and the full `build` lives here too.
 
 A **local commit triggers neither gate.** Run `pnpm check` before asking for review.
+
+**Deploy.** A push to `main` fires the Dokploy webhook of every long-lived environment —
+push = deploy ([`../dev/deploy.md`](../dev/deploy.md#deploy-flow)). An agent never pushes
+`main` on its own, never creates a release or a `v*` tag, and never moves a deploy branch —
+those are the user's acts; the agent stops at the local commit and says so.

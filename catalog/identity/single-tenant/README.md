@@ -12,42 +12,42 @@ Instalação: `pnpm platform module add identity --variant single-tenant --with-
 Prefixo global `/v1`. `Acesso` é a `AccessRequirement` que o `AccessGuard` do kernel lê;
 `authenticated` sem metadata explícita vem do default fail-closed do kernel (`@SelfService()`).
 
-| Método | Path | operationId | Acesso | Eventos | Facades |
-| --- | --- | --- | --- | --- | --- |
-| POST | `/v1/auth/login` | `login` | public | `notification.requested` | — |
-| POST | `/v1/auth/forgot-password` | `forgotPassword` | public | `notification.requested` | — |
-| POST | `/v1/auth/reset-password` | `resetPassword` | public | `notification.requested` | — |
-| POST | `/v1/auth/set-password` | `setPassword` | public | `notification.requested` | — |
-| POST | `/v1/auth/verify-email` | `verifyEmail` | public | — | — |
-| GET | `/v1/auth/access-link` | `validateAccessLink` | public | — | — |
-| POST | `/v1/auth/access-link/cancel` | `cancelAccessLink` | public | — | — |
-| POST | `/v1/auth/access-link/avatar` | `uploadAccessLinkAvatar` | public | — | `PROFILE_IMAGE_STORE` |
-| GET | `/v1/auth/email-change` | `validateEmailChange` | public | — | — |
-| POST | `/v1/auth/confirm-email-change` | `confirmEmailChange` | public | — | — |
-| GET | `/v1/auth/session` | `getSession` | authenticated | — | — |
-| POST | `/v1/auth/logout` | `logout` | authenticated | — | — |
-| POST | `/v1/auth/change-password` | `changePassword` | authenticated | `notification.requested` | — |
-| POST | `/v1/auth/resend-verification` | `resendVerification` | authenticated | `notification.requested` | — |
-| GET | `/v1/auth/access-history` | `accessHistory` | authenticated | — | — |
-| PATCH | `/v1/auth/profile` | `updateMyProfile` | authenticated | — | — |
-| POST | `/v1/auth/avatar` | `uploadAvatar` | authenticated | — | `PROFILE_IMAGE_STORE` |
-| POST | `/v1/auth/change-email` | `requestEmailChange` | authenticated | `notification.requested` | — |
-| GET | `/v1/auth/devices` | `listDevices` | authenticated | — | — |
-| DELETE | `/v1/auth/devices` | `revokeOtherDevices` | authenticated | — | — |
-| DELETE | `/v1/auth/devices/{id}` | `revokeDevice` | authenticated | `notification.requested` | — |
-| GET | `/v1/access-catalog` | `getAccessCatalog` | authenticated | — | — |
-| GET | `/v1/admin/users` | `listUsers` | permission `admin.users.read` | — | — |
-| POST | `/v1/admin/users` | `createUser` | permission `admin.users.create` | `notification.requested` | — |
-| PUT | `/v1/admin/users/{id}` | `updateUser` | permission `admin.users.update` | — | — |
-| DELETE | `/v1/admin/users/{id}` | `deleteUser` | permission `admin.users.delete` | — | — |
-| POST | `/v1/admin/users/restore` | `restoreUsers` | permission `admin.users.trash.restore` | — | — |
-| POST | `/v1/admin/users/purge` | `purgeUsers` | permission `admin.users.trash.purge` | — | `AuditTrailPurger` (port) |
-| POST | `/v1/admin/users/{id}/resend-access-link` | `resendAccessLink` | permission `admin.users.access_link.resend` | `notification.requested` | — |
-| GET | `/v1/admin/permission-templates` | `listPermissionTemplates` | permission `admin.permission_templates.read` | — | — |
-| POST | `/v1/admin/permission-templates` | `createPermissionTemplate` | permission `admin.permission_templates.create` | — | — |
-| GET | `/v1/admin/permission-templates/{id}` | `getPermissionTemplate` | permission `admin.permission_templates.read` | — | — |
-| PUT | `/v1/admin/permission-templates/{id}` | `updatePermissionTemplate` | permission `admin.permission_templates.update` | — | — |
-| DELETE | `/v1/admin/permission-templates/{id}` | `deletePermissionTemplate` | permission `admin.permission_templates.delete` | — | — |
+| Método | Path                                      | operationId                | Acesso                                         | Eventos                  | Facades                   |
+| ------ | ----------------------------------------- | -------------------------- | ---------------------------------------------- | ------------------------ | ------------------------- |
+| POST   | `/v1/auth/login`                          | `login`                    | public                                         | `notification.requested` | —                         |
+| POST   | `/v1/auth/forgot-password`                | `forgotPassword`           | public                                         | `notification.requested` | —                         |
+| POST   | `/v1/auth/reset-password`                 | `resetPassword`            | public                                         | `notification.requested` | —                         |
+| POST   | `/v1/auth/set-password`                   | `setPassword`              | public                                         | `notification.requested` | —                         |
+| POST   | `/v1/auth/verify-email`                   | `verifyEmail`              | public                                         | —                        | —                         |
+| GET    | `/v1/auth/access-link`                    | `validateAccessLink`       | public                                         | —                        | —                         |
+| POST   | `/v1/auth/access-link/cancel`             | `cancelAccessLink`         | public                                         | —                        | —                         |
+| POST   | `/v1/auth/access-link/avatar`             | `uploadAccessLinkAvatar`   | public                                         | —                        | `PROFILE_IMAGE_STORE`     |
+| GET    | `/v1/auth/email-change`                   | `validateEmailChange`      | public                                         | —                        | —                         |
+| POST   | `/v1/auth/confirm-email-change`           | `confirmEmailChange`       | public                                         | —                        | —                         |
+| GET    | `/v1/auth/session`                        | `getSession`               | authenticated                                  | —                        | —                         |
+| POST   | `/v1/auth/logout`                         | `logout`                   | authenticated                                  | —                        | —                         |
+| POST   | `/v1/auth/change-password`                | `changePassword`           | authenticated                                  | `notification.requested` | —                         |
+| POST   | `/v1/auth/resend-verification`            | `resendVerification`       | authenticated                                  | `notification.requested` | —                         |
+| GET    | `/v1/auth/access-history`                 | `accessHistory`            | authenticated                                  | —                        | —                         |
+| PATCH  | `/v1/auth/profile`                        | `updateMyProfile`          | authenticated                                  | —                        | —                         |
+| POST   | `/v1/auth/avatar`                         | `uploadAvatar`             | authenticated                                  | —                        | `PROFILE_IMAGE_STORE`     |
+| POST   | `/v1/auth/change-email`                   | `requestEmailChange`       | authenticated                                  | `notification.requested` | —                         |
+| GET    | `/v1/auth/devices`                        | `listDevices`              | authenticated                                  | —                        | —                         |
+| DELETE | `/v1/auth/devices`                        | `revokeOtherDevices`       | authenticated                                  | —                        | —                         |
+| DELETE | `/v1/auth/devices/{id}`                   | `revokeDevice`             | authenticated                                  | `notification.requested` | —                         |
+| GET    | `/v1/access-catalog`                      | `getAccessCatalog`         | authenticated                                  | —                        | —                         |
+| GET    | `/v1/admin/users`                         | `listUsers`                | permission `admin.users.read`                  | —                        | —                         |
+| POST   | `/v1/admin/users`                         | `createUser`               | permission `admin.users.create`                | `notification.requested` | —                         |
+| PUT    | `/v1/admin/users/{id}`                    | `updateUser`               | permission `admin.users.update`                | —                        | —                         |
+| DELETE | `/v1/admin/users/{id}`                    | `deleteUser`               | permission `admin.users.delete`                | —                        | —                         |
+| POST   | `/v1/admin/users/restore`                 | `restoreUsers`             | permission `admin.users.trash.restore`         | —                        | —                         |
+| POST   | `/v1/admin/users/purge`                   | `purgeUsers`               | permission `admin.users.trash.purge`           | —                        | `AuditTrailPurger` (port) |
+| POST   | `/v1/admin/users/{id}/resend-access-link` | `resendAccessLink`         | permission `admin.users.access_link.resend`    | `notification.requested` | —                         |
+| GET    | `/v1/admin/permission-templates`          | `listPermissionTemplates`  | permission `admin.permission_templates.read`   | —                        | —                         |
+| POST   | `/v1/admin/permission-templates`          | `createPermissionTemplate` | permission `admin.permission_templates.create` | —                        | —                         |
+| GET    | `/v1/admin/permission-templates/{id}`     | `getPermissionTemplate`    | permission `admin.permission_templates.read`   | —                        | —                         |
+| PUT    | `/v1/admin/permission-templates/{id}`     | `updatePermissionTemplate` | permission `admin.permission_templates.update` | —                        | —                         |
+| DELETE | `/v1/admin/permission-templates/{id}`     | `deletePermissionTemplate` | permission `admin.permission_templates.delete` | —                        | —                         |
 
 Facades **exportadas** para outras entradas: `UserDirectoryFacade` (nome/e-mail/avatar por id),
 `UsageAccessFacade` (checagem de uso antes de apagar) e `ProfessionalDirectoryFacade` (usuários
@@ -65,19 +65,19 @@ Todo evento sai pelo outbox do kernel (`notification.requested`, consumido pela 
 
 ## Portas do kernel consumidas
 
-| Porta / adapter do kernel | Uso na entrada |
-| --- | --- |
-| `access/access-policy.port` (`ACCESS_POLICY`, `AccessRequirement`) | `IdentityAccessPolicy` implementa e o módulo liga o token |
-| `profile-image/profile-image-store.port` (`PROFILE_IMAGE_STORE`, `ProfileImageStore`) | `uploadAvatar`, `uploadAccessLinkAvatar` e `setPassword` resolvem com `@Optional()`; quem liga é outra entrada |
-| `audit-trail/audit-trail-purger.port` (`AUDIT_TRAIL_PURGER`, `AuditTrailPurger`) | `purgeUsers` resolve com `@Optional()`; sem provider a purga da trilha é no-op |
-| `access/decorators` (`@Public`, `@SelfService`, `@RequirePermission`, `@MachineToMachine`) | metadata de acesso das 34 rotas |
-| `context/request-context` (`setActor`, `setExtension`) | `AuthMiddleware` publica `Actor` + `IDENTITY_SESSION` / `IDENTITY_ACCESS` |
-| `clock/clock`, `clock/bucket-sql` | TTLs de sessão/token e janelas de rate limit |
-| `outbox/outbox.publisher` | `notification.requested` na mesma transação do caso de uso |
-| `transactional/*`, `use-case/*`, `idempotency/idempotent.decorator` | transação, decorators de caso de uso e idempotência |
-| `listing/*` (`apply-listing`, `listing-query.schema`, `paginated`) | paginação de `listUsers`, `accessHistory`, `listPermissionTemplates` |
-| `errors/forbidden.error`, `logging/logger.factory`, `tracing/traced.decorator`, `scheduling/maintenance-job.decorator` | erros RFC 7807, log, tracing e jobs de manutenção |
-| `infra/database/drizzle.provider`, `infra/redis/redis.provider` | repositórios Drizzle e rate limiter em Redis |
+| Porta / adapter do kernel                                                                                              | Uso na entrada                                                                                                 |
+| ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `access/access-policy.port` (`ACCESS_POLICY`, `AccessRequirement`)                                                     | `IdentityAccessPolicy` implementa e o módulo liga o token                                                      |
+| `profile-image/profile-image-store.port` (`PROFILE_IMAGE_STORE`, `ProfileImageStore`)                                  | `uploadAvatar`, `uploadAccessLinkAvatar` e `setPassword` resolvem com `@Optional()`; quem liga é outra entrada |
+| `audit-trail/audit-trail-purger.port` (`AUDIT_TRAIL_PURGER`, `AuditTrailPurger`)                                       | `purgeUsers` resolve com `@Optional()`; sem provider a purga da trilha é no-op                                 |
+| `access/decorators` (`@Public`, `@SelfService`, `@RequirePermission`, `@MachineToMachine`)                             | metadata de acesso das 34 rotas                                                                                |
+| `context/request-context` (`setActor`, `setExtension`)                                                                 | `AuthMiddleware` publica `Actor` + `IDENTITY_SESSION` / `IDENTITY_ACCESS`                                      |
+| `clock/clock`, `clock/bucket-sql`                                                                                      | TTLs de sessão/token e janelas de rate limit                                                                   |
+| `outbox/outbox.publisher`                                                                                              | `notification.requested` na mesma transação do caso de uso                                                     |
+| `transactional/*`, `use-case/*`, `idempotency/idempotent.decorator`                                                    | transação, decorators de caso de uso e idempotência                                                            |
+| `listing/*` (`apply-listing`, `listing-query.schema`, `paginated`)                                                     | paginação de `listUsers`, `accessHistory`, `listPermissionTemplates`                                           |
+| `errors/forbidden.error`, `logging/logger.factory`, `tracing/traced.decorator`, `scheduling/maintenance-job.decorator` | erros RFC 7807, log, tracing e jobs de manutenção                                                              |
+| `infra/database/drizzle.provider`, `infra/redis/redis.provider`                                                        | repositórios Drizzle e rate limiter em Redis                                                                   |
 
 Os dois acoplamentos de kernel v0.2 que a v1 tinha de desfazer estão desfeitos: o catálogo de
 perfis/permissões voltou para `api/domain/access/` desta entrada e o purge da trilha em
@@ -88,16 +88,16 @@ perfis/permissões voltou para `api/domain/access/` desta entrada e o purge da t
 Schema `identity`. As tabelas são código TS (`api/infrastructure/tables/**`) e o `drizzle-kit`
 do child gera o SQL de criação — a entrada nunca entrega `CREATE TABLE` numerado.
 
-| Tabela | Papel |
-| --- | --- |
-| `identity.users` | conta, perfil de acesso, status, contadores de bloqueio, avatar |
-| `identity.user_permissions` | permissões concedidas por usuário |
-| `identity.permission_templates` / `identity.permission_template_permissions` | modelos de permissão reutilizáveis |
-| `identity.sessions` | sessões ativas (idle/absolute TTL, remember-me) |
-| `identity.devices` | dispositivos conhecidos por usuário |
-| `identity.verification_tokens` | tokens de reset, verificação, primeiro acesso e troca de e-mail |
-| `identity.auth_events` | trilha append-only de autenticação |
-| `identity.user_professional_areas`, `identity.user_professional_services`, `identity.user_scheduling_areas`, `identity.user_professional_schedule_configs` (+ slots e blocks), `identity.professional_default_hours` | recorte do perfil `professional` (AD-002) |
+| Tabela                                                                                                                                                                                                               | Papel                                                           |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `identity.users`                                                                                                                                                                                                     | conta, perfil de acesso, status, contadores de bloqueio, avatar |
+| `identity.user_permissions`                                                                                                                                                                                          | permissões concedidas por usuário                               |
+| `identity.permission_templates` / `identity.permission_template_permissions`                                                                                                                                         | modelos de permissão reutilizáveis                              |
+| `identity.sessions`                                                                                                                                                                                                  | sessões ativas (idle/absolute TTL, remember-me)                 |
+| `identity.devices`                                                                                                                                                                                                   | dispositivos conhecidos por usuário                             |
+| `identity.verification_tokens`                                                                                                                                                                                       | tokens de reset, verificação, primeiro acesso e troca de e-mail |
+| `identity.auth_events`                                                                                                                                                                                               | trilha append-only de autenticação                              |
+| `identity.user_professional_areas`, `identity.user_professional_services`, `identity.user_scheduling_areas`, `identity.user_professional_schedule_configs` (+ slots e blocks), `identity.professional_default_hours` | recorte do perfil `professional` (AD-002)                       |
 
 Tipos de `identity.auth_events.type`: `login_success`, `login_failed`, `logout`,
 `password_changed`, `password_set`, `password_reset_requested`, `password_reset_completed`,
@@ -343,21 +343,21 @@ O `access` da rota vem do `staticData` do match ou de `IDENTITY_ROUTE_ACCESS[pat
 entra em laço. Para a tela de login, a v0.2 usava `requireAnon`: com sessão no cache, redirecione
 para o destino logado em vez de renderizar o formulário.
 
-### Receita: Next.js (`middleware.ts` + layout)
+### Receita: Next.js (`middleware.ts` + `src/_app/layout/access-slot.tsx`)
 
 O `middleware` roda no edge, sem o cache do React Query: ele só decide o que dá para decidir
-pelo cookie de sessão — presença do cookie contra `IDENTITY_ROUTE_ACCESS[pathname]`. A checagem
-de permissão fica no layout do segmento, que já tem a sessão:
+pelo cookie de sessão — presença do cookie contra `ROUTE_ACCESS[pathname]`. A checagem
+de permissão fica no `AccessGuard` de `src/_app/layout/access-slot.tsx`, que já tem a sessão:
 
 ```ts
 import { NextResponse } from "next/server"
 
-import { IDENTITY_ROUTE_ACCESS } from "@/entities/identity/core/route-access"
+import { ROUTE_ACCESS } from "@/shared/config/route-access"
 
 import type { NextRequest } from "next/server"
 
 export function middleware(request: NextRequest) {
-  const access = IDENTITY_ROUTE_ACCESS[request.nextUrl.pathname] ?? { kind: "authenticated" }
+  const access = ROUTE_ACCESS[request.nextUrl.pathname] ?? { kind: "authenticated" }
   const hasSession = request.cookies.has(process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME!)
   if (access.kind !== "public" && !hasSession) {
     return NextResponse.redirect(new URL("/entrar", request.url))
@@ -366,8 +366,8 @@ export function middleware(request: NextRequest) {
 }
 ```
 
-No layout autenticado, busque `GET /v1/auth/session` no servidor e aplique
-`resolveAccess(user, access)` — `forbidden` vira `notFound()` ou um redirect; `anon` vira
+No `AccessGuard` de `src/_app/layout/access-slot.tsx`, busque `GET /v1/auth/session` no servidor
+e aplique `resolveAccess(user, access)` — `forbidden` vira `notFound()` ou um redirect; `anon` vira
 redirect para o login. Nunca confie só no middleware: cookie presente não é sessão válida.
 
 ### Receita: formulário de login

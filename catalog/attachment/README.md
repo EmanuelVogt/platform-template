@@ -18,6 +18,13 @@ consumo em processo por outras entradas do catálogo: `upload`, `delete`, `confi
 `openForDownload`, `exists`, `describeByIds` e `listAccessLog(attachmentId)`. Esse último método
 é o ponto de consulta ao log de acesso usado pela entrada `audit`.
 
+`openForDownload` (`DownloadResult`) devolve, além do stream, `profile: UploadProfileName |
+"legacy"`. O controller HTTP nunca decide `inline` por perfil nem pelo `Content-Type` recebido no
+upload: uma allowlist fechada de `content_type` gravado (`image/jpeg`, `image/png`,
+`image/webp`), verificado pelos magic bytes do arquivo na entrada (não pelo header do cliente),
+é o que abre exibição inline — qualquer outro tipo desce como `attachment` com
+`X-Content-Type-Options: nosniff` (correção da XSS refletida por upload disfarçado de imagem).
+
 O `AttachmentModule` é `@Global()` e liga a porta `PROFILE_IMAGE_STORE` do kernel
 (`AttachmentProfileImageStore`, em `api/adapters/`, sobre a própria `AttachmentFacade`). O token e a
 interface moram no kernel (AD-024), não na entrada consumidora: é assim que a identidade guarda
@@ -88,15 +95,18 @@ via `pnpm vitest run --project api apps/api/src/modules/attachment` no app filho
 
 ## Dependências
 
-- `dependsOn`: `identity` (`>=1.0.0 <2.0.0`) — `list-attachment-access-log.use-case.ts` injeta
+- `dependsOn`: `identity` (`>=2.0.0 <3.0.0`) — `list-attachment-access-log.use-case.ts` injeta
   `UserDirectoryFacade` (de `modules/identity/api/facades/user-directory.facade`, montada
   globalmente pelo `IdentityModule`) para resolver o nome do ator de cada entrada do log. Esta
   entrada também liga `PROFILE_IMAGE_STORE`, a porta de imagem de perfil que mora no kernel e
-  `identity` consome (§ Contrato) — ligar a porta não cria aresta para `identity`. `identity` declara
-  `dependsOn: notification`, não `attachment`, então não há ciclo: só `attachment → identity →
-  notification`.
+  `identity` consome (§ Contrato) — ligar a porta não cria aresta para `identity`. `dependsOn`
+  ganha também `notification` (`>=2.0.0 <3.0.0`), mesma faixa que `identity` já declara: o e2e
+  cruzado de convite relocado para cá sobrepõe a porta `MAILER` de `notification` para
+  interceptar o e-mail e extrair o token do access-link (ADV-20260821-01). Não há ciclo:
+  `attachment → identity → notification`, e `notification.dependsOn` é `[]`.
 - `env` (`module.json`): `ATTACHMENT_MAX_UPLOAD_BYTES`, `ATTACHMENT_ACCESS_LOG_RETENTION_DAYS`,
-  `ATTACHMENT_MULTI_MAX_FILE_BYTES`, `ATTACHMENT_MULTI_MAX_TOTAL_BYTES`.
+  `ATTACHMENT_MULTI_MAX_FILE_BYTES`, `ATTACHMENT_MULTI_MAX_TOTAL_BYTES`,
+  `ATTACHMENT_PENDING_QUOTA_BYTES`, `ATTACHMENT_MAX_CONCURRENT_UPLOADS`.
 
 ## Parte web
 

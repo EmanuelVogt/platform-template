@@ -1,0 +1,39 @@
+name: Template update
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  update:
+    name: Try the next template tag
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TEMPLATE_READ_TOKEN: ${{ secrets.TEMPLATE_READ_TOKEN }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      # job-level `if` não aceita hashFiles (só disponível em jobs.*.steps.*):
+      # guarda repetida em cada passo depois do checkout. Inerte no próprio
+      # template: a raiz não tem .copier-answers.yml (74022fe).
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        if: hashFiles('.copier-answers.yml') != ''
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        if: hashFiles('.copier-answers.yml') != ''
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        if: hashFiles('.copier-answers.yml') != ''
+      - run: pipx install copier
+        if: hashFiles('.copier-answers.yml') != ''
+      - run: node scripts/platform/template-update-ci.mjs
+        if: hashFiles('.copier-answers.yml') != ''

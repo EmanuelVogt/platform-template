@@ -4,8 +4,11 @@ const DEFAULT_ANSWERS = {
   root_domain: "demo.test",
 };
 
-export function renderChild({ repoRoot, targetDir, answers = DEFAULT_ANSWERS, run }) {
-  const dataArgs = Object.entries(answers).flatMap(([key, value]) => ["--data", `${key}=${value}`]);
+export function renderChild({ repoRoot, targetDir, answers = DEFAULT_ANSWERS, webStack = "vite", run }) {
+  const dataArgs = Object.entries({ ...answers, web_stack: webStack }).flatMap(([key, value]) => [
+    "--data",
+    `${key}=${value}`,
+  ]);
   return run("copier", ["copy", "--trust", "--defaults", "--vcs-ref", "HEAD", ...dataArgs, repoRoot, targetDir]);
 }
 

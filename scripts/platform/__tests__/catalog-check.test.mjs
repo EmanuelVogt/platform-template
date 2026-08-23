@@ -192,7 +192,10 @@ test("runCatalogCheck happy path renders, installs, adds every entry in order (w
     assert.ok(runCli.calls.every((call) => call.deps.cwd === "/scratch/child"));
 
     const commands = run.calls.map((call) => [call.command, ...call.args].join(" "));
-    assert.equal(commands[0], "copier copy --trust --defaults --vcs-ref HEAD --data project_name=Demo --data github_org=acme --data root_domain=demo.test /repo /scratch/child");
+    assert.equal(
+      commands[0],
+      "copier copy --trust --defaults --vcs-ref HEAD --data project_name=Demo --data github_org=acme --data root_domain=demo.test --data web_stack=vite /repo /scratch/child",
+    );
     assert.equal(commands[1], "pnpm install");
     assert.deepEqual(commands.slice(-2), ["pnpm check", "pnpm test"]);
   } finally {
@@ -604,5 +607,55 @@ test("runCatalogCheck keeps the scratch dir it created when keep:true is passed"
     cleanup(catalogRoot);
     rmSync(repoRoot, { recursive: true, force: true });
     if (childDir) rmSync(childDir, { recursive: true, force: true });
+  }
+});
+
+test("runCatalogCheck passes --web-stack through to renderChild's --data args", async () => {
+  const catalogRoot = withTmpCatalog(buildRealGraphCatalog);
+  const run = stubRun();
+  try {
+    const code = await runCatalogCheck({
+      entries: ["notification"],
+      repoRoot: "/repo",
+      catalogRoot,
+      scratchDir: "/scratch/child",
+      webStack: "next",
+      run,
+      runCli: stubRunCli(),
+      log: () => {},
+    });
+    assert.equal(code, EXIT_CODES.OK);
+    const copierCall = run.calls.find((call) => call.command === "copier");
+    assert.ok(copierCall.args.includes("web_stack=next"));
+  } finally {
+    cleanup(catalogRoot);
+  }
+});
+
+test("runCatalogCheck fails fast when the rendered apps/web does not match --web-stack, before touching any entry", async () => {
+  const catalogRoot = withTmpCatalog(buildRealGraphCatalog);
+  const scratchDir = mkdtempSync(path.join(tmpdir(), "catalog-check-webshell-"));
+  mkdirSync(path.join(scratchDir, "apps", "web"), { recursive: true });
+  writeFileSync(path.join(scratchDir, "apps", "web", "package.json"), JSON.stringify({ name: "web" }));
+  writeFileSync(path.join(scratchDir, "apps", "web", "vite.config.ts"), "export default {}\n");
+  const run = stubRun();
+  const runCli = stubRunCli();
+  const logs = [];
+  try {
+    const code = await runCatalogCheck({
+      entries: ["notification"],
+      catalogRoot,
+      scratchDir,
+      webStack: "next",
+      run,
+      runCli,
+      log: (line) => logs.push(line),
+    });
+    assert.equal(code, EXIT_CODES.TEST_FAILURE);
+    assert.equal(runCli.calls.length, 0, "não deve chamar module add quando o shape do web shell está errado");
+    assert.ok(logs.some((line) => line.includes("apps/web não tem o formato esperado")));
+  } finally {
+    cleanup(catalogRoot);
+    rmSync(scratchDir, { recursive: true, force: true });
   }
 });

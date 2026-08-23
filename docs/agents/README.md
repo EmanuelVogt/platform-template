@@ -14,7 +14,7 @@ Everything else under `docs/` is a **human** handbook — `code-quality.md`, `ar
 | [`workflow.md`](workflow.md)           | Creating a branch, sizing a task, opening a worktree, committing, writing a spec  |
 | [`harness.md`](harness.md)             | Shell output looks wrong, installing/removing a skill, editing a hook             |
 | [`communication.md`](communication.md) | Writing any reply to the user                                                     |
-| [`infra.md`](infra.md)                 | Touching AWS, Dokploy, Cloudflare, Resend, or a long-lived environment's database |
+| [`infra.md`](infra.md)                 | Operating a deployed environment or its database, or a product's own provider access |
 | [`issue-tracker.md`](issue-tracker.md) | Reading, creating or triaging a GitHub issue                                      |
 
 Product strings quoted from the UI (screen labels, error messages) stay in pt-BR inside

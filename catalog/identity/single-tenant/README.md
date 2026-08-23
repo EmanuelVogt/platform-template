@@ -73,6 +73,7 @@ Todo evento sai pelo outbox do kernel (`notification.requested`, consumido pela 
 | `access/decorators` (`@Public`, `@SelfService`, `@RequirePermission`, `@MachineToMachine`) | metadata de acesso das 34 rotas |
 | `context/request-context` (`setActor`, `setExtension`) | `AuthMiddleware` publica `Actor` + `IDENTITY_SESSION` / `IDENTITY_ACCESS` |
 | `clock/clock`, `clock/bucket-sql` | TTLs de sessão/token e janelas de rate limit |
+| `rate-limit/rate-limiter.port` (`RATE_LIMITER`) | `RateLimitGuard` (`@RateLimit` em 27 rotas) e o throttle de login por conta; limiter resiliente composto (Redis + fallback local), ligado pelo `RateLimitModule` `@Global()` |
 | `outbox/outbox.publisher` | `notification.requested` na mesma transação do caso de uso |
 | `transactional/*`, `use-case/*`, `idempotency/idempotent.decorator` | transação, decorators de caso de uso e idempotência |
 | `listing/*` (`apply-listing`, `listing-query.schema`, `paginated`) | paginação de `listUsers`, `accessHistory`, `listPermissionTemplates` |
@@ -103,7 +104,7 @@ Tipos de `identity.auth_events.type`: `login_success`, `login_failed`, `logout`,
 `password_changed`, `password_set`, `password_reset_requested`, `password_reset_completed`,
 `email_verified`, `email_change_requested`, `email_changed`, `access_link_sent`,
 `access_link_resent`, `access_link_cancelled`, `device_revoked`, `sessions_revoked_all`,
-`rate_limited_burst`, `user_deleted`, `user_restored`, `user_purged`.
+`rate_limited_burst`, `rate_limiter_degraded`, `user_deleted`, `user_restored`, `user_purged`.
 
 Migrações manuais (`migrations/custom/`, aplicadas nesta ordem, depois das tabelas):
 
@@ -111,17 +112,22 @@ Migrações manuais (`migrations/custom/`, aplicadas nesta ordem, depois das tab
   `auth_events_append_only` que bloqueia `UPDATE` sempre e `DELETE` a menos que a transação
   ligue o GUC `app.auth_events_purge=on` (o job de retenção liga; SQLi precisaria do
   `set_config` na mesma transação).
-- `02_audit_attach.sql` — anexa 14 tabelas do identity à trilha da entrada `audit`
-  (`users` com `password_hash` redigido, `devices`, `sessions`, `verification_tokens`,
-  `permission_templates` + `permission_template_permissions`, `user_permissions` e as seis
-  tabelas do recorte `professional`). Cada módulo anexa as suas tabelas: a entrada `audit`
-  entrega o schema, a tabela e o helper `audit.attach`, nunca a lista de quem é auditado.
+- `04_audit_attach_hook.sql` — declara `identity.attach_audit()`, a função idempotente com as
+  14 tabelas do identity que vão para a trilha da entrada `audit` (`users` com `password_hash`
+  redigido, `sessions` com `token_hash`, `devices` com `cookie_token_hash`,
+  `verification_tokens` com `token_hash`, `permission_templates` +
+  `permission_template_permissions`, `user_permissions` e as seis tabelas do recorte
+  `professional`). Cada módulo declara as suas tabelas: a entrada `audit` entrega o schema, a
+  tabela, o helper `audit.attach` e o replay dos hooks, nunca a lista de quem é auditado.
   `identity.auth_events` fica de fora de propósito — já tem trilha própria (01).
 
-  A entrada `audit` é **opcional**: o passo 02 é um bloco `DO` guardado por
+  A entrada `audit` é **opcional**: `identity.attach_audit()` é guardada por
   `to_regprocedure('audit.attach(text,text,text[],text[])') IS NULL`, então um child
-  kernel-only + identity migra sem erro e sem anexar nada. É dependência de **ordem**, não de
-  instalação — por isso `audit` não entra em `dependsOn`. Quem instalar `audit` depois do
+  kernel-only + identity migra sem erro e sem anexar nada — por isso `audit` não entra em
+  `dependsOn`. Quem executa a função quando a entrada existe é a migração
+  `02_attach_module_hooks.sql` do próprio `audit`, no fim da instalação dela (o inverso — child
+  que já tem `audit` e adiciona o identity depois — é coberto pelo `PERFORM` no fim de
+  `04_audit_attach_hook.sql`). Quem instalar `audit` depois do
   identity precisa reexecutar este passo; `audit.attach` é idempotente (recria o trigger
   `audit_row`), então reaplicar é seguro.
 
@@ -172,8 +178,9 @@ sem nunca rejeitar; quem rejeita é o `AccessGuard` do kernel delegando a `Ident
 **Contexto**: vários e2e são testes de integração ENTRE entradas — precisam de usuário semeado
 com hash real e de sessão por `/v1/auth/login`, que só o identity entrega. Espalhados, eles
 fechavam o único ciclo do grafo de entradas: cinco e2e do `notification` e um do `tag`
-importavam `RATE_LIMITER` do identity, e o identity importa `NotificationRequested` do
-`notification` em dez use-cases de produção.
+importavam `RATE_LIMITER`, que na época morava nesta entrada (hoje é porta do kernel, §
+Portas do kernel consumidas), e o identity importa `NotificationRequested` do `notification`
+em dez use-cases de produção.
 **Decisão**: um e2e cruzado fica na entrada que **depende**, nunca na dependência. Como
 `identity → notification` é a direção do DAG, os quatro e2e cruzados que viviam no
 `notification` (`notifications-email`, `notifications-feed`, `notifications-inapp`,
@@ -252,8 +259,8 @@ instalação é acíclico.
 Sem a entrada `attachment` (ou qualquer outro provider de `PROFILE_IMAGE_STORE`) o
 `IdentityModule` resolve normalmente no boot; só as operações de imagem de perfil respondem `501`.
 
-A entrada `audit` **não** é dependência: `migrations/custom/02_audit_attach.sql` é guardado e não
-faz nada quando `audit.attach` não existe (§ Dados). O purge LGPD da trilha em `purgeUsers` também
+A entrada `audit` **não** é dependência: `migrations/custom/04_audit_attach_hook.sql` só declara
+`identity.attach_audit()`, guardada, que não faz nada quando `audit.attach` não existe (§ Dados). O purge LGPD da trilha em `purgeUsers` também
 virou porta — `AUDIT_TRAIL_PURGER` (`shared/kernel/audit-trail/audit-trail-purger.port.ts`, no
 kernel pela AD-024), resolvida com
 `@Optional()`. Quem liga é a entrada `audit`; sem provider a purga da trilha é no-op, e não `501`
@@ -270,11 +277,13 @@ kernel — o que a RULE C proíbe. O que continua verdade é que **publicar** no
 consumidor: sem a entrada instalada o evento fica sem quem o processe.
 
 Variáveis de ambiente (campo `env` do `module.json`, anexadas ao `.env.example` pelo
-`module add`). Obrigatórias: `WEB_ORIGIN`, `PASSWORD_PEPPER` (≥32 caracteres) e
-`BREACH_CHECK_MODE` (`fail_open` | `fail_closed`, sem default de propósito). `CSRF_SECRET` passa
-a ser obrigatória quando `COOKIE_SAMESITE=none`. As demais (cookie, TTLs de sessão e token,
-cooldowns, parâmetros do argon2, política de senha, retenção da trilha) têm default e estão
-documentadas uma a uma no `module.json`.
+`module add`). Obrigatórias: `WEB_ORIGIN`, `PASSWORD_PEPPER` (≥32 caracteres),
+`BREACH_CHECK_MODE` (`fail_open` | `fail_closed`, sem default de propósito) e
+`BREACH_CHECK_ENABLED` (sem default: esquecer de configurar não pode virar "não checa
+vazamento"). `CSRF_SECRET` passa a ser obrigatória quando `COOKIE_SAMESITE=none`. As demais
+(cookie, TTLs de sessão e token, throttle de login por conta, cooldowns, parâmetros do argon2,
+teto de hashes em voo, política de senha, retenção da trilha, seed do usuário master) têm
+default e estão documentadas uma a uma no `module.json`.
 
 ## Parte web
 

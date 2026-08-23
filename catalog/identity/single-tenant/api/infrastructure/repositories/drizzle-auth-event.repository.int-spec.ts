@@ -357,11 +357,17 @@ describe("DrizzleAuthEventRepository (int)", () => {
         generate: vi.fn(),
         hashOf: vi.fn().mockReturnValue("email-hash"),
       }
+      // Primeira chamada = bucket por conta (429 explícito); a segunda é o gate
+      // IP+conta, o que este bloco exercita. Liberar a conta isola o gate.
       const rateLimiter = {
-        consume: vi.fn().mockResolvedValue({
-          allowed: rateLimiterAllowed,
-          retryAfterSeconds: 30,
-        }),
+        consume: vi
+          .fn()
+          .mockResolvedValueOnce({ allowed: true, retryAfterSeconds: 0 })
+          .mockResolvedValue({
+            allowed: rateLimiterAllowed,
+            retryAfterSeconds: 30,
+          }),
+        reset: vi.fn().mockResolvedValue(undefined),
       }
       const clock = { now: () => new Date("2026-05-30T00:00:00.000Z") }
       const outbox = { publish: vi.fn() }
@@ -370,6 +376,7 @@ describe("DrizzleAuthEventRepository (int)", () => {
         PASSWORD_PEPPER: "x".repeat(32),
         CSRF_SECRET: "y".repeat(32),
         BREACH_CHECK_MODE: "fail_closed",
+        BREACH_CHECK_ENABLED: "false",
         COOKIE_SECURE: "false",
         COOKIE_NAME: "rit_session",
         DEVICE_COOKIE_NAME: "rit_device",
@@ -388,7 +395,7 @@ describe("DrizzleAuthEventRepository (int)", () => {
       )
     }
 
-    it("rate-limit estourado (login.use-case.ts:82) grava rate_limited_burst fora da tx", async () => {
+    it("gate IP+conta estourado (login.use-case.ts:91) grava rate_limited_burst fora da tx", async () => {
       const uc = makeLoginUseCase(false, true)
       await uc.onModuleInit()
       await expect(

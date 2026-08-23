@@ -3,12 +3,16 @@ import { Inject, type OnModuleInit } from "@nestjs/common"
 import { CLOCK, type Clock } from "../../../../../shared/kernel/clock/clock"
 import { RequestContext } from "../../../../../shared/kernel/context/request-context"
 import { OutboxPublisher } from "../../../../../shared/kernel/outbox/outbox.publisher"
+import {
+  RATE_LIMITER,
+  type RateLimiter,
+} from "../../../../../shared/kernel/rate-limit/rate-limiter.port"
 import { Traced } from "../../../../../shared/kernel/tracing/traced.decorator"
 import { Transactional } from "../../../../../shared/kernel/transactional/transactional.decorator"
 import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
 import { NotificationRequested } from "../../../../notification/api/events/notification-requested.event"
 import { User } from "../../../domain/entities/user.entity"
-import { InvalidCredentialsError } from "../../../domain/errors"
+import { InvalidCredentialsError, RateLimitedError } from "../../../domain/errors"
 import {
   AUTH_EVENT_REPOSITORY,
   type AuthEventRepository,
@@ -17,10 +21,6 @@ import {
   PASSWORD_HASHER,
   type PasswordHasher,
 } from "../../../domain/ports/password-hasher"
-import {
-  RATE_LIMITER,
-  type RateLimiter,
-} from "../../../domain/ports/rate-limiter"
 import {
   TOKEN_GENERATOR,
   type TokenGenerator,
@@ -72,21 +72,30 @@ export class LoginUseCase
     const email = input.email.trim().toLowerCase()
     const ctx = this.ctx.get()
 
+    // Bucket por conta ANTES do lookup: força bruta distribuída (N IPs, um
+    // e-mail) e enumeração caem no mesmo 429, porque nada antes dele depende de
+    // o e-mail existir. `critical` mantém o teto valendo com o Redis fora.
+    const accountKey = `login:acct:${email}`
+    const account = await this.rateLimiter.consume(
+      accountKey,
+      this.config.LOGIN_ACCOUNT_MAX_FAILURES,
+      this.config.LOGIN_ACCOUNT_WINDOW_SECONDS,
+      { critical: true }
+    )
+    if (!account.allowed) {
+      await this.recordBurst(ctx, email, account.retryAfterSeconds, "account")
+      throw new RateLimitedError(account.retryAfterSeconds)
+    }
+
     // Rate-limit ANTES do argon2 (gate barato — §8). Chave composta IP+conta.
     const gate = await this.rateLimiter.consume(
       `login:${ctx.ip ?? "noip"}:${email}`,
       LOGIN_RATE_LIMIT,
-      LOGIN_RATE_WINDOW_SECONDS
+      LOGIN_RATE_WINDOW_SECONDS,
+      { critical: true }
     )
     if (!gate.allowed) {
-      await this.authEvents.record(
-        authEventOf(ctx, {
-          userId: null,
-          eventType: "rate_limited_burst",
-          emailHash: this.tokens.hashOf(email),
-          metadata: { retryAfterSeconds: gate.retryAfterSeconds },
-        })
-      )
+      await this.recordBurst(ctx, email, gate.retryAfterSeconds, "ip")
       throw new InvalidCredentialsError()
     }
 
@@ -112,7 +121,27 @@ export class LoginUseCase
       throw new InvalidCredentialsError()
     }
 
-    return this.succeed(user, input, ctx, now)
+    const output = await this.succeed(user, input, ctx, now)
+    // Só o sucesso zera o bucket da conta: as falhas de todos os IPs somam até
+    // alguém provar que é o dono.
+    await this.rateLimiter.reset(accountKey)
+    return output
+  }
+
+  private async recordBurst(
+    ctx: RequestContextStore,
+    email: string,
+    retryAfterSeconds: number,
+    scope: "account" | "ip",
+  ): Promise<void> {
+    await this.authEvents.record(
+      authEventOf(ctx, {
+        userId: null,
+        eventType: "rate_limited_burst",
+        emailHash: this.tokens.hashOf(email),
+        metadata: { retryAfterSeconds, scope },
+      })
+    )
   }
 
   // record/raiz (não onCommit): sobrevive a abort/rollback (§10).

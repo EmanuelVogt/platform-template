@@ -8,6 +8,10 @@ const boolFromEnv = (def: "true" | "false") =>
     .default(def)
     .transform((v) => v === "true")
 
+/** Sem default: a variável tem de ser declarada, e o Zod nomeia qual falta. */
+const requiredBoolFromEnv = () =>
+  z.enum(["true", "false"]).transform((v) => v === "true")
+
 /** Schema das env vars consumidas pelo módulo identity (auth). */
 export const identityConfigSchema = z
   .object({
@@ -39,6 +43,14 @@ export const identityConfigSchema = z
       .default(2592000), // 30d
     SESSION_MAX_PER_USER: z.coerce.number().int().positive().default(20),
 
+    // --- throttle de login por conta (o teto vale somando todos os IPs) ---
+    LOGIN_ACCOUNT_MAX_FAILURES: z.coerce.number().int().positive().default(10),
+    LOGIN_ACCOUNT_WINDOW_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(900),
+
     // --- tokens ---
     RESET_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(3600),
     VERIFY_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(86400),
@@ -57,6 +69,8 @@ export const identityConfigSchema = z
     ARGON_PARALLELISM: z.coerce.number().int().min(1).default(1),
     ARGON_HASH_LENGTH: z.coerce.number().int().min(32).default(32),
     ARGON_SALT_LENGTH: z.coerce.number().int().min(16).default(16),
+    // Teto de argon2 em voo: acima dele o pool do libuv trava o processo todo.
+    PASSWORD_HASH_MAX_IN_FLIGHT: z.coerce.number().int().positive().default(8),
 
     // --- pepper + política de senha ---
     PASSWORD_PEPPER: z.string().min(32),
@@ -64,8 +78,8 @@ export const identityConfigSchema = z
 
     // --- breach check (sem default — força decisão consciente) ---
     BREACH_CHECK_MODE: z.enum(["fail_open", "fail_closed"]),
-    // Liga o adapter real (HIBP). Default off em dev; true em prod para checar.
-    BREACH_CHECK_ENABLED: boolFromEnv("false"),
+    // Sem default: "esqueci de configurar" não pode virar "não checa vazamento".
+    BREACH_CHECK_ENABLED: requiredBoolFromEnv(),
 
     // --- verificação / csrf / auditoria ---
     REQUIRE_EMAIL_VERIFICATION: boolFromEnv("false"),

@@ -12,7 +12,12 @@ export function baseConnectionConfig(config: Env = env()): ClientConfig {
     idle_in_transaction_session_timeout: config.DATABASE_IDLE_IN_TX_TIMEOUT_MS,
     application_name: APPLICATION_NAME,
     ssl:
-      config.DATABASE_SSL === "require" ? { rejectUnauthorized: true } : false,
+      config.DATABASE_SSL === "require"
+        ? {
+            rejectUnauthorized: true,
+            ...(config.DATABASE_SSL_CA && { ca: config.DATABASE_SSL_CA }),
+          }
+        : false,
   }
 }
 

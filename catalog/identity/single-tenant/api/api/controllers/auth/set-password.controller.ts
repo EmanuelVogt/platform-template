@@ -11,6 +11,7 @@ import {
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger"
 
 import { Public } from "../../../../../shared/kernel/access/decorators"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 import { SetPasswordUseCase } from "../../../application/use-cases/set-password/set-password.use-case"
 import { CSRF } from "../../../domain/ports/csrf"
 import { IDENTITY_CONFIG } from "../../../identity.config"
@@ -24,7 +25,6 @@ import {
   setDeviceCookie,
   setSessionCookie,
 } from "../../guards/cookie"
-import { RateLimit } from "../../guards/rate-limit.guard"
 
 import type { UserView } from "../../../application/views"
 import type { Csrf } from "../../../domain/ports/csrf"
@@ -45,7 +45,7 @@ export class SetPasswordController {
   @ApiOperation({ operationId: "setPassword" })
   @Public()
   @Post("set-password")
-  @RateLimit({ limit: 10, windowSeconds: 60 })
+  @RateLimit({ limit: 10, windowSeconds: 60, critical: true })
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: CurrentUserResponseDto })
   async handle(

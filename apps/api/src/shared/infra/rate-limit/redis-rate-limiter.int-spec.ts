@@ -2,8 +2,6 @@ import Redis from "ioredis"
 import { GenericContainer, Wait } from "testcontainers"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
-import { makeTestLogger } from "../../../../../test/setup/test-logger"
-
 import { RedisRateLimiter } from "./redis-rate-limiter"
 
 import type { StartedTestContainer } from "testcontainers"
@@ -12,6 +10,8 @@ describe("RedisRateLimiter (int)", () => {
   let container: StartedTestContainer
   let redis: Redis
   let limiter: RedisRateLimiter
+  // Cliente apontado para porta sem ninguém escutando: todo comando rejeita.
+  let unreachable: Redis
 
   beforeAll(async () => {
     container = await new GenericContainer("redis:7-alpine")
@@ -37,7 +37,17 @@ describe("RedisRateLimiter (int)", () => {
         resolve()
       })
     })
-    limiter = new RedisRateLimiter(redis, makeTestLogger().loggerFactory)
+    limiter = new RedisRateLimiter(redis)
+    unreachable = new Redis({
+      host: "127.0.0.1",
+      port: 1,
+      maxRetriesPerRequest: 1,
+      enableOfflineQueue: false,
+      lazyConnect: true,
+      // Sem isso o ioredis reagenda reconexão para sempre e o Jest não sai.
+      retryStrategy: () => null,
+    })
+    unreachable.on("error", () => undefined)
   }, 60000)
 
   beforeEach(async () => {
@@ -45,6 +55,7 @@ describe("RedisRateLimiter (int)", () => {
   })
 
   afterAll(async () => {
+    unreachable.disconnect()
     await redis.quit()
     await container.stop()
   })
@@ -91,5 +102,39 @@ describe("RedisRateLimiter (int)", () => {
     await new Promise((r) => setTimeout(r, 1100))
     const afterWindow = await limiter.consume(key, 1, 1)
     expect(afterWindow.allowed).toBe(true)
+  })
+
+  it("erro do Redis propaga em vez de liberar a janela", async () => {
+    const failing = new RedisRateLimiter(unreachable)
+    await expect(failing.consume("ip:down:login", 1, 60)).rejects.toThrow()
+  })
+
+  it("reset apaga o bucket ratelimit:<key> e a chave volta a admitir", async () => {
+    const key = "ip:7.7.7.7:login"
+    await limiter.consume(key, 1, 60)
+    expect((await limiter.consume(key, 1, 60)).allowed).toBe(false)
+
+    await limiter.reset(key)
+
+    expect(await redis.exists(`ratelimit:${key}`)).toBe(0)
+    expect(await limiter.consume(key, 1, 60)).toEqual({
+      allowed: true,
+      retryAfterSeconds: 0,
+    })
+  })
+
+  it("reset de uma chave não toca as demais", async () => {
+    await limiter.consume("ip:a:login", 1, 60)
+    await limiter.consume("ip:b:login", 1, 60)
+
+    await limiter.reset("ip:a:login")
+
+    expect((await limiter.consume("ip:a:login", 1, 60)).allowed).toBe(true)
+    expect((await limiter.consume("ip:b:login", 1, 60)).allowed).toBe(false)
+  })
+
+  it("erro do Redis no reset também propaga", async () => {
+    const failing = new RedisRateLimiter(unreachable)
+    await expect(failing.reset("ip:down:login")).rejects.toThrow()
   })
 })

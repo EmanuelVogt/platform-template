@@ -3,8 +3,17 @@ import type { Session } from '../entities/session.entity';
 export interface SessionRepository {
   create(session: Session): Promise<void>;
   findByTokenHash(hash: string): Promise<Session | null>;
-  /** UPDATE condicional throttled de lastSeenAt/expiresAt (≤1/60s). */
-  touch(id: string, lastSeenAt: Date, expiresAt: Date): Promise<void>;
+  /**
+   * UPDATE throttled de lastSeenAt/expiresAt: só grava se a sessão não foi
+   * vista depois de `touchBefore` (o caller define o intervalo). Chamada
+   * concorrente abaixo do intervalo não gera segunda escrita.
+   */
+  touch(
+    id: string,
+    lastSeenAt: Date,
+    expiresAt: Date,
+    touchBefore: Date,
+  ): Promise<void>;
   listByUser(userId: string): Promise<Session[]>;
   /** Deleta por id com escopo pelo dono (anti-IDOR). Retorna rowCount. */
   deleteById(id: string, userId: string): Promise<number>;

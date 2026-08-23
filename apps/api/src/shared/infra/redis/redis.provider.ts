@@ -1,6 +1,6 @@
 import Redis from "ioredis"
 
-import { env } from "../../config/env"
+import { env, type Env } from "../../config/env"
 
 /** Token DI do client Redis compartilhado (rate-limit, cache, BullMQ futuro). */
 export const REDIS_CLIENT = Symbol("REDIS_CLIENT")
@@ -17,10 +17,14 @@ export const REDIS_CLIENT = Symbol("REDIS_CLIENT")
  * (ex.: export de OpenAPI) abrem conexão à toa — e contra um Redis alcançável
  * que exige auth, o reconnect infinito do ioredis nunca solta o processo.
  */
-export function createRedis(): Redis {
-  return new Redis(env().REDIS_URL, {
+export function createRedis(config: Env = env()): Redis {
+  return new Redis(config.REDIS_URL, {
     maxRetriesPerRequest: 1,
     enableOfflineQueue: false,
     lazyConnect: true,
+    // Um Redis black-holed (firewall dropando pacotes) travaria o comando sem
+    // erro nem timeout do próprio ioredis; isto dá ao limitador resiliente um
+    // erro para agir (fail-open) em vez de um wait aberto.
+    commandTimeout: 2000,
   })
 }

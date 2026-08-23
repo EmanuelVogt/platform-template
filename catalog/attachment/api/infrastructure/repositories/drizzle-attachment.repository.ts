@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { and, eq, inArray, lt } from "drizzle-orm"
+import { and, eq, inArray, lt, sql } from "drizzle-orm"
 
 import { TransactionManager } from "../../../../shared/kernel/transactional/transaction-manager"
 import { Attachment } from "../../domain/attachment.entity"
@@ -94,10 +94,32 @@ export class DrizzleAttachmentRepository implements AttachmentRepository {
     return rows.map((row) => this.toEntity(row.attachments, row.attachment_acls))
   }
 
-  async deleteByIds(ids: string[]): Promise<void> {
+  // WHERE carrega o status na própria query de delete: uma linha que virou
+  // 'ready' entre a seleção do job e este delete sobrevive (a corrida contra
+  // confirmUploads é resolvida por quem chegou primeiro no banco, não pelo
+  // job). `returning` dá exatamente o que foi apagado, pra limpar só as ACLs
+  // correspondentes — nunca a de uma linha que sobreviveu.
+  async deletePendingByIds(ids: string[]): Promise<void> {
     if (ids.length === 0) return
-    await this.db.delete(attachmentAcls).where(inArray(attachmentAcls.attachmentId, ids))
-    await this.db.delete(attachments).where(inArray(attachments.id, ids))
+    const deleted = await this.db
+      .delete(attachments)
+      .where(and(inArray(attachments.id, ids), eq(attachments.status, "pending")))
+      .returning({ id: attachments.id })
+    if (deleted.length === 0) return
+    await this.db.delete(attachmentAcls).where(
+      inArray(
+        attachmentAcls.attachmentId,
+        deleted.map((row) => row.id),
+      ),
+    )
+  }
+
+  async sumPendingBytesByOwner(ownerId: string): Promise<number> {
+    const [row] = await this.db
+      .select({ total: sql<string>`coalesce(sum(${attachments.sizeBytes}), 0)` })
+      .from(attachments)
+      .where(and(eq(attachments.status, "pending"), eq(attachments.ownerUserId, ownerId)))
+    return Number(row?.total ?? 0)
   }
 
   private toEntity(row: AttachmentRow, acl: AttachmentAclRow): Attachment {

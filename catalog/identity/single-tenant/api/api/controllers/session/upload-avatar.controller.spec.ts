@@ -1,3 +1,4 @@
+import { INTERCEPTORS_METADATA } from "@nestjs/common/constants"
 import { type Mock, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AvatarFileRequiredError } from "../../../domain/errors"
@@ -45,5 +46,25 @@ describe("UploadAvatarController", () => {
       originalFilename: "foto.png",
     })
     expect(result).toEqual({ avatarAttachmentId: "att-1" })
+  })
+
+  it("configura o multer sem campos extras (GHSA-72gw-mp4g-v24j)", () => {
+    // Acesso via Record<string, unknown>, não via referência de método de classe:
+    // é a mesma função (mesma identidade, necessária para o Reflect.getMetadata
+    // achar os metadados do decorator), mas sem o tipo "method" que o
+    // @typescript-eslint/unbound-method sinalizaria por causa do "this" perdido —
+    // aqui a função nunca é chamada fora de contexto, só inspecionada.
+    const controllerPrototype = UploadAvatarController.prototype as unknown as Record<
+      "handle",
+      unknown
+    >
+    const [FileInterceptor] = Reflect.getMetadata(
+      INTERCEPTORS_METADATA,
+      controllerPrototype.handle as object,
+    ) as [new () => { multer: { limits?: { fileSize?: number; fields?: number } } }]
+
+    const { multer } = new FileInterceptor()
+
+    expect(multer.limits).toEqual({ fileSize: 5 * 1024 * 1024, fields: 0 })
   })
 })

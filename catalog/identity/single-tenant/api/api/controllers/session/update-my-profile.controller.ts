@@ -2,9 +2,9 @@ import { Body, Controller, HttpCode, HttpStatus, Patch } from "@nestjs/common"
 import { ApiOperation, ApiTags } from "@nestjs/swagger"
 
 import { SelfService } from "../../../../../shared/kernel/access/decorators"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 import { UpdateMyProfileUseCase } from "../../../application/use-cases/update-my-profile/update-my-profile.use-case"
 import { UpdateMyProfileDto } from "../../contracts/identity.contract"
-import { RateLimit } from "../../guards/rate-limit.guard"
 
 @ApiTags("Session")
 @Controller("auth")

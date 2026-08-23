@@ -13,6 +13,26 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
   `await vi.importActual`, tipos `jest.Mock*`/`jest.SpyInstance` → `Mock`/`Mocked`/
   `MockedFunction`/`MockInstance` de `"vitest"`. `dependsOn` notification sobe para
   `>=2.0.0 <3.0.0`. Filhos em `>=1.0.0 <2.0.0` precisam rodar o codemod antes de atualizar.
+- `BREACH_CHECK_ENABLED` deixa de ter default e passa a ser obrigatória: esquecer de configurar
+  não pode mais virar silenciosamente "não checa vazamento" (auditoria 2026-08-22, AUTH-1,
+  ADV-20260822-01).
+- A porta `RATE_LIMITER` sai desta entrada e sobe para o kernel
+  (`shared/kernel/rate-limit/rate-limiter.port`), com o limiter resiliente composto (Redis +
+  fallback local) ligado pelo `RateLimitModule` `@Global()`. Todo importador do antigo
+  `domain/ports/rate-limiter.ts` local re-aponta para o token do kernel — mecânico, sem mudança
+  de comportamento para quem só injeta `RATE_LIMITER`.
+- `BreachCheck.check` formaliza o veredito em três estados (`BreachVerdict`: `clear` | `breached`
+  | `skipped`), separando "não vazada" de "não deu para saber" — a falha do provedor HIBP sob
+  `fail_open` já não se confunde com "senha limpa".
+- `EmailBelongsToDeletedUserError` foi removida: `request-email-change` (AUTH-10) unifica os dois
+  tipos de 409 que a v2.0.0 anterior distinguia, e o cooldown por conta passa a valer também na
+  falha, não só no sucesso.
+- `identity.auth_events.type` ganha o literal `rate_limiter_degraded`, emitido quando o
+  `RateLimiterOutageListener` detecta o composite em modo de fallback.
+- O bootstrap do usuário master de cada módulo instalado passa a rodar via um glob descoberto
+  pelo entrypoint do kernel (`dist/modules/*/seeds/bootstrap.js`), não mais por um script único
+  do template; esta entrada contribui `api/seeds/bootstrap.ts`, compilado para
+  `dist/modules/identity/seeds/bootstrap.js`.
 
 ### Fixed
 
@@ -25,6 +45,18 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
   relação com a ordem de inserção — exposto por `pnpm catalog:check attachment` (identity como
   dependência), nunca pelo `catalog:check identity` isolado. Passa a usar `clock_timestamp()`
   (ADV-20260821-03).
+- `migrations/custom/02_audit_attach.sql` e `03_audit_redact_token_hashes.sql` **removidos**,
+  substituídos por `04_audit_attach_hook.sql`. Os dois chamavam `audit.attach` direto sob um
+  guard "entrada audit ausente" que, na prática, era **sempre** verdadeiro: a entrada `audit`
+  declara `dependsOn: identity`, então a ordem topológica do instalador gera as migrações do
+  identity antes das do audit e `audit.attach` ainda não existe quando elas rodam — um filho
+  recém-gerado nascia com a trilha vazia para todo o identity, inclusive sem a redação de
+  `users.password_hash`, `sessions.token_hash`, `devices.cookie_token_hash` e
+  `verification_tokens.token_hash` (auditoria de segurança 2026-08-22, ADV-20260822-01). O novo
+  arquivo só **declara** a lista, na função idempotente `identity.attach_audit()`; quem a executa
+  é `audit.attach_module_hooks()`, no fim da instalação da entrada `audit`. Um filho sem `audit`
+  segue migrando sem erro e sem anexar nada, e um filho que já tem `audit` anexa na hora (o
+  `PERFORM` no fim do arquivo).
 
 ## [1.0.0]
 

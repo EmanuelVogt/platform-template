@@ -9,10 +9,10 @@ import {
 import { ApiOperation, ApiTags } from "@nestjs/swagger"
 
 import { SelfService } from "../../../../../shared/kernel/access/decorators"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 import { LogoutUseCase } from "../../../application/use-cases/logout/logout.use-case"
 import { IDENTITY_CONFIG } from "../../../identity.config"
 import { clearSessionCookie } from "../../guards/cookie"
-import { RateLimit } from "../../guards/rate-limit.guard"
 
 import type { IdentityConfig } from "../../../identity.config"
 import type { Response } from "express"

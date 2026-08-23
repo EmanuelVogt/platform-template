@@ -2,8 +2,9 @@ import { Controller, HttpCode, HttpStatus, Param, Post } from "@nestjs/common"
 import { ApiOperation, ApiTags } from "@nestjs/swagger"
 
 import { RequirePermission } from "../../../../../shared/kernel/access/decorators"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 import { ResendAccessLinkUseCase } from "../../../application/use-cases/resend-access-link/resend-access-link.use-case"
-import { RateLimit } from "../../guards/rate-limit.guard"
+import { IdParamDto } from "../../contracts/identity.contract"
 
 @ApiTags("Admin")
 @Controller("admin/users")
@@ -15,7 +16,7 @@ export class ResendAccessLinkController {
   @Post(":id/resend-access-link")
   @RateLimit({ limit: 10, windowSeconds: 60 })
   @HttpCode(HttpStatus.ACCEPTED)
-  async handle(@Param("id") id: string): Promise<void> {
-    await this.resendAccessLink.execute({ userId: id })
+  async handle(@Param() params: IdParamDto): Promise<void> {
+    await this.resendAccessLink.execute({ userId: params.id })
   }
 }

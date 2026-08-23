@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 16,
+  "next_id": 25,
   "lessons": [
     {
       "id": "L-001",
@@ -275,6 +275,168 @@
       ],
       "created": "2026-08-23T00:06:13Z",
       "last_seen": "2026-08-23T00:06:13Z"
+    },
+    {
+      "id": "L-016",
+      "key": "surviving_mutant::a rejection written as a or b needs one test per disjunct content sniff specs that only feed bytes sniffing to null leave the sniffed type differs from the declared type branch deletable with the suite still green",
+      "text": "A rejection written as 'A or B' needs one test per disjunct: content-sniff specs that only feed bytes sniffing to null leave the 'sniffed type differs from the declared type' branch deletable with the suite still green.",
+      "signal": "surviving_mutant",
+      "scope": "catalog/attachment",
+      "status": "candidate",
+      "features": [
+        "security-audit-remediation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "mutant 2 — catalog/attachment/api/application/use-cases/upload-attachments-batch/upload-attachments-batch.use-case.ts:67 (catalog/attachment)"
+      ],
+      "created": "2026-08-23T15:33:00Z",
+      "last_seen": "2026-08-23T15:33:00Z"
+    },
+    {
+      "id": "L-017",
+      "key": "ac_gap::asserting a quota s config default is not proof of the quota an ac that names a status code 429 413 503 needs an assertion on that status on the route not on the parsed config value",
+      "text": "Asserting a quota's config default is not proof of the quota: an AC that names a status code (429/413/503) needs an assertion on that status on the route, not on the parsed config value.",
+      "signal": "ac_gap",
+      "scope": "catalog/attachment",
+      "status": "candidate",
+      "features": [
+        "security-audit-remediation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "REM-14 (P1 Attach AC7) (catalog/attachment)"
+      ],
+      "created": "2026-08-23T15:33:00Z",
+      "last_seen": "2026-08-23T15:33:00Z"
+    },
+    {
+      "id": "L-018",
+      "key": "ac_gap::a migration that registers columns for redaction is not evidence of redaction every newly registered column needs its own read back assertion on the trail row since the pre existing one covers only the column added earlier",
+      "text": "A migration that registers columns for redaction is not evidence of redaction — every newly registered column needs its own read-back assertion on the trail row, since the pre-existing one covers only the column added earlier.",
+      "signal": "ac_gap",
+      "scope": "migrations",
+      "status": "candidate",
+      "features": [
+        "security-audit-remediation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "REM-40 (P3 AC10) — catalog/identity/single-tenant/migrations/custom/03_audit_redact_token_hashes.sql (migrations)"
+      ],
+      "created": "2026-08-23T15:33:00Z",
+      "last_seen": "2026-08-23T15:33:00Z"
+    },
+    {
+      "id": "L-019",
+      "key": "ac_gap::an error branch whose only visible artifact is a log line stays untested unless a spec asserts that log key grep the key across specs before calling the catch path covered",
+      "text": "An error branch whose only visible artifact is a log line stays untested unless a spec asserts that log key; grep the key across specs before calling the catch path covered.",
+      "signal": "ac_gap",
+      "scope": "catalog/attachment",
+      "status": "candidate",
+      "features": [
+        "security-audit-remediation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "REM-12 (P1 Attach AC5) — catalog/attachment/api/api/controllers/download-attachment.controller.ts:78-91 (catalog/attachment)"
+      ],
+      "created": "2026-08-23T15:33:00Z",
+      "last_seen": "2026-08-23T15:33:00Z"
+    },
+    {
+      "id": "L-020",
+      "key": "spec_precision_gap::when a spec excludes a dependency chain in out of scope its audit gate cannot also demand exit 0 state the proof as no advisory outside that chain with a command that filters or the gate is unpassable by construction",
+      "text": "When a spec excludes a dependency chain in Out of Scope, its audit gate cannot also demand exit 0 — state the proof as 'no advisory outside that chain' with a command that filters, or the gate is unpassable by construction.",
+      "signal": "spec_precision_gap",
+      "scope": "spec",
+      "status": "candidate",
+      "features": [
+        "security-audit-remediation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "REM-39 Proof + Success Criteria #2 vs spec.md Out of Scope (spec)"
+      ],
+      "created": "2026-08-23T15:33:00Z",
+      "last_seen": "2026-08-23T15:33:00Z"
+    },
+    {
+      "id": "L-021",
+      "key": "spec_deviation::a blanket fields 0 upload limit breaks any route that declares a required multipart field derive the cap from the fields the route actually accepts before writing it into the design",
+      "text": "A blanket 'fields: 0' upload limit breaks any route that declares a required multipart field; derive the cap from the fields the route actually accepts before writing it into the design.",
+      "signal": "spec_deviation",
+      "scope": "catalog/identity",
+      "status": "candidate",
+      "features": [
+        "security-audit-remediation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "catalog/identity/single-tenant/api/api/controllers/auth/upload-access-link-avatar.controller.ts:53-60 (catalog/identity)"
+      ],
+      "created": "2026-08-23T15:33:00Z",
+      "last_seen": "2026-08-23T15:33:00Z"
+    },
+    {
+      "id": "L-022",
+      "key": "surviving_mutant::a test that re creates a migration s effect in its own setup proves the mechanism not the migration emptying the migration stays green assert against the state the migration itself produced or the assertion is about the trigger only",
+      "text": "A test that re-creates a migration's effect in its own setup proves the mechanism, not the migration: emptying the migration stays green. Assert against the state the migration itself produced, or the assertion is about the trigger only.",
+      "signal": "surviving_mutant",
+      "scope": "migrations",
+      "status": "candidate",
+      "features": [
+        "security-audit-remediation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "mutant 7 — catalog/identity/single-tenant/migrations/custom/03_audit_redact_token_hashes.sql:19 survives pnpm catalog:check audit (migrations)"
+      ],
+      "created": "2026-08-23T16:53:38Z",
+      "last_seen": "2026-08-23T16:53:38Z"
+    },
+    {
+      "id": "L-023",
+      "key": "ac_gap::when two catalog entries are siblings install order not forced by dependson and one attaches ddl that depends on the other a combined multi entry install can silently skip the attach cover it with a coverage enforcement test that simulates the documented manual re apply and document the manual step in both entries advisories not just the code comment",
+      "text": "When two catalog entries are siblings (install order not forced by dependsOn) and one attaches DDL that depends on the other, a combined multi-entry install can silently skip the attach — cover it with a coverage-enforcement test that simulates the documented manual re-apply, and document the manual step in both entries' advisories, not just the code comment.",
+      "signal": "ac_gap",
+      "scope": "catalog",
+      "status": "candidate",
+      "features": [
+        "security-audit-remediation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "REM-40 — audit-trigger.int-spec.ts:32-45 SPEC_DEVIATION concedes the attach never runs in a real catalog:check (catalog)"
+      ],
+      "created": "2026-08-23T16:53:38Z",
+      "last_seen": "2026-08-23T16:53:38Z"
+    },
+    {
+      "id": "L-024",
+      "key": "spec_precision_gap::a probe grep for a json script key must be anchored to the scripts block a pattern like test also matches devdependencies such as testcontainers so the probe reports a failure the ac does not have",
+      "text": "A probe grep for a JSON script key must be anchored to the scripts block: a pattern like '\"test[^\"]*\":' also matches devDependencies such as 'testcontainers', so the probe reports a failure the AC does not have.",
+      "signal": "spec_precision_gap",
+      "scope": "spec",
+      "status": "candidate",
+      "features": [
+        "security-audit-remediation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "REM-48 probe, spec.md:244 vs apps/api/package.json:88 (spec)"
+      ],
+      "created": "2026-08-23T16:53:38Z",
+      "last_seen": "2026-08-23T16:53:38Z"
     }
   ]
 }

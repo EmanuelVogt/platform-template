@@ -1,14 +1,16 @@
 import "reflect-metadata"
 
 import { ForbiddenException } from "@nestjs/common"
-import { Reflector } from "@nestjs/core"
+import { APP_GUARD, Reflector } from "@nestjs/core"
 import { describe, expect, it } from "vitest"
 
 import {
   ACCESS_REQUIREMENT,
   IS_MACHINE_TO_MACHINE_KEY,
 } from "../../../shared/kernel/access/decorators"
+import { RateLimitGuard } from "../../../shared/kernel/rate-limit/rate-limit.guard"
 import { CsrfGuard } from "../api/guards/csrf.guard"
+import { IdentityModule } from "../identity.module"
 
 import type { AccessRequirement } from "../../../shared/kernel/access/access-policy.port"
 import type { CsrfConfig } from "../api/guards/csrf.guard"
@@ -134,5 +136,22 @@ describe("paridade do CsrfGuard", () => {
     )
 
     expect(guard("lax").canActivate(context)).toBe(true)
+  })
+})
+
+describe("paridade da ordem dos guards globais", () => {
+  // O Nest aplica os APP_GUARD na ordem em que são registrados no array de
+  // providers, e a ordem não aparece em nenhum tipo: só um teste a segura.
+  const appGuards = (
+    IdentityModule.forRoot().providers as {
+      provide?: unknown
+      useClass?: unknown
+    }[]
+  )
+    .filter((p) => p.provide === APP_GUARD)
+    .map((p) => p.useClass)
+
+  it("CSRF roda ANTES do rate limiter (Origin forjada não gasta bucket)", () => {
+    expect(appGuards).toEqual([CsrfGuard, RateLimitGuard])
   })
 })

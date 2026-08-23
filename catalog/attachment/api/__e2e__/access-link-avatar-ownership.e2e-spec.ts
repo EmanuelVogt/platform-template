@@ -11,7 +11,7 @@ import {
 } from "../../../../test/setup/test-db"
 import { OBJECT_STORAGE } from "../../../shared/infra/storage/object-storage.port"
 import { OutboxDispatcher } from "../../../shared/kernel/outbox/outbox.dispatcher"
-import { RATE_LIMITER } from "../../identity/domain/ports/rate-limiter"
+import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
 import { allowAllRateLimiter } from "../../identity/testing/allow-all-rate-limiter"
 import { fakeMailer } from "../../identity/testing/fake-mailer"
 import { seedUser } from "../../identity/testing/seed-user"

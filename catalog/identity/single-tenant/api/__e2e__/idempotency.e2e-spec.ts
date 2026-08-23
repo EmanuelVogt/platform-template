@@ -8,7 +8,7 @@ import { AppModule } from "../../../app.module"
 import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
 import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
-import { RATE_LIMITER } from "../domain/ports/rate-limiter"
+import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
 
 const ORIGIN = "http://localhost:5173"
 
@@ -16,6 +16,7 @@ const ORIGIN = "http://localhost:5173"
 // do mesmo IP. O foco aqui são os ramos do interceptor de idempotência.
 const allowAll = {
   consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
+  reset: () => Promise.resolve(),
 }
 
 describe("IdempotencyInterceptor (e2e)", () => {

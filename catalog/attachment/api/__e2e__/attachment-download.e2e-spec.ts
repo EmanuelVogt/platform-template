@@ -1,3 +1,4 @@
+import http from "node:http"
 import { Readable } from "node:stream"
 
 import { type INestApplication, VersioningType } from "@nestjs/common"
@@ -18,7 +19,8 @@ import { loadEnv } from "../../../shared/config/env"
 import { OBJECT_STORAGE } from "../../../shared/infra/storage/object-storage.port"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
 import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
-import { RATE_LIMITER } from "../../identity/domain/ports/rate-limiter"
+import { LoggerFactory } from "../../../shared/kernel/logging/logger.factory"
+import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
 import { seedUser } from "../../identity/testing/seed-user"
 
 import type { ObjectStoragePort } from "../../../shared/infra/storage/object-storage.port"
@@ -29,6 +31,7 @@ const ORIGIN = "http://localhost:5173"
 
 const allowAll = {
   consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
+  reset: () => Promise.resolve(),
 }
 
 // 1x1 PNG válido (assinatura 0x89 'PNG').
@@ -37,15 +40,23 @@ const PNG_1PX = Buffer.from(
   "base64",
 )
 
-/** Storage em memória: substitui o adapter R2 no teste (sem IO externo). */
-function makeInMemoryStorage(): ObjectStoragePort {
+/**
+ * Storage em memória: substitui o adapter R2 no teste (sem IO externo).
+ * `getStream` conta chamadas — o que prova que 304 nunca toca o storage.
+ */
+function makeInMemoryStorage(): {
+  storage: ObjectStoragePort
+  getStreamCallCount: () => number
+} {
   const objects = new Map<string, { body: Buffer; contentType: string }>()
-  return {
+  let callCount = 0
+  const storage: ObjectStoragePort = {
     put: (key, body, contentType) => {
       objects.set(key, { body, contentType })
       return Promise.resolve()
     },
     getStream: (key) => {
+      callCount += 1
       const o = objects.get(key)
       if (o === undefined) throw new Error(`objeto inexistente: ${key}`)
       return Promise.resolve(Readable.from(o.body))
@@ -70,6 +81,25 @@ function makeInMemoryStorage(): ObjectStoragePort {
       objects.set(key, { body: Buffer.concat(chunks), contentType })
     },
   }
+  return { storage, getStreamCallCount: () => callCount }
+}
+
+/** Storage cujo `getStream` recusa passar de `maxSockets` chamadas simultâneas. */
+function makeSocketLimitedStorage(base: ObjectStoragePort, maxSockets: number): ObjectStoragePort {
+  const originalGetStream = base.getStream.bind(base)
+  let inFlight = 0
+  return {
+    ...base,
+    getStream: async (key) => {
+      if (inFlight >= maxSockets) throw new Error("sem socket livre")
+      inFlight += 1
+      try {
+        return await originalGetStream(key)
+      } finally {
+        inFlight -= 1
+      }
+    },
+  }
 }
 
 /** Semeia attachment 'ready' + ACL direto no banco (não há mais rota de upload). */
@@ -81,18 +111,20 @@ async function seedAttachment(
     visibility: "public" | "authenticated" | "restricted"
     profile?: string
     originalFilename?: string
+    contentType?: string
   },
 ): Promise<string> {
   const id = ulid()
   const storageKey = `e2e/${id}.png`
   const profile = opts.profile ?? "legacy"
   const originalFilename = opts.originalFilename ?? "avatar.png"
-  await storage.put(storageKey, PNG_1PX, "image/png")
+  const contentType = opts.contentType ?? "image/png"
+  await storage.put(storageKey, PNG_1PX, contentType)
   await pool.query(
     `insert into attachment.attachments
        (id, storage_key, content_type, size_bytes, checksum, original_filename, owner_user_id, status, profile)
-     values ($1, $2, 'image/png', $3, 'checksum-e2e', $4, $5, 'ready', $6)`,
-    [id, storageKey, PNG_1PX.byteLength, originalFilename, opts.ownerUserId, profile],
+     values ($1, $2, $3, $4, 'checksum-e2e', $5, $6, 'ready', $7)`,
+    [id, storageKey, contentType, PNG_1PX.byteLength, originalFilename, opts.ownerUserId, profile],
   )
   await pool.query(
     "insert into attachment.attachment_acls (attachment_id, visibility) values ($1, $2)",
@@ -114,6 +146,7 @@ describe("Attachment (e2e): download com ACL", () => {
   let app: INestApplication
   let pool: Pool
   let storage: ObjectStoragePort
+  let getStreamCallCount: () => number
 
   beforeAll(async () => {
     pool = createTestPool()
@@ -121,7 +154,7 @@ describe("Attachment (e2e): download com ACL", () => {
     await truncateKernel(pool)
     await truncateAttachment(pool)
 
-    storage = makeInMemoryStorage()
+    ;({ storage, getStreamCallCount } = makeInMemoryStorage())
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(RATE_LIMITER)
       .useValue(allowAll)
@@ -215,7 +248,7 @@ describe("Attachment (e2e): download com ACL", () => {
       .expect(404)
   })
 
-  it("força download e nosniff em anexo de perfil de tipo livre", async () => {
+  it("content_type fora do allowlist inline força octet-stream + nosniff, independente do perfil", async () => {
     const userId = await seedUser(app, pool, {
       email: "att-force-dl@example.com",
       name: "Force",
@@ -231,8 +264,8 @@ describe("Attachment (e2e): download com ACL", () => {
     const id = await seedAttachment(pool, storage, {
       ownerUserId: userId,
       visibility: "restricted",
-      profile: "document",
       originalFilename: "log.txt",
+      contentType: "text/html",
     })
 
     const res = await request(app.getHttpServer())
@@ -242,13 +275,13 @@ describe("Attachment (e2e): download com ACL", () => {
 
     expect(res.headers["content-type"]).toBe("application/octet-stream")
     expect(res.headers["content-disposition"]).toBe(
-      "attachment; filename*=UTF-8''log.txt",
+      `attachment; filename="log.txt"; filename*=UTF-8''log.txt`,
     )
     expect(res.headers["x-content-type-options"]).toBe("nosniff")
     expect(res.headers["cache-control"]).toBe("private, max-age=300")
   })
 
-  it("perfil desconhecido (removido/renomeado) falha alto em vez de servir octet-stream", async () => {
+  it("perfil desconhecido (removido/renomeado) não bloqueia mais o download — decisão é só pelo content_type", async () => {
     const userId = await seedUser(app, pool, {
       email: "att-unknown-profile@example.com",
       name: "Legado",
@@ -265,16 +298,46 @@ describe("Attachment (e2e): download com ACL", () => {
       ownerUserId: userId,
       visibility: "restricted",
       profile: "legacy-profile",
-      originalFilename: "antigo.txt",
+      originalFilename: "antigo.png",
     })
 
     const res = await request(app.getHttpServer())
       .get(`/v1/attachments/${id}`)
       .set("Cookie", cookies!)
-      .expect(404)
+      .expect(200)
 
-    expect(res.body.type).toMatch(/\/not-found$/)
+    expect(res.headers["content-type"]).toBe("image/png")
     expect(res.headers["content-disposition"]).toBeUndefined()
+    expect(res.headers["x-content-type-options"]).toBe("nosniff")
+  })
+
+  it("perfil 'legacy' com content_type image/png segue inline (allowlist, não perfil)", async () => {
+    const userId = await seedUser(app, pool, {
+      email: "att-legacy-inline@example.com",
+      name: "Legacy",
+      password: "Senha-Att-Muito-Forte-2026!",
+    })
+    const loginRes = await request(app.getHttpServer())
+      .post("/v1/auth/login")
+      .set("Origin", ORIGIN)
+      .send({ email: "att-legacy-inline@example.com", password: "Senha-Att-Muito-Forte-2026!" })
+      .expect(200)
+    const cookies = loginRes.headers["set-cookie"]
+
+    const id = await seedAttachment(pool, storage, {
+      ownerUserId: userId,
+      visibility: "restricted",
+      profile: "legacy",
+    })
+
+    const res = await request(app.getHttpServer())
+      .get(`/v1/attachments/${id}`)
+      .set("Cookie", cookies!)
+      .expect(200)
+
+    expect(res.headers["content-type"]).toBe("image/png")
+    expect(res.headers["content-disposition"]).toBeUndefined()
+    expect(res.headers["x-content-type-options"]).toBe("nosniff")
   })
 
   it("mantém avatar inline", async () => {
@@ -303,6 +366,7 @@ describe("Attachment (e2e): download com ACL", () => {
 
     expect(res.headers["content-type"]).toBe("image/png")
     expect(res.headers["content-disposition"]).toBeUndefined()
+    expect(res.headers["x-content-type-options"]).toBe("nosniff")
     expect(res.headers["cache-control"]).toBe(
       "private, max-age=86400, immutable",
     )
@@ -341,5 +405,299 @@ describe("Attachment (e2e): download com ACL", () => {
     expect(responses.map((res) => res.status)).toEqual(
       Array<number>(simultaneos).fill(200),
     )
+  })
+
+  it("If-None-Match casando responde 304 sem abrir stream de storage", async () => {
+    const userId = await seedUser(app, pool, {
+      email: "att-304@example.com",
+      name: "Cache",
+      password: "Senha-Att-Muito-Forte-2026!",
+    })
+    const loginRes = await request(app.getHttpServer())
+      .post("/v1/auth/login")
+      .set("Origin", ORIGIN)
+      .send({ email: "att-304@example.com", password: "Senha-Att-Muito-Forte-2026!" })
+      .expect(200)
+    const cookies = loginRes.headers["set-cookie"]
+
+    const id = await seedAttachment(pool, storage, {
+      ownerUserId: userId,
+      visibility: "restricted",
+    })
+
+    const firstRes = await request(app.getHttpServer())
+      .get(`/v1/attachments/${id}`)
+      .set("Cookie", cookies!)
+      .expect(200)
+    const etag = firstRes.headers.etag!
+    const callsAfterFirst = getStreamCallCount()
+    expect(callsAfterFirst).toBeGreaterThan(0)
+
+    await request(app.getHttpServer())
+      .get(`/v1/attachments/${id}`)
+      .set("Cookie", cookies!)
+      .set("If-None-Match", etag)
+      .expect(304)
+
+    expect(getStreamCallCount()).toBe(callsAfterFirst)
+  })
+
+  it("50 requisições If-None-Match contra storage com maxSockets:2 — a 51ª ainda responde", async () => {
+    const userId = await seedUser(app, pool, {
+      email: "att-304-burst@example.com",
+      name: "Burst",
+      password: "Senha-Att-Muito-Forte-2026!",
+    })
+    const loginRes = await request(app.getHttpServer())
+      .post("/v1/auth/login")
+      .set("Origin", ORIGIN)
+      .send({ email: "att-304-burst@example.com", password: "Senha-Att-Muito-Forte-2026!" })
+      .expect(200)
+    const cookies = loginRes.headers["set-cookie"]
+
+    const id = await seedAttachment(pool, storage, {
+      ownerUserId: userId,
+      visibility: "restricted",
+    })
+    const firstRes = await request(app.getHttpServer())
+      .get(`/v1/attachments/${id}`)
+      .set("Cookie", cookies!)
+      .expect(200)
+    const etag = firstRes.headers.etag!
+
+    const originalGetStream = storage.getStream.bind(storage)
+    const limited = makeSocketLimitedStorage(storage, 2)
+    storage.getStream = limited.getStream.bind(limited)
+    try {
+      const responses = await Promise.all(
+        Array.from({ length: 51 }, () =>
+          request(app.getHttpServer())
+            .get(`/v1/attachments/${id}`)
+            .set("Cookie", cookies!)
+            .set("If-None-Match", etag),
+        ),
+      )
+      expect(responses.map((res) => res.status)).toEqual(Array<number>(51).fill(304))
+    } finally {
+      storage.getStream = originalGetStream
+    }
+  })
+
+  it("abort do cliente no meio do corpo destrói o stream de origem", async () => {
+    const userId = await seedUser(app, pool, {
+      email: "att-abort@example.com",
+      name: "Abort",
+      password: "Senha-Att-Muito-Forte-2026!",
+    })
+    const loginRes = await request(app.getHttpServer())
+      .post("/v1/auth/login")
+      .set("Origin", ORIGIN)
+      .send({ email: "att-abort@example.com", password: "Senha-Att-Muito-Forte-2026!" })
+      .expect(200)
+    const setCookie: unknown = loginRes.headers["set-cookie"]
+    const cookies = Array.isArray(setCookie) ? setCookie.join("; ") : String(setCookie)
+
+    const id = await seedAttachment(pool, storage, {
+      ownerUserId: userId,
+      visibility: "restricted",
+    })
+
+    // Stream lento e controlável: dá tempo do teste abortar antes do fim do corpo.
+    let slowStream: Readable | undefined
+    const originalGetStream = storage.getStream.bind(storage)
+    storage.getStream = () => {
+      slowStream = new Readable({
+        read() {
+          setTimeout(() => this.push(Buffer.alloc(1024, "x")), 20)
+        },
+      })
+      return Promise.resolve(slowStream)
+    }
+
+    const server = app.getHttpServer() as Server
+    await ensureListening(server)
+    const address = server.address()
+    const port = typeof address === "object" && address !== null ? address.port : 0
+
+    try {
+      await new Promise<void>((resolve) => {
+        const req = http.request(
+          { host: "127.0.0.1", port, path: `/v1/attachments/${id}`, headers: { cookie: cookies } },
+          (res) => {
+            res.once("data", () => req.destroy())
+          },
+        )
+        req.on("error", () => {
+          resolve()
+        })
+        req.on("close", () => {
+          resolve()
+        })
+        req.end()
+      })
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(slowStream?.destroyed).toBe(true)
+    } finally {
+      storage.getStream = originalGetStream
+    }
+  })
+})
+
+describe("Attachment (e2e): falha do storage depois dos headers (REM-12)", () => {
+  let app: INestApplication
+  let pool: Pool
+  let storage: ObjectStoragePort
+  let errorCalls: { msg: string; bindings: unknown }[]
+
+  beforeAll(async () => {
+    pool = createTestPool()
+    await truncateIdentity(pool)
+    await truncateKernel(pool)
+    await truncateAttachment(pool)
+
+    ;({ storage } = makeInMemoryStorage())
+    errorCalls = []
+    const loggerFactory = {
+      forModule: () => ({
+        info: () => undefined,
+        warn: () => undefined,
+        error: (msg: string, bindings?: unknown) => {
+          errorCalls.push({ msg, bindings })
+        },
+        debug: () => undefined,
+      }),
+    } as unknown as LoggerFactory
+
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(RATE_LIMITER)
+      .useValue(allowAll)
+      .overrideProvider(OBJECT_STORAGE)
+      .useValue(storage)
+      .overrideProvider(LoggerFactory)
+      .useValue(loggerFactory)
+      .compile()
+    app = moduleRef.createNestApplication()
+    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
+    applySecurity(app)
+    app.use(createRequestContextMiddleware(app.get(RequestContext)))
+    await app.init()
+  })
+
+  afterAll(async () => {
+    await app.close()
+    await pool.end()
+  })
+
+  it("stream de storage falha depois dos headers: conexão cai, log único, processo segue de pé", async () => {
+    const userId = await seedUser(app, pool, {
+      email: "att-dl-fail@example.com",
+      name: "Fail",
+      password: "Senha-Att-Muito-Forte-2026!",
+    })
+    const loginRes = await request(app.getHttpServer())
+      .post("/v1/auth/login")
+      .set("Origin", ORIGIN)
+      .send({ email: "att-dl-fail@example.com", password: "Senha-Att-Muito-Forte-2026!" })
+      .expect(200)
+    const setCookie: unknown = loginRes.headers["set-cookie"]
+    const cookies = Array.isArray(setCookie) ? setCookie.join("; ") : String(setCookie)
+
+    const id = await seedAttachment(pool, storage, {
+      ownerUserId: userId,
+      visibility: "restricted",
+    })
+
+    // Primeiro chunk sai (headers vão junto), só depois o stream falha — é
+    // exatamente o caso "erro pós-headers" que o catch do controller trata.
+    let failingStream: Readable | undefined
+    const originalGetStream = storage.getStream.bind(storage)
+    let pushed = false
+    storage.getStream = () => {
+      failingStream = new Readable({
+        read() {
+          if (!pushed) {
+            pushed = true
+            // Menor que o Content-Length anunciado (tamanho real do PNG
+            // semeado) — sem isso o servidor fecha por exceder o header, e o
+            // teste provaria o limite errado.
+            this.push(Buffer.alloc(20, "x"))
+            return
+          }
+          setTimeout(() => this.destroy(new Error("falha simulada pós-headers")), 10)
+        },
+      })
+      return Promise.resolve(failingStream)
+    }
+
+    const server = app.getHttpServer() as Server
+    await ensureListening(server)
+    const address = server.address()
+    const port = typeof address === "object" && address !== null ? address.port : 0
+
+    try {
+      const received = await new Promise<{ bytes: number; endedWithoutError: boolean }>(
+        (resolve) => {
+          let bytes = 0
+          // agent:false — o servidor derruba a conexão pós-headers; sem isso o
+          // socket morto pode voltar pro pool do agent global e confundir uma
+          // requisição de outro teste que reúse a porta depois do app.close().
+          const req = http.request(
+            {
+              host: "127.0.0.1",
+              port,
+              path: `/v1/attachments/${id}`,
+              headers: { cookie: cookies },
+              agent: false,
+            },
+            (res) => {
+              res.on("data", (chunk: Buffer) => {
+                bytes += chunk.length
+              })
+              res.on("end", () => {
+                resolve({ bytes, endedWithoutError: true })
+              })
+              res.on("close", () => {
+                resolve({ bytes, endedWithoutError: false })
+              })
+            },
+          )
+          req.on("error", () => {
+            resolve({ bytes, endedWithoutError: false })
+          })
+          req.end()
+        },
+      )
+
+      // Content-Length anunciado é o tamanho inteiro do PNG semeado — corpo
+      // incompleto (e sem "end" limpo) prova que a conexão foi derrubada.
+      expect(received.bytes).toBeLessThan(PNG_1PX.byteLength)
+      expect(received.endedWithoutError).toBe(false)
+
+      // O fechamento chega ao cliente antes do catch do controller terminar
+      // do lado do servidor — dá um instante pro teardown assíncrono rodar
+      // antes de checar o stream/log (mesma folga do teste de abort acima).
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      expect(failingStream?.destroyed).toBe(true)
+      // A conexão derrubada também deixa a trilha de acesso falhar ao
+      // registrar (log próprio, não relacionado) — filtra pela chave do
+      // teardown do download em vez de exigir que seja o único log de erro.
+      const downloadFailedLogs = errorCalls.filter(
+        (call) => call.msg === "attachment.download_stream_failed",
+      )
+      expect(downloadFailedLogs).toHaveLength(1)
+    } finally {
+      storage.getStream = originalGetStream
+    }
+
+    const secondId = await seedAttachment(pool, storage, {
+      ownerUserId: userId,
+      visibility: "restricted",
+      originalFilename: "ok.png",
+    })
+    await request(app.getHttpServer())
+      .get(`/v1/attachments/${secondId}`)
+      .set("Cookie", cookies)
+      .expect(200)
   })
 })

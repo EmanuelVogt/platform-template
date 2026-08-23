@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest"
 import { CLOCK } from "../../shared/kernel/clock/clock"
 import { RequestContext } from "../../shared/kernel/context/request-context"
 import { LoggerFactory } from "../../shared/kernel/logging/logger.factory"
+import { RateLimitModule } from "../../shared/kernel/rate-limit/rate-limit.module"
 
 import { UploadAccessLinkAvatarUseCase } from "./application/use-cases/upload-access-link-avatar/upload-access-link-avatar.use-case"
 import { UploadAvatarUseCase } from "./application/use-cases/upload-avatar/upload-avatar.use-case"
@@ -44,8 +45,8 @@ const STUBS = [
 ]
 
 describe("identidade instalada sozinha, sem o módulo de anexos", () => {
-  it("o IdentityModule não importa nenhum outro módulo sem slot profissional", () => {
-    expect(IdentityModule.forRoot().imports).toEqual([])
+  it("sem slot profissional, o IdentityModule importa apenas RateLimitModule", () => {
+    expect(IdentityModule.forRoot().imports).toEqual([RateLimitModule])
   })
 
   it("os casos de uso de imagem resolvem sem nenhum provider de PROFILE_IMAGE_STORE", async () => {

@@ -1,14 +1,68 @@
+import { Inject, Injectable } from "@nestjs/common"
 import busboy from "busboy"
 
-import { InvalidMultipartRequestError, UploadInterruptedError } from "../../domain/errors"
+import { InFlightGate } from "../../../../shared/kernel/collections/in-flight-gate"
+import { ATTACHMENT_CONFIG, type AttachmentConfig } from "../../attachment.config"
+import {
+  InvalidMultipartRequestError,
+  PayloadTooLargeError,
+  UnexpectedMultipartFieldError,
+  UploadInterruptedError,
+} from "../../domain/errors"
 
 import type { IncomingFile } from "../../domain/incoming-file"
 import type { Request, Response } from "express"
 import type { Readable } from "node:stream"
 
-function createParser(req: Request): ReturnType<typeof busboy> {
+/** Vagas de upload concorrente, na instância — 503 antes de ler o corpo
+ *  quando não sobra nenhuma; a liberação é responsabilidade de quem adquire. */
+@Injectable()
+export class UploadGate {
+  private readonly gate: InFlightGate
+
+  constructor(@Inject(ATTACHMENT_CONFIG) config: AttachmentConfig) {
+    this.gate = new InFlightGate(config.ATTACHMENT_MAX_CONCURRENT_UPLOADS)
+  }
+
+  tryAcquire(): (() => void) | null {
+    return this.gate.tryAcquire()
+  }
+}
+
+// 1 KiB: nenhuma rota atual usa `fields` > 0, mas o parser é reaproveitado por
+// rotas futuras que aceitem um campo — o teto protege essas sem exigir que
+// cada chamador escolha um valor.
+const DEFAULT_FIELD_SIZE_BYTES = 1024
+
+/** Bordas do perfil de upload que o parser precisa pra bloquear cedo, sem
+ *  confiar no que o cliente declara no corpo. */
+export interface MultipartLimits {
+  readonly maxBytes: number
+  readonly maxFiles: number
+  // Campos não-arquivo aceitos e o teto de bytes de cada um. Default 0/1 KiB —
+  // a rota de lote não aceita nenhum campo.
+  readonly fields?: number
+  readonly fieldSize?: number
+}
+
+function createParser(req: Request, limits: MultipartLimits): ReturnType<typeof busboy> {
   try {
-    return busboy({ headers: req.headers })
+    return busboy({
+      headers: req.headers,
+      // `parts` = `files` + 1 de propósito: o busboy emite `partsLimit` quando
+      // a contagem ALCANÇA o teto (`++parts === partsLimit`), enquanto
+      // `filesLimit` só dispara na parte ALÉM do teto (`files === filesLimit`
+      // antes de contar). Com os dois no mesmo número, um lote no limite exato
+      // (1 arquivo com maxFiles=1) morria em 413. Quem barra o excesso de
+      // arquivos é `files`; `parts` fica como rede para partes fora do padrão.
+      limits: {
+        fileSize: limits.maxBytes,
+        files: limits.maxFiles,
+        parts: limits.maxFiles + 1,
+        fields: limits.fields ?? 0,
+        fieldSize: limits.fieldSize ?? DEFAULT_FIELD_SIZE_BYTES,
+      },
+    })
   } catch {
     // Content-type ausente ou fora do multipart: pedido malformado, não falha
     // do servidor.
@@ -25,8 +79,9 @@ export async function* readMultipartFiles(
   req: Request,
   res: Response,
   fieldName: string,
+  limits: MultipartLimits,
 ): AsyncGenerator<IncomingFile> {
-  const parser = createParser(req)
+  const parser = createParser(req, limits)
   const queue: IncomingFile[] = []
   let finished = false
   let failure: Error | null = null
@@ -61,15 +116,35 @@ export async function* readMultipartFiles(
     // stream de erro sem ouvinte derruba o processo inteiro.
     stream.on("error", () => undefined)
     if (name !== fieldName) {
-      stream.resume()
+      stream.destroy()
+      fail(new UnexpectedMultipartFieldError())
       return
     }
+    stream.on("limit", () => {
+      fail(new PayloadTooLargeError())
+    })
     queue.push({
       filename: info.filename,
       contentType: info.mimeType,
       stream,
     })
     notify()
+  })
+  parser.on("field", (_name, _value, info) => {
+    // Campo não-arquivo acima de `fieldSize`: busboy só trunca o valor por
+    // padrão, sem recusar — sem este check o corte passaria batido.
+    if (info.nameTruncated || info.valueTruncated) {
+      fail(new InvalidMultipartRequestError())
+    }
+  })
+  parser.on("filesLimit", () => {
+    fail(new PayloadTooLargeError())
+  })
+  parser.on("partsLimit", () => {
+    fail(new PayloadTooLargeError())
+  })
+  parser.on("fieldsLimit", () => {
+    fail(new InvalidMultipartRequestError())
   })
   parser.on("close", () => {
     finished = true

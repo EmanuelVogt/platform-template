@@ -29,7 +29,7 @@ describe("PurgePendingAttachmentsJob", () => {
     const attachment = stale()
     const repo = {
       findPendingOlderThan: vi.fn(async () => [attachment]),
-      deleteByIds: vi.fn(async () => undefined),
+      deletePendingByIds: vi.fn(async () => undefined),
     }
     const storage = { delete: vi.fn(async () => undefined) }
     const job = new PurgePendingAttachmentsJob(storage as never, repo as never, logger)
@@ -37,14 +37,14 @@ describe("PurgePendingAttachmentsJob", () => {
     await job.run()
 
     expect(storage.delete).toHaveBeenCalledWith(attachment.props.storageKey)
-    expect(repo.deleteByIds).toHaveBeenCalledWith([attachment.props.id])
+    expect(repo.deletePendingByIds).toHaveBeenCalledWith([attachment.props.id])
   })
 
   it("apaga a linha mesmo se o objeto não existir no storage", async () => {
     const attachment = stale()
     const repo = {
       findPendingOlderThan: vi.fn(async () => [attachment]),
-      deleteByIds: vi.fn(async () => undefined),
+      deletePendingByIds: vi.fn(async () => undefined),
     }
     const storage = {
       delete: vi.fn(async () => {
@@ -55,18 +55,18 @@ describe("PurgePendingAttachmentsJob", () => {
 
     await job.run()
 
-    expect(repo.deleteByIds).toHaveBeenCalledWith([attachment.props.id])
+    expect(repo.deletePendingByIds).toHaveBeenCalledWith([attachment.props.id])
   })
 
   it("não chama o repositório quando não há vencidos", async () => {
     const repo = {
       findPendingOlderThan: vi.fn(async () => []),
-      deleteByIds: vi.fn(async () => undefined),
+      deletePendingByIds: vi.fn(async () => undefined),
     }
     const job = new PurgePendingAttachmentsJob({ delete: vi.fn() } as never, repo as never, logger)
 
     await job.run()
 
-    expect(repo.deleteByIds).not.toHaveBeenCalled()
+    expect(repo.deletePendingByIds).not.toHaveBeenCalled()
   })
 })

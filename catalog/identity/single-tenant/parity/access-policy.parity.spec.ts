@@ -2,6 +2,7 @@ import { UnauthorizedException } from "@nestjs/common"
 import { describe, expect, it } from "vitest"
 
 import { IdentityAccessPolicy } from "../api/access/identity-access.policy"
+import { assertCanGrant } from "../application/access-policy"
 import { IDENTITY_ACCESS } from "../application/identity-context"
 
 import type { Actor, RequestContext  } from "../../../shared/kernel/context/request-context"
@@ -82,5 +83,57 @@ describe("paridade do IdentityAccessPolicy", () => {
     expect(
       policyWith(undefined).can(ACTOR, { kind: "permission", key: "admin.users.read" }),
     ).toBe(false)
+  })
+})
+
+/**
+ * Regra congelada da edição de permissões (REM-18): o delta é a diferença
+ * simétrica entre o conjunto atual do alvo e o pedido, e cada chave do delta
+ * precisa estar com o ator — conceder e revogar valem igual.
+ */
+describe("paridade do assertCanGrant", () => {
+  const actorOf = (keys: string[]) => ({
+    permissions: new Set(keys),
+    isMaster: false,
+  })
+
+  it("concede chave que o ator possui", () => {
+    expect(() => {
+      assertCanGrant({ actor: actorOf(["admin.users.read"]), current: [] }, [
+        "admin.users.read",
+      ])
+    }).not.toThrow()
+  })
+
+  it("nega conceder chave que o ator não possui", () => {
+    expect(() => {
+      assertCanGrant({ actor: actorOf([]), current: [] }, ["admin.users.read"])
+    }).toThrow(/permissões/i)
+  })
+
+  it("nega revogar chave que o ator não possui", () => {
+    expect(() => {
+      assertCanGrant({ actor: actorOf([]), current: ["admin.users.read"] }, [])
+    }).toThrow(/permissões/i)
+  })
+
+  it("conjunto inalterado passa, mesmo fora do conjunto do ator", () => {
+    expect(() => {
+      assertCanGrant({ actor: actorOf([]), current: ["admin.users.read"] }, [
+        "admin.users.read",
+      ])
+    }).not.toThrow()
+  })
+
+  it("master edita qualquer chave", () => {
+    expect(() => {
+      assertCanGrant(
+        {
+          actor: { permissions: new Set<string>(), isMaster: true },
+          current: ["admin.users.read"],
+        },
+        ["admin.tags.read"],
+      )
+    }).not.toThrow()
   })
 })

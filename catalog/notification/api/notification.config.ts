@@ -1,9 +1,11 @@
 import { z } from "zod"
 
+import { nodeEnvSchema } from "../../shared/config/env"
+
 /** Schema das env vars do módulo notification (mail movido do identity). */
 export const notificationConfigSchema = z
   .object({
-    NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+    NODE_ENV: nodeEnvSchema.default("development"),
     MAIL_TRANSPORT: z.enum(["log", "resend"]).default("log"),
     RESEND_API_KEY: z.string().min(1).optional(),
     MAIL_FROM: z.string().min(1).optional(),

@@ -180,6 +180,14 @@ export async function runCatalogCheck({
       return EXIT_CODES.CATALOG_UNREACHABLE;
     }
 
+    log("catalog:check — lint do catálogo (pnpm catalog:lint)");
+    const lintResult = timedRun("pnpm", ["catalog:lint"], { cwd: repoRoot });
+    if (lintResult.timedOut) return timeoutFailure(log, "pnpm catalog:lint", stepTimeoutMs);
+    if (lintResult.status !== 0) {
+      log(`catalog:check — "pnpm catalog:lint" falhou (código ${lintResult.status})`);
+      return EXIT_CODES.TEST_FAILURE;
+    }
+
     for (const entry of order) {
       const label = entryLabel(entry);
       log(`catalog:check — module add ${label}`);

@@ -48,17 +48,17 @@ function formatDateTime(iso: string): string {
 export const accessLinkSentData = z.object({
   email: z.email(),
   name: z.string().min(1),
-  link: z.url(),
+  link: z.url({ protocol: /^https?$/ }),
   tokenExpiresAt: isoDate,
 })
 export const emailVerificationData = z.object({
   email: z.email(),
-  link: z.url(),
+  link: z.url({ protocol: /^https?$/ }),
   tokenExpiresAt: isoDate,
 })
 export const passwordResetRequestedData = z.object({
   email: z.email(),
-  link: z.url(),
+  link: z.url({ protocol: /^https?$/ }),
   tokenExpiresAt: isoDate,
 })
 export const accountLockoutData = z.object({ email: z.email() })
@@ -74,7 +74,7 @@ export const passwordSetData = z.object({ userName: z.string().min(1) })
 // Vai ao NOVO e-mail: link de reativação. `email` é o endereço de destino.
 export const emailChangeRequestedData = z.object({
   email: z.email(),
-  link: z.url(),
+  link: z.url({ protocol: /^https?$/ }),
   tokenExpiresAt: isoDate,
 })
 // Vai ao e-mail ANTIGO: aviso de que uma troca foi solicitada (sem link).

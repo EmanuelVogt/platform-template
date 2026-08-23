@@ -201,8 +201,45 @@ describe("AuthMiddleware", () => {
     expect(sessions.touch).toHaveBeenCalledWith(
       "sess-1",
       NOW,
-      new Date(NOW.getTime() + cfg.SESSION_IDLE_TTL_SECONDS * 1000)
+      new Date(NOW.getTime() + cfg.SESSION_IDLE_TTL_SECONDS * 1000),
+      new Date(NOW.getTime() - cfg.SESSION_TOUCH_INTERVAL_SECONDS * 1000)
     )
+  })
+
+  it("abaixo do intervalo de touch nenhum UPDATE é emitido", async () => {
+    const lastSeenAt = new Date(
+      NOW.getTime() - (cfg.SESSION_TOUCH_INTERVAL_SECONDS - 1) * 1000
+    )
+    const { ctx, middleware, req, next, sessions } = setup({
+      cookie: "raw",
+      session: makeSession({ lastSeenAt }),
+    })
+
+    const actor = await ctx.run(storeOf(), async () => {
+      await middleware.use(req, {} as unknown as Response, next)
+      return ctx.getActor()
+    })
+
+    expect(sessions.touch).not.toHaveBeenCalled()
+    // a sessão segue válida: o que foi economizado é a escrita, não o acesso
+    expect(actor).toEqual({ id: "user-1", kind: "user" })
+    expect(next).toHaveBeenCalled()
+  })
+
+  it("no limite do intervalo o touch volta a ser emitido", async () => {
+    const lastSeenAt = new Date(
+      NOW.getTime() - cfg.SESSION_TOUCH_INTERVAL_SECONDS * 1000
+    )
+    const { ctx, middleware, req, next, sessions } = setup({
+      cookie: "raw",
+      session: makeSession({ lastSeenAt }),
+    })
+
+    await ctx.run(storeOf(), () =>
+      middleware.use(req, {} as unknown as Response, next)
+    )
+
+    expect(sessions.touch).toHaveBeenCalledTimes(1)
   })
 
   it("cookie inválido segue anônimo e apaga o cookie morto", async () => {
@@ -259,22 +296,53 @@ describe("AuthMiddleware", () => {
     expect(next).not.toHaveBeenCalled()
   })
 
-  it("usuário excluído fica COM ator e SEM permissões (403, não 401)", async () => {
-    const { ctx, middleware, req, next } = setup({
+  it("usuário excluído com sessão viva não publica NADA e perde o cookie", async () => {
+    const cleared: string[] = []
+    const { ctx, middleware, req, next, sessions } = setup({
       cookie: "raw",
       session: makeSession(),
       deleted: true,
       permissions: ["admin.users.read"],
     })
+    const res = {
+      cookie: (name: string, value: string) => {
+        if (value === "") cleared.push(name)
+      },
+    } as unknown as Response
+
     const captured = await ctx.run(storeOf(), async () => {
-      await middleware.use(req, {} as unknown as Response, next)
+      await middleware.use(req, res, next)
       return {
         actor: ctx.getActor(),
+        session: ctx.getExtension(IDENTITY_SESSION),
         access: ctx.getExtension(IDENTITY_ACCESS),
       }
     })
-    expect(captured.actor).toEqual({ id: "user-1", kind: "user" })
+
+    expect(captured.actor).toBeNull()
+    expect(captured.session).toBeUndefined()
     expect(captured.access).toBeUndefined()
+    expect(req.userId).toBeUndefined()
+    expect(sessions.touch).not.toHaveBeenCalled()
+    expect(cleared).toEqual([cfg.COOKIE_NAME])
+    expect(next).toHaveBeenCalled()
+  })
+
+  it("usuário sumido do banco também não publica nada", async () => {
+    const { ctx, middleware, req, next } = setup({
+      cookie: "raw",
+      session: makeSession(),
+      userNotFound: true,
+    })
+    const res = { cookie: () => undefined } as unknown as Response
+
+    const actor = await ctx.run(storeOf(), async () => {
+      await middleware.use(req, res, next)
+      return ctx.getActor()
+    })
+
+    expect(actor).toBeNull()
+    expect(next).toHaveBeenCalled()
   })
 
   it("usuário master publica isMaster no contexto", async () => {

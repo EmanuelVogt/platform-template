@@ -12,7 +12,6 @@ import { User } from "../../../domain/entities/user.entity"
 import { VerificationToken } from "../../../domain/entities/verification-token.entity"
 import {
   EmailAlreadyInUseError,
-  EmailBelongsToDeletedUserError,
 } from "../../../domain/errors"
 import {
   AUTH_EVENT_REPOSITORY,
@@ -72,9 +71,9 @@ export class CreateUserUseCase implements UseCaseContract<CreateUserInput, void>
 
     const existing = await this.users.findByEmail(email)
     if (existing) {
-      throw existing.isDeleted()
-        ? new EmailBelongsToDeletedUserError()
-        : new EmailAlreadyInUseError()
+      // 409 único: dizer que o endereço pertence a um usuário na lixeira conta
+      // ao chamador algo que ele não pode ver de outro jeito.
+      throw new EmailAlreadyInUseError()
     }
 
     const user = User.create({

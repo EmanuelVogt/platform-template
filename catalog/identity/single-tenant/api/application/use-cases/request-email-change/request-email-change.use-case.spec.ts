@@ -4,7 +4,6 @@ import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.er
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import {
   EmailAlreadyInUseError,
-  EmailBelongsToDeletedUserError,
   EmailUnchangedError,
   InvalidCredentialsError,
   RateLimitedError,
@@ -334,8 +333,8 @@ describe("RequestEmailChangeUseCase", () => {
     })
   })
 
-  describe("EmailAlreadyInUseError / EmailBelongsToDeletedUserError", () => {
-    it("lança EmailAlreadyInUseError quando o novo e-mail pertence a usuário ativo", async () => {
+  describe("endereço recusado: 409 único e cooldown gravado", () => {
+    it("e-mail de usuário ativo → EmailAlreadyInUseError com o cooldown gravado", async () => {
       const t = makeDeps({
         users: {
           findById: vi.fn().mockResolvedValue(makeUser()),
@@ -346,10 +345,14 @@ describe("RequestEmailChangeUseCase", () => {
       await expect(
         t.uc.execute({ currentPassword: "senha-ok", newEmail: "novo@example.com" }),
       ).rejects.toBeInstanceOf(EmailAlreadyInUseError)
-      expect(t.users.update).not.toHaveBeenCalled()
+      expect(t.users.update).toHaveBeenCalledTimes(1)
+      const saved = t.users.update.mock.calls[0][0] as User
+      expect(saved.props.lastEmailChangeRequestedAt).toEqual(NOW)
+      expect(saved.props.pendingEmail).toBeNull()
+      expect(saved.props.status).toBe("active")
     })
 
-    it("lança EmailBelongsToDeletedUserError quando o novo e-mail pertence a usuário excluído", async () => {
+    it("e-mail de usuário excluído → MESMO erro e MESMO cooldown", async () => {
       const deletedUser = makeUser({
         id: "u-2",
         email: "novo@example.com",
@@ -364,7 +367,25 @@ describe("RequestEmailChangeUseCase", () => {
       })
       await expect(
         t.uc.execute({ currentPassword: "senha-ok", newEmail: "novo@example.com" }),
-      ).rejects.toBeInstanceOf(EmailBelongsToDeletedUserError)
+      ).rejects.toBeInstanceOf(EmailAlreadyInUseError)
+      const saved = t.users.update.mock.calls[0][0] as User
+      expect(saved.props.lastEmailChangeRequestedAt).toEqual(NOW)
+    })
+
+    it("segunda sondagem em seguida bate no cooldown (429), não em outro 409", async () => {
+      const t = makeDeps({
+        users: {
+          findById: vi
+            .fn()
+            .mockResolvedValue(makeUser({ lastEmailChangeRequestedAt: NOW })),
+          findByEmail: vi.fn().mockResolvedValue(makeUser({ id: "u-2", email: "novo@example.com" })),
+          update: vi.fn(),
+        },
+      })
+      await expect(
+        t.uc.execute({ currentPassword: "senha-ok", newEmail: "novo@example.com" }),
+      ).rejects.toBeInstanceOf(RateLimitedError)
+      expect(t.users.findByEmail).not.toHaveBeenCalled()
       expect(t.users.update).not.toHaveBeenCalled()
     })
   })

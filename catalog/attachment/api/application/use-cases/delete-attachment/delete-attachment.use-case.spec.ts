@@ -21,7 +21,8 @@ function makeDeps(found: Attachment | null) {
     findByIds: vi.fn(),
     saveMany: vi.fn(),
     findPendingOlderThan: vi.fn(),
-    deleteByIds: vi.fn(),
+    deletePendingByIds: vi.fn(),
+    sumPendingBytesByOwner: vi.fn(),
   }
   const log = {
     record: vi.fn(),

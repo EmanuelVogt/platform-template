@@ -34,6 +34,27 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   `notification` em `>=2.0.0 <3.0.0`, mesma faixa declarada por `identity` — o grafo continua
   acíclico (`notification.dependsOn` é `[]`) (ADV-20260821-01).
 
+### Security
+
+- `GetAttachmentForDownloadUseCase.execute` (`DownloadResult`, superfície pública da facade) passa
+  a devolver `profile: UploadProfileName | "legacy"` junto com o stream — mudança de forma
+  aditiva usada para decidir a política de exibição por perfil, não só pelo `content_type`
+  gravado.
+- `DownloadAttachmentController` passa a decidir `inline` vs. `attachment` por uma allowlist
+  fechada de `content_type` (`image/jpeg`, `image/png`, `image/webp`) checada pelos magic bytes
+  do arquivo (`content-type-sniff.ts`), nunca pelo header enviado no upload — corrige a XSS
+  refletida por upload de HTML/SVG disfarçado de imagem servido inline (UPLOAD-3/4).
+- `UploadAttachmentsBatchUseCase` passa a rodar a mesma sniffagem de magic bytes que o upload
+  simples já fazia — o lote era o caminho que ainda confiava no `Content-Type` declarado pelo
+  cliente.
+- Nova `ATTACHMENT_MAX_CONCURRENT_UPLOADS`: `multipart-files.ts` limita, por um
+  `InFlightGate` do kernel, quantos uploads multipart esta entrada processa ao mesmo tempo na
+  instância — parte da correção do vazamento de sockets do storage, cujo outro lado
+  (`STORAGE_MAX_SOCKETS` + `keepAlive` no `httpsAgent` do adapter R2) é do kernel
+  (`shared/infra/storage/storage.config.ts`, fora do Touches desta entrada).
+- Nova `ATTACHMENT_PENDING_QUOTA_BYTES`: teto de bytes pendentes (upload iniciado, nunca
+  confirmado) por dono, cota contra esgotar o storage com lixo nunca finalizado.
+
 ## [1.0.0]
 
 ### Adicionado

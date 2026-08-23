@@ -1,6 +1,7 @@
-import { Controller, Inject, Req, Sse } from "@nestjs/common"
+import { Controller, ForbiddenException, Inject, Req, Sse } from "@nestjs/common"
 import { ApiExcludeEndpoint, ApiTags } from "@nestjs/swagger"
 
+import { env } from "../../../../../shared/config/env"
 import { SelfService } from "../../../../../shared/kernel/access/decorators"
 import { RequestContext } from "../../../../../shared/kernel/context/request-context"
 import { requireRecipient } from "../../../application/require-recipient"
@@ -25,6 +26,10 @@ export class SseController {
   @SelfService()
   @Sse("stream")
   stream(@Req() req: Request): Observable<MessageEvent> {
+    const origin = req.headers.origin
+    if (origin && origin !== env().WEB_ORIGIN) {
+      throw new ForbiddenException("cross-origin stream request rejected")
+    }
     const recipientId = requireRecipient(this.ctx)
     const conn = this.registry.register(recipientId)
     req.on("close", () => {

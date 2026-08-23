@@ -145,4 +145,55 @@ describe("DrizzleAttachmentRepository", () => {
     const found = await repo.findById(id)
     expect(found?.props.profile).toBe("multi")
   })
+
+  it("sumPendingBytesByOwner soma só os pendentes do dono, ignora prontos e de outro dono", async () => {
+    const pendingA = Attachment.createPending({
+      contentType: "application/pdf", sizeBytes: 100, originalFilename: null,
+      profile: "multi", visibility: "restricted", ownerUserId: "owner-1",
+    })
+    const pendingB = Attachment.createPending({
+      contentType: "application/pdf", sizeBytes: 50, originalFilename: null,
+      profile: "multi", visibility: "restricted", ownerUserId: "owner-1",
+    })
+    const readyOwner1 = Attachment.create({
+      storageKey: "attachments/ready-owner1", contentType: "image/png", sizeBytes: 999,
+      checksum: "z", originalFilename: null, profile: "avatar",
+      visibility: "restricted", ownerUserId: "owner-1",
+    })
+    const pendingOtherOwner = Attachment.createPending({
+      contentType: "application/pdf", sizeBytes: 777, originalFilename: null,
+      profile: "multi", visibility: "restricted", ownerUserId: "owner-2",
+    })
+    await repo.insertMany([pendingA, pendingB, pendingOtherOwner])
+    await repo.insert(readyOwner1)
+
+    expect(await repo.sumPendingBytesByOwner("owner-1")).toBe(150)
+    expect(await repo.sumPendingBytesByOwner("owner-2")).toBe(777)
+  })
+
+  it("sumPendingBytesByOwner devolve 0 quando o dono não tem pendente", async () => {
+    expect(await repo.sumPendingBytesByOwner("sem-pendente")).toBe(0)
+  })
+
+  it("deletePendingByIds só apaga quem ainda está pending — linha que virou ready sobrevive", async () => {
+    const stillPending = Attachment.createPending({
+      contentType: "application/pdf", sizeBytes: 10, originalFilename: null,
+      profile: "multi", visibility: "restricted", ownerUserId: "user-1",
+    })
+    const turnedReady = Attachment.createPending({
+      contentType: "application/pdf", sizeBytes: 10, originalFilename: null,
+      profile: "multi", visibility: "restricted", ownerUserId: "user-1",
+    })
+    await repo.insertMany([stillPending, turnedReady])
+    // Simula a corrida: confirmUploads mudou o status pra 'ready' entre a
+    // seleção do job (findPendingOlderThan) e o delete.
+    await pool.query(`UPDATE attachment.attachments SET status = 'ready' WHERE id = $1`, [
+      turnedReady.props.id,
+    ])
+
+    await repo.deletePendingByIds([stillPending.props.id, turnedReady.props.id])
+
+    expect(await repo.findById(stillPending.props.id)).toBeNull()
+    expect((await repo.findById(turnedReady.props.id))?.props.status).toBe("ready")
+  })
 })

@@ -10,7 +10,7 @@ import {
   truncateKernel,
   truncateTag,
 } from "../../../../test/setup/test-db"
-import { RATE_LIMITER } from "../../identity/domain/ports/rate-limiter"
+import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
 import { allowAllRateLimiter } from "../../identity/testing/allow-all-rate-limiter"
 import { seedUser } from "../../identity/testing/seed-user"
 
@@ -130,6 +130,22 @@ describe("Tags (e2e)", () => {
         (tag: { id: string }) => tag.id === tagId
       )
       expect(listed.usage).toEqual({ total: 0 })
+    })
+
+    it("?deleted=true sem admin.tags.trash.read → 403", async () => {
+      await request(app.getHttpServer())
+        .get("/v1/admin/tags?deleted=true")
+        .set("Origin", ORIGIN)
+        .set("Cookie", readerCookie)
+        .expect(403)
+    })
+
+    it("?deleted=true com admin.tags.trash.read → 200", async () => {
+      await request(app.getHttpServer())
+        .get("/v1/admin/tags?deleted=true")
+        .set("Origin", ORIGIN)
+        .set("Cookie", managerCookie)
+        .expect(200)
     })
   })
 

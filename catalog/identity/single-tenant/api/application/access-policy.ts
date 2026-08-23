@@ -55,14 +55,26 @@ export type GrantContext = {
   current: readonly PermissionKey[]
 }
 
+/**
+ * Toda EDIÇÃO do conjunto do alvo — conceder e revogar — precisa estar dentro
+ * do que o ator possui: a diferença simétrica entre o conjunto atual e o
+ * pedido é o delta, e cada chave do delta tem de ser do ator. Só olhar o
+ * acréscimo deixava um admin apagar permissão que ele próprio não tem.
+ * Chave que o alvo já tinha e permanece não é edição, então não entra no
+ * delta; master é isento.
+ */
 export function assertCanGrant(
   grant: GrantContext,
   requested: readonly PermissionKey[],
 ): void {
   if (grant.actor.isMaster) return
   const current = new Set(grant.current)
-  const added = requested.filter((key) => !current.has(key))
-  if (added.some((key) => !grant.actor.permissions.has(key))) {
+  const next = new Set(requested)
+  const delta = [
+    ...[...next].filter((key) => !current.has(key)),
+    ...[...current].filter((key) => !next.has(key)),
+  ]
+  if (delta.some((key) => !grant.actor.permissions.has(key))) {
     throw new PermissionGrantNotAllowedError()
   }
 }

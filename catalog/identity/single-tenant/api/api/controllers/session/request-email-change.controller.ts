@@ -10,11 +10,11 @@ import {
 import { ApiOperation, ApiTags } from "@nestjs/swagger"
 
 import { SelfService } from "../../../../../shared/kernel/access/decorators"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 import { RequestEmailChangeUseCase } from "../../../application/use-cases/request-email-change/request-email-change.use-case"
 import { IDENTITY_CONFIG } from "../../../identity.config"
 import { ChangeEmailDto } from "../../contracts/identity.contract"
 import { clearSessionCookie } from "../../guards/cookie"
-import { RateLimit } from "../../guards/rate-limit.guard"
 
 import type { IdentityConfig } from "../../../identity.config"
 import type { Response } from "express"

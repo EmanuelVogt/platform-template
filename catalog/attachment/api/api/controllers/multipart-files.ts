@@ -29,11 +29,20 @@ export class UploadGate {
   }
 }
 
+// 1 KiB: nenhuma rota atual usa `fields` > 0, mas o parser é reaproveitado por
+// rotas futuras que aceitem um campo — o teto protege essas sem exigir que
+// cada chamador escolha um valor.
+const DEFAULT_FIELD_SIZE_BYTES = 1024
+
 /** Bordas do perfil de upload que o parser precisa pra bloquear cedo, sem
  *  confiar no que o cliente declara no corpo. */
 export interface MultipartLimits {
   readonly maxBytes: number
   readonly maxFiles: number
+  // Campos não-arquivo aceitos e o teto de bytes de cada um. Default 0/1 KiB —
+  // a rota de lote não aceita nenhum campo.
+  readonly fields?: number
+  readonly fieldSize?: number
 }
 
 function createParser(req: Request, limits: MultipartLimits): ReturnType<typeof busboy> {
@@ -46,12 +55,12 @@ function createParser(req: Request, limits: MultipartLimits): ReturnType<typeof 
       // antes de contar). Com os dois no mesmo número, um lote no limite exato
       // (1 arquivo com maxFiles=1) morria em 413. Quem barra o excesso de
       // arquivos é `files`; `parts` fica como rede para partes fora do padrão.
-      // `fields` em 0 — a rota não aceita nenhum campo não-arquivo.
       limits: {
         fileSize: limits.maxBytes,
         files: limits.maxFiles,
         parts: limits.maxFiles + 1,
-        fields: 0,
+        fields: limits.fields ?? 0,
+        fieldSize: limits.fieldSize ?? DEFAULT_FIELD_SIZE_BYTES,
       },
     })
   } catch {
@@ -120,6 +129,13 @@ export async function* readMultipartFiles(
       stream,
     })
     notify()
+  })
+  parser.on("field", (_name, _value, info) => {
+    // Campo não-arquivo acima de `fieldSize`: busboy só trunca o valor por
+    // padrão, sem recusar — sem este check o corte passaria batido.
+    if (info.nameTruncated || info.valueTruncated) {
+      fail(new InvalidMultipartRequestError())
+    }
   })
   parser.on("filesLimit", () => {
     fail(new PayloadTooLargeError())

@@ -307,4 +307,68 @@ describe("readMultipartFiles", () => {
       InvalidMultipartRequestError,
     )
   })
+
+  it("recusa campo não-arquivo acima do fieldSize (400, valor truncado)", async () => {
+    const req = fakeRequest(
+      Buffer.from(
+        `${fieldPartOf({ name: "legenda", value: "0123456789" })}--${BOUNDARY}--\r\n`,
+      ),
+    )
+
+    await expect(
+      collect(req, fakeResponse(), {
+        maxBytes: 1_000_000,
+        maxFiles: 1,
+        fields: 1,
+        fieldSize: 4,
+      }),
+    ).rejects.toBeInstanceOf(InvalidMultipartRequestError)
+  })
+
+  it(
+    "recusa mais partes que o teto de `parts` (400/413) e destrói o arquivo em voo",
+    async () => {
+      const { req, socket } = streamingRequest()
+      const draining = deferred()
+      const seen: Readable[] = []
+      const limits: MultipartLimits = { maxBytes: 1_000_000, maxFiles: 2, fields: 1 }
+
+      const consume = (async () => {
+        for await (const file of readMultipartFiles(
+          req,
+          asResponse(fakeResponse()),
+          "file",
+          limits,
+        )) {
+          seen.push(file.stream)
+          for await (const chunk of file.stream) {
+            void chunk
+            draining.resolve()
+          }
+        }
+      })()
+
+      socket.write(
+        `--${BOUNDARY}\r\n` +
+          `Content-Disposition: form-data; name="file"; filename="a.txt"\r\n` +
+          `Content-Type: text/plain\r\n\r\nprimeiros bytes`,
+      )
+      await draining.done
+
+      // Campo (parte 2, dentro de fields:1) + 2º arquivo (parte 3, dentro de
+      // files:2) — a 3ª parte alcança o teto de `parts` (maxFiles+1=3) sem
+      // estourar `files` nem `fields`: só `partsLimit` dispara, isolado dos
+      // outros dois — é o que faltava provar (REM-15). `\r\n` inicial fecha a
+      // parte 1, que não tinha o boundary de encerramento ainda.
+      socket.write(
+        `\r\n${fieldPartOf({ name: "legenda", value: "oi" })}` +
+          partOf({ field: "file", filename: "b.txt", content: "outro" }) +
+          `--${BOUNDARY}--\r\n`,
+      )
+
+      await expect(consume).rejects.toBeInstanceOf(PayloadTooLargeError)
+      expect(seen[0]?.destroyed).toBe(true)
+    },
+    3000,
+  )
 })

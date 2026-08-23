@@ -7,7 +7,7 @@ Execute flow and Critical Rules.** Do not search for skill files by filesystem p
 skill cannot be activated, STOP and tell the user.
 
 **Design**: `.specs/features/template-update-contract/design.md`
-**Status**: Execute — waves 1–2 DONE (gates green); next: wave 3 (C8, exclusive), then Verifier
+**Status**: Execute — all 3 waves DONE, 17/17 tasks, build gates green; Verifier dispatched
 
 **Execute preconditions (hard):**
 1. Clean working tree. At authoring time a parallel session holds uncommitted WIP on
@@ -343,3 +343,16 @@ those fixtures at test setup in a temp dir. All workers sonnet.
   tested outcomes need only `status`/`openPrs`/`closedPrs`.
 - T7/T8/C1: no fixture ever commits a literal `.copier-answers.yml`; all child fixtures are built at
   test setup under `mkdtempSync`.
+
+### Wave 3 (exclusive)
+
+| Wave | Cluster | Task | Commit | Status |
+| --- | --- | --- | --- | --- |
+| 3 | C8 | T16 | `12b6207` | DONE |
+
+**Wave 3 Build gate**: `pnpm test:scripts` 349/349 pass, `pnpm catalog:lint` exit 0. Worker sonnet.
+No deviations. The worker verified all four red directions by hand before committing (release.yml
+absent from `_exclude`; template-update.yml, the handbook and `scripts/platform/migrations/**`
+wrongly excluded).
+
+**Execute complete — 17/17 tasks.** Test count 279 (pre-feature) → 349. Verifier dispatched next.

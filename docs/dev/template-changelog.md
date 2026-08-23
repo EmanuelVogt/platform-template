@@ -4,6 +4,34 @@ Version truth = git tag + this entry (AD-006); `package.json` is not bumped on
 release. Each version lists the contract-breaking changes and the steps for the child
 to apply on `copier update`.
 
+## v2.2.1
+
+Two `module add` fixes (issues #10, #11). No contract change; migration = re-run
+what failed.
+
+### Changes
+
+1. **Second `module add` on the same machine died on the catalog cache** (issue #10,
+   `scripts/platform/lib/catalog-source.mjs`): `resolveCatalog` cloned into the cache
+   dir without ever reading it — the second call hit `destination path already exists`,
+   mislabeled "catálogo inacessível". Now: intact clone of an immutable ref (tag) is
+   reused; mutable ref (branch) or corrupted/half clone is discarded and re-cloned.
+   A real access failure still reports as unreachable.
+2. **Custom migration SQL written outside the journal** (issue #11,
+   `scripts/platform/lib/migrations.mjs`): destination names were computed from a
+   predicted index, so an entry with no schema diff (no baseline) shifted every custom
+   SQL one file above the one drizzle registered — the journaled file kept the empty
+   stub (for `identity`, the `auth_events` append-only control). Names are now read
+   from the journal after each `generate`; the shipped SQL overwrites the registered
+   file and the lock only lists files that exist.
+
+### Child migration steps (`copier update` from v2.2.0)
+
+1. Clean `git status`, then `copier update` (or `--vcs-ref v2.2.1`) — only
+   `scripts/platform/**` and this changelog change.
+2. If a previous add left stub-in-journal / orphan-outside, `--rollback` (or remove
+   the orphans) and re-run the add. No manual cache cleanup is needed anymore.
+
 ## v2.2.0
 
 The product gains the routine that brings the template forward, and the answers file it

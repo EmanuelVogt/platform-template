@@ -146,7 +146,7 @@ The 2026-08-22 white-box audit of the backend (kernel + the five catalog entries
 6. WHEN a permission/area/service id array contains duplicates THEN system SHALL respond 400.
 7. WHEN audit `from`/`to` are not ISO datetimes, or `txId` exceeds `Number.MAX_SAFE_INTEGER` THEN system SHALL respond 400.
 8. WHEN a notification catalog `link` is not `http(s)` THEN the event data SHALL fail validation.
-9. WHEN `multer` is resolved THEN it SHALL be ≥ 2.2.0 with `limits.fields` set on both avatar interceptors; WHEN `pnpm audit --prod --audit-level=high` runs on `apps/api` THEN it SHALL exit 0.
+9. WHEN `multer` is resolved THEN it SHALL be ≥ 2.2.0 with `limits.fields` set on both avatar interceptors; WHEN `pnpm audit --prod --audit-level=high --json` runs on `apps/api` THEN every `high`/`critical` advisory it reports SHALL root in the Out-of-Scope `packages/api-client > axios` chain — no backend dependency is flagged (the raw exit code is 1 while that chain exists; precision fix after Verifier round 1, 2026-08-23).
 10. WHEN a sensitive hash column (`sessions.token_hash`, `devices.cookie_token_hash`, `verification_tokens.token_hash`) is captured by the audit trail THEN it SHALL be redacted (new custom migration).
 11. WHEN `purge-pending-attachments` deletes THEN the delete SHALL carry `status = 'pending'`; WHEN `confirmUploads` receives more ids than `maxFiles` THEN it SHALL reject before querying.
 12. WHEN `Content-Disposition` is built THEN `'`, `(`, `)`, `*` SHALL be percent-encoded and an ASCII `filename=` fallback SHALL precede `filename*`.
@@ -232,7 +232,7 @@ The 2026-08-22 white-box audit of the backend (kernel + the five catalog entries
 | REM-36 | INPUT-3 | P3 | test | Tasks | Pending |
 | REM-37 | INPUT-7, INPUT-8 | P3 | test | Tasks | Pending |
 | REM-38 | NOTIF-2 | P3 | test | Tasks | Pending |
-| REM-39 | SUPPLY-4, SUPPLY-5 | P3 | gate: `cd apps/api && pnpm audit --prod --audit-level=high` | Tasks | Pending |
+| REM-39 | SUPPLY-4, SUPPLY-5 | P3 | gate: `cd apps/api && pnpm audit --prod --audit-level=high --json \| jq -e '[.advisories[] \| select(.severity=="high" or .severity=="critical") \| select(.findings[].paths[] \| test("api-client>axios") \| not)] \| length == 0'` (exit 0 = only the Out-of-Scope chain remains) | Tasks | Pending |
 | REM-40 | DB-2 | P3 | test | Tasks | Pending |
 | REM-41 | UPLOAD-9, DB-5 | P3 | test | Tasks | Pending |
 | REM-42 | UPLOAD-10 | P3 | test | Tasks | Pending |
@@ -241,7 +241,7 @@ The 2026-08-22 white-box audit of the backend (kernel + the five catalog entries
 | REM-45 | AUTH-9 | P3 | test | Tasks | Pending |
 | REM-46 | NOTIF-1 | P3 | test | Tasks | Pending |
 | REM-47 | SUPPLY-6/7, KERNEL-7 | P3 | probe: `grep -En "uses: .*@v[0-9]" .github/workflows/*.yml \| grep -v '#' ; grep -L "^permissions:" .github/workflows/*.yml` (both empty) | Tasks | Pending |
-| REM-48 | — (Vitest port, AC 1) | P1 Port | probe: `grep -rEn "\bjest\.|@jest/globals|ts-jest" apps/api/src apps/api/test catalog --include='*.ts' ; ls apps/api/test/jest-*.json ; grep -n '"test' apps/api/package.json` (all empty) | Tasks | Pending |
+| REM-48 | — (Vitest port, AC 1) | P1 Port | probe: `grep -rEn "\bjest\.|@jest/globals|ts-jest" apps/api/src apps/api/test catalog --include='*.ts' ; ls apps/api/test/jest-*.json ; grep -En '^\s*"test[^"]*":' apps/api/package.json` (all empty — the last grep matches script keys only, not the `format` glob or the `testcontainers` devDependency) | Tasks | Pending |
 | REM-49 | — (Vitest port, AC 2) | P1 Port | gate: `pnpm test && pnpm test:int && pnpm test:e2e` | Tasks | Pending |
 | REM-50 | — (Vitest port, AC 3) | P1 Port | gate: `pnpm catalog:check` | Tasks | Pending |
 | REM-51 | — (Vitest port, ACs 4–5) | P1 Port | gate: `pnpm test:coverage` + `pnpm test:scripts`; probes REM-26, REM-47 | Tasks | Pending |
@@ -255,6 +255,6 @@ Proofs: `test` = assertion in a spec/int-spec/e2e file of the owning entry or ke
 ## Success Criteria
 
 - [ ] Every repro in spike.md for a High/Medium finding fails against the fixed code.
-- [ ] `pnpm audit --prod --audit-level=high` exits 0 in `apps/api`.
+- [ ] `pnpm audit --prod --audit-level=high` in `apps/api` reports no high/critical advisory outside the Out-of-Scope `packages/api-client > axios` chain (REM-39 filtered gate exits 0).
 - [ ] A kernel-only child boots only with an explicit `NODE_ENV`, `DATABASE_SSL`, `TRUST_PROXY_HOPS` intent; an identity child additionally with `BREACH_CHECK_ENABLED`.
 - [ ] Each touched entry has a CHANGELOG entry, version bump and advisory; `docs/dev/template-changelog.md` lists the kernel changes.

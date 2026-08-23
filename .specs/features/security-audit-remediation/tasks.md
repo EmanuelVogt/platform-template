@@ -1596,6 +1596,140 @@ Wave 6:  [C11: T53→T58]
 
 ---
 
+> **Fix tasks — Verifier round 1 (2026-08-23, `validation.md` § Fix Plans)**. Wave 7 = C13 (attachment, T63→T66) ∥ C14 (identity + audit, T67→T68); disjoint ownership, both touch `catalog/**` so the Build gate includes `pnpm catalog:check`. Spec-precision fixes (REM-39 criterion, REM-48 probe) are made by the orchestrator in `spec.md`, not by a worker. The cosmetic narrower-than-stated proofs (REM-09, REM-10, REM-19, REM-25, REM-27) are accepted as passing and are not re-opened.
+
+### T63: Discriminate the declared-type mismatch in the batch sniff (REM-08, mutant 2)
+
+**What**: Kill the surviving mutant — a valid image whose bytes sniff to a *different* image type than declared must be rejected like a null sniff.
+**Where**: `catalog/attachment/api/application/use-cases/upload-attachments-batch/upload-attachments-batch.use-case.spec.ts`
+**Touches**: `catalog/attachment/api/application/use-cases/upload-attachments-batch/upload-attachments-batch.use-case.spec.ts`, `catalog/attachment/api/__e2e__/attachment-upload.e2e-spec.ts`
+**Depends on**: T46
+**Exclusive**: no
+**Reuses**: the existing spoofed-part cases at `upload-attachments-batch.use-case.spec.ts:294-326` and `attachment-upload.e2e-spec.ts:137` (415); real PNG/JPEG magic bytes (`file-type` sniff)
+**Requirement**: REM-08
+
+**Done when**:
+
+- [ ] A use-case test feeds valid PNG bytes declared `image/jpeg` (and the reverse) and asserts `UnsupportedMediaTypeError`, nothing persisted, every stored object of the batch discarded (the edge case `validation.md` § Edge Cases leaves unticked)
+- [ ] An e2e case asserts HTTP 415 for the same input
+- [ ] Re-applying mutant 2 (`sniffed !== file.contentType` dropped at `upload-attachments-batch.use-case.ts:67`) turns the scoped gate red — state the failing test names in the summary, then restore the file
+- [ ] Gate check passes: `pnpm catalog:check attachment`
+
+**Tests**: unit + e2e (matrix: use-case → unit; HTTP → e2e in the child)
+**Gate**: full (entry)
+**Commit**: `test(attachment): reject a sniffed image type that differs from the declared one`
+
+---
+
+### T64: Prove the upload quotas — 429 / 413 / 503 before the body is read (REM-14)
+
+**What**: Give the three upload bounds the proof the AC declares.
+**Where**: `catalog/attachment/api/__e2e__/attachment-upload.e2e-spec.ts`
+**Touches**: `catalog/attachment/api/__e2e__/attachment-upload.e2e-spec.ts`, `catalog/attachment/api/api/controllers/upload-attachments.controller.spec.ts` (new if absent), `catalog/attachment/api/application/use-cases/upload-attachments-batch/upload-attachments-batch.use-case.spec.ts` (413 quota path only if the check lives in the use case)
+**Depends on**: T63
+**Exclusive**: no
+**Reuses**: `@RateLimit({ limit: 20, windowSeconds: 60 })` at `upload-attachments.controller.ts:72`; `UploadsSaturatedError` (`domain/errors.ts:68`) and `PendingQuotaExceededError` (`domain/errors.ts:79`); `UploadGate`/`InFlightGate` unit spec; the avatar 429 e2e precedent in identity (`__e2e__/auth-csrf-none.e2e-spec.ts:203-209` consumes the rate-limit bucket)
+**Requirement**: REM-14
+
+**Done when**:
+
+- [ ] 429 on the 21st `POST /attachments/uploads` of one IP within 60 s, with `Retry-After`
+- [ ] 413 when the owner's pending bytes exceed `ATTACHMENT_PENDING_QUOTA_BYTES`
+- [ ] 503 with `Retry-After` when `ATTACHMENT_MAX_CONCURRENT_UPLOADS` uploads are in flight
+- [ ] Each case asserts the body was not consumed (the multipart parser / storage `putStream` never invoked)
+- [ ] Gate check passes: `pnpm catalog:check attachment`
+
+**Tests**: e2e in the child (+ unit where the bound is checked in a use case)
+**Gate**: full (entry)
+**Commit**: `test(attachment): prove the upload rate limit, pending quota and in-flight cap`
+
+---
+
+### T65: Prove the post-header stream failure teardown (REM-12)
+
+**What**: A storage stream that errors after the headers were sent must tear the response down, log `attachment.download_stream_failed`, and leave the process up.
+**Where**: `catalog/attachment/api/__e2e__/attachment-download.e2e-spec.ts`
+**Touches**: `catalog/attachment/api/__e2e__/attachment-download.e2e-spec.ts`
+**Depends on**: T64
+**Exclusive**: no
+**Reuses**: the client-abort case at `attachment-download.e2e-spec.ts:538` (fake storage stream, `slowStream.destroyed`); `download-attachment.controller.ts:78-91` (log key)
+**Requirement**: REM-12
+
+**Done when**:
+
+- [ ] A fake storage stream emits `error` after the first chunk; the test asserts the client connection is closed/reset (no complete body), `attachment.download_stream_failed` is logged once, and a subsequent request on the same app succeeds
+- [ ] Gate check passes: `pnpm catalog:check attachment`
+
+**Tests**: e2e in the child
+**Gate**: full (entry)
+**Commit**: `test(attachment): prove the download stream failure after headers tears the response down`
+
+---
+
+### T66: `fieldSize` in the busboy limits and a `parts` proof (REM-15)
+
+**What**: Complete the limits object the AC enumerates and prove the two untested bounds.
+**Where**: `catalog/attachment/api/api/multipart/multipart-files.ts`
+**Touches**: `catalog/attachment/api/api/multipart/multipart-files.ts`, `catalog/attachment/api/api/multipart/multipart-files.spec.ts`
+**Depends on**: T65
+**Exclusive**: no
+**Reuses**: `multipart-files.ts:50-55` (`fileSize`, `files`, `parts`, `fields`); `multipart-files.spec.ts:135-184` (existing limit cases); busboy `limits.fieldSize` (default 1 MiB) → on `fieldsLimit`/`partsLimit` → `InvalidMultipartRequestError` (400), consistent with the `fields` case at `:147`
+**Requirement**: REM-15
+
+**Done when**:
+
+- [ ] `fieldSize` is set from the profile (a small bound, e.g. 1 KiB — the batch route accepts no field; the value protects any route that reuses the parser)
+- [ ] Spec cases: a non-file field over `fieldSize` → 400; more than `parts` parts → 400; the offending part is destroyed (`destroyed === true`)
+- [ ] Gate check passes: `pnpm catalog:check attachment`
+
+**Tests**: unit
+**Gate**: full (entry)
+**Commit**: `fix(attachment): bound multipart field size and prove the parts limit`
+
+---
+
+### T67: Prove the audit-trail redaction of the three token-hash columns (REM-40)
+
+**What**: One trail assertion per column the custom migration registers.
+**Where**: `catalog/identity/single-tenant/api/infrastructure/persistence/audit-redaction.int-spec.ts` (new; or the precedent's file if the trail helper is only reachable from the audit entry)
+**Touches**: `catalog/identity/single-tenant/api/infrastructure/persistence/audit-redaction.int-spec.ts` (new), `catalog/audit/api/infrastructure/trail/audit-trigger.int-spec.ts` (only if the precedent must host the cases)
+**Depends on**: T38
+**Exclusive**: no
+**Reuses**: `catalog/audit/api/infrastructure/trail/audit-trigger.int-spec.ts:144` (`row_new.password_hash === "[REDACTED]"` — the exact pattern to mirror); `catalog/identity/single-tenant/migrations/custom/03_audit_redact_token_hashes.sql:19-21`
+**Requirement**: REM-40
+
+**Done when**:
+
+- [ ] Inserting/updating a `sessions`, `devices` and `verification_tokens` row yields an `audit.entries` row whose `row_new.token_hash` / `row_new.cookie_token_hash` / `row_new.token_hash` is `"[REDACTED]"` and whose other columns are intact
+- [ ] Gate check passes: `pnpm catalog:check identity` (and `audit` if its file changed)
+
+**Tests**: int in the child (matrix: custom SQL migration → int-spec)
+**Gate**: full (entry)
+**Commit**: `test(identity): prove the audit trail redacts the session, device and verification token hashes`
+
+---
+
+### T68: Unit proof for the dev seed password source (REM-28)
+
+**What**: The seed reads `SEED_MASTER_PASSWORD` or generates one — prove both branches.
+**Where**: `catalog/identity/single-tenant/api/testing/seeds/master-user.seed.spec.ts`
+**Touches**: `catalog/identity/single-tenant/api/testing/seeds/master-user.seed.spec.ts` (new), `catalog/identity/single-tenant/api/testing/seeds/master-user.seed.ts` (export only, if `resolveMasterPassword` is not exported)
+**Depends on**: T67
+**Exclusive**: no
+**Reuses**: `master-user.seed.ts:18-24,31-35`
+**Requirement**: REM-28
+
+**Done when**:
+
+- [ ] Env set → that value, `generated: false`; env absent → a generated value of the documented length, `generated: true`, printed once; no literal password anywhere in the file (assert by reading the source in the test or by grep in the summary)
+- [ ] Gate check passes: `pnpm catalog:check identity`
+
+**Tests**: unit
+**Gate**: full (entry)
+**Commit**: `test(identity): prove the master seed reads SEED_MASTER_PASSWORD or generates one`
+
+---
+
 ## Wave Execution Map
 
 ```

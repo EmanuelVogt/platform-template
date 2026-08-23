@@ -16,6 +16,9 @@ decides its own license.
 The step-by-step for template consumers is in the [README](.github/README.md). The
 repository is public: `copier` and `module add` clone over HTTPS, no SSH key needed.
 
+Supported dev platforms: macOS, Linux, WSL2 on Windows. Native Windows is not supported —
+`scripts/sync-agent-skills.mjs` mirrors the agent skills via symlinks.
+
 ```
 pipx install copier              # or uv tool install copier
 copier copy --trust gh:EmanuelVogt/platform-template ./my-product

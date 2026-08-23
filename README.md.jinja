@@ -31,6 +31,9 @@ coverage floor of 90 % on every metric, never lowered; pre-push runs
 
 ## Getting started
 
+Supported dev platforms: macOS, Linux, WSL2 on Windows. Native Windows is not supported —
+`scripts/sync-agent-skills.mjs` mirrors the agent skills via symlinks.
+
 ```
 cp apps/api/.env.example apps/api/.env
 docker compose up -d

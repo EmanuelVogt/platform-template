@@ -6,6 +6,8 @@ at the root.
 
 ## Prerequisites
 
+- Supported platforms: macOS, Linux, WSL2 on Windows. Native Windows is not supported —
+  `scripts/sync-agent-skills.mjs` mirrors the agent skills via symlinks.
 - Docker Desktop (with WSL2 enabled on Windows).
 - pnpm (`npm install -g pnpm@10.33.4`).
 - Dependencies installed: `pnpm install` at the root.

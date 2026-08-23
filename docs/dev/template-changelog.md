@@ -21,11 +21,9 @@ catalog entry, and the product reads them before updating instead of after.
    the latest tag (24 h cache) merged with local by id.
 4. **Cadence** (`docs/dev/template-update.md`): `overdue` marks past each kind's
    recommended days; nothing blocks.
-5. **Weekly bot** (`template-update.yml` + `template-update-ci.mjs`): PR on green, issue
-   naming the blocker otherwise.
-6. **Executable migrations** (`pnpm platform template migrate`): runs every
+5. **Executable migrations** (`pnpm platform template migrate`): runs every
    `migrations/v<X.Y.Z>.mjs` up to target, idempotent per script.
-7. **No dev server left hanging** (`.claude/hooks/no-servers-left-behind.mjs` +
+6. **No dev server left hanging** (`.claude/hooks/no-servers-left-behind.mjs` +
    `lib/dev-servers.mjs`): `SubagentStart`/`SubagentStop` terminate what an agent booted
    and never killed; `kill-orphan-dev-servers.mjs` (`SessionEnd`) becomes the backstop and
    now sees the API (`nest start --watch`) and the watchers, not only Vite.

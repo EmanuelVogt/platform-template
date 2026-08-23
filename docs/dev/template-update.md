@@ -38,14 +38,12 @@ tag of the template origin via a sparse git checkout, cached 24 h next to the ta
 cache. Remote and local advisories merge by id (remote wins on a duplicate id), so a
 defect published after the product's installed tag still reaches it.
 
-## Bot: the product updates itself
+## The product never updates itself
 
-A weekly workflow (ships via copier, inert inside the template itself) targets the
-product's first behind tag: `copier update --vcs-ref <tag>`,
-`pnpm platform template migrate`, `pnpm install`, then the product's own gate. Green and
-conflict-free → branch + PR carrying that tag's changelog section, one per tag. A red
-gate or a copier conflict opens an issue naming the blocker instead, refreshed rather
-than duplicated. An unreachable origin fails naming `TEMPLATE_READ_TOKEN`.
+Detection is automatic; applying is the operator's act. No workflow, in the product's
+repository or anywhere else, opens an update PR on a schedule — the lag and the pending
+advisories surface in the session (`template-behind` hook) and in `pnpm platform status`,
+and a human decides when to run the update, through the `template-update` skill.
 
 ## Commands
 

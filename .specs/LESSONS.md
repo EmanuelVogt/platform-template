@@ -104,6 +104,42 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: transaction-manager.int-spec.ts:285 (pre-9ff5e57) (testing)
 - last seen: 2026-08-23T00:06:13Z
 
+### L-016 — A rejection written as 'A or B' needs one test per disjunct: content-sniff specs that only feed bytes sniffing to null leave the 'sniffed type differs from the declared type' branch deletable with the suite still green.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `catalog/attachment` · harmful: 0
+- features: security-audit-remediation
+- evidence: mutant 2 — catalog/attachment/api/application/use-cases/upload-attachments-batch/upload-attachments-batch.use-case.ts:67 (catalog/attachment)
+- last seen: 2026-08-23T15:33:00Z
+
+### L-017 — Asserting a quota's config default is not proof of the quota: an AC that names a status code (429/413/503) needs an assertion on that status on the route, not on the parsed config value.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `catalog/attachment` · harmful: 0
+- features: security-audit-remediation
+- evidence: REM-14 (P1 Attach AC7) (catalog/attachment)
+- last seen: 2026-08-23T15:33:00Z
+
+### L-018 — A migration that registers columns for redaction is not evidence of redaction — every newly registered column needs its own read-back assertion on the trail row, since the pre-existing one covers only the column added earlier.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `migrations` · harmful: 0
+- features: security-audit-remediation
+- evidence: REM-40 (P3 AC10) — catalog/identity/single-tenant/migrations/custom/03_audit_redact_token_hashes.sql (migrations)
+- last seen: 2026-08-23T15:33:00Z
+
+### L-019 — An error branch whose only visible artifact is a log line stays untested unless a spec asserts that log key; grep the key across specs before calling the catch path covered.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `catalog/attachment` · harmful: 0
+- features: security-audit-remediation
+- evidence: REM-12 (P1 Attach AC5) — catalog/attachment/api/api/controllers/download-attachment.controller.ts:78-91 (catalog/attachment)
+- last seen: 2026-08-23T15:33:00Z
+
+### L-020 — When a spec excludes a dependency chain in Out of Scope, its audit gate cannot also demand exit 0 — state the proof as 'no advisory outside that chain' with a command that filters, or the gate is unpassable by construction.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: security-audit-remediation
+- evidence: REM-39 Proof + Success Criteria #2 vs spec.md Out of Scope (spec)
+- last seen: 2026-08-23T15:33:00Z
+
+### L-021 — A blanket 'fields: 0' upload limit breaks any route that declares a required multipart field; derive the cap from the fields the route actually accepts before writing it into the design.
+- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `catalog/identity` · harmful: 0
+- features: security-audit-remediation
+- evidence: catalog/identity/single-tenant/api/api/controllers/auth/upload-access-link-avatar.controller.ts:53-60 (catalog/identity)
+- last seen: 2026-08-23T15:33:00Z
+
 ## Quarantined (failed when applied — ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

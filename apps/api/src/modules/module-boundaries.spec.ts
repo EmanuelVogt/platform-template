@@ -612,9 +612,9 @@ describe("module-boundaries — RULE C: o vocabulário do kernel não conhece m�
   it("a varredura enxerga a casca do template, api e web (sanidade)", () => {
     const files = kernelSurfaceFiles().map(toPosix)
     expect(files.length).toBeGreaterThan(50)
-    expect(files.some((file) => file.includes("/apps/web-vite/src/app/"))).toBe(
-      true
-    )
+    expect(
+      files.some((file) => /\/apps\/web(-vite|-next)?\/src\/_?app\//.test(file))
+    ).toBe(true)
     expect(files.some((file) => file.includes("/apps/api/src/shared/"))).toBe(
       true
     )
@@ -622,22 +622,22 @@ describe("module-boundaries — RULE C: o vocabulário do kernel não conhece m�
     expect(files).toContain(toPosix(resolve(SRC_DIR, "db", "schema.ts")))
   })
 
-  it("webShellRoots() resolve as cascas existentes neste repositório (CAT-03)", () => {
+  it("webShellRoots() resolve só as cascas web existentes — template ou produto (CAT-03)", () => {
     const roots = webShellRoots().map(toPosix)
     const appsDir = resolve(SRC_DIR, "..", "..")
-    const expected = ["web-vite", "web-next"]
+    const existing = ["web", "web-vite", "web-next"]
       .map((name) => resolve(appsDir, name))
       .filter((dir) => existsSync(dir))
       .map(toPosix)
-    expect(roots).toContain(toPosix(resolve(appsDir, "web-vite")))
-    expect(roots).toEqual(expected)
-    expect(roots).not.toContain(toPosix(resolve(appsDir, "web")))
+    expect(existing.length).toBeGreaterThan(0)
+    expect(roots).toEqual(existing)
   })
 
   it("KERNEL_SURFACE inclui src/app/** e src/_app/** de cada casca web", () => {
-    const viteRoot = resolve(SRC_DIR, "..", "..", "web-vite")
-    expect(KERNEL_SURFACE).toContain(resolve(viteRoot, "src", "app"))
-    expect(KERNEL_SURFACE).toContain(resolve(viteRoot, "src", "_app"))
+    for (const root of webShellRoots()) {
+      expect(KERNEL_SURFACE).toContain(resolve(root, "src", "app"))
+      expect(KERNEL_SURFACE).toContain(resolve(root, "src", "_app"))
+    }
   })
 
   it("nenhum token de módulo sobrevive na casca do template", () => {

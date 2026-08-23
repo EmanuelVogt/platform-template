@@ -1,8 +1,8 @@
 # Deploy
 
-Two long-lived environments, each on its own VM (EC2, `us-east-2`), orchestrated by
-[Dokploy](https://dokploy.com) on top of Docker Swarm. Web traffic enters through
-Cloudflare; TLS at the origin is issued by the Traefik that Dokploy manages.
+What the API and web images require to run, and what the entrypoint does at boot. Where
+and how you actually deploy them (cloud/VM, orchestrator, DNS/CDN) is your own operational
+decision — see [*Your provider*](#your-provider) below.
 
 The local environment uses none of this — see [`local-environment.md`](local-environment.md).
 
@@ -12,20 +12,14 @@ The local environment uses none of this — see [`local-environment.md`](local-e
 | --- | --- | --- |
 | Front | `dev.{{ app_domain }}` | `{{ app_domain }}` |
 | API | `dev.api.{{ app_domain }}` | `api.{{ app_domain }}` |
-| Dokploy panel | `dev.deploy.{{ app_domain }}` | `deploy.{{ app_domain }}` |
 
-Each VM runs its own Dokploy, its own Postgres, its own Redis and its own tunnel to the
-legacy MySQL. **No resource is shared between the environments** — not the database, not
-the panel, not the GitHub App.
-
-The legacy MySQL lives on neither VM: a `legacy-tunnel` container (a `raw` compose in
-Dokploy) keeps an SSH tunnel to the legacy host and publishes it on the `dokploy-network`
-network under that name. That is why `MYSQL_LEGACY_DATABASE` points at
-`legacy-tunnel:3306` and not at an IP.
+Two long-lived environments is a convention, not a requirement — adjust it to what your
+provider actually offers. Whatever you run, **no resource is shared between environments**:
+not the database, not secrets, not the deploy credential.
 
 ## What gets built
 
-Two images, built on the VM itself from the repository.
+Two images, built from the repository.
 
 **`apps/api/Dockerfile`** — multi-stage on `node:22-slim`: `turbo prune` isolates the
 `api` subgraph, compiles, installs production dependencies only and copies `dist` into
@@ -65,19 +59,20 @@ other:
 
 | Variable | Note |
 | --- | --- |
-| `DATABASE_URL`, `REDIS_URL` | point at the environment's own services (Swarm service name, not an IP) |
+| `DATABASE_URL`, `REDIS_URL` | point at the environment's own services |
 | `WEB_ORIGIN` | the front's exact origin; CORS mirrors only that one |
 | `VITE_API_URL` (front) | build arg — see the warning above |
-| `PASSWORD_PEPPER`, `CSRF_SECRET` | **generate new ones per environment**; never reuse staging's |
+| `PASSWORD_PEPPER`, `CSRF_SECRET` | **generate new ones per environment**; never reuse one environment's in another |
 | `MASTER_EMAIL`, `MASTER_PASSWORD` | initial superuser credential |
-| `MYSQL_LEGACY_DATABASE` | connection via `legacy-tunnel` |
 | `DATABASE_POOL_MAX` | ceiling of the application pool's connections; saturated → `PoolSaturatedError`, **503** with `Retry-After` (ADR 0089) |
 | `DATABASE_POOL_MAX_WAITING` | ceiling of the wait queue for a connection; above it, acquisition is refused immediately (same 503) instead of queueing |
 | `DATABASE_IDLE_IN_TX_TIMEOUT_MS` | ceiling for an open, idle transaction; above it Postgres terminates the session |
 
-The rest (session parameters, Argon2, lockout, cookie, timeouts) is pure configuration and
-can be identical in both. Validation is fail-fast per module: a missing value or wrong
-format brings the boot down with an explicit error.
+The full variable list, with defaults, is `apps/api/.env.example` — this table only calls
+out the ones that must differ per environment. The rest (session parameters, Argon2,
+lockout, cookie, timeouts) is pure configuration and can be identical in both. Validation
+is fail-fast per module: a missing value or wrong format brings the boot down with an
+explicit error.
 
 ## Fail-closed configuration
 
@@ -87,9 +82,9 @@ one. Same value in both environments unless noted:
 
 | Variable | Default | Production guidance |
 | --- | --- | --- |
-| `TRUST_PROXY_HOPS` | `0` | **Set to `2`** for this topology (Cloudflare → Traefik, two hops in front of the app). `0` means "trust nothing in front" — every request looks like it comes from the edge, which breaks per-IP rate limiting and records the wrong IP in `auth_events`/sessions/new-device e-mail. Never leave the default in a deployed environment that sits behind a proxy. |
+| `TRUST_PROXY_HOPS` | `0` | Set this to the number of reverse proxies in front of the app (for example `2` behind a CDN plus your orchestrator's own edge). `0` means "trust nothing in front" — every request looks like it comes from the edge, which breaks per-IP rate limiting and records the wrong IP in `auth_events`/sessions/new-device e-mail. Never leave the default in a deployed environment that sits behind a proxy. |
 | `DOCS_ENABLED` | `false` | Leave off in production (`/docs` was reachable by default before this default flipped). Turn on only for a controlled window if the OpenAPI UI is needed there. |
-| `REDIS_ALLOW_PLAINTEXT` | `false` | `REDIS_URL` starting with `redis://` (not `rediss://`) in production is refused at boot unless this is `true`. Prefer `rediss://` when the Redis service supports TLS; set this flag only when the connection is already isolated to the Swarm overlay network. |
+| `REDIS_ALLOW_PLAINTEXT` | `false` | `REDIS_URL` starting with `redis://` (not `rediss://`) in production is refused at boot unless this is `true`. Prefer `rediss://` when the Redis service supports TLS; set this flag only when the connection is already isolated to a private network. |
 | `DATABASE_SSL_CA` | unset | Optional PEM (accepts escaped `\n`) for `DATABASE_SSL=require`. Unset relies on the platform's default CA trust. |
 | `OUTBOX_DEAD_RETENTION_DAYS` | `30` | How long a dead-lettered outbox event survives before the `outbox-dead.purge` maintenance job removes it (`lockId` 6 — see `docs/dev/template-changelog.md`). Raise it if dead letters need a longer investigation window. |
 | `STORAGE_REQUEST_TIMEOUT_MS` | `30000` | Timeout per request to the object storage (R2) adapter. |
@@ -100,24 +95,22 @@ one. Same value in both environments unless noted:
 
 ## Deploy flow
 
-1. Push to `main` on `{{ github_org }}/{{ github_repo }}`.
-2. The GitHub App installed in each environment fires that VM's Dokploy webhook.
-3. Dokploy runs `git fetch`, builds the image on the VM and updates the service in the Swarm.
-4. Traefik reconfigures the route; the origin certificate already exists (Let's Encrypt).
+`.github/workflows/ci.yml` runs three gates on every PR and on push to `main`: `quality`
+(lint + typecheck + builds), `test-unit` (api + web) and `test-coverage` (api integration +
+e2e, testcontainers) — see [`workflow.md`](../agents/workflow.md) for the full pipeline.
+Nothing builds or deploys the images before those pass.
 
-Auto-deploy on push is on in both environments, pointing at the **same branch** (`main`).
-Each VM has its own GitHub App — connecting one does not connect the other.
-
-The quality gate runs **before** that: lefthook on pre-push (typecheck + unit) and CI on
-PR/push (`.github/workflows/ci.yml`). The Dokploy build runs no tests.
+How a green push actually becomes a running deployment — which provider, which webhook or
+CLI, which orchestrator — is whatever hook your environment configures; describe it under
+*Your provider*.
 
 ## Known pitfalls
 
 **Never deploy a long-lived environment with `Dockerfile.dev`.** `docker-entrypoint.dev.sh`
-applies migrations and backfill, but does **not** run `bootstrap-master` — the environment
-comes up with zero users and nobody can authenticate. On top of that it runs `pnpm dev`
-(ts-node in watch mode) instead of the compiled build. `.dev` exists for local
-development, not for staging or production.
+applies migrations, but does **not** run `bootstrap-master` — the environment comes up
+with zero users and nobody can authenticate. On top of that it runs `pnpm dev` (ts-node in
+watch mode) instead of the compiled build. `.dev` exists for local development, not for
+staging or production.
 
 **Migrations can be silently skipped on a long-lived database.** Drizzle's migrator only
 runs entries whose timestamp is greater than the last applied one. If a migration lands on
@@ -136,28 +129,6 @@ The total must match the number of entries in
 and a staging database with drift **is not a valid source for copying data** into
 production.
 
-**The build consumes the VM.** The build happens on the very machine that serves the
-environment; a heavy build competes with the running application. Both environments run
-with swap configured and a daily Docker cache cleanup (cron at 04:00) precisely for that
-reason.
-
-## Operations
-
-Access to the VMs is by SSH with a key, entering through the EC2 Instance Connect Endpoint
-— there is no per-IP allowance, and without an active SSO session there is no SSH. The
-Postgres port is closed in both environments. The path to reach the database depends on
-the environment and is detailed in [`../agents/infra.md`](../agents/infra.md): on staging
-the `ssh -L` tunnel reaches it, on production it does not — Postgres exists only on the
-Swarm overlay network.
-
-Useful commands on the VM:
-
-```bash
-docker service ls                          # state of the Swarm services
-docker service logs --tail 50 <service>    # logs of one service
-docker system df                           # Docker disk usage
-```
-
 Migrations and the module boot seed can also be fired by hand from the already-built image,
 without a redeploy:
 
@@ -166,3 +137,11 @@ docker run --rm <api-image> node dist/db/migrate
 docker run --rm -e MASTER_EMAIL=... -e MASTER_PASSWORD=... <api-image> \
   node dist/modules/identity/seeds/bootstrap.js
 ```
+
+## Your provider
+
+Product-owned: the template ships no cloud account, VM, deploy orchestrator or panel —
+those are this product's own choice. Document here how a push actually reaches a running
+environment (the orchestrator or CLI, the webhook or GitHub App wiring, TLS/DNS, and how an
+operator reaches the VM and the database for each environment), following the shape of
+[`../agents/infra.md`](../agents/infra.md).

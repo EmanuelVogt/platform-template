@@ -49,6 +49,26 @@ test("lock presente com advisory pendente: emite uma linha `ADV-… <kind> <seve
   );
 });
 
+test("kernel sem lock: a linha de kernel aparece mesmo sem .platform-modules.lock, antes do aviso de no-lock", () => {
+  const result = runHook({ projectDir: path.join(FIXTURES_DIR, "kernel-no-lock") });
+  assert.equal(result.status, 0);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(
+    payload.hookSpecificOutput.additionalContext,
+    "ADV-20260823-01 bug high kernel\nno .platform-modules.lock — run platform module adopt",
+  );
+});
+
+test("kernel com lock: linhas de kernel vêm antes das linhas de entrada", () => {
+  const result = runHook({ projectDir: path.join(FIXTURES_DIR, "kernel-with-lock") });
+  assert.equal(result.status, 0);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(
+    payload.hookSpecificOutput.additionalContext,
+    "ADV-20260823-01 bug high kernel\nADV-20260901-01 security high identity/single-tenant",
+  );
+});
+
 test("UserPromptSubmit só dispara no primeiro prompt da sessão", () => {
   const sessionId = randomUUID();
   const projectDir = path.join(FIXTURES_DIR, "pending");

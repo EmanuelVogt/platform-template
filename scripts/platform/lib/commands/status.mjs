@@ -6,6 +6,7 @@ import {
   computeTemplateStatus,
   formatTemplateStatus,
   listRemoteStableTags,
+  parseInstalledVersion,
   readTemplateOrigin,
 } from "../template-version.mjs";
 
@@ -33,6 +34,7 @@ export function collectStatus({ cwd, offline, fetchTags = listRemoteStableTags }
     version: entry.version,
   }));
 
+  const templateVersion = origin ? parseInstalledVersion(origin.commit)?.version : undefined;
   const advisoriesDir = path.join(cwd, "docs", "advisories");
   let advisories;
   try {
@@ -40,6 +42,7 @@ export function collectStatus({ cwd, offline, fetchTags = listRemoteStableTags }
       lock,
       loadAdvisories(advisoriesDir),
       readLedger(path.join(advisoriesDir, "APPLIED.md")),
+      { templateVersion },
     );
     advisories = { noLock, pending: pending.map((a) => ({ id: a.id, kind: a.kind, severity: a.severity, module: a.module })) };
   } catch (err) {

@@ -399,3 +399,62 @@ test("advisory detect retorna exit 0 quando o comando detect não acusa afetaç�
 
   assert.equal(exitCode, EXIT_CODES.OK);
 });
+
+function writeKernelAdvisory(dir) {
+  mkdirSync(path.join(dir, "docs", "advisories"), { recursive: true });
+  writeFileSync(path.join(dir, "docs", "advisories", "APPLIED.md"), "");
+  writeFileSync(
+    path.join(dir, "docs", "advisories", "ADV-20260823-01.md"),
+    [
+      "---",
+      'id: "ADV-20260823-01"',
+      'kind: "bug"',
+      'module: "kernel"',
+      'affects: ">=2.0.0 <2.1.0"',
+      'severity: "high"',
+      'detect: "pnpm platform status"',
+      'fix: "copier update para >= v2.1.0"',
+      'parity: "scripts/platform/__tests__/lint.test.mjs"',
+      "---",
+      "Corpo em pt-BR.",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+}
+
+test("status --json reporta advisory de kernel pendente sem quebrar o shape existente", async () => {
+  const cwd = mkdtempSync(path.join(tmpdir(), "cli-status-"));
+  writeFileSync(
+    path.join(cwd, ".copier-answers.yml"),
+    "_src_path: gh:EmanuelVogt/platform-template\n_commit: v2.0.0\n",
+    "utf8",
+  );
+  writeKernelAdvisory(cwd);
+
+  const { result: exitCode, output } = await captureOutput("stdout", () =>
+    run(["status", "--json"], { cwd, fetchTags: () => ["v2.0.0"] }),
+  );
+
+  assert.equal(exitCode, EXIT_CODES.OK);
+  const status = JSON.parse(output);
+  assert.equal(status.advisories.noLock, true);
+  assert.deepEqual(status.advisories.pending, [
+    { id: "ADV-20260823-01", kind: "bug", severity: "high", module: "kernel" },
+  ]);
+  assert.deepEqual(Object.keys(status).sort(), ["advisories", "modules", "template"]);
+});
+
+test("status --json não reporta o advisory de kernel quando a versão instalada está fora do affects", async () => {
+  const cwd = mkdtempSync(path.join(tmpdir(), "cli-status-"));
+  writeFileSync(
+    path.join(cwd, ".copier-answers.yml"),
+    "_src_path: gh:EmanuelVogt/platform-template\n_commit: v2.1.0\n",
+    "utf8",
+  );
+  writeKernelAdvisory(cwd);
+
+  const { output } = await captureOutput("stdout", () => run(["status", "--json"], { cwd, fetchTags: () => ["v2.1.0"] }));
+
+  assert.deepEqual(JSON.parse(output).advisories.pending, []);
+});

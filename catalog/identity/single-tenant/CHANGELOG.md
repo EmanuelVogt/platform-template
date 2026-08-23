@@ -4,6 +4,19 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 [semver](https://semver.org/lang/pt-BR/). Toda versão que leva código lista os advisories
 (`docs/advisories/ADV-*.md`) que carrega.
 
+## [1.0.1]
+
+### Corrigido
+
+- `api/application/access-policy.spec.ts`: `makeScope()` deixa de tipar o mock como
+  `ProfessionalScope & { assertValid: jest.Mock }` (interseção com a interface da porta) e
+  passa a retornar só `{ assertValid: jest.Mock }`, o que satisfaz `@typescript-eslint/unbound-method`
+  após o bump do `typescript-eslint` para 8.67.
+
+### Advisories
+
+- `ADV-20260823-01`
+
 ## [1.0.0]
 
 Primeira publicação da entrada no catálogo — extração do módulo `identity` do template v0.2,

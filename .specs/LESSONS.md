@@ -68,6 +68,42 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: .github/workflows/catalog.yml:29-34
 - last seen: 2026-08-21T14:56:46Z
 
+### L-010 — A spec that also runs inside a rendered child must derive its expected paths from the directories it finds, never from the template's own directory names
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `gates` · harmful: 0
+- features: web-stack-next
+- evidence: apps/api/src/modules/module-boundaries.spec.ts:615,632,639 (gates)
+- last seen: 2026-08-23T17:11:55Z
+
+### L-011 — When a lockfile bump upgrades the linter, re-run lint over catalog/** as well — an entry's spec is only linted inside a rendered child
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `catalog` · harmful: 0
+- features: web-stack-next
+- evidence: catalog/identity/single-tenant/api/application/access-policy.spec.ts:116,139,183 (catalog)
+- last seen: 2026-08-23T17:11:55Z
+
+### L-012 — Give every build-time env var an ARG default in the Dockerfile, or the acceptance criterion that runs a bare docker build can never pass
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `docker` · harmful: 0
+- features: web-stack-next
+- evidence: apps/web-next/Dockerfile:24 (docker)
+- last seen: 2026-08-23T17:11:55Z
+
+### L-013 — Add the framework's build output directory to .gitignore in the same commit that adds a new app, or the artifacts get committed and ship to every rendered child
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `repo` · harmful: 0
+- features: web-stack-next
+- evidence: .gitignore:1-68 (237 tracked files under apps/web-next/.next) (repo)
+- last seen: 2026-08-23T17:11:55Z
+
+### L-014 — A zero-diff acceptance criterion must list every path the change legitimately touches, lockfile and shared config packages included, or it fails by construction
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: web-stack-next
+- evidence: .specs/features/web-stack-next/spec.md ACC-01/ACC-02 (spec)
+- last seen: 2026-08-23T17:11:55Z
+
+### L-015 — Adding a path to .gitignore does not untrack what is already committed — pair it with git rm -r --cached in the same commit and verify with git ls-files
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `repo` · harmful: 0
+- features: web-stack-next
+- evidence: d74104c (.gitignore:13) — git ls-files apps/web-next/.next still 237 at HEAD 0e08d3d (repo)
+- last seen: 2026-08-23T17:42:44Z
+
 ## Quarantined (failed when applied — ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

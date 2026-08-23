@@ -82,11 +82,15 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 - **Done when**: both jobs carry `web_stack: [vite, next]` and pass the flag; `smoke` job runs `pnpm turbo test:cov --filter=web-next`; test parses the YAML and asserts (ACC-11).
 - **Tests**: unit. Spec refs: CAT-02, ACC-11.
 
+**Wave 2 result (2026-08-23)**: DONE — T0 `0b87e21`; T2 `005a583` (34 tests; `webShellRoots()` + `webShellSurfaceRoots()`, `KERNEL_SURFACE` adds `src/app`, `src/_app`, `src/shared` per root); T3 `9050b9c` (28 tests; SPEC_DEVIATION `fsd-next.js:76` — `nextPlugin.flatConfig.coreWebVitals`, the design's `configs["core-web-vitals"]` is the eslintrc export; `@next/eslint-plugin-next ^15.5.23`, lockfile left for T7); T4 `ba2e2f0`; T5 `c3f9828` (`parseWebStack` + `assertWebShell` in `lib/web-shell.mjs`, no-op when `apps/web` absent); T6 `06e2680`. Orchestrator fix `f1caf70`: `add-web-test-script.test.mjs` pointed at `apps/web/package.json` (stale after T1) → now checks every existing `apps/web-{vite,next}`. Gate: `pnpm check` 0, `pnpm test:scripts` 196/0, module-boundaries 0.
+
 ### T7 — Next shell package skeleton + lockfile
 - **Depends on**: T1, T3, T4 · **Exclusive**: yes (lockfile)
 - **Touches**: `apps/web-next/{package.json,next.config.ts,next-env.d.ts,tsconfig.json,eslint.config.js,vitest.config.ts,test/setup.ts,.env.example,.dockerignore,public/.gitkeep}`, `apps/web-next/app/page.tsx` (placeholder page so `next build` has a route — replaced in T11), `pnpm-lock.yaml`
 - **Done when**: `pnpm install` clean; `pnpm --filter web-next typecheck lint build` green; vitest config per design § 2 (thresholds 90 — allowed to fail `test:cov` until T8–T11 land; `test` with zero files passes via `passWithNoTests`).
 - **Tests**: none (gate). Spec refs: SHELL-08, SHELL-10, SHELL-12.
+
+**Wave 3 result (2026-08-23)**: DONE — T7 `5fec447` (Next `^16.3.2`; `eslint.config.js`/`tsconfig.json` exclude `test/` until T9's `zod-locale` exists; `test/setup.ts` mirrors Vite's jest-dom+cleanup, SPEC_DEVIATION inline). Lockfile bump (`typescript-eslint` 8.60→8.67, eslint 10.4→10.9) surfaced 6 `unbound-method` in `access.guard.spec.ts` → orchestrator `03f2bac` (`policyReturning` returns `{ can: jest.Mock }`, `Reflect.get` for the handler ref). T2's exact-list assertion broke once `apps/web-next` existed → `f1173a1` (asserts existing shells, never `apps/web`). Gate: `pnpm check` 0, `pnpm test` 332 api / 68 web / 28 eslint-config, `test:scripts` 196.
 
 ### T8 — `shared/{config,lib,store,test}` mirrored
 - **Depends on**: T7 · **Exclusive**: no
@@ -106,11 +110,15 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 - **Done when**: three unstyled pages + tests (error page calls `reset` on click; not-found links `ROUTES.home`).
 - **Tests**: unit. Spec ref: SHELL-09.
 
+**Wave 4 result (2026-08-23)**: DONE — T8 `4fbb657` (49 tests; `env.test.ts` asserts zod pt-BR locale strings), T9 `d06799a` (SPEC_DEVIATION `cross-tab-logout.tsx:8` `window.location.assign(ROUTES.LOGIN)` — no imperative router; `app-providers.tsx:12` `setupApiClient` at module scope), T10 `3badd61` (SPEC_DEVIATION `not-found-page.tsx:5` `ROUTES.HOME` — keys are uppercase in the copied `routes.ts`; spec said `ROUTES.home`), T12 `2ed41d1` (standalone runner `node:22-alpine`, matches `next.config.ts`). Orchestrator: `3c72c4d` tsconfig `paths @/*` + `customConditions` (preset's relative `paths` resolve against the preset dir — T7 gap) and `test/` re-included in tsconfig + eslint; `fe09ad7` providers lint (`no-misused-spread`, import order). T10 was STOPPED once on missing `zod-locale` (T9) and resumed. Gate: `turbo typecheck lint --filter=web-next` 0 (1 warning: `home-page.tsx` exports `metadata`, react-refresh), `pnpm --filter web-next test` 49/49.
+
 ### T11 — `_app/layout` + `app/` re-exports
 - **Depends on**: T8, T9, T10 · **Exclusive**: no
 - **Touches**: `apps/web-next/src/_app/layout/**`, `apps/web-next/app/{layout,page,error,not-found}.tsx`
 - **Done when**: `root-layout`, `product-shell` (slot), `access-slot` (`AccessGuard`, `resolveRouteAccess` fail-closed), `last-location-tracker`; `app/*.tsx` are one-line re-exports; tests for `resolveRouteAccess` (known public → entry; unknown → authenticated) and root layout composition; `pnpm --filter web-next test:cov` ≥ 90 all four; `next build` green; grep ACC-06 clean.
 - **Tests**: unit. Spec refs: SHELL-01, SHELL-05, SHELL-06, SHELL-13, ACC-07.
+
+**Wave 5 result (2026-08-23)**: DONE — T11 `e02a7cc` (56 tests; cov S 96.74 / B 94.25 / F 97.05 / L 99.06; `turbo typecheck lint build` 0 — `next build` needs `NEXT_PUBLIC_API_URL` in env, same convention as `VITE_API_URL`; ACC-06 grep 0 hits; react-refresh warnings on `access-slot.tsx:13`, `root-layout.tsx:9`).
 
 ### T12 — Next `Dockerfile`
 - **Depends on**: T7 · **Exclusive**: no
@@ -137,6 +145,8 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 - **Tests**: none. Spec ref: DOC-07.
 
 ---
+
+**Wave 6 result (2026-08-23)**: DONE — T13 `19017b5` (prettier reformatted the whole file mechanically; Princípio 9 softened too); T14 `3122156` (ACC probe: README/AGENTS byte-identical vs `main` render, both diffs exit 0; SPEC_DEVIATION `deploy.md.jinja:35` two independent `{% if %}` blocks instead of if/else — prettier folded the else branch into the blockquote; spec-precision gap DOC-03: AGENTS command table only gains `(front on :3001)` for next); T15 `61985dc` (hook accepted without advisory trailer).
 
 ## Wave Plan
 

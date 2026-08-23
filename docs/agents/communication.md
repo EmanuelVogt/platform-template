@@ -25,14 +25,14 @@ it's that the useful explanation is the **business rule the system now follows**
 mechanics of how it was assembled. Plain language, short sentences.
 
 **Say what the system decides, when, and what happens to the person on the other end**
-(guest, front desk, practitioner). Mechanics — data structures, call order, types,
-pattern names — only when asked.
+(customer, front-desk staff, service provider). Mechanics — data structures, call order,
+types, pattern names — only when asked.
 
 > Bad: "o comparador ordena as alocações por data de criação e o primeiro elemento vence
 > o desempate."
 >
-> Good: "quando duas reservas disputam a mesma sala no mesmo horário, fica com quem
-> reservou primeiro. A que chegou depois vai pra lista de espera em vez de simplesmente
+> Good: "quando dois pedidos disputam o mesmo horário de atendimento, fica com quem
+> chegou primeiro. O que chegou depois vai pra lista de espera em vez de simplesmente
 > sumir da tela."
 
 **Don't name variables, functions, classes or files** mid-explanation. Point at what the
@@ -40,8 +40,8 @@ thing does ("a tela de configurações da conta") and put the file link beside i
 technical term is unavoidable, translate it in the same sentence.
 
 **Analogies come from the adult world**, preferably from the business itself — front
-desk, guest record, cash drawer, room schedule, room key. Childish analogies and a
-teacher-to-a-kid tone are forbidden.
+desk, customer file, cash drawer, appointment calendar, storage locker. Childish analogies
+and a teacher-to-a-kid tone are forbidden.
 
 **Every slightly complex rule ships with a real case from the product's operation.** Not
 optional.

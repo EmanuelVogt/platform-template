@@ -30,11 +30,11 @@ platform-owned code goes upstream to the template repository instead — the
 Three axes, all closed lists — don't create a new label without the user's decision:
 
 - **Type**: `bug` | `enhancement`.
-- **Area** (17, one per issue): Agenda coletiva · Agenda do Hóspede · Agenda do
-  Profissional · Hóspedes · Motor de agendamento · Perfil do usuário · Serviço ·
-  Reservas · Acomodações · Créditos · Descontos · Notificações · Produtos ·
-  Relatórios · Espaços · Feedback · Acesso e login. None fits → issue with no area
-  label.
+- **Area** (one per issue, closed list): this product's own set, not the template's —
+  list every label this repo actually carries under its area prefix. Confirm with
+  `gh label list` before creating an issue rather than reusing an example from this file.
+  Illustrative shape only (a generic product, not this one): `Billing` · `Onboarding` ·
+  `Notifications` · `Reports` · `Access & login`. None fits → issue with no area label.
 - **Size**: `Minor` | `Major`; normal size = **no** label. In the interactive flow, size
   is always a question to the user; automated triage always produces issues with no size
   label.

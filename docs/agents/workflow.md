@@ -128,5 +128,8 @@ A **local commit triggers neither gate.** Run `pnpm check` before asking for rev
 
 **Deploy.** A push to `main` fires the Dokploy webhook of every long-lived environment —
 push = deploy ([`../dev/deploy.md`](../dev/deploy.md#deploy-flow)). An agent never pushes
-`main` on its own, never creates a release or a `v*` tag, and never moves a deploy branch —
-those are the user's acts; the agent stops at the local commit and says so.
+`main` on its own and never moves a deploy branch — those are the user's acts; the agent
+stops at the local commit and says so.
+
+**Tags.** A `v*` tag is cut only by the user dispatching the `release` workflow — never
+by a push, never by an agent. The agent still never tags or pushes on its own.

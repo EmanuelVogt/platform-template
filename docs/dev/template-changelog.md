@@ -4,6 +4,32 @@ Version truth = git tag + this entry (AD-006); `package.json` is not bumped on
 release. Each version lists the contract-breaking changes and the steps for the child
 to apply on `copier update`.
 
+## v2.3.0
+
+The update contract: a tag only ships green, the kernel carries advisories like any
+catalog entry, and the product reads them before updating instead of after.
+
+### Changes
+
+1. **Release gate** (`release.yml` + `release-preflight.mjs`, template-only): full gate,
+   version/tag/ref checks, unbumped-entry check, manual-step check on a non-major
+   changelog — then tag + push.
+2. **Kernel advisories** (`module: kernel` in `lib/advisories.mjs`): matched to the
+   installed template version regardless of the module lock; `ADV-20260823-01`/`-02`
+   cover issue #9 and the fixture leak.
+3. **Remote feed** (`lib/advisory-feed.mjs`): `status`/hook read `docs/advisories/` from
+   the latest tag (24 h cache) merged with local by id.
+4. **Cadence** (`docs/dev/template-update.md`): `overdue` marks past each kind's
+   recommended days; nothing blocks.
+5. **Weekly bot** (`template-update.yml` + `template-update-ci.mjs`): PR on green, issue
+   naming the blocker otherwise.
+6. **Executable migrations** (`pnpm platform template migrate`): runs every
+   `migrations/v<X.Y.Z>.mjs` up to target, idempotent per script.
+
+### Child migration steps
+
+None — copier update is enough.
+
 ## v2.2.1
 
 Two `module add` fixes (issues #10, #11). No contract change; migration = re-run

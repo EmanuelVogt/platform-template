@@ -1208,7 +1208,7 @@ steps** (AD-034). Anything that would force a child decision belongs to `v3.0.0`
 
 **What**: The model-tier and Verifier-sensor rules name booking/availability domain categories. Replace them with generic categories that point at the product's own domain doc.
 **Where**: `.claude/hooks/subagent-model-required.mjs:42`
-**Touches**: `.agents/skills/tlc-spec-driven/SKILL.md`, `.agents/skills/tlc-spec-driven/references/validate.md`, `.agents/skills/tlc-spec-driven/references/sub-agents.md`, `.agents/skills/tlc-spec-driven/references/cards/orchestrator.md`, `.agents/skills/repo-discovery/SKILL.md`, `.claude/agents/spec-verifier.md`, `.claude/hooks/subagent-model-required.mjs`, `docs/agents/harness.md`, `scripts/platform/__tests__/harness-taxonomy.test.mjs`
+**Touches**: `.agents/skills/tlc-spec-driven/SKILL.md`, `.agents/skills/tlc-spec-driven/references/validate.md`, `.agents/skills/tlc-spec-driven/references/sub-agents.md`, `.agents/skills/tlc-spec-driven/references/cards/orchestrator.md`, `.agents/skills/repo-discovery/SKILL.md`, `.claude/agents/spec-verifier.md`, `.claude/hooks/subagent-model-required.mjs`, `docs/agents/harness.md`, `scripts/platform/__tests__/harness-taxonomy.test.mjs`, `scripts/platform/__tests__/docs-no-owner-infra.test.mjs`
 **Depends on**: T16, T41
 **Exclusive**: **yes** — own wave, and **last**
 **Reuses**: the generic-category wording established by T16
@@ -1221,6 +1221,7 @@ steps** (AD-034). Anything that would force a child decision belongs to `v3.0.0`
 - [ ] `SKILL.md:80`'s example slug `guest-agenda-full-load` and `repo-discovery/SKILL.md:37`'s "motor de agenda" are neutral
 - [ ] **Only `.agents/skills/**` paths are edited** — `.claude/skills/tlc-spec-driven` is a symlink to it (§ 0.3); editing both would own one file twice
 - [ ] The pre-edit taxonomy is quoted in the commit body, so the Verifier is judged against the contract in force at dispatch
+- [ ] The `SPEC_DEVIATION` exclusion of `docs/agents/harness.md` at `scripts/platform/__tests__/docs-no-owner-infra.test.mjs:10-14` — left by T16 in wave 1 because this file was forbidden to C3 — is **removed**, so T16's guard covers the literal `docs/agents/**` its AC names. Without this, BRAND-04 ships a fix its own guard cannot see (Execution Log, wave 1, deviation 2)
 - [ ] Gate passes: `pnpm test:scripts`
 - [ ] Test count: 3 new tests pass
 
@@ -2331,6 +2332,7 @@ cap**: the widest wave holds 3 clusters.
 | `apps/api/test/setup/{test-db,unit-env,e2e-env}.ts` | T45 (C12, wave 6), T49 (C14, wave 8), T72 (C19, wave 11) | different waves |
 | `scripts/platform/lib/lint.mjs` | T1 (C1, wave 1), T33 and T34 (C7, wave 3) | different waves |
 | `scripts/platform/lib/commands/add.mjs` | T3 (C1, wave 1), T17, T18, T19 (C4, wave 2) | different waves |
+| `scripts/platform/__tests__/docs-no-owner-infra.test.mjs` | T16 (C3, wave 1), T43 (C11, wave 5) | different waves — T43 removes the `harness.md` exclusion T16 had to leave behind |
 | `scripts/platform/__tests__/brand-hygiene.test.mjs` | T46 (wave 6), T55 (wave 8) | different waves |
 | `docs/arch/front.md` | T38 (C8, wave 3), T44 (C12, wave 6) | different waves |
 | `openapi.json`, `packages/api-client/src/` | T57 (wave 9), T76 (wave 12) | both exclusive, different waves |
@@ -2368,3 +2370,74 @@ work under the standard gates.
   between wave 11 and wave 12 is expected, not a regression.
 - **The agent never tags and never pushes** (AD-006/AD-034). The four owner hand-off points are
   listed in § *Owner hand-off points*.
+
+---
+
+## Execution Log
+
+Written by the orchestrator only, after each wave's Build gate. Hashes are the workers' atomic
+commits, in task order.
+
+### Wave 1 — GATED GREEN (2026-08-23)
+
+| Cluster | Tasks | Commits | Worker's own gate |
+| --- | --- | --- | --- |
+| C1 (sonnet) | T1 → T5 | `a754208`, `b4cfa63`, `72592c6`, `a16bef0`, `5f89723` | `pnpm test:scripts` exit 0 |
+| C2 (sonnet) | T6 → T11 | `bd56b71`, `37c873c`, `4aeb55e`, `aa0da6b`, `f0dd838`, `2e19a04` | `pnpm vitest run --project api apps/api/src/shared/config` 27 passed; `pnpm test:scripts` exit 0 |
+| C3 (sonnet) | T12 → T16 | `160bc60`, `63bb75f`, `29b3357`, `d8f036b`, `768c1ef` | `pnpm test:scripts` exit 0 |
+
+**Build gate (`full-unit`)** — run once, through the runner, after all three clusters reported:
+
+| Command | Exit | Result |
+| --- | --- | --- |
+| `pnpm check` | 0 | 5/5 turbo tasks |
+| `pnpm test` | 0 | 585 tests / 89 files — unchanged vs the pre-feature baseline |
+| `pnpm test:scripts` | 0 | 376 tests / 42 files — **+31 tests, +8 files** vs baseline 345/34 |
+
+Pre-feature baseline, measured on `92b4120` before dispatch: **930 tests / 123 files, 0 failures**
+(`pnpm test` 585/89 · `pnpm test:scripts` 345/34). No count dropped — no silent deletion.
+
+#### Deviations recorded in wave 1 (input to the Verifier)
+
+1. **T16 — the area-label placeholder is discovery-based, not a copier variable.** The worker shipped
+   a `gh label list` discovery placeholder with domain-neutral examples instead of the `{{ … }}`
+   Jinja placeholder T16's body names, because such a variable must be declared in `copier.yml`, and
+   that file is **T41's** alone. § *Files with more than one editor* never listed T16 as a
+   `copier.yml` editor — **the plan created this gap, not the worker.** The Verifier judges story
+   AC 4 ("the area-label list SHALL come from a product-filled placeholder") against the shipped
+   shape; if a declared copier variable is required, the fix belongs to **T41 (wave 3)**, whose
+   `Touches` already carry `copier.yml`.
+2. **T16 — `SPEC_DEVIATION` at `scripts/platform/__tests__/docs-no-owner-infra.test.mjs:10-14`.** The
+   guard's scan excludes `docs/agents/harness.md`, which still names booking rules. That file is
+   **BRAND-04 / T43 (wave 5)** and was forbidden to C3. **T43 must remove the exclusion** so the guard
+   covers the literal `docs/agents/**` its AC names — otherwise BRAND-04 ships a fix its own guard
+   cannot see. Added to T43's *Done when*.
+3. **T14 — this plan's own `Reuses` field was wrong.** The real `lefthook.yml` pre-push chain is three
+   steps (`migrations → typecheck → test-coverage`); T14 cited a four-step chain including
+   `catalog-typecheck`, which is not on disk. The worker documented the real chain. **The plan was
+   wrong, the delivery is right** — no fix task.
+4. **T8 — `db:seed` was removed, not repaired.** It targeted an absent `apps/api/src/seeds` with no
+   replacement in scope; T8's own wording ("either the script ships or the doc stops naming it")
+   permits it.
+5. **T6 — four in-scope files were already correct** (`apps/web/.env.example`, both Dockerfiles,
+   `docker-compose.yml` already at `3000`). No edit needed; the ten-site assertion still covers them.
+
+#### Cross-feature facts learned during wave 1 (from the `prettier-format-gate` session)
+
+Premises this plan recorded that have changed. **None is visible to `wave-plan-check.mjs`.**
+
+- **The five entries will sit at `2.0.1`, not `2.0.0`, before T42 runs.** That feature's repo-wide
+  reformat trips `entryChangedWithoutBump`, so it carries a bump task of its own. **T42 bumps from
+  `2.0.1`.** § 0.3's advisory-`affects` row is unaffected; any reading of "all five entries sit at
+  `2.0.0`" (design.md § C *Notes*) is stale from that feature's landing onward.
+- **`lefthook-local.yml` gains a pre-commit format check** in **auto-fix** mode (`--write` + re-stage),
+  chosen so a worker's commit is fixed rather than rejected. Asked of that session: the re-stage must
+  be pathspec-limited — a `git add -A` inside the hook would sweep a sibling cluster's in-flight edits
+  into an unrelated worker's commit.
+- **The `v2.3.0` gate was lifted on that feature only** — it now ships *inside* `v2.3.0`. **This does
+  not transfer: T48 stays blocked** until `git tag -l v2.3.0` is non-empty (AD-034, latest-section
+  rule). The tag that unblocks T48 is the one their release dispatches.
+- **Ordering is undecided and is the owner's call.** That feature's T7/T8 reformat the whole tree and
+  would rewrite any file a worker holds open. RUN-04 is `satisfied-by-sibling` here and this feature's
+  Verifier asserts `pnpm format:check` green at HEAD — which cannot hold until that feature lands, so
+  the dependency runs one way only. **Wave 2 is held pending the owner's ruling.**

@@ -1642,6 +1642,12 @@ Plan corrections from wave 1: (a) T6 `Touches` gains `catalog/identity/single-te
 
 Plan corrections from wave 3: (a) `contract.parity.spec.ts` is green on the Vitest tree — T52's "re-freeze" is still owed for the T35 contract change, but no red precedes it; (b) Build gate from here on = the Vitest table (`pnpm check` + `pnpm test` + `module-boundaries.spec.ts` + `catalog:typecheck`); entry int/e2e only via `pnpm catalog:check`; (c) the T62 coverage criterion depends on `main` clearing its own floors — re-run `pnpm test:coverage` after the pre-Verifier merge of `main`.
 
+**Wave 4 — DONE (2026-08-22), Build gate PASS on the 1st run** (`pnpm install --frozen-lockfile` 0 · `pnpm check` 0 · `pnpm test` 86 files / 546 tests · `module-boundaries.spec.ts` in the run · `catalog:typecheck` 0). Commit `298e8f3` (1 commit).
+
+| Cluster | Tier | Tasks → commits | Notes |
+| --- | --- | --- | --- |
+| C9 | sonnet | T51 `298e8f3` | `multer` → 2.2.0 (direct dep + root override, since `@nestjs/platform-express` ships its own copy); `limits.fields: 0` on both avatar `FileInterceptor`s + 1 new config assertion. Root `pnpm.overrides`: multer, js-yaml, `@opentelemetry/propagator-jaeger`, `minimatch@3/@10>brace-expansion`, `postcss>nanoid` / `@scalar/types>nanoid`, postcss, vite, undici — **advisory mapping lives in the commit body** (JSON has no comments and pnpm rejects non-selector `"//"` keys; the AC's "one-line comment per entry" is satisfied there). Deviation: **`pnpm audit --prod --audit-level=high` exits 1, not 0** — 21 highs → 2, the residue is exactly the spec's Out of Scope (`packages/api-client>axios` GHSA-gcfj-64vw-6mp9 + its transitive `form-data` GHSA-hmw2-7cc7-3qxx); pnpm audits the workspace lockfile from any package, so the literal "exits 0" cannot be met without touching `api-client` — for the Verifier: the AC holds modulo the Out-of-Scope chain. Scoped gate ran against the staged copy (`catalog:typecheck --keep` + `vitest run`, 3/3) because catalog specs only resolve from their staged position. |
+
 ---
 
 ## Task Granularity Check

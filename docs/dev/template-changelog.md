@@ -4,13 +4,52 @@ Version truth = git tag + this entry (AD-006); `package.json` is not bumped on
 release. Each version lists the contract-breaking changes and the steps for the child
 to apply on `copier update`.
 
+## v2.1.0
+
+Security audit remediation (2026-08-22 white-box audit, 4 High / 9 Medium). Breaking for
+every child despite the minor: several kernel defaults changed from "silently degrade" to
+"fail closed at boot" — `v2.0.0` was tagged before this landed, so it ships on its own tag.
+
+### Changes
+
+1. **Fail-closed kernel configuration; hardened identity, attachment, notification, audit, tag.**
+   The five catalog entries stay at `2.0.0` (`kernelRange` `">=2.0.0 <3.0.0"` covers this
+   tag) and each ships a second advisory (`ADV-20260822-01..05`). An entry's audit trail is
+   now attached by a hook the entry declares (`<schema>.attach_audit()`, run by
+   `audit.attach_module_hooks()` at the end of audit's install — AD-032).
+
+   | Change | Child action |
+   | --- | --- |
+   | `NODE_ENV` and `DATABASE_SSL` lose their default | Set both explicitly in every environment — the boot now fails fast instead of guessing |
+   | `BREACH_CHECK_ENABLED` (identity) loses its default | Set it explicitly — a missing value no longer silently means "don't check for breached passwords" |
+   | `TRUST_PROXY_HOPS` default changes to `0` | Set the real hop count explicitly (e.g. `2` for a Cloudflare → Traefik chain) — `0` alone means "trust nothing in front", every request looks like it comes from the edge |
+   | `redis://` in production | Refused unless `REDIS_ALLOW_PLAINTEXT=true` — use `rediss://` or set the flag deliberately |
+   | `/docs` in production | Off unless `DOCS_ENABLED=true` — was reachable by default before |
+   | `nest-cli.json` swc `ignore` | `copier update` brings the new ignore globs for `testing/`, `__e2e__/`, `parity/`, `__parity__/` — no manual action |
+   | Boot seed | The entrypoint now discovers `dist/modules/*/seeds/bootstrap.js` by glob (one per installed module) instead of a single template script — no product action, informational |
+   | `@RateLimit` import path | Moves to `shared/kernel/rate-limit/rate-limit.decorator` — the codemod/`copier update` updates in-kernel usages; a product importing it directly updates the path by hand |
+   | Redaction list (`sensitive-keys.ts`) | Widens to include `cookie` and `link` — a product with its own redaction allowlist built on the same fragments picks up the wider default on `copier update` |
+   | `outbox-dead.purge` maintenance job | Registers with `lockId` **6** (`maintenance-registry.ts`) — a product with a custom job must not reuse this id |
+
+   **DX note**: `pnpm contract` (`apps/api` `ts-node src/openapi/export-openapi.ts`, boots the
+   Nest app to introspect routes) now needs the kernel's env loaded — `NODE_ENV`/`DATABASE_SSL`
+   and the rest of `env.ts` no longer have defaults, so running it with an incomplete `.env`
+   fails at boot instead of generating a partial contract.
+
+### Child migration steps
+
+1. `copier update` brings the swc `ignore` globs and the entrypoint's seed glob — no manual action.
+2. Set `NODE_ENV`, `DATABASE_SSL`, `TRUST_PROXY_HOPS` and, if the `identity` entry is
+   installed, `BREACH_CHECK_ENABLED` explicitly in every environment — the boot now fails
+   fast when any of these is absent. Set `REDIS_ALLOW_PLAINTEXT`/`DOCS_ENABLED` if production
+   needs `redis://` or `/docs` on.
+3. Apply the `ADV-20260822-*` advisories of the entries already installed
+   (`pnpm platform module …`, see `docs/catalog/catalog.md`).
+
 ## v2.0.0
 
-Two features land under the same major, tagged together (`git tag v2.0.0`, applied by the
-maintainer after merge — not part of either feature's own work): the Jest → Vitest port
-(below, item 1) and the 2026-08-22 security audit remediation (item 2). Both are breaking for
-every child: the specs change runner, several env vars that used to have a default now fail
-the boot when absent, and the five catalog entries move to `2.0.0`.
+The Jest → Vitest port (item 1) and the lean-docs harness hook (item 2). Breaking for every
+child: the specs change runner and the five catalog entries move to `2.0.0`.
 
 ### Changes
 
@@ -28,33 +67,7 @@ the boot when absent, and the five catalog entries move to `2.0.0`.
    api does not clear it yet (measured 87.70 / 74.21 / 91.30 / 88.44 at the merge), so the
    coverage step is red until that gap is covered; the web clears it (94.78 / 94.51 /
    95.56 / 96.58). A floor is never lowered to make a push pass.
-2. **Security audit remediation (2026-08-22 white-box audit, 4 High / 9 Medium).** Several
-   kernel defaults changed from "silently degrade" to "fail closed at boot". The same five
-   catalog entries stay at `2.0.0` (folded into item 1's bump — `kernelRange` moves to
-   `">=2.0.0 <3.0.0"`) and each ships a second advisory (`ADV-20260822-01..05`).
-
-   | Change | Child action |
-   | --- | --- |
-   | `NODE_ENV` and `DATABASE_SSL` lose their default | Set both explicitly in every environment — the boot now fails fast instead of guessing |
-   | `BREACH_CHECK_ENABLED` (identity) loses its default | Set it explicitly — a missing value no longer silently means "don't check for breached passwords" |
-   | `TRUST_PROXY_HOPS` default changes to `0` | Set the real hop count explicitly (e.g. `2` for a Cloudflare → Traefik chain) — `0` alone means "trust nothing in front", every request looks like it comes from the edge |
-   | `redis://` in production | Refused unless `REDIS_ALLOW_PLAINTEXT=true` — use `rediss://` or set the flag deliberately |
-   | `/docs` in production | Off unless `DOCS_ENABLED=true` — was reachable by default before |
-   | `nest-cli.json` swc `ignore` | `copier update` brings the new ignore globs for `testing/`, `__e2e__/`, `parity/`, `__parity__/` — no manual action |
-   | Boot seed | The entrypoint now discovers `dist/modules/*/seeds/bootstrap.js` by glob (one per installed module) instead of a single template script — no product action, informational |
-   | `@RateLimit` import path | Moves to `shared/kernel/rate-limit/rate-limit.decorator` — the codemod/`copier update` updates in-kernel usages; a product importing it directly updates the path by hand |
-   | Redaction list (`sensitive-keys.ts`) | Widens to include `cookie` and `link` — a product with its own redaction allowlist built on the same fragments picks up the wider default on `copier update` |
-   | `outbox-dead.purge` maintenance job | Registers with `lockId` **6** (`maintenance-registry.ts`) — a product with a custom job must not reuse this id |
-
-   Cross-reference: item 1 above (Vitest) is the same kernel major as this remediation — a
-   child running `copier update` from a pre-`v2.0.0` tag gets both in the same pass.
-
-   **DX note**: `pnpm contract` (`apps/api` `ts-node src/openapi/export-openapi.ts`, boots the
-   Nest app to introspect routes) now needs the kernel's env loaded — `NODE_ENV`/`DATABASE_SSL`
-   and the rest of `env.ts` no longer have defaults, so running it with an incomplete `.env`
-   fails at boot instead of generating a partial contract.
-
-3. **Harness: `docs-stay-lean` hook** (`.claude/hooks/docs-stay-lean.mjs`, wired in
+2. **Harness: `docs-stay-lean` hook** (`.claude/hooks/docs-stay-lean.mjs`, wired in
    `.claude/settings.json` on `Edit|Write|MultiEdit` and `Bash`). A handbook edit that
    grows the file by more than 30 lines, a new handbook over 80 / ADR over 60, rationale
    prose outside `docs/adr` or a shell write into `docs/` is refused;
@@ -73,13 +86,9 @@ the boot when absent, and the five catalog entries move to `2.0.0`.
 4. Remove `jest`, `@swc/jest`, `@types/jest` and `nyc` from `apps/api`; remove
    `@vitest/coverage-v8` from `apps/web` (web coverage moved to the root).
 5. `pnpm install`.
-6. Set `NODE_ENV`, `DATABASE_SSL`, `TRUST_PROXY_HOPS` and, if the `identity` entry is
-   installed, `BREACH_CHECK_ENABLED` explicitly in every environment — the boot now fails
-   fast when any of these is absent. Set `REDIS_ALLOW_PLAINTEXT`/`DOCS_ENABLED` if production
-   needs `redis://` or `/docs` on.
-7. Apply the advisories of the entries already installed, both `ADV-20260821-*` and
-   `ADV-20260822-*` (`pnpm platform module …`, see `docs/catalog/catalog.md`).
-8. Run `pnpm test:coverage` once and read the gap: the coverage floors are 90 on all four
+6. Apply the `ADV-20260821-*` advisories of the entries already installed
+   (`pnpm platform module …`, see `docs/catalog/catalog.md`).
+7. Run `pnpm test:coverage` once and read the gap: the coverage floors are 90 on all four
    metrics, and a product whose tree does not clear them will have `pre-push` blocked until
    it does. Cover the gap — do not lower the floor.
 

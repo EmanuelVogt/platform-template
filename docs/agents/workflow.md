@@ -105,8 +105,8 @@ only by the orchestrator. Mechanics in
 
 ## Never scratch inside `apps/`
 
-The `api` test runner collects **every** `*.spec.ts` under `src/` (`testRegex` in
-`apps/api/package.json`), so a forgotten probe joins the real suite and shifts the count,
+The `api` Vitest project collects **every** `*.spec.ts` under `src/` (`include` in
+`apps/api/vitest.config.mts:20`), so a forgotten probe joins the real suite and shifts the count,
 breaking any gate that relies on a stable one. Probes, throwaway scripts and temp files
 go to the session scratchpad or to a worktree.
 
@@ -115,21 +115,22 @@ file you didn't create signals another session in flight, not your mess to delet
 
 ## Gates
 
-**Pre-push (lefthook).** `git push` runs `turbo typecheck` + `turbo test` (unit) and
-fails on a project-wide type error or a broken unit test — it blocks before the Docker
-build. Self-installs on `pnpm install` (`prepare` script). Emergency escape:
-`git push --no-verify` (the prod build still typechecks).
+**Pre-push (lefthook).** `git push` runs, in order, `migrations` (journal check) →
+`typecheck` (`turbo typecheck`) → `test-coverage` (`pnpm test:coverage`, all four Vitest
+projects), and fails on the first failing step — it blocks before the Docker build.
+Self-installs on `pnpm install` (`prepare` script). Emergency escape: `git push --no-verify`
+(the prod build still typechecks).
 
-**CI.** `.github/workflows/ci.yml` — `quality` / `test-unit` / `test-integration` /
-`test-e2e`, on PR and on push to `main`. Integration and e2e spin up Postgres + Redis via
-testcontainers, and the full `build` lives here too.
+**CI.** `.github/workflows/ci.yml` — `quality` (lint + typecheck + builds) / `test-unit`
+(api + web) / `test-coverage` (api integration + e2e, testcontainers), on PR and on push to
+`main`. The full `build` lives in `quality`.
 
 A **local commit triggers neither gate.** Run `pnpm check` before asking for review.
 
-**Deploy.** A push to `main` fires the Dokploy webhook of every long-lived environment —
-push = deploy ([`../dev/deploy.md`](../dev/deploy.md#deploy-flow)). An agent never pushes
-`main` on its own and never moves a deploy branch — those are the user's acts; the agent
-stops at the local commit and says so.
+**Deploy.** A push to `main` fires whatever hook the product's environment configures —
+push = deploy ([`../dev/deploy.md`](../dev/deploy.md#deploy-flow), operational access in
+[`infra.md`](infra.md)). An agent never pushes `main` on its own and never moves a deploy
+branch — those are the user's acts; the agent stops at the local commit and says so.
 
 **Tags.** A `v*` tag is cut only by the user dispatching the `release` workflow — never
 by a push, never by an agent. The agent still never tags or pushes on its own.

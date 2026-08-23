@@ -49,6 +49,11 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   `detachIdentityTables` no `afterAll` de cada um, porque o trigger é DDL permanente que vaza
   para outras suítes do worker compartilhado (achado: latência extra do trigger derrubava
   timeouts de e2e do identity sem relação nenhuma com auditoria).
+- `listAuditEntriesQuerySchema` (`audit.contract.ts`): `from`/`to` eram `z.string().min(1)`,
+  aceitando qualquer texto e estourando `new Date(invalid)` num `Invalid Date` que a query
+  Drizzle devolvia como **500** em vez de 400; passam a `z.iso.datetime()`. `txId` ganha teto
+  explícito (`z.coerce.number().int().max(Number.MAX_SAFE_INTEGER)`), fechando o coerce sem
+  limite superior (auditoria de segurança 2026-08-22, ADV-20260822-04).
 
 ## [1.0.0]
 

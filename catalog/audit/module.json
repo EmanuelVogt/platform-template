@@ -2,7 +2,7 @@
   "name": "audit",
   "version": "2.0.0",
   "description": "Trilha de auditoria: leitura paginada de audit.entries (GET /v1/audit) e manutenção/purge de retenção LGPD.",
-  "kernelRange": ">=1.0.0 <2.0.0",
+  "kernelRange": ">=2.0.0 <3.0.0",
   "dependsOn": [{ "name": "identity", "range": ">=2.0.0 <3.0.0" }],
   "apiModule": { "export": "AuditModule", "path": "modules/audit/audit.module" },
   "schemaExports": ["modules/audit/infrastructure/tables/audit.schema"],

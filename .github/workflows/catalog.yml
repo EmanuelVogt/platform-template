@@ -40,6 +40,7 @@ jobs:
       fail-fast: false
       matrix:
         entry: [identity, attachment, audit, notification, tag]
+        web_stack: [vite, next]
     services:
       postgres:
         image: postgres:16-alpine
@@ -74,11 +75,15 @@ jobs:
           node-version-file: ".nvmrc"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm catalog:check ${{ matrix.entry }}
+      - run: pnpm catalog:check ${{ matrix.entry }} --web-stack ${{ matrix.web_stack }}
 
   smoke:
-    name: template:smoke
+    name: "template:smoke (${{ matrix.web_stack }})"
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        web_stack: [vite, next]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -87,4 +92,6 @@ jobs:
           node-version-file: ".nvmrc"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm template:smoke
+      - if: matrix.web_stack == 'next'
+        run: pnpm turbo test:cov --filter=web-next
+      - run: pnpm template:smoke --web-stack ${{ matrix.web_stack }}

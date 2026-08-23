@@ -58,14 +58,14 @@ class Routes {
 
 function contextFor(route: keyof Routes): ExecutionContext {
   return {
-    getHandler: () => Routes.prototype[route],
+    getHandler: () => Reflect.get(Routes.prototype, route),
     getClass: () => Routes,
   } as unknown as ExecutionContext
 }
 
 function policyReturning(
   result: boolean | Promise<boolean>
-): AccessPolicy & { can: jest.Mock } {
+): { can: jest.Mock } {
   return { can: jest.fn().mockReturnValue(result) }
 }
 

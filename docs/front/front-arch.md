@@ -1,8 +1,8 @@
 # Frontend — Heurísticas e Guidelines (FSD)
 
-> **Nota do template.** O front gerado é *headless*: só transporte e roteador shell, sem
+> **Nota do template.** O front gerado é _headless_: só transporte e roteador shell, sem
 > sessão nem login (isso é parte web de uma entrada instalada, ver `## Parte web de uma
-> entrada instalada` abaixo). As seções sobre FSD completo, formulários, listagem e design
+entrada instalada` abaixo). As seções sobre FSD completo, formulários, listagem e design
 > system descrevem a arquitetura de referência de um front completo — valem se o produto
 > adotar essa pilha; as regras de contrato (Kubb), transporte e roteamento valem sempre.
 
@@ -18,19 +18,19 @@ Handbook. Stack: **React + Vite + TanStack Query + React Hook Form + Zod + `@pla
 6. **Validação no boundary** — Zod do `api-client` em form (ou schema local + transform).
 7. **`ui/` dumb por padrão** — orquestração em `model/`.
 8. **Boot centralizado** — `configureApiClient`, `QueryClient`, providers em `app/`.
-9. **Roteador = TanStack Router** — type-safe, code splitting via `createLazyFileRoute` ou `React.lazy`.
+9. **Roteador = TanStack Router (Vite) ou Next App Router (Next)** — type-safe; code splitting via `createLazyFileRoute`/`React.lazy` (Vite) ou automático por rota (Next).
 10. **Wrap só quando agrega.** Re-export trivial > wrap inútil (YAGNI).
 
 ## Camadas
 
-| Layer        | Propósito                                                   | Importa de                          |
-| ------------ | ----------------------------------------------------------- | ----------------------------------- |
-| `app/`       | Bootstrap, providers, roteador, estilos                     | todas                               |
-| `pages/`     | Rotas. Compõe widgets/features/entities.                    | widgets, features, entities, shared |
-| `widgets/`   | Blocos compostos reutilizáveis                              | features, entities, shared          |
-| `features/`  | Ação do usuário (pay-invoice, register-user)                | entities, shared                    |
-| `entities/`  | Modelo de domínio (1:1 com módulo backend)                  | shared                              |
-| `shared/`    | UI kit, libs, config — sem domínio                          | nada                                |
+| Layer       | Propósito                                    | Importa de                          |
+| ----------- | -------------------------------------------- | ----------------------------------- |
+| `app/`      | Bootstrap, providers, roteador, estilos      | todas                               |
+| `pages/`    | Rotas. Compõe widgets/features/entities.     | widgets, features, entities, shared |
+| `widgets/`  | Blocos compostos reutilizáveis               | features, entities, shared          |
+| `features/` | Ação do usuário (pay-invoice, register-user) | entities, shared                    |
+| `entities/` | Modelo de domínio (1:1 com módulo backend)   | shared                              |
+| `shared/`   | UI kit, libs, config — sem domínio           | nada                                |
 
 `entities/invoice/` **não** conhece `entities/user/`. Composição vive em widget/feature/page.
 
@@ -67,13 +67,13 @@ apps/web/src/
 
 ## Segments do slice
 
-| Segment    | Conteúdo                                                       |
-| ---------- | -------------------------------------------------------------- |
-| `ui/`      | Componentes React (apresentação)                               |
-| `model/`   | Hooks, stores, schemas locais, orquestração                    |
-| `api/`     | Wrap de hooks gerados + query keys                             |
-| `lib/`     | Utilitários internos do slice                                  |
-| `config/`  | Constantes do slice                                            |
+| Segment   | Conteúdo                                    |
+| --------- | ------------------------------------------- |
+| `ui/`     | Componentes React (apresentação)            |
+| `model/`  | Hooks, stores, schemas locais, orquestração |
+| `api/`    | Wrap de hooks gerados + query keys          |
+| `lib/`    | Utilitários internos do slice               |
+| `config/` | Constantes do slice                         |
 
 Crie só o que precisa. `entities/invoice/` tem `api/ + model/ + ui/`; `features/filter-invoices/` pode ter só `ui/ + model/`.
 
@@ -97,12 +97,12 @@ O gerado pelo Kubb idem: import direto de `@platform/api-client/hooks/*` | `zod/
 
 ## Mapeamento backend ↔ FSD
 
-| Backend module (tag)                  | FSD entity              |
-| ------------------------------------- | ----------------------- |
-| `billing` (`invoices`)                | `entities/invoice/`     |
-| `identity` (`users`)                  | `entities/user/`        |
-| `shipping` (`shipments`)              | `entities/shipment/`    |
-| `reporting` (read models)             | `entities/<projection>/` ou widget composto |
+| Backend module (tag)      | FSD entity                                  |
+| ------------------------- | ------------------------------------------- |
+| `billing` (`invoices`)    | `entities/invoice/`                         |
+| `identity` (`users`)      | `entities/user/`                            |
+| `shipping` (`shipments`)  | `entities/shipment/`                        |
+| `reporting` (read models) | `entities/<projection>/` ou widget composto |
 
 Cada entity **wrapa** a tag correspondente do `@platform/api-client`. App nunca importa direto.
 
@@ -111,6 +111,7 @@ Cada entity **wrapa** a tag correspondente do `@platform/api-client`. App nunca 
 **Wrap só quando agrega valor.** Re-export trivial > wrap inútil (YAGNI).
 
 Wrap quando adiciona:
+
 - `onSuccess`/`onError`/`invalidateQueries`.
 - `select` para transform de dado.
 - Override de `staleTime`/`gcTime` por endpoint.
@@ -315,14 +316,14 @@ Multi-seleção não passa pelo `Select` (o kit fixa seleção única): usar `sh
 
 ## Estado
 
-| Tipo                                   | Onde mora                          |
-| -------------------------------------- | ---------------------------------- |
-| Dado da API                            | TanStack Query (via entity)        |
-| Visual local (modal, aba, foco)        | `useState` / `useReducer`          |
-| Cliente compartilhado (tema, sidebar)  | Zustand em `shared/store/`         |
-| Form em edição                         | React Hook Form                    |
-| Derivado de dado da API                | `select` do TanStack Query         |
-| URL (filtros, paginação, aba)          | search params (router)             |
+| Tipo                                  | Onde mora                   |
+| ------------------------------------- | --------------------------- |
+| Dado da API                           | TanStack Query (via entity) |
+| Visual local (modal, aba, foco)       | `useState` / `useReducer`   |
+| Cliente compartilhado (tema, sidebar) | Zustand em `shared/store/`  |
+| Form em edição                        | React Hook Form             |
+| Derivado de dado da API               | `select` do TanStack Query  |
+| URL (filtros, paginação, aba)         | search params (router)      |
 
 **Server state nunca em store global.**
 
@@ -339,14 +340,23 @@ export type UserId     = string & { readonly __brand: 'UserId' };
 
 `entities/invoice/model/invoice.types.ts` re-exporta `InvoiceId`. `Invoice.customerId: CustomerId` não obriga `entities/invoice` a conhecer `entities/customer`.
 
-## Bootstrap (`app/`)
+## Bootstrap — Vite
 
 - `configureApiClient({ baseURL, getToken, onUnauthorized })` em `app/config/api-client.ts`, importado como side-effect no `app/index.tsx`.
 - `QueryClient` defaults: `staleTime: 10_000` (10s — conservador), `gcTime: 5 * 60_000`, `retry: 1`, `refetchOnWindowFocus: true`, `refetchOnReconnect: true`. Per-query sobe `staleTime` quando dado é imutável (`Infinity`) ou raramente muda.
 - Providers em ordem: `QueryClientProvider` → `ThemeProvider` → `RouterProvider`.
 - **Roteador = TanStack Router** (`@tanstack/react-router`). `app/router/routes.tsx` registra `createRouter`; rotas em `app/router/routes/` (file-based) ou inline (code-based). Code splitting via `createLazyFileRoute` ou `React.lazy`.
 - Env via `shared/config/env.ts` parseando `import.meta.env` com Zod (fail-fast no boot).
-- Vite: alias `@/ → src/`, `target: 'es2022'`, `sourcemap: true`.
+- Alias `@/ → src/`, `target: 'es2022'`, `sourcemap: true`.
+
+## Bootstrap — Next
+
+- `src/_app/config/api-client.ts` chama `setupApiClient` (mesmo corpo de `configureApiClient` do Vite); `src/_app/config/query-client.ts` traz o `QueryClient` com os mesmos defaults do Vite.
+- `src/_app/providers/app-providers.tsx` (`"use client"`) chama `setupApiClient` uma vez em escopo de módulo e monta `QueryClientProvider` + `CrossTabLogout` (`src/_app/providers/cross-tab-logout.tsx`, que chama `window.location.assign` para forçar reload duro em logout detectado noutra aba).
+- **Roteador = Next App Router** — sem `@tanstack/react-router`. `app/layout.tsx`, `app/page.tsx`, `app/error.tsx`, `app/not-found.tsx` são re-exports de uma linha (`export { default, metadata } from "@/_pages/..."`); a rota de fato mora em `src/_pages/<slice>/ui/`. Code splitting é automático por rota (App Router).
+- `src/_app/layout/root-layout.tsx` compõe `AppProviders → ProductShell → AccessGuard → children` (ver "Acesso por rota e permissão" abaixo).
+- Env via `shared/config/env.ts` parseando `process.env` com Zod (`NEXT_PUBLIC_API_URL`), fail-fast no boot.
+- `next.config.ts`: `output: "standalone"`, `reactStrictMode: true`.
 
 ## Imports do `api-client`
 
@@ -423,6 +433,8 @@ README da própria entrada — o template não traz esse fiapo de roteador pront
 
 ## Acesso por rota e permissão
 
+### TanStack Router
+
 - `shared/config/route-access.ts` é a fonte única: `ROUTE_ACCESS` mapeia todo
   `RoutePath` para `{ kind: "public" | "self" | "permission" }`;
   `ACCESS_PROFILE_HOME` dá a home por perfil.
@@ -438,7 +450,44 @@ README da própria entrada — o template não traz esse fiapo de roteador pront
 - Item de nav (`shared/config/navigation.ts`) declara `permission` obrigatória;
   `visibleSections(canKey)` filtra itens e some com seção vazia (o `to` da
   seção deriva do primeiro item visível).
-- Detalhe e decisões no [ADR-0028](../adr/0028-modelo-de-autorizacao.md).
+
+### Next App Router
+
+- Mesma fonte única, `shared/config/route-access.ts` (copiado do Vite): `ROUTE_ACCESS`
+  mapeia todo `RoutePath` para `{ kind: "public" } | { kind: "authenticated" } | { kind:
+"permission", key: PermissionKey }`.
+- `AccessGuard`, em `src/_app/layout/access-slot.tsx` (`"use client"`), envolve
+  `children` no `root-layout` e lê a rota via `usePathname()`. Exporta
+  `resolveRouteAccess(pathname)`, que devolve a entrada de `ROUTE_ACCESS` ou
+  `{ kind: "authenticated" }` para caminho ausente do mapa — **fail-closed**, mesma
+  postura padrão de AD-017.
+- Não há `staticData`/module augmentation (não existe no App Router): a trava de
+  rota nova sem entrada em `ROUTE_ACCESS` sai do typecheck e vira o fallback
+  fail-closed do próprio `resolveRouteAccess`.
+- `can(user, key)` / `useCan()` e a navegação seguem a mesma convenção do Vite —
+  mesmo pacote `entities/session`, quando a entrada de identidade está instalada.
+
+Detalhe e decisões no [ADR-0028](../adr/0028-modelo-de-autorizacao.md).
+
+## FSD no Next
+
+No shell Next, `src/_app`/`src/_pages` substituem o `app/` único do Vite; `app/`
+(raiz do pacote, fora de `src/`) vira só a casca exigida pelo App Router:
+
+- `src/_app/` = shell da aplicação (config, providers, layout) — equivalente ao
+  `app/` do Vite; nunca conhece domínio de produto (mesma regra de "Kernel da
+  aplicação" acima).
+- `src/_pages/<slice>/ui/` = conteúdo de rota, equivalente a `pages/<slice>/` do Vite.
+- `app/` contém só os arquivos exigidos pelo App Router (`layout.tsx`, `page.tsx`,
+  `error.tsx`, `not-found.tsx`, rotas aninhadas). Cada um é um **re-export de uma
+  linha** — `export { default, metadata } from "@/_pages/<slice>/ui/<slice>-page"` —
+  sem lógica própria, só o que a rota exporta (`default`, `metadata`,
+  `generateMetadata`…).
+- Esses arquivos **não são barrel**: um arquivo por rota, reexportando um único
+  módulo — a regra "Imports — sem barrel" (index agregador de múltiplos módulos)
+  continua proibida e vale igual nas duas stacks.
+- `widgets/`, `features/`, `entities/`, `shared/` seguem a mesma estrutura e regras
+  de camada do Vite, sem mudança de layer nem de policy de import.
 
 ## Nomenclatura
 
@@ -508,6 +557,7 @@ Derivado da API?           → select do TanStack Query
 Primitive reusável (Button, Sheet, Table, Dialog)?       → packages/ui (@workspace/ui) + .stories.tsx
 Composição app-specific (AuthField, SetPasswordFields)?  → apps/web/src/shared/ui/
 ```
+
 Kit primitivo mora em `packages/ui` (`@workspace/ui`) mesmo com 1 app — Storybook e tokens centralizados. `shared/ui/` guarda composições que dependem do app.
 
 ## Regras de Ouro
@@ -527,7 +577,7 @@ Kit primitivo mora em `packages/ui` (`@workspace/ui`) mesmo com 1 app — Storyb
 13. Imports do `api-client` por símbolo (`/hooks/*`, `/zod/*`, `/models/*`), nunca do barrel raiz.
 14. `X-Correlation-Id` injetado pelo interceptor do `api-client`; `Idempotency-Key` é do caller, por operação.
 15. Lint = `eslint-plugin-import-x` (ordem, `no-cycle`, self-import) + `unused-imports` + `eslint-plugin-boundaries` (`@workspace/eslint-config/fsd`): direção de layer e slice irmão são **erro de lint**, não só convenção. Exceção declarada no config: `entities/*/api/*.keys.ts` é superfície pública cross-entity (invalidação de cache cruza domínios). No-barrel segue por convenção + review.
-16. Roteador = TanStack Router; rotas em `app/router/`.
+16. Roteador = TanStack Router (Vite, rotas em `app/router/`) ou Next App Router (Next, rotas em `app/`, ver "FSD no Next").
 17. Wrap em entity só quando agrega (invalidation/select/transform/error). Re-export trivial.
 18. `Idempotency-Key` = valor gerado pelo wrapper da feature por tentativa manual, reusado em retry de transporte.
 19. `X-Correlation-Id` = ULID por aba, em `sessionStorage`, injetado em todo request.
@@ -561,7 +611,7 @@ Kit primitivo mora em `packages/ui` (`@workspace/ui`) mesmo com 1 app — Storyb
 - ID de entity A importado de `entities/B/model/` (use `shared/types/ids.ts`).
 - Default export em arquivo que não é página lazy-loaded.
 - `useForm<Body>()` quando schema tem `.transform()` (use `useForm<Input, _, Output>`).
-- React Router (`react-router-dom`) em arquivo do app — projeto usa TanStack Router.
+- React Router (`react-router-dom`) em arquivo do app — o roteador é TanStack Router (Vite) ou Next App Router (Next), nunca `react-router-dom`.
 - Par `Create<X>Drawer` + `Update<X>Drawer` (ou `*Form`/`*Dialog`) separados para a mesma entidade — unificar em um componente com prop de modo (Regra de Ouro 22).
 - Wizard multi-step ou form longo dentro de um drawer (`Sheet`) — usar tela dedicada com rota própria (Regra de Ouro 22).
 - `register`/`Controller` + `Select`/`Checkbox`/`DatePicker` repetidos por campo em vez de reusar `shared/ui/form/` (`Rhf*`) (Regra de Ouro 24).
@@ -628,7 +678,7 @@ Provider / boot?               → app/
 **Core** — `react ^19`, `react-dom ^19`, `vite ^5`, `@vitejs/plugin-react ^4`, `typescript ^5`.
 **Data** — `@tanstack/react-query ^5`, `@platform/api-client` (Kubb), `axios ^1`.
 **Form** — `react-hook-form ^7`, `@hookform/resolvers ^3`, `zod ^3`.
-**Router** — `@tanstack/react-router ^1`.
+**Router** — `@tanstack/react-router ^1` (Vite) ou `next ^16` App Router (Next, sem pacote de roteador separado).
 **State (cliente)** — `zustand ^4` (quando necessário).
 **UI** — kit primitivo em `packages/ui` (`@workspace/ui`); composições app-specific em `shared/ui/`; `tailwindcss ^3`, `clsx`, `tailwind-merge`.
 **Lint** — `eslint ^9`, `typescript-eslint`, `eslint-plugin-import-x`, `eslint-plugin-unused-imports`, `eslint-plugin-react`, `eslint-plugin-react-hooks`, `eslint-plugin-jsx-a11y`.

@@ -4,6 +4,14 @@ Verdade da versão = tag git + esta entrada (AD-006); `package.json` não é inc
 no release. Cada versão lista as mudanças quebra-contrato e os passos para o filho
 aplicar no `copier update`.
 
+## Unreleased
+
+Proposta de tag `v1.1.0`. Nova pergunta do copier `web_stack` (`vite` | `next`, default
+`vite`) escolhe o front headless do produto — ver
+[`template.md`](template.md#catálogo-de-módulos). Sem passo de migração: `copier update
+--defaults` (ou `--skip-answered`) escreve `web_stack: vite` no arquivo de respostas para
+filhos existentes, preservando o front Vite atual sem exigir nenhuma ação.
+
 ## v1.0.0
 
 O template passa a distribuir só o kernel; os módulos que antes vinham no copier viram
@@ -50,7 +58,7 @@ renderizado), instaladas com `pnpm platform module add` — ver
 
 1. `git status` limpo, depois `copier update` (ou `copier update --vcs-ref v1.0.0`).
 2. Para cada módulo da plataforma já presente no produto: `pnpm platform module adopt
-   <entry> --version <versão-atual>` — registra o `.platform-modules.lock` sem tocar em
+<entry> --version <versão-atual>` — registra o `.platform-modules.lock` sem tocar em
    arquivo.
 3. Resolva o merge de `_journal.json` como de praxe (ver
    [`numeração de migrations`](template.md#migrations-ad-015)).

@@ -15,7 +15,6 @@ import {
 } from "./access-policy"
 
 import type { GrantContext } from "./access-policy"
-import type { ProfessionalScope } from "../domain/ports/professional-scope.port"
 
 describe("assertValidPermissionSet (closure de requires)", () => {
   it("aceita set vazio", () => {
@@ -88,7 +87,7 @@ describe("assertProfileFloor (piso do perfil)", () => {
   })
 })
 
-function makeScope(): ProfessionalScope & { assertValid: jest.Mock } {
+function makeScope(): { assertValid: jest.Mock } {
   return { assertValid: jest.fn().mockResolvedValue(undefined) }
 }
 

@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { EXIT_CODES } from "./platform/lib/exit-codes.mjs";
 import { installChild, renderChild } from "./platform/lib/render-child.mjs";
+import { assertWebShell, InvalidWebStackError, parseWebStack } from "./platform/lib/web-shell.mjs";
 
 const EXPECTED_SCHEMAS = ["_kernel", "drizzle"];
 const ALLOWED_EXTRA_SCHEMAS = ["public"];
@@ -26,6 +27,7 @@ export function parseArgs(argv) {
     help: argv.includes("--help") || argv.includes("-h"),
     dryRun: argv.includes("--dry-run") || argv.includes("--plan"),
     keep: argv.includes("--keep"),
+    webStack: parseWebStack(argv),
   };
 }
 
@@ -37,9 +39,10 @@ export function helpText() {
     ...planSteps().map((step, i) => `  ${i + 1}. ${step}`),
     "",
     "Opções:",
-    "  --dry-run, --plan   mostra os passos sem executar nada",
-    "  --keep              mantém o diretório do child ao final (debug)",
-    "  --help, -h          mostra esta ajuda",
+    "  --dry-run, --plan       mostra os passos sem executar nada",
+    "  --keep                  mantém o diretório do child ao final (debug)",
+    "  --web-stack vite|next   escolhe o stack do child renderizado (padrão: vite)",
+    "  --help, -h              mostra esta ajuda",
   ].join("\n");
 }
 
@@ -267,6 +270,8 @@ export async function runTemplateSmoke({
   spawnProcess = defaultSpawnProcess,
   renderChildFn = renderChild,
   installChildFn = installChild,
+  assertWebShellFn = assertWebShell,
+  webStack = "vite",
   sleep = defaultSleep,
   fetchImpl = typeof fetch === "function" ? fetch : undefined,
   keep = false,
@@ -278,7 +283,7 @@ export async function runTemplateSmoke({
 
   try {
     log(`template:smoke — renderizando child kernel-only em ${childDir}`);
-    const renderResult = renderChildFn({ repoRoot, targetDir: childDir, run });
+    const renderResult = renderChildFn({ repoRoot, targetDir: childDir, run, webStack });
     if (renderResult.status !== 0) {
       log(`template:smoke — falha ao renderizar o child (copier saiu com código ${renderResult.status})`);
       return EXIT_CODES.CATALOG_UNREACHABLE;
@@ -289,6 +294,14 @@ export async function runTemplateSmoke({
     if (installResult.status !== 0) {
       log(`template:smoke — falha ao instalar dependências do child (pnpm install saiu com código ${installResult.status})`);
       return EXIT_CODES.CATALOG_UNREACHABLE;
+    }
+
+    log(`template:smoke — verificando o shape do web shell (--web-stack ${webStack})`);
+    try {
+      assertWebShellFn(childDir, webStack);
+    } catch (err) {
+      log(`template:smoke — ${err.message}`);
+      return EXIT_CODES.TEST_FAILURE;
     }
 
     log("template:smoke — checagem 1/4: pnpm check && pnpm test");
@@ -346,7 +359,16 @@ export async function runTemplateSmoke({
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const args = parseArgs(process.argv.slice(2));
+  let args;
+  try {
+    args = parseArgs(process.argv.slice(2));
+  } catch (err) {
+    if (err instanceof InvalidWebStackError) {
+      process.stderr.write(`template:smoke — ${err.message}\n`);
+      process.exit(EXIT_CODES.USAGE_ERROR);
+    }
+    throw err;
+  }
   if (args.help) {
     process.stdout.write(`${helpText()}\n`);
     process.exit(EXIT_CODES.OK);
@@ -358,6 +380,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exit(EXIT_CODES.OK);
   }
   const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-  const exitCode = await runTemplateSmoke({ repoRoot, keep: args.keep });
+  const exitCode = await runTemplateSmoke({ repoRoot, keep: args.keep, webStack: args.webStack });
   process.exit(exitCode ?? EXIT_CODES.OK);
 }

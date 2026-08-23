@@ -50,9 +50,14 @@ export class UploadAccessLinkAvatarController {
   // Teto no multer: rota pré-auth não pode bufferizar body sem limite (DoS de
   // memória). Espelha o default de ATTACHMENT_MAX_UPLOAD_BYTES; o use case
   // revalida contra o config e segue como gate autoritativo.
+  // SPEC_DEVIATION: REM-39 previa `fields: 0` nos dois controllers de avatar;
+  // esta rota consome o campo multipart "token" (ver @Body("token") abaixo),
+  // então o teto precisa ser 1 — 0 rejeitaria toda chamada legítima com 400.
+  // Reason: GHSA-72gw-mp4g-v24j pede limitar os campos extras ao mínimo que a
+  // rota realmente aceita, não zerá-los onde ela já declara um campo obrigatório.
   @UseInterceptors(
     FileInterceptor("file", {
-      limits: { fileSize: MAX_UPLOAD_BYTES, fields: 0 },
+      limits: { fileSize: MAX_UPLOAD_BYTES, fields: 1 },
     }),
   )
   async handle(

@@ -1,0 +1,4 @@
+{
+  "extends": "@workspace/typescript-config/next.json",
+  "include": ["app", "src", "next-env.d.ts", "*.ts"]
+}

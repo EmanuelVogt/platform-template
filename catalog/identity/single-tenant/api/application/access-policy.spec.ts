@@ -17,6 +17,7 @@ import {
 } from "./access-policy"
 
 import type { GrantContext } from "./access-policy"
+import type { ProfessionalScope } from "../domain/ports/professional-scope.port"
 
 describe("assertValidPermissionSet (closure de requires)", () => {
   it("aceita set vazio", () => {

@@ -3,6 +3,7 @@ import { addCommand } from "./lib/commands/add.mjs";
 import { adoptCommand } from "./lib/commands/adopt.mjs";
 import { detectCommand } from "./lib/commands/advisory.mjs";
 import { listCommand } from "./lib/commands/list.mjs";
+import { statusCommand } from "./lib/commands/status.mjs";
 
 const commands = new Map();
 
@@ -36,7 +37,7 @@ export function parseArgs(argv) {
 
 function updateCommand(name) {
   process.stdout.write(
-    `module update ainda não é automatizado — use a skill \`port-module-update\` para portar ${name} manualmente (o port é tarefa de agente por design).\n`,
+    `module update ainda não é automatizado — use a skill \`port-module-update\` para portar ${name} manualmente (o port é tarefa de agente por design); a rotina completa de atualização do produto é a skill \`template-update\`.\n`,
   );
   return EXIT_CODES.OK;
 }
@@ -57,6 +58,8 @@ registerCommand("module", async ({ positionals, options, deps }) => {
       return EXIT_CODES.USAGE_ERROR;
   }
 });
+
+registerCommand("status", async ({ options, deps }) => statusCommand({ options, ...deps }));
 
 registerCommand("advisory", async ({ positionals, deps }) => {
   const [sub, id] = positionals;

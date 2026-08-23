@@ -233,6 +233,13 @@ never recreate `.cursor/skills` — Cursor reads `.agents` directly.
   files (heredoc, `sed -i`, `tee`, `open(…, 'w')`) so the text always passes through
   Edit/Write. Constants at the top of the file; `PLATFORM_DOCS_LEAN_OFF=1` disables it. Rule
   in [`../code-quality.md`](../code-quality.md) § Documentation.
+- `.claude/hooks/template-behind.mjs` — `SessionStart` and the first `UserPromptSubmit`:
+  in a generated product, compares `.copier-answers.yml`'s `_commit` with the latest
+  stable `v*` tag of `_src_path` (one `git ls-remote` per 24h per machine, cached in the
+  OS temp dir, 8s timeout, silent offline) and names the `template-update` skill when the
+  product is behind. Silent in the template repository. Sibling of
+  `pending-advisories.mjs`, which does the same for catalog advisories. Rule in
+  [`../dev/template.md`](../dev/template.md).
 - `.claude/hooks/delegate-to-subagent.mjs` — `PreToolUse(Bash|Grep|Glob|Read)`: blocks
   navigation in the main thread past a per-turn quota (2) and every test/typecheck/lint/
   build run (quota 0), naming the subagent to call — `repo-scout` or `shell-runner`. A

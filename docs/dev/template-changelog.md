@@ -4,6 +4,44 @@ Version truth = git tag + this entry (AD-006); `package.json` is not bumped on
 release. Each version lists the contract-breaking changes and the steps for the child
 to apply on `copier update`.
 
+## v2.2.0
+
+The product gains the routine that brings the template forward, and the answers file it
+was born with is repaired. No contract change and no migration; one manual step.
+
+### Changes
+
+1. **`pnpm platform status`** (`scripts/platform/lib/commands/status.mjs`): installed
+   template version (`_commit`) vs the latest stable `v*` tag on `_src_path` via
+   `git ls-remote` (8s timeout, `--offline`), the entries in the lock, the pending
+   advisories; `--json` for agents. Shared lib `scripts/platform/lib/template-version.mjs`.
+2. **Harness: `template-behind` hook** (`.claude/hooks/template-behind.mjs`, on
+   `SessionStart` and the first `UserPromptSubmit`): same check, one `ls-remote` per 24h
+   per machine cached in the OS temp dir, silent offline and silent in the template
+   repository. Names the skill when the product is behind.
+3. **Skill `template-update`** (`.agents/skills/template-update/`): one tag per cycle in
+   a worktree, conflict rules by ownership, the changelog's child migration steps, then
+   stale entries (`port-module-update`) and advisories, gates and commits; push stays the
+   user's act. `module update` now also points at it.
+
+4. **Fix: the product's `.copier-answers.yml` was a test fixture.** copier writes any
+   tracked file named like `_answers_file` to the product root, before `_exclude`:
+   `scripts/platform/__tests__/fixtures/child/.copier-answers.yml` overwrote the rendered
+   answers with `_commit: v1.0.0` and no answers. Every product born from v1.0.0 to
+   v2.1.0 cannot `copier update` ("Question project_name is required") and
+   `module add` cloned the catalog at v1.0.0. The fixture is renamed;
+   `copier-answers-leak.test.mjs` guards it.
+
+### Child migration steps
+
+1. **Repair `.copier-answers.yml` by hand, once, before `copier update`**: add the
+   answers (`project_name`, `project_slug`, `github_org`, `github_repo`, `root_domain`,
+   `app_domain` — from `AGENTS.md`, `package.json`, `README.md`) and set `_commit` to
+   the tag the product was really generated from (the top entry of the product's copy
+   of this changelog). Commit, then `copier update`.
+2. `copier update` brings the command, the hook (in `.claude/settings.json`) and the
+   skill; copier's post-task `pnpm skills:sync` links it — nothing else manual.
+
 ## v2.1.0
 
 Security audit remediation (2026-08-22 white-box audit, 4 High / 9 Medium). Breaking for
@@ -18,18 +56,18 @@ every child despite the minor: several kernel defaults changed from "silently de
    now attached by a hook the entry declares (`<schema>.attach_audit()`, run by
    `audit.attach_module_hooks()` at the end of audit's install — AD-032).
 
-   | Change | Child action |
-   | --- | --- |
-   | `NODE_ENV` and `DATABASE_SSL` lose their default | Set both explicitly in every environment — the boot now fails fast instead of guessing |
-   | `BREACH_CHECK_ENABLED` (identity) loses its default | Set it explicitly — a missing value no longer silently means "don't check for breached passwords" |
-   | `TRUST_PROXY_HOPS` default changes to `0` | Set the real hop count explicitly (e.g. `2` for a Cloudflare → Traefik chain) — `0` alone means "trust nothing in front", every request looks like it comes from the edge |
-   | `redis://` in production | Refused unless `REDIS_ALLOW_PLAINTEXT=true` — use `rediss://` or set the flag deliberately |
-   | `/docs` in production | Off unless `DOCS_ENABLED=true` — was reachable by default before |
-   | `nest-cli.json` swc `ignore` | `copier update` brings the new ignore globs for `testing/`, `__e2e__/`, `parity/`, `__parity__/` — no manual action |
-   | Boot seed | The entrypoint now discovers `dist/modules/*/seeds/bootstrap.js` by glob (one per installed module) instead of a single template script — no product action, informational |
-   | `@RateLimit` import path | Moves to `shared/kernel/rate-limit/rate-limit.decorator` — the codemod/`copier update` updates in-kernel usages; a product importing it directly updates the path by hand |
-   | Redaction list (`sensitive-keys.ts`) | Widens to include `cookie` and `link` — a product with its own redaction allowlist built on the same fragments picks up the wider default on `copier update` |
-   | `outbox-dead.purge` maintenance job | Registers with `lockId` **6** (`maintenance-registry.ts`) — a product with a custom job must not reuse this id |
+   | Change                                              | Child action                                                                                                                                                               |
+   | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `NODE_ENV` and `DATABASE_SSL` lose their default    | Set both explicitly in every environment — the boot now fails fast instead of guessing                                                                                     |
+   | `BREACH_CHECK_ENABLED` (identity) loses its default | Set it explicitly — a missing value no longer silently means "don't check for breached passwords"                                                                          |
+   | `TRUST_PROXY_HOPS` default changes to `0`           | Set the real hop count explicitly (e.g. `2` for a Cloudflare → Traefik chain) — `0` alone means "trust nothing in front", every request looks like it comes from the edge  |
+   | `redis://` in production                            | Refused unless `REDIS_ALLOW_PLAINTEXT=true` — use `rediss://` or set the flag deliberately                                                                                 |
+   | `/docs` in production                               | Off unless `DOCS_ENABLED=true` — was reachable by default before                                                                                                           |
+   | `nest-cli.json` swc `ignore`                        | `copier update` brings the new ignore globs for `testing/`, `__e2e__/`, `parity/`, `__parity__/` — no manual action                                                        |
+   | Boot seed                                           | The entrypoint now discovers `dist/modules/*/seeds/bootstrap.js` by glob (one per installed module) instead of a single template script — no product action, informational |
+   | `@RateLimit` import path                            | Moves to `shared/kernel/rate-limit/rate-limit.decorator` — the codemod/`copier update` updates in-kernel usages; a product importing it directly updates the path by hand  |
+   | Redaction list (`sensitive-keys.ts`)                | Widens to include `cookie` and `link` — a product with its own redaction allowlist built on the same fragments picks up the wider default on `copier update`               |
+   | `outbox-dead.purge` maintenance job                 | Registers with `lockId` **6** (`maintenance-registry.ts`) — a product with a custom job must not reuse this id                                                             |
 
    **DX note**: `pnpm contract` (`apps/api` `ts-node src/openapi/export-openapi.ts`, boots the
    Nest app to introspect routes) now needs the kernel's env loaded — `NODE_ENV`/`DATABASE_SSL`

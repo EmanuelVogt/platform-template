@@ -1596,6 +1596,166 @@ Wave 6:  [C11: T53→T58]
 
 ---
 
+> **Fix tasks — Verifier round 1 (2026-08-23, `validation.md` § Fix Plans)**. Wave 7 = C13 (attachment, T63→T66) ∥ C14 (identity + audit, T67→T68); disjoint ownership, both touch `catalog/**` so the Build gate includes `pnpm catalog:check`. Spec-precision fixes (REM-39 criterion, REM-48 probe) are made by the orchestrator in `spec.md`, not by a worker. The cosmetic narrower-than-stated proofs (REM-09, REM-10, REM-19, REM-25, REM-27) are accepted as passing and are not re-opened.
+
+### T63: Discriminate the declared-type mismatch in the batch sniff (REM-08, mutant 2)
+
+**What**: Kill the surviving mutant — a valid image whose bytes sniff to a *different* image type than declared must be rejected like a null sniff.
+**Where**: `catalog/attachment/api/application/use-cases/upload-attachments-batch/upload-attachments-batch.use-case.spec.ts`
+**Touches**: `catalog/attachment/api/application/use-cases/upload-attachments-batch/upload-attachments-batch.use-case.spec.ts`, `catalog/attachment/api/__e2e__/attachment-upload.e2e-spec.ts`
+**Depends on**: T46
+**Exclusive**: no
+**Reuses**: the existing spoofed-part cases at `upload-attachments-batch.use-case.spec.ts:294-326` and `attachment-upload.e2e-spec.ts:137` (415); real PNG/JPEG magic bytes (`file-type` sniff)
+**Requirement**: REM-08
+
+**Done when**:
+
+- [ ] A use-case test feeds valid PNG bytes declared `image/jpeg` (and the reverse) and asserts `UnsupportedMediaTypeError`, nothing persisted, every stored object of the batch discarded (the edge case `validation.md` § Edge Cases leaves unticked)
+- [ ] An e2e case asserts HTTP 415 for the same input
+- [ ] Re-applying mutant 2 (`sniffed !== file.contentType` dropped at `upload-attachments-batch.use-case.ts:67`) turns the scoped gate red — state the failing test names in the summary, then restore the file
+- [ ] Gate check passes: `pnpm catalog:check attachment`
+
+**Tests**: unit + e2e (matrix: use-case → unit; HTTP → e2e in the child)
+**Gate**: full (entry)
+**Commit**: `test(attachment): reject a sniffed image type that differs from the declared one`
+
+---
+
+### T64: Prove the upload quotas — 429 / 413 / 503 before the body is read (REM-14)
+
+**What**: Give the three upload bounds the proof the AC declares.
+**Where**: `catalog/attachment/api/__e2e__/attachment-upload.e2e-spec.ts`
+**Touches**: `catalog/attachment/api/__e2e__/attachment-upload.e2e-spec.ts`, `catalog/attachment/api/api/controllers/upload-attachments.controller.spec.ts` (new if absent), `catalog/attachment/api/application/use-cases/upload-attachments-batch/upload-attachments-batch.use-case.spec.ts` (413 quota path only if the check lives in the use case)
+**Depends on**: T63
+**Exclusive**: no
+**Reuses**: `@RateLimit({ limit: 20, windowSeconds: 60 })` at `upload-attachments.controller.ts:72`; `UploadsSaturatedError` (`domain/errors.ts:68`) and `PendingQuotaExceededError` (`domain/errors.ts:79`); `UploadGate`/`InFlightGate` unit spec; the avatar 429 e2e precedent in identity (`__e2e__/auth-csrf-none.e2e-spec.ts:203-209` consumes the rate-limit bucket)
+**Requirement**: REM-14
+
+**Done when**:
+
+- [ ] 429 on the 21st `POST /attachments/uploads` of one IP within 60 s, with `Retry-After`
+- [ ] 413 when the owner's pending bytes exceed `ATTACHMENT_PENDING_QUOTA_BYTES`
+- [ ] 503 with `Retry-After` when `ATTACHMENT_MAX_CONCURRENT_UPLOADS` uploads are in flight
+- [ ] Each case asserts the body was not consumed (the multipart parser / storage `putStream` never invoked)
+- [ ] Gate check passes: `pnpm catalog:check attachment`
+
+**Tests**: e2e in the child (+ unit where the bound is checked in a use case)
+**Gate**: full (entry)
+**Commit**: `test(attachment): prove the upload rate limit, pending quota and in-flight cap`
+
+---
+
+### T65: Prove the post-header stream failure teardown (REM-12)
+
+**What**: A storage stream that errors after the headers were sent must tear the response down, log `attachment.download_stream_failed`, and leave the process up.
+**Where**: `catalog/attachment/api/__e2e__/attachment-download.e2e-spec.ts`
+**Touches**: `catalog/attachment/api/__e2e__/attachment-download.e2e-spec.ts`
+**Depends on**: T64
+**Exclusive**: no
+**Reuses**: the client-abort case at `attachment-download.e2e-spec.ts:538` (fake storage stream, `slowStream.destroyed`); `download-attachment.controller.ts:78-91` (log key)
+**Requirement**: REM-12
+
+**Done when**:
+
+- [ ] A fake storage stream emits `error` after the first chunk; the test asserts the client connection is closed/reset (no complete body), `attachment.download_stream_failed` is logged once, and a subsequent request on the same app succeeds
+- [ ] Gate check passes: `pnpm catalog:check attachment`
+
+**Tests**: e2e in the child
+**Gate**: full (entry)
+**Commit**: `test(attachment): prove the download stream failure after headers tears the response down`
+
+---
+
+### T66: `fieldSize` in the busboy limits and a `parts` proof (REM-15)
+
+**What**: Complete the limits object the AC enumerates and prove the two untested bounds.
+**Where**: `catalog/attachment/api/api/multipart/multipart-files.ts`
+**Touches**: `catalog/attachment/api/api/multipart/multipart-files.ts`, `catalog/attachment/api/api/multipart/multipart-files.spec.ts`
+**Depends on**: T65
+**Exclusive**: no
+**Reuses**: `multipart-files.ts:50-55` (`fileSize`, `files`, `parts`, `fields`); `multipart-files.spec.ts:135-184` (existing limit cases); busboy `limits.fieldSize` (default 1 MiB) → on `fieldsLimit`/`partsLimit` → `InvalidMultipartRequestError` (400), consistent with the `fields` case at `:147`
+**Requirement**: REM-15
+
+**Done when**:
+
+- [ ] `fieldSize` is set from the profile (a small bound, e.g. 1 KiB — the batch route accepts no field; the value protects any route that reuses the parser)
+- [ ] Spec cases: a non-file field over `fieldSize` → 400; more than `parts` parts → 400; the offending part is destroyed (`destroyed === true`)
+- [ ] Gate check passes: `pnpm catalog:check attachment`
+
+**Tests**: unit
+**Gate**: full (entry)
+**Commit**: `fix(attachment): bound multipart field size and prove the parts limit`
+
+---
+
+### T67: Prove the audit-trail redaction of the three token-hash columns (REM-40)
+
+**What**: One trail assertion per column the custom migration registers.
+**Where**: `catalog/identity/single-tenant/api/infrastructure/persistence/audit-redaction.int-spec.ts` (new; or the precedent's file if the trail helper is only reachable from the audit entry)
+**Touches**: `catalog/identity/single-tenant/api/infrastructure/persistence/audit-redaction.int-spec.ts` (new), `catalog/audit/api/infrastructure/trail/audit-trigger.int-spec.ts` (only if the precedent must host the cases)
+**Depends on**: T38
+**Exclusive**: no
+**Reuses**: `catalog/audit/api/infrastructure/trail/audit-trigger.int-spec.ts:144` (`row_new.password_hash === "[REDACTED]"` — the exact pattern to mirror); `catalog/identity/single-tenant/migrations/custom/03_audit_redact_token_hashes.sql:19-21`
+**Requirement**: REM-40
+
+**Done when**:
+
+- [ ] Inserting/updating a `sessions`, `devices` and `verification_tokens` row yields an `audit.entries` row whose `row_new.token_hash` / `row_new.cookie_token_hash` / `row_new.token_hash` is `"[REDACTED]"` and whose other columns are intact
+- [ ] Gate check passes: `pnpm catalog:check identity` (and `audit` if its file changed)
+
+**Tests**: int in the child (matrix: custom SQL migration → int-spec)
+**Gate**: full (entry)
+**Commit**: `test(identity): prove the audit trail redacts the session, device and verification token hashes`
+
+---
+
+### T68: Unit proof for the dev seed password source (REM-28)
+
+**What**: The seed reads `SEED_MASTER_PASSWORD` or generates one — prove both branches.
+**Where**: `catalog/identity/single-tenant/api/testing/seeds/master-user.seed.spec.ts`
+**Touches**: `catalog/identity/single-tenant/api/testing/seeds/master-user.seed.spec.ts` (new), `catalog/identity/single-tenant/api/testing/seeds/master-user.seed.ts` (export only, if `resolveMasterPassword` is not exported)
+**Depends on**: T67
+**Exclusive**: no
+**Reuses**: `master-user.seed.ts:18-24,31-35`
+**Requirement**: REM-28
+
+**Done when**:
+
+- [ ] Env set → that value, `generated: false`; env absent → a generated value of the documented length, `generated: true`, printed once; no literal password anywhere in the file (assert by reading the source in the test or by grep in the summary)
+- [ ] Gate check passes: `pnpm catalog:check identity`
+
+**Tests**: unit
+**Gate**: full (entry)
+**Commit**: `test(identity): prove the master seed reads SEED_MASTER_PASSWORD or generates one`
+
+---
+
+> **Fix tasks — Verifier round 2 (2026-08-23)**. Wave 8 = C15 (T69, opus — migration + install order, cross-entry). Touches `catalog/**` → Build gate includes `pnpm catalog:check`. The REM-48 probe is tightened by the orchestrator in `spec.md` (`jq -r '.scripts | keys[]'`).
+
+### T69: Make the token-hash redaction attach run in the real install order (REM-40)
+
+**What**: In a stock child, `identity` is installed before `audit`, so `03_audit_redact_token_hashes.sql` hits its `audit.attach`-missing guard and no-ops — the trail keeps clear `token_hash` / `cookie_token_hash` values. The attach must execute in the real install path, and the proof must fail when the redact list is emptied (Verifier mutant 7 at `03_audit_redact_token_hashes.sql:19`).
+**Where**: `catalog/identity/single-tenant/migrations/custom/03_audit_redact_token_hashes.sql`
+**Touches**: `catalog/identity/single-tenant/migrations/custom/03_audit_redact_token_hashes.sql`, `catalog/identity/single-tenant/migrations/custom/02_*.sql` (same guard — the `users.password_hash` attach has the same ordering hole; fix both or prove 02 is reached), `catalog/audit/api/infrastructure/trail/audit-trigger.int-spec.ts:46-50` (delete the inline re-attach), `catalog/audit/api/testing/**` (`reattachIdentityTables` helper — delete or align), and ONE of: (a) an audit custom migration that, guarded on `to_regclass('identity.sessions')`, (re)attaches the identity tables with the lists identity declares — installed after identity by `dependsOn`; or (b) the catalog installer re-runs a dependency's `customMigrations` tagged as attach-after (`scripts/platform/**`, `module.json` schema) — pick (a) unless the installer already has such a hook (scout first); record the choice in the summary. If (a): `catalog/audit/module.json` `customMigrations` + `catalog/audit/CHANGELOG.md` `## [2.0.0]` item + `docs/advisories/ADV-20260822-04.md` `fix`/`detect` updated; `catalog/identity/single-tenant/README.md`/`CHANGELOG.md` line if identity's migration changes meaning.
+**Depends on**: T67
+**Exclusive**: **yes** — single cluster of wave 8 (migrations + two entries)
+**Reuses**: the existing guard pattern in `02_*.sql`/`03_*.sql`; `audit.attach(schema, table, pk, redact[])` signature (`catalog/audit/migrations/**`); `catalog:check` install order = topological on `dependsOn` (`scripts/platform/**` — confirm)
+**Requirement**: REM-40 (and the `users.password_hash` case of the original audit finding)
+
+**Done when**:
+
+- [ ] `pnpm catalog:check audit` renders a child with identity then audit and, **without any inline re-attach in tests**, an insert into `sessions`/`devices`/`verification_tokens`/`users` yields trail rows with the hash columns `"[REDACTED]"`
+- [ ] Mutant 7 (redact list → `'{}'` in the migration that now carries the list) turns `pnpm catalog:check audit` red — state the failing test names, restore the file
+- [ ] The inline re-attach at `audit-trigger.int-spec.ts:46-50` and its "never redacts in a real catalog:check" note are gone; `reattachIdentityTables` deleted or reduced to the real path
+- [ ] Advisory/changelog updated for whichever entry carries the attach; `pnpm catalog:lint` 0
+- [ ] Gate check passes: `pnpm catalog:check audit` and `pnpm catalog:check identity`
+
+**Tests**: int in the child (matrix: custom SQL migration → int-spec)
+**Gate**: full (entry)
+**Commit**: `fix(audit,identity): attach the token-hash redaction in the real install order` (+ `Advisory: none — covered by ADV-20260822-04 (security-audit-remediation)` for audit files, `…-01` for identity files — one commit, both trailers)
+
+---
+
 ## Wave Execution Map
 
 ```
@@ -1633,6 +1793,45 @@ At Execute the orchestrator never implements a cluster. Per wave it dispatches o
 **Unrun proofs after wave 2** (every entry `int-spec`/`__e2e__` written in waves 1–2): the Jest staged child has no entry migrations (`schema "identity" does not exist`), `PLATFORM_MODULES` is empty in the template, and parity specs are not staged. They run for the first time in **T61** (`pnpm catalog:check` on the Vitest tree). Plan corrections from wave 2: (a) C6's `Touches` gains `catalog/identity/single-tenant/api/domain/errors.spec.ts` (T37); (b) design § C: `outbox-dead.purge` `lockId` is **6**, not 3; (c) the Build gate for catalog code = `pnpm catalog:typecheck --keep` + jest `--rootDir .catalog-stage` over the five entries (the matrix's `pnpm --filter api test -- modules/<entry>` never ran anything — `rootDir=src`); void after T59; (d) the `vitest-migration` merge landed on `main` at `278dde0` during this wave → wave 3 is the port (C12, T59–T62).
 
 Plan corrections from wave 1: (a) T6 `Touches` gains `catalog/identity/single-tenant/api/api/controllers/**` (the 27 `@RateLimit` importers) and `catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-auth-event.repository.int-spec.ts`; (b) the Build gate's `src/modules/architecture.spec.ts` does not exist in this tree — only `src/modules/module-boundaries.spec.ts` is named from wave 2 on; (c) wave-1 workers touching `catalog/**` used the trailer `Advisory: none — covered by ADV-20260822-NN (security-audit-remediation)` (advisory files themselves land in wave 5, C11).
+
+**Wave 3 — DONE (2026-08-22), Build gate PASS on the 1st run** (Vitest, the first Vitest gate: `pnpm check` 0 · `pnpm test` 86 files / 546 tests · `module-boundaries.spec.ts` 32/32 · `catalog:typecheck` 0 · REM-48 probe empty, no Jest config left). Commit range `16a9645..bd8a4e9`, 3 commits + the merge. **The new post-merge baseline for the Verifier: 86 files / 546 tests** (`main` alone: 76 / 399 at `278dde0`).
+
+| Cluster | Tier | Tasks → commits | Notes |
+| --- | --- | --- | --- |
+| C12 | opus | T59 `aeedbfd` (merge of `main@2bdee72`) · T60 `f6e23a4` · T61 `bd8a4e9` · T62 **no-op** (no commit: floors untouched, `ci.yml` consistent, docs unchanged) | T59: 25 conflicts (22 specs → ours; `rate-limit.guard.spec.ts` kept deleted; `tsconfig.build.json` union; idempotency interceptor + spec merged keeping both intents); `test:scripts` 233/233. T60: codemod clean on the 2nd run (0 changed / 0 manual). T61: `test:int` 119/119 · `test:e2e` 14/14 · **`pnpm catalog:check` exit 0** (child: 1499 unit + 498 int/e2e — `contract.parity.spec.ts` PASSES, nothing red to carry to T52). The wave-2 unrun entry proofs ran for the first time and exposed **5 real defects, fixed at source**: 14 e2e rate-limiter doubles lacked `reset`; attachment upload e2e sent no `Origin` (CSRF 403); **busboy off-by-one in `catalog/attachment/api/api/controllers/multipart-files.ts`** (`parts: maxFiles` 413'd a single legal file — busboy fires `partsLimit` on `++parts === limit`; now `maxFiles + 1` + a boundary unit case); `seeds/bootstrap.ts` imported the root connection (module-boundaries red) → own `pg.Pool` + `poolConfig()`; stale `maintenance-runtime.int-spec` lockId 6 (now the kernel's). Deviations: (1) **`pnpm test:coverage` exit 1 on the merged tree — inherited from `main`, floors NOT lowered**: branches 88.54 % global / 87.56 % `apps/api/src/**` vs the flat 90 (stmts 94.98 · funcs 94.22 · lines 95.51 pass; 679/679 tests green); offenders are kernel infra the feature never touched (`client.factory.ts` 60 %, `dedicated-client.ts` 80 %, `event-context.ts` 83 %) — `main`'s open `api-coverage-to-90` work closes it; the branch must merge `main` once more before the Verifier's Final gate. (2) `apps/api/test/setup/e2e-env.ts` sets `DATABASE_POOL_MAX_WAITING=200` (the 51-request storage-socket burst tripped the fail-closed pool queue under parallel load → 503s). (3) Catalog import order fixed tree-wide (the template never lints `catalog/**`; only the rendered child does). |
+
+Plan corrections from wave 3: (a) `contract.parity.spec.ts` is green on the Vitest tree — T52's "re-freeze" is still owed for the T35 contract change, but no red precedes it; (b) Build gate from here on = the Vitest table (`pnpm check` + `pnpm test` + `module-boundaries.spec.ts` + `catalog:typecheck`); entry int/e2e only via `pnpm catalog:check`; (c) the T62 coverage criterion depends on `main` clearing its own floors — re-run `pnpm test:coverage` after the pre-Verifier merge of `main`.
+
+**Wave 4 — DONE (2026-08-22), Build gate PASS on the 1st run** (`pnpm install --frozen-lockfile` 0 · `pnpm check` 0 · `pnpm test` 86 files / 546 tests · `module-boundaries.spec.ts` in the run · `catalog:typecheck` 0). Commit `298e8f3` (1 commit).
+
+| Cluster | Tier | Tasks → commits | Notes |
+| --- | --- | --- | --- |
+| C9 | sonnet | T51 `298e8f3` | `multer` → 2.2.0 (direct dep + root override, since `@nestjs/platform-express` ships its own copy); `limits.fields: 0` on both avatar `FileInterceptor`s + 1 new config assertion. Root `pnpm.overrides`: multer, js-yaml, `@opentelemetry/propagator-jaeger`, `minimatch@3/@10>brace-expansion`, `postcss>nanoid` / `@scalar/types>nanoid`, postcss, vite, undici — **advisory mapping lives in the commit body** (JSON has no comments and pnpm rejects non-selector `"//"` keys; the AC's "one-line comment per entry" is satisfied there). Deviation: **`pnpm audit --prod --audit-level=high` exits 1, not 0** — 21 highs → 2, the residue is exactly the spec's Out of Scope (`packages/api-client>axios` GHSA-gcfj-64vw-6mp9 + its transitive `form-data` GHSA-hmw2-7cc7-3qxx); pnpm audits the workspace lockfile from any package, so the literal "exits 0" cannot be met without touching `api-client` — for the Verifier: the AC holds modulo the Out-of-Scope chain. Scoped gate ran against the staged copy (`catalog:typecheck --keep` + `vitest run`, 3/3) because catalog specs only resolve from their staged position. |
+
+**Wave 4 gate-fix (2026-08-23)** — the wave-4 Build gate did not run `pnpm catalog:check`, and C10's run exposed two T51 reds: `upload-avatar.controller.spec.ts:54` eslint `unbound-method` (surfaces only in the child) and `access-link-avatar-ownership.e2e-spec.ts:178` 400 — `limits.fields = 0` rejected the legitimate `token` multipart field of the pre-auth access-link avatar route. One fix worker (sonnet) closed both in `6c8e35e`: `upload-access-link-avatar.controller.ts` → `fields: 1` (the `@Body("token")` field), `upload-avatar.controller.ts` keeps `fields: 0`, spec lint fixed without `eslint-disable`. **SPEC_DEVIATION for the Verifier** (inlined at `upload-access-link-avatar.controller.ts:50-53`): REM-39 literally says `fields: 0` on both avatar interceptors; the access-link route needs exactly one. `pnpm catalog:check` exit 0 after the fix (216 unit + 498 test:db, 5 module adds OK). Plan correction: **a wave that touches `catalog/**` code must include `pnpm catalog:check` in its Build gate** (the scoped unit gate cannot see child-only lint or the entry e2e).
+
+**Wave 5 — DONE (2026-08-23), Build gate PASS on the 1st run** (`pnpm check` 0 · `pnpm test` 86 files / 546 tests · `module-boundaries.spec.ts` in the run · `catalog:typecheck` 0 · `catalog:check` 0 via the gate-fix above). Commits `65af323` + `6c8e35e`.
+
+| Cluster | Tier | Tasks → commits | Notes |
+| --- | --- | --- | --- |
+| C10 | opus | T52 `65af323` | `openapi.json`: 1-line delta only (`info.description` — CSRF attributed to identity's `CsrfGuard`, from T18). The T35/T50 input bounds live in `catalog/**`, so they never appear in the template's kernel-only document (2 paths: `/health`, `/ready`); `packages/api-client/generated/**` regenerated byte-identical → nothing to commit. **Parity needed no edit**: in a kept child (identity + 4 entries, 44 paths / 53 ops) 14 parity files / 89 tests pass, `contract.parity.spec.ts` included; child typecheck green (both web consumers OK); child `pnpm test` 216 files / 1500. STOPPED once on the T51 reds above (outside its ownership — reported, not touched). DX note for T57: `pnpm contract` now requires the kernel env (`NODE_ENV`, `DATABASE_URL`, `DATABASE_SSL`, `REDIS_URL`, `WEB_ORIGIN`, `R2_*`) after T8–T12; no `.env` in a fresh worktree and no CI job runs it. |
+
+**Wave 6 — DONE (2026-08-23), Build gate PASS on the 1st run** (`pnpm check` 0 · `pnpm test` 86 files / 546 tests · `module-boundaries.spec.ts` 32/32 · `catalog:typecheck` 0 · `catalog:lint` 0 · `template:smoke` 4/4 · `catalog:check` 0 — child 216 unit files / 1500 tests + 70 test:db files / 498 tests, 5 entries OK). Commit range `6c8e35e..a4ebe34`, 6 commits. **Version fold applied (default, spec § Open questions closed)**: entries stay `2.0.0`, items folded into the existing `## [2.0.0]` sections, `ADV-20260822-01..05` beside `ADV-20260821-01..05`, `kernelRange` `">=2.0.0 <3.0.0"` ×5, kernel tag `v2.0.0` covers Vitest + security. The worker died once mid-T53 (host sleep; three identity files modified, nothing committed) and was resumed from its transcript — diff repaired, no re-dispatch. **Execute complete — all 58 tasks DONE; next: pre-Verifier `git merge main` in the worktree + `pnpm test:coverage`, then the Verifier at opus.**
+
+| Cluster | Tier | Tasks → commits | Notes |
+| --- | --- | --- | --- |
+| C11 | sonnet | T53 `f1e76ca` · T54 `d975c1e` · T55 `e8d7195` · T56 `b9b0ca1` · T57 `5bb31ff` · T58 `a4ebe34` | T53–T56 each stage their `ADV-20260822-NN.md` with the catalog change (01 identity `breaking/high` · 02 attachment `security/high` · 03 notification `security/medium` · 04 audit `bug/low` · 05 tag `security/low`). READMEs edited only for identity and attachment (the only Done-when items naming README lines). T57: `## v2.0.0` in `template-changelog.md` lists every fail-closed change with the child's action, `outbox-dead.purge` **`lockId` 6** (task body said 3 — stale since the wave-2 fix), the tag-by-maintainer note, the pointer to the Vitest entry and the `pnpm contract` kernel-env DX note. T58: `deploy.md.jinja` drops the `legacy-import` entrypoint step for the seed glob and gains a "Fail-closed configuration" table (`TRUST_PROXY_HOPS=2` for Cloudflare → Traefik, `DOCS_ENABLED`, `REDIS_ALLOW_PLAINTEXT`, `DATABASE_SSL_CA`, `OUTBOX_DEAD_RETENTION_DAYS`, `STORAGE_*`, identity/attachment vars); `local-environment.md` lists the variables a developer now sets explicitly. No `SPEC_DEVIATION` in this wave. |
+
+**Verifier round 1 (2026-08-23, opus) — FAIL**: 45/51 ACs evidenced, Final gate 10/11 (`pnpm audit` residue = Out-of-Scope `api-client>axios`), sensor 4/5 (mutant 2 survived). `validation.md` committed on the branch at `e46790a`; fix tasks T63–T68 + spec precision (REM-39 filtered gate, REM-48 probe, Success Criteria #2) on `main` at `44d8fd4`, merged into the worktree at `3b7554f`.
+
+**Wave 7 (fix round 1) — DONE (2026-08-23), Build gate PASS on the 1st run** (`pnpm check` 0 · `pnpm test` 89 files / 585 tests · `module-boundaries.spec.ts` 32/32 · `catalog:typecheck` 0 · `catalog:lint` 0 · `catalog:check` 0 — child 221 unit files / 1548 tests + 70 test:db files / 510 tests; attachment 20/117, identity 74/677 + 3/15, audit 6/44). Commit range `3b7554f..ca6bb6f`, 6 commits.
+
+| Cluster | Tier | Tasks → commits | Notes |
+| --- | --- | --- | --- |
+| C13 | sonnet | T63 `b3b1259` · T64 `1937907` · T65 `b721676` · T66 `ca6bb6f` | **Mutant 2 kill verified**: re-injected the `sniffed !== file.contentType` drop at `upload-attachments-batch.use-case.ts:67`, `catalog:check attachment` went red on "recusa PNG válido declarado como image/jpeg…" and "recusa JPEG válido declarado como image/png e descarta o objeto já enviado do lote", file restored. T64: new `upload-attachments.controller.spec.ts` (503/413 wiring) + 3 e2e blocks (429 real limiter, 413 seeded pending rows, 503 pre-acquired `UploadGate`), body-not-read asserted. T65: fake `LoggerFactory` spy proves `attachment.download_stream_failed`; a cross-test socket-pool flake (`Parse Error: Expected HTTP/`) fixed with `agent: false` on the raw `http.request`. T66: `fields`/`fieldSize` configurable on `MultipartLimits` (defaults 0 / 1024 keep callers unchanged), `field` handler rejects `nameTruncated`/`valueTruncated` → 400, `partsLimit` isolated with `stream.destroyed === true`. Plan correction: the multipart parser lives at `catalog/attachment/api/api/controllers/multipart-files.ts` (T66's `api/multipart/` path was wrong). |
+| C14 | sonnet | T67 `63f1e5e` · T68 `1ec6034` | T67 hosted in `catalog/audit/api/infrastructure/trail/audit-trigger.int-spec.ts` (precedent), not a new identity file: `catalog:check identity` resolves only identity's `dependsOn` (notification), so `audit.entries` does not exist in an identity-only child and migration 03 no-ops there; `audit` depends on `identity`, so `catalog:check audit` proves both. **SPEC_DEVIATION for the Verifier** (inline in that spec's `beforeAll`): it re-attaches `sessions`/`devices`/`verification_tokens` with migration 03's redact lists because the shared `reattachIdentityTables` helper (outside C14's ownership) mirrors migration 02's empty lists. T68: `resolveMasterPassword` exported (no behaviour change), env-set/absent branches + 32-char base64url + printed-once; no literal password in the file. |
+
+**Verifier round 2 (2026-08-23, opus, same agent resumed) — FAIL, 1 Major**: 50/51 ACs evidenced; Final gate 12/12 (REM-39 filtered gate exit 0); sensor round 2 3 injected / 2 killed (mutant 2 now killed by T63, fresh mutant 6 on the REM-14 quota arithmetic killed), **mutant 7 survived** — `03_audit_redact_token_hashes.sql:19` redact list → `'{}'` leaves `catalog:check audit` green because `audit-trigger.int-spec.ts:46-50` re-attaches the tables inline with hand-copied literals, and in a stock install (identity before audit) the migration hits its guard and never runs: **REM-40 is not closed in product**. Closed this round: REM-08, REM-12, REM-14, REM-15, REM-28. Cosmetics carried (REM-09/10/19/25/27, REM-12 server socket). → fix task **T69** (wave 8, C15, opus, exclusive); REM-48 probe re-tightened in `spec.md` (`jq -r '.scripts | keys[]'`). Lessons L-022..L-024 (L-023 restates L-013).
 
 ---
 

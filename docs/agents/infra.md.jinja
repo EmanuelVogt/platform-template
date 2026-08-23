@@ -1,221 +1,37 @@
-# Infra: how the agent reaches AWS, Dokploy, Cloudflare and Resend
+# Infra: how the agent reaches the product's deployed environments
 
-Operational instructions for acting on the long-lived environments. The deploy mechanism
-itself is in [`../dev/deploy.md`](../dev/deploy.md) — read that before touching build,
-entrypoint or migrations. The local environment uses none of this.
+Platform-level guidance for an agent acting on infrastructure once it is deployed. The
+image contract, boot entrypoint and environment variables are documented in
+[`../dev/deploy.md`](../dev/deploy.md) — read that before touching build, entrypoint or
+migrations. The local environment uses none of this.
 
 ## Operating rules
 
-**Check the session before concluding something is broken.** An expired token and a real
-failure produce similar symptoms. Confirm the credential is valid before diagnosing.
+**Check the session before concluding something is broken.** An expired credential and a
+real failure produce similar symptoms. Confirm the credential is valid before diagnosing.
 
 **Production is read-only by default.** Queries, counts and logs are free. Writing to the
 production database, redeploying, changing a variable or altering a firewall requires
 explicit confirmation from the user — production holds real customer data.
 
-**Transient failure is common; don't conclude on the first attempt.** SSH into the VMs and
-the Cloudflare API fail intermittently. Retry 3–5 times with a pause before treating it as
-a problem. A `curl` returning empty is usually a gateway error, not a refused operation —
-inspect the raw response body before re-running (it may have succeeded on the server with
-only the response lost, which produces a duplicate if you blindly repeat).
+**Transient failure is common; don't conclude on the first attempt.** Talking to a
+provider's API or opening a remote session can fail intermittently. Retry 3–5 times with a
+pause before treating it as a problem. A `curl` returning empty is usually a gateway error,
+not a refused operation — inspect the raw response body before re-running (it may have
+succeeded on the server with only the response lost, which produces a duplicate if you
+blindly repeat).
 
-**List before you create.** The user may have created the resource through the UI while
-you were working. Check current state before any creation.
+**List before you create.** The user may have created the resource through a console or UI
+while you were working. Check current state before any creation.
 
-## AWS
+## Your provider
 
-SSO through IAM Identity Center; the token lasts ~8h. Resources in `us-east-2`, Identity
-Center in `sa-east-1` — passing the wrong region makes the command find nothing.
+Product-owned: the template ships no cloud account, VM, panel, DNS/CDN or mail-sending
+credential — those are this product's own choice. Fill this section in with how an agent
+reaches your actual environments (cloud/VM access, the deploy orchestrator's panel or API,
+the database connection path per environment, DNS/CDN, outbound mail), one subsection per
+service, in the same shape as the rules above: how to check a session, what is read-only by
+default, what always needs the user's explicit confirmation.
 
-```bash
-aws sts get-caller-identity                    # checks the session
-aws sso login --sso-session {{ project_slug }}           # renews (opens a browser, requires MFA)
-```
-
-Login is interactive and **does not work from a tool call without a terminal** — ask the
-user to run the command. Expiry symptom: `Error when retrieving token from sso`.
-
-The `infra_dev` role **has no IAM permissions**. `iam:GetRole` and `iam:PassRole` are
-denied, which blocks Data Lifecycle Manager, AWS Backup and Lambda. Hitting `AccessDenied`
-on those services is a permission boundary, not something to work around — escalate.
-
-Commands that accept `--region` should always receive it explicitly; don't rely on the
-profile default.
-
-## SSH into the VMs
-
-Aliases `{{ project_slug }}-dev` and `{{ project_slug }}-prod` in `~/.ssh/config`.
-
-**Port 22 no longer accepts a public IP.** Since 2026-08-01 all SSH goes through the EC2
-Instance Connect Endpoint, via the `ProxyCommand aws ec2-instance-connect open-tunnel`
-already configured in the aliases. Consequence: **without a valid SSO session there is no
-SSH at all**. A failing connection is, overwhelmingly, an expired token — check the
-session before suspecting the VM.
-
-Comparing your current IP against the security group rule is obsolete diagnosis: there is
-no per-IP rule to open any more. Don't reopen one.
-
-The aliases' `HostName` is the instance-id, not the IP. If `Host key verification failed`
-shows up, the key isn't in `known_hosts` — take the real key from the instance console,
-which is a verifiable source, and record it under the instance-id as host:
-
-```bash
-aws ec2 get-console-output --region us-east-2 --instance-id <id> \
-  --output text --query Output | sed -n '/BEGIN SSH HOST KEY KEYS/,/END SSH HOST KEY KEYS/p'
-```
-
-Don't solve this with `StrictHostKeyChecking=accept-new` — accepting a key without
-checking it discards the very protection the error was offering.
-
-With no key access at all, inject one temporarily and write it to `authorized_keys` in the
-same session:
-
-```bash
-aws ec2-instance-connect send-ssh-public-key --region us-east-2 \
-  --instance-id <id> --availability-zone <az> --instance-os-user ubuntu \
-  --ssh-public-key file://<key.pub>
-```
-
-## The environments' Postgres
-
-Neither database is reachable from the internet: port 5432 is closed in both security
-groups. **The two environments are not symmetric**, and assuming they are is the most
-common source of error here:
-
-- **dev** — the container publishes `0.0.0.0:5432` on the host, so `ssh -L` reaches it.
-- **prod** — Postgres exists only on the `dokploy-network` overlay and **the host does not
-  route there**. `ssh -L 5432:localhost:5432 {{ project_slug }}-prod` opens a tunnel to nothing:
-  there is nothing listening on the other end.
-
-To query (the agent's normal path, and the only one that works identically in both
-environments), go through `docker exec` over SSH. The container name changes on every
-Dokploy redeploy, so discover it at call time:
-
-```bash
-ssh {{ project_slug }}-prod 'bash -s' <<'REMOTE'
-PG=$(sudo docker ps --filter name={{ project_slug }}-prod-db --format '{{ '{{.Names}}' }}' | head -1)
-sudo docker exec -i "$PG" psql -U postgres -f - <<'SQL'
-select schemaname || '.' || relname, n_live_tup
-from pg_stat_user_tables order by n_live_tup desc limit 10;
-SQL
-REMOTE
-```
-
-On dev the filter is `dev-{{ project_slug }}-db`. Without `sudo` Docker refuses the socket.
-
-**Use a heredoc, not SQL as an argument.** In the shell → ssh → docker exec chain, a
-quoted query breaks as soon as it contains `'`, `%` or `$` — and the error that surfaces
-is a SQL syntax error, which wastes time hunting a defect in the query instead of in the
-quoting.
-
-The schemas are modular (`audit.`, `guest.`, `reservation.`, `_kernel.`).
-`current_schema()` is no good for filtering tables; use `schemaname` from
-`pg_stat_user_tables`.
-
-When an external client needs to connect (DBeaver, TablePlus), the user has
-`~/.local/bin/{{ project_slug }}-db {dev|prod}`, which resolves the asymmetry above: on prod it
-raises an ephemeral socat bridge on the overlay and tears it down on exit. It's a script
-on their machine, not in the repo.
-
-**The connection is superuser.** There is no read-only role — the user's decision on
-2026-08-02. Nothing in the database prevents an accidental write to production, so the
-operating rule above holds: writing to prod requires explicit confirmation.
-
-## Dokploy
-
-One panel per environment, with independent logins and API keys. Addresses in
-[`../dev/deploy.md`](../dev/deploy.md).
-
-API key: *Settings → Profile* (there is no "API/CLI" tab). Call format — **not
-conventional REST**:
-
-```bash
-curl -H "x-api-key: <key>" https://<panel>/api/project.all
-curl -X POST -H "x-api-key: <key>" -H "Content-Type: application/json" \
-     -d '{"applicationId":"<id>"}' https://<panel>/api/application.redeploy
-```
-
-The pattern is `/api/<router>.<action>`. The full spec (546 endpoints) comes from
-`/api/trpc/settings.getOpenApiDocument`; `/swagger.json` doesn't exist and returns an
-error.
-
-Responses vary: some routes return the object directly, others wrap it in
-`result.data.json`. Handle both when parsing. Deploy is synchronous and usually blows past
-the `curl` timeout — an empty response doesn't mean failure; check the state afterwards.
-
-Traps when creating resources through the API:
-
-- An application created via API gets a random `appName`; through the UI the name follows
-  the project's pattern. If the name matters, create it in the UI or accept the generated
-  one.
-- A compose is born with `sourceType: "github"`. Pasted content requires `compose.update`
-  with `sourceType: "raw"`, otherwise the deploy fails with `Github Provider not found`.
-
-**The API cannot connect the GitHub provider.** It requires the App installation OAuth
-flow in a browser (*Settings → Git Providers*), once per environment — escalate to the
-user.
-
-Access reset, when the panel is unreachable (runs on the VM):
-
-```bash
-docker exec -i <dokploy-container> bash -c "pnpm run reset-password"
-docker exec -i <dokploy-container> bash -c "pnpm run reset-2fa"
-```
-
-## Cloudflare
-
-Zone `{{ root_domain }}`, shared with subdomains pointing outside these environments —
-**touch only the records of the service in question**. Cloudflare features (WAF, cache,
-zone rules) apply only to proxied records; a grey record is DNS only.
-
-The API token needs the scope matching the operation: `Zone → DNS → Edit` for records,
-plus `Zone → SSL and Certificates → Edit` to order a certificate. A missing scope returns
-`9109 Unauthorized to access requested resource`.
-
-A `522` with an HTML body is a transient failure of Cloudflare's own gateway, not of the
-operation. Before repeating a `POST`, list the records — the creation may have succeeded
-with only the response lost, and repeating produces
-`81058 An identical record already exists` or a duplicate.
-
-**The free certificate covers a single subdomain level.** Universal SSL covers
-`{{ root_domain }}` and `*.{{ root_domain }}` — one label. A name with more levels
-(`dev.api.os.…`) needs a wildcard in Advanced Certificate Manager, a paid per-zone
-subscription. The symptom is a handshake failing at the edge for every visitor while the
-origin answers normally — don't confuse it with an application problem.
-
-A wildcard TLS certificate matches **exactly one** label: `*.{{ app_domain }}` covers
-`dev.{{ app_domain }}` but not `dev.api.{{ app_domain }}`. Each depth needs its own
-wildcard. Before publishing a new name, check which certificate the edge presents:
-
-```bash
-echo | openssl s_client -connect <edge-ip>:443 -servername <host> 2>/dev/null \
-  | openssl x509 -noout -text | grep -A2 'Subject Alternative Name'
-```
-
-## Resend
-
-Email diagnosis, read-only:
-
-```bash
-curl -H "Authorization: Bearer <key>" "https://api.resend.com/emails?limit=20"
-curl -H "Authorization: Bearer <key>" https://api.resend.com/domains
-```
-
-Each send's `last_event` field decides the line of investigation. `delivered` means the
-destination server accepted the message — what's left to look for is spam, a filter or
-alias routing, **not** an application bug. `bounced` or an unverified domain point at
-configuration.
-
-Before investigating delivery, confirm an attempt was made: check
-`notification.notification_deliveries` and `_kernel.outbox` in the environment's database.
-Zero rows means the flow never fired — the problem is upstream of email.
-
-## What always requires the user
-
-Don't work around these; ask:
-
-- `aws sso login` (interactive, with MFA).
-- Installing the GitHub App under *Settings → Git Providers* on each panel.
-- Subscribing to or ordering an advanced certificate on Cloudflare (costs money).
-- Anything needing IAM permissions on AWS.
-- Writing to the production database, redeploying production, and firewall changes.
+The variable names any provider needs to run the images are in `apps/api/.env.example` —
+point at that file instead of repeating the list here.

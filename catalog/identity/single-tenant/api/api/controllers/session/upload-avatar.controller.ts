@@ -43,7 +43,9 @@ export class UploadAvatarController {
   @RateLimit({ limit: 10, windowSeconds: 60 })
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(
-    FileInterceptor("file", { limits: { fileSize: MAX_UPLOAD_BYTES } }),
+    FileInterceptor("file", {
+      limits: { fileSize: MAX_UPLOAD_BYTES, fields: 0 },
+    }),
   )
   async handle(
     @UploadedFile() file: Express.Multer.File | undefined,

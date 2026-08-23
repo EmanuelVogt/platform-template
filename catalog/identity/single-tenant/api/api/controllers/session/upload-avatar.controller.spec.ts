@@ -1,3 +1,4 @@
+import { INTERCEPTORS_METADATA } from "@nestjs/common/constants"
 import { type Mock, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AvatarFileRequiredError } from "../../../domain/errors"
@@ -45,5 +46,16 @@ describe("UploadAvatarController", () => {
       originalFilename: "foto.png",
     })
     expect(result).toEqual({ avatarAttachmentId: "att-1" })
+  })
+
+  it("configura o multer sem campos extras (GHSA-72gw-mp4g-v24j)", () => {
+    const [FileInterceptor] = Reflect.getMetadata(
+      INTERCEPTORS_METADATA,
+      UploadAvatarController.prototype.handle,
+    ) as [new () => { multer: { limits?: { fileSize?: number; fields?: number } } }]
+
+    const { multer } = new FileInterceptor()
+
+    expect(multer.limits).toEqual({ fileSize: 5 * 1024 * 1024, fields: 0 })
   })
 })

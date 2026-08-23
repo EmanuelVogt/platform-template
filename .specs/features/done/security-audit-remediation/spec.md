@@ -194,57 +194,57 @@ The 2026-08-22 white-box audit of the backend (kernel + the five catalog entries
 
 | Requirement ID | Audit ID | Story | Proof | Phase | Status |
 | --- | --- | --- | --- | --- | --- |
-| REM-01 | AUTH-1 | P1 Login | test | Tasks | Pending |
-| REM-02 | AUTH-1 | P1 Login | test | Tasks | Pending |
-| REM-03 | AUTH-1 | P1 Login | test | Tasks | Pending |
-| REM-04 | AUTH-5 | P1 Login | test | Tasks | Pending |
-| REM-05 | AUTH-2 | P1 Login | test | Tasks | Pending |
-| REM-06 | adj. guard order | P1 Login | test | Tasks | Pending |
-| REM-07 | AUTH-4, AUTH-13 | P1 Login | test | Tasks | Pending |
-| REM-08 | UPLOAD-1 | P1 Attach | test | Tasks | Pending |
-| REM-09 | UPLOAD-1, UPLOAD-6 | P1 Attach | test | Tasks | Pending |
-| REM-10 | UPLOAD-2 | P1 Attach | test | Tasks | Pending |
-| REM-11 | UPLOAD-2 (304) | P1 Attach | test | Tasks | Pending |
-| REM-12 | UPLOAD-2 | P1 Attach | test | Tasks | Pending |
-| REM-13 | UPLOAD-2 adj. | P1 Attach | test | Tasks | Pending |
-| REM-14 | UPLOAD-3 | P1 Attach | test | Tasks | Pending |
-| REM-15 | UPLOAD-4 | P1 Attach | test | Tasks | Pending |
-| REM-16 | AUTH-3 | P2 Secrets | test | Tasks | Pending |
-| REM-17 | AUTH-3 | P2 Secrets | test | Tasks | Pending |
-| REM-18 | AUTHZ-3 | P2 Secrets | test | Tasks | Pending |
-| REM-19 | AUTHZ-1 | P2 Secrets | test | Tasks | Pending |
-| REM-20 | KERNEL-3 adj. | P2 Secrets | test | Tasks | Pending |
-| REM-21 | KERNEL-3, SUPPLY-2, SUPPLY-3 | P2 Config | test | Tasks | Pending |
-| REM-22 | NOTIF-3 | P2 Config | test | Tasks | Pending |
-| REM-23 | SUPPLY-2 adj. | P2 Config | test | Tasks | Pending |
-| REM-24 | AUTH-6 | P2 Config | test | Tasks | Pending |
-| REM-25 | KERNEL-4 | P2 Config | test | Tasks | Pending |
-| REM-26 | SUPPLY-1 | P2 Config | probe: `pnpm --filter api build && ! find apps/api/dist \( -path '*/testing/*' -o -path '*/__e2e__/*' -o -path '*/parity/*' \) -print \| grep .` | Tasks | Pending |
-| REM-27 | SUPPLY-1 | P2 Config | test | Tasks | Pending |
-| REM-28 | SUPPLY-1 | P2 Config | test | Tasks | Pending |
-| REM-29 | SUPPLY-1 | P2 Config | test | Tasks | Pending |
-| REM-30 | adj. notif NODE_ENV | P2 Config | test | Tasks | Pending |
-| REM-31 | AUTHZ-2 | P3 | test | Tasks | Pending |
-| REM-32 | KERNEL-1, INPUT-6 | P3 | test | Tasks | Pending |
-| REM-33 | KERNEL-6 | P3 | test | Tasks | Pending |
-| REM-34 | INPUT-5 | P3 | test | Tasks | Pending |
-| REM-35 | INPUT-4 | P3 | test | Tasks | Pending |
-| REM-36 | INPUT-3 | P3 | test | Tasks | Pending |
-| REM-37 | INPUT-7, INPUT-8 | P3 | test | Tasks | Pending |
-| REM-38 | NOTIF-2 | P3 | test | Tasks | Pending |
-| REM-39 | SUPPLY-4, SUPPLY-5 | P3 | gate: `cd apps/api && pnpm audit --prod --audit-level=high --json \| jq -e '[.advisories[] \| select(.severity=="high" or .severity=="critical") \| select(.findings[].paths[] \| test("api-client>axios") \| not)] \| length == 0'` (exit 0 = only the Out-of-Scope chain remains) | Tasks | Pending |
-| REM-40 | DB-2 | P3 | test | Tasks | Pending |
-| REM-41 | UPLOAD-9, DB-5 | P3 | test | Tasks | Pending |
-| REM-42 | UPLOAD-10 | P3 | test | Tasks | Pending |
-| REM-43 | AUTHZ-8 | P3 | test | Tasks | Pending |
-| REM-44 | AUTH-10 | P3 | test | Tasks | Pending |
-| REM-45 | AUTH-9 | P3 | test | Tasks | Pending |
-| REM-46 | NOTIF-1 | P3 | test | Tasks | Pending |
-| REM-47 | SUPPLY-6/7, KERNEL-7 | P3 | probe: `grep -En "uses: .*@v[0-9]" .github/workflows/*.yml \| grep -v '#' ; grep -L "^permissions:" .github/workflows/*.yml` (both empty) | Tasks | Pending |
-| REM-48 | — (Vitest port, AC 1) | P1 Port | probe: `grep -rEn "\bjest\.|@jest/globals|ts-jest" apps/api/src apps/api/test catalog --include='*.ts' ; ls apps/api/test/jest-*.json ; jq -r '.scripts | keys[]' apps/api/package.json | grep -E '^test'` (all empty — the last arm reads the `scripts` block only, so neither the `format` glob nor the `testcontainers` devDependency can match) | Tasks | Pending |
-| REM-49 | — (Vitest port, AC 2) | P1 Port | gate: `pnpm test && pnpm test:int && pnpm test:e2e` | Tasks | Pending |
-| REM-50 | — (Vitest port, AC 3) | P1 Port | gate: `pnpm catalog:check` | Tasks | Pending |
-| REM-51 | — (Vitest port, ACs 4–5) | P1 Port | gate: `pnpm test:coverage` + `pnpm test:scripts`; probes REM-26, REM-47 | Tasks | Pending |
+| REM-01 | AUTH-1 | P1 Login | test | Execute | Done |
+| REM-02 | AUTH-1 | P1 Login | test | Execute | Done |
+| REM-03 | AUTH-1 | P1 Login | test | Execute | Done |
+| REM-04 | AUTH-5 | P1 Login | test | Execute | Done |
+| REM-05 | AUTH-2 | P1 Login | test | Execute | Done |
+| REM-06 | adj. guard order | P1 Login | test | Execute | Done |
+| REM-07 | AUTH-4, AUTH-13 | P1 Login | test | Execute | Done |
+| REM-08 | UPLOAD-1 | P1 Attach | test | Execute | Done |
+| REM-09 | UPLOAD-1, UPLOAD-6 | P1 Attach | test | Execute | Done |
+| REM-10 | UPLOAD-2 | P1 Attach | test | Execute | Done |
+| REM-11 | UPLOAD-2 (304) | P1 Attach | test | Execute | Done |
+| REM-12 | UPLOAD-2 | P1 Attach | test | Execute | Done |
+| REM-13 | UPLOAD-2 adj. | P1 Attach | test | Execute | Done |
+| REM-14 | UPLOAD-3 | P1 Attach | test | Execute | Done |
+| REM-15 | UPLOAD-4 | P1 Attach | test | Execute | Done |
+| REM-16 | AUTH-3 | P2 Secrets | test | Execute | Done |
+| REM-17 | AUTH-3 | P2 Secrets | test | Execute | Done |
+| REM-18 | AUTHZ-3 | P2 Secrets | test | Execute | Done |
+| REM-19 | AUTHZ-1 | P2 Secrets | test | Execute | Done |
+| REM-20 | KERNEL-3 adj. | P2 Secrets | test | Execute | Done |
+| REM-21 | KERNEL-3, SUPPLY-2, SUPPLY-3 | P2 Config | test | Execute | Done |
+| REM-22 | NOTIF-3 | P2 Config | test | Execute | Done |
+| REM-23 | SUPPLY-2 adj. | P2 Config | test | Execute | Done |
+| REM-24 | AUTH-6 | P2 Config | test | Execute | Done |
+| REM-25 | KERNEL-4 | P2 Config | test | Execute | Done |
+| REM-26 | SUPPLY-1 | P2 Config | probe: `pnpm --filter api build && ! find apps/api/dist \( -path '*/testing/*' -o -path '*/__e2e__/*' -o -path '*/parity/*' \) -print \| grep .` | Execute | Done |
+| REM-27 | SUPPLY-1 | P2 Config | test | Execute | Done |
+| REM-28 | SUPPLY-1 | P2 Config | test | Execute | Done |
+| REM-29 | SUPPLY-1 | P2 Config | test | Execute | Done |
+| REM-30 | adj. notif NODE_ENV | P2 Config | test | Execute | Done |
+| REM-31 | AUTHZ-2 | P3 | test | Execute | Done |
+| REM-32 | KERNEL-1, INPUT-6 | P3 | test | Execute | Done |
+| REM-33 | KERNEL-6 | P3 | test | Execute | Done |
+| REM-34 | INPUT-5 | P3 | test | Execute | Done |
+| REM-35 | INPUT-4 | P3 | test | Execute | Done |
+| REM-36 | INPUT-3 | P3 | test | Execute | Done |
+| REM-37 | INPUT-7, INPUT-8 | P3 | test | Execute | Done |
+| REM-38 | NOTIF-2 | P3 | test | Execute | Done |
+| REM-39 | SUPPLY-4, SUPPLY-5 | P3 | gate: `cd apps/api && pnpm audit --prod --audit-level=high --json \| jq -e '[.advisories[] \| select(.severity=="high" or .severity=="critical") \| select(.findings[].paths[] \| test("api-client>axios") \| not)] \| length == 0'` (exit 0 = only the Out-of-Scope chain remains) | Execute | Done |
+| REM-40 | DB-2 | P3 | test | Execute | Done |
+| REM-41 | UPLOAD-9, DB-5 | P3 | test | Execute | Done |
+| REM-42 | UPLOAD-10 | P3 | test | Execute | Done |
+| REM-43 | AUTHZ-8 | P3 | test | Execute | Done |
+| REM-44 | AUTH-10 | P3 | test | Execute | Done |
+| REM-45 | AUTH-9 | P3 | test | Execute | Done |
+| REM-46 | NOTIF-1 | P3 | test | Execute | Done |
+| REM-47 | SUPPLY-6/7, KERNEL-7 | P3 | probe: `grep -En "uses: .*@v[0-9]" .github/workflows/*.yml \| grep -v '#' ; grep -L "^permissions:" .github/workflows/*.yml` (both empty) | Execute | Done |
+| REM-48 | — (Vitest port, AC 1) | P1 Port | probe: `grep -rEn "\bjest\.|@jest/globals|ts-jest" apps/api/src apps/api/test catalog --include='*.ts' ; ls apps/api/test/jest-*.json ; jq -r '.scripts | keys[]' apps/api/package.json | grep -E '^test'` (all empty — the last arm reads the `scripts` block only, so neither the `format` glob nor the `testcontainers` devDependency can match) | Execute | Done |
+| REM-49 | — (Vitest port, AC 2) | P1 Port | gate: `pnpm test && pnpm test:int && pnpm test:e2e` | Execute | Done |
+| REM-50 | — (Vitest port, AC 3) | P1 Port | gate: `pnpm catalog:check` | Execute | Done |
+| REM-51 | — (Vitest port, ACs 4–5) | P1 Port | gate: `pnpm test:coverage` + `pnpm test:scripts`; probes REM-26, REM-47 | Execute | Done |
 
 Proofs: `test` = assertion in a spec/int-spec/e2e file of the owning entry or kernel; 1 gate; 2 probes.
 

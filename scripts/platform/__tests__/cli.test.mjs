@@ -433,14 +433,14 @@ test("status --json reporta advisory de kernel pendente sem quebrar o shape exis
   writeKernelAdvisory(cwd);
 
   const { result: exitCode, output } = await captureOutput("stdout", () =>
-    run(["status", "--json"], { cwd, fetchTags: () => ["v2.0.0"] }),
+    run(["status", "--json"], { cwd, fetchTags: () => ["v2.0.0"], now: Date.parse("2026-08-23T12:00:00Z") }),
   );
 
   assert.equal(exitCode, EXIT_CODES.OK);
   const status = JSON.parse(output);
   assert.equal(status.advisories.noLock, true);
   assert.deepEqual(status.advisories.pending, [
-    { id: "ADV-20260823-01", kind: "bug", severity: "high", module: "kernel" },
+    { id: "ADV-20260823-01", kind: "bug", severity: "high", module: "kernel", ageDays: 0, overdue: false },
   ]);
   assert.deepEqual(Object.keys(status).sort(), ["advisories", "modules", "template"]);
 });
@@ -457,4 +457,89 @@ test("status --json não reporta o advisory de kernel quando a versão instalada
   const { output } = await captureOutput("stdout", () => run(["status", "--json"], { cwd, fetchTags: () => ["v2.1.0"] }));
 
   assert.deepEqual(JSON.parse(output).advisories.pending, []);
+});
+
+function writeSecurityKernelAdvisory(dir, id) {
+  mkdirSync(path.join(dir, "docs", "advisories"), { recursive: true });
+  writeFileSync(path.join(dir, "docs", "advisories", "APPLIED.md"), "");
+  writeFileSync(
+    path.join(dir, "docs", "advisories", `${id}.md`),
+    [
+      "---",
+      `id: "${id}"`,
+      'kind: "security"',
+      'module: "kernel"',
+      'affects: ">=2.0.0 <2.1.0"',
+      'severity: "critical"',
+      'detect: "pnpm platform status"',
+      'fix: "copier update para >= v2.1.0"',
+      'parity: "scripts/platform/__tests__/lint.test.mjs"',
+      "---",
+      "Corpo em pt-BR.",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+}
+
+test("status --json marca overdue uma advisory de kernel security com 10 dias (CAD-01)", async () => {
+  const cwd = mkdtempSync(path.join(tmpdir(), "cli-status-"));
+  writeFileSync(path.join(cwd, ".copier-answers.yml"), "_src_path: gh:EmanuelVogt/platform-template\n_commit: v2.0.0\n", "utf8");
+  writeSecurityKernelAdvisory(cwd, "ADV-20260801-01");
+
+  const { output } = await captureOutput("stdout", () =>
+    run(["status", "--json"], { cwd, fetchTags: () => ["v2.0.0"], now: Date.parse("2026-08-11T00:00:00Z") }),
+  );
+
+  assert.deepEqual(JSON.parse(output).advisories.pending, [
+    { id: "ADV-20260801-01", kind: "security", severity: "critical", module: "kernel", ageDays: 10, overdue: true },
+  ]);
+});
+
+test("status --json não marca overdue uma advisory de kernel security com 3 dias (CAD-01)", async () => {
+  const cwd = mkdtempSync(path.join(tmpdir(), "cli-status-"));
+  writeFileSync(path.join(cwd, ".copier-answers.yml"), "_src_path: gh:EmanuelVogt/platform-template\n_commit: v2.0.0\n", "utf8");
+  writeSecurityKernelAdvisory(cwd, "ADV-20260801-01");
+
+  const { output } = await captureOutput("stdout", () =>
+    run(["status", "--json"], { cwd, fetchTags: () => ["v2.0.0"], now: Date.parse("2026-08-04T00:00:00Z") }),
+  );
+
+  assert.deepEqual(JSON.parse(output).advisories.pending, [
+    { id: "ADV-20260801-01", kind: "security", severity: "critical", module: "kernel", ageDays: 3, overdue: false },
+  ]);
+});
+
+test("status --json soma template.latestPublishedDaysAgo a partir da tagDate do feed quando behind (CAD-02)", async () => {
+  const cwd = mkdtempSync(path.join(tmpdir(), "cli-status-"));
+  writeFileSync(path.join(cwd, ".copier-answers.yml"), "_src_path: gh:EmanuelVogt/platform-template\n_commit: v2.0.0\n", "utf8");
+
+  const { output } = await captureOutput("stdout", () =>
+    run(["status", "--json"], {
+      cwd,
+      fetchTags: () => ["v2.0.0", "v2.1.0"],
+      fetchFeed: () => ({ tag: "v2.1.0", tagDate: "2026-08-13T10:00:00-03:00", advisories: [], skipped: [] }),
+      now: Date.parse("2026-08-23T00:00:00Z"),
+    }),
+  );
+
+  assert.equal(JSON.parse(output).template.latestPublishedDaysAgo, 10);
+});
+
+test("status (texto) permanece byte-idêntico ao formato atual quando não há tags atrás nem advisories pendentes (CAD-03)", async () => {
+  const cwd = mkdtempSync(path.join(tmpdir(), "cli-status-"));
+  writeFileSync(path.join(cwd, ".copier-answers.yml"), "_src_path: gh:EmanuelVogt/platform-template\n_commit: v2.0.0\n", "utf8");
+  writeFileSync(path.join(cwd, ".platform-modules.lock"), JSON.stringify({ modules: { alpha: { version: "1.0.0" } } }));
+
+  const { result: exitCode, output } = await captureOutput("stdout", () =>
+    run(["status"], { cwd, fetchTags: () => ["v2.0.0"] }),
+  );
+
+  assert.equal(exitCode, EXIT_CODES.OK);
+  assert.equal(
+    output,
+    "template: gh:EmanuelVogt/platform-template installed=v2.0.0 latest=v2.0.0 — atualizado\n" +
+      "modules: alpha lock=1.0.0 (catálogo: pnpm platform module list)\n" +
+      "advisories: nenhuma pendente\n",
+  );
 });

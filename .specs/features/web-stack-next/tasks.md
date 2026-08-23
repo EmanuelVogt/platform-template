@@ -45,6 +45,13 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 - **Done when**: `git status` shows a pure rename for `apps/web`; `readlink` of both symlinks correct; `copier.yml` matches design § 1 (question after `app_domain`, two `_exclude` lines, rename task before `pnpm install`); `pnpm check` green in the repo; `pnpm template:smoke` (vite) green; a child rendered with `--data web_stack=vite` diffs empty against one rendered from `main` (excluding `.copier-answers.yml`) — worker runs this probe via the runner and pastes the diff exit code in the summary.
 - **Tests**: none (gate + probe). Spec refs: COP-01..04, ACC-01.
 
+**T1 result (2026-08-23)**: DONE — `e931486` + `7a3823d` (worker split the rename into two commits). `_tasks` command wrapped in a YAML single-quoted scalar (design § 1 literal was unparseable). ACC-01 probe: only `.prettierignore` differs (exclusion added to spec). `pnpm check` red from pre-existing `load-dotenv.spec.ts` lint → T0 added.
+
+### T0 — Fix pre-existing lint in `load-dotenv.spec.ts` (unblocks every gate)
+- **Depends on**: none · **Exclusive**: no · **Wave**: 2 (cluster C0, sonnet)
+- **Touches**: `apps/api/src/shared/config/load-dotenv.spec.ts`
+- **Done when**: the 4 ESLint errors (`unbound-method` L5/16/23, `no-confusing-void-expression` L31) are gone without weakening assertions; `pnpm --filter api lint` and the spec pass. Commit `fix(api): lint in load-dotenv.spec`.
+
 ### T2 — RULE C resolver for the three web roots
 - **Depends on**: T1 · **Exclusive**: no
 - **Touches**: `apps/api/src/modules/module-boundaries.spec.ts`

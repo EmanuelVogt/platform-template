@@ -174,7 +174,7 @@ gets `apps/web` = Next shell with `"name": "web"`, and a later `copier update` p
 
 | ID | WHEN / THEN / SHALL | Proof |
 | --- | --- | --- |
-| ACC-01 | WHEN `copier copy --defaults --data web_stack=vite` renders a child from this feature's HEAD and from `main@8c2cc0c` THEN `diff -r` excluding `.copier-answers.yml`, `docs/`, `AGENTS.md`, `CLAUDE.md`, `scripts/`, `apps/api/src/modules/module-boundaries.spec.ts`, `README.md` SHALL be empty, and `apps/web/**` SHALL be byte-identical | probe (Verifier) |
+| ACC-01 | WHEN `copier copy --defaults --data web_stack=vite` renders a child from this feature's HEAD and from `main@8c2cc0c` THEN `diff -r` excluding `.copier-answers.yml`, `docs/`, `AGENTS.md`, `CLAUDE.md`, `scripts/`, `apps/api/src/modules/module-boundaries.spec.ts`, `apps/api/src/shared/config/load-dotenv.spec.ts`, `.prettierignore`, `README.md` SHALL be empty, and `apps/web/**` SHALL be byte-identical | probe (Verifier) |
 | ACC-02 | WHEN an old Vite child (rendered from `8c2cc0c`, committed) runs `copier update --defaults --vcs-ref <feature HEAD>` THEN `git status --short` SHALL list only `.copier-answers.yml` plus the paths excluded in ACC-01, and the answers file SHALL contain `web_stack: vite` | probe |
 | ACC-03 | WHEN `copier copy --defaults --data web_stack=next` renders a child THEN `apps/web/next.config.ts` SHALL exist, `apps/web/vite.config.ts` SHALL NOT, `apps/web/package.json` name SHALL be `web`, and `pnpm install && pnpm check && pnpm test && pnpm --filter web build` SHALL exit 0 | gate (`pnpm template:smoke --web-stack next`) |
 | ACC-04 | WHEN `docker build -f apps/web/Dockerfile .` runs in the Next child THEN it SHALL exit 0 and the image SHALL run as a non-root user | probe |

@@ -5,6 +5,7 @@ import { detectCommand } from "./lib/commands/advisory.mjs";
 import { feedbackCommand } from "./lib/commands/feedback.mjs";
 import { listCommand } from "./lib/commands/list.mjs";
 import { statusCommand } from "./lib/commands/status.mjs";
+import { templateMigrateCommand } from "./lib/commands/template-migrate.mjs";
 
 const commands = new Map();
 
@@ -72,6 +73,15 @@ registerCommand("advisory", async ({ positionals, deps }) => {
     return detectCommand({ id, ...deps });
   }
   process.stderr.write(`subcomando desconhecido: advisory ${sub ?? "(nenhum)"}\n`);
+  return EXIT_CODES.USAGE_ERROR;
+});
+
+registerCommand("template", async ({ positionals, options, deps }) => {
+  const [sub] = positionals;
+  if (sub === "migrate") {
+    return templateMigrateCommand({ options, ...deps });
+  }
+  process.stderr.write(`subcomando desconhecido: template ${sub ?? "(nenhum)"}\n`);
   return EXIT_CODES.USAGE_ERROR;
 });
 

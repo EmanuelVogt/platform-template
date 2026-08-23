@@ -5,6 +5,7 @@ import path from "node:path";
 import { test } from "node:test";
 import { collectStatus } from "../lib/commands/status.mjs";
 import {
+  buildTemplateBehindReport,
   cachedRemoteStableTags,
   compareSemver,
   computeTemplateStatus,
@@ -67,6 +68,29 @@ test("formatTemplateStatus states up to date, behind, or unknown", () => {
     /installed=v2\.0\.0\+2 latest=v2\.1\.0 — 1 versão\(ões\) atrás: v2\.1\.0$/,
   );
   assert.match(formatTemplateStatus(source, computeTemplateStatus({ commit: "v2.0.0", tags: [] })), /latest=\(desconhecida\)$/);
+});
+
+test("buildTemplateBehindReport keeps the behind message alone when there is no pending kernel advisory (FEED-02)", () => {
+  const status = { installed: "v2.0.0", aheadBy: 0, latest: "v2.1.0", behind: ["v2.1.0"] };
+  const report = buildTemplateBehindReport({ status, pendingKernelAdvisories: [] });
+  assert.equal(
+    report,
+    "template behind: installed v2.0.0, latest v2.1.0 — 1 tag(s): v2.1.0\n" +
+      "run the template-update skill (pnpm platform status for the full picture)",
+  );
+});
+
+test("buildTemplateBehindReport appends one line per pending kernel advisory, first fix line only (FEED-02)", () => {
+  const status = { installed: "v2.0.0", aheadBy: 2, latest: "v2.1.0", behind: ["v2.1.0"] };
+  const report = buildTemplateBehindReport({
+    status,
+    pendingKernelAdvisories: [
+      { id: "ADV-20260823-01", kind: "bug", severity: "high", fix: "copier update to >= v2.1.0\nmore detail" },
+    ],
+  });
+  const lines = report.split("\n");
+  assert.equal(lines[0], "template behind: installed v2.0.0 (installed from a commit 2 past that tag), latest v2.1.0 — 1 tag(s): v2.1.0");
+  assert.equal(lines[2], "ADV-20260823-01 bug high kernel — fix: copier update to >= v2.1.0");
 });
 
 test("readTemplateOrigin reads _src_path and _commit from the copier answers", () => {

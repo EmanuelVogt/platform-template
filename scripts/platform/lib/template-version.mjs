@@ -95,6 +95,21 @@ export function computeTemplateStatus({ commit, tags }) {
   return { installed: installed.version, aheadBy: installed.aheadBy, latest, behind };
 }
 
+// Extraída do hook (T7) para ser pura e testável: assume `status.behind.length > 0`,
+// já garantido pelo chamador.
+export function buildTemplateBehindReport({ status, pendingKernelAdvisories = [] }) {
+  const ahead = status.aheadBy > 0 ? ` (installed from a commit ${status.aheadBy} past that tag)` : "";
+  const lines = [
+    `template behind: installed ${status.installed}${ahead}, latest ${status.latest} — ${status.behind.length} tag(s): ${status.behind.join(", ")}`,
+    "run the template-update skill (pnpm platform status for the full picture)",
+  ];
+  for (const advisory of pendingKernelAdvisories) {
+    const firstFixLine = String(advisory.fix ?? "").split("\n")[0];
+    lines.push(`${advisory.id} ${advisory.kind} ${advisory.severity} kernel — fix: ${firstFixLine}`);
+  }
+  return lines.join("\n");
+}
+
 export function formatTemplateStatus(source, status) {
   const { installed, aheadBy, latest, behind } = status;
   const installedLabel = installed ? `${installed}${aheadBy > 0 ? `+${aheadBy}` : ""}` : "(desconhecida)";

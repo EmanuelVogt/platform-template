@@ -15,7 +15,7 @@ pnpm --filter api db:bootstrap
 pnpm dev
 ```
 
-Front em `http://localhost:5173`, API em `http://localhost:3000` (Scalar em `/docs`).
+Front em `http://localhost:{% if web_stack == 'next' %}3001{% else %}5173{% endif %}`, API em `http://localhost:3000` (Scalar em `/docs`).
 
 ## Mapa
 

@@ -8,10 +8,10 @@ Ambiente local não usa nada disso — ver [`ambiente-local.md`](ambiente-local.
 
 ## Topologia
 
-| | Homologação | Produção |
-| --- | --- | --- |
-| Front | `dev.{{ app_domain }}` | `{{ app_domain }}` |
-| API | `dev.api.{{ app_domain }}` | `api.{{ app_domain }}` |
+|                | Homologação                   | Produção                  |
+| -------------- | ----------------------------- | ------------------------- |
+| Front          | `dev.{{ app_domain }}`        | `{{ app_domain }}`        |
+| API            | `dev.api.{{ app_domain }}`    | `api.{{ app_domain }}`    |
 | Painel Dokploy | `dev.deploy.{{ app_domain }}` | `deploy.{{ app_domain }}` |
 
 Cada VM roda o próprio Dokploy, o próprio Postgres, o próprio Redis e o próprio túnel
@@ -32,6 +32,21 @@ subgrafo do `api`, compila, instala só dependências de produção e copia o `d
 o runner. Expõe a porta **3000**, entra por `tini` → `docker-entrypoint.sh` e roda
 `node dist/main`.
 
+{% if web_stack == 'next' %}
+**`apps/web/Dockerfile`** — multi-stage sobre `node:22-alpine`: `turbo prune web
+--docker` isola o subgrafo do front, instala, compila com `next build` (`output:
+"standalone"`) e copia `.next/standalone`, `.next/static` e `public` para o runner, que
+roda como usuário não-root `nextjs`. Expõe a porta **3000**, sem nginx — o próprio
+`server.js` do standalone serve assets e rotas: `CMD ["node", "apps/web/server.js"]`.
+
+> **`NEXT_PUBLIC_API_URL` é build arg, não variável de runtime.** O valor é assado no
+> bundle durante o build do Next (`ARG` → `ENV` para o Next enxergar e para o BuildKit
+> invalidar o cache quando a URL muda). Trocar a URL da API exige **rebuild do front** —
+> mudar a variável e reiniciar o container não tem efeito nenhum.
+
+{% endif %}
+{% if web_stack != 'next' %}
+
 **`apps/web/Dockerfile`** — compila o Vite e serve o estático em
 `nginx-unprivileged`, porta **8080**, com healthcheck em `/healthz`.
 
@@ -39,6 +54,8 @@ o runner. Expõe a porta **3000**, entra por `tini` → `docker-entrypoint.sh` e
 > durante o build (`ARG` → `ENV` para o Vite enxergar e para o BuildKit invalidar o
 > cache quando a URL muda). Trocar a URL da API exige **rebuild do front** — mudar a
 > variável e reiniciar o container não tem efeito nenhum.
+
+{% endif %}
 
 > **Os builds do `web` e do `api` de dev precisam do token do registry privado do
 > Bryntum.** `@bryntum/scheduler` é licenciado; sem credencial o `pnpm install` do
@@ -56,11 +73,11 @@ o runner. Expõe a porta **3000**, entra por `tini` → `docker-entrypoint.sh` e
 
 `docker-entrypoint.sh` executa três passos condicionais antes de subir o app:
 
-| Passo | Condição | Default |
-| --- | --- | --- |
-| Migrations (`node dist/db/migrate`) | `RUN_MIGRATIONS != false` | **liga** |
+| Passo                                                          | Condição                                           | Default     |
+| -------------------------------------------------------------- | -------------------------------------------------- | ----------- |
+| Migrations (`node dist/db/migrate`)                            | `RUN_MIGRATIONS != false`                          | **liga**    |
 | Bootstrap do superusuário (`node dist/seeds/bootstrap-master`) | `MASTER_EMAIL` **e** `MASTER_PASSWORD` preenchidos | condicional |
-| Backfill do legado (`node dist/legacy-import/run`) | `RUN_BACKFILL == true` | **desliga** |
+| Backfill do legado (`node dist/legacy-import/run`)             | `RUN_BACKFILL == true`                             | **desliga** |
 
 As migrations são fail-fast: schema errado aborta o boot. `RUN_MIGRATIONS=false` só faz
 sentido quando um job dedicado migra e as réplicas apenas servem.
@@ -83,17 +100,17 @@ durante toda a importação a cada restart — a carga inicial de produção lev
 
 O que muda entre homologação e produção, e nunca deve ser copiado de um para o outro:
 
-| Variável | Observação |
-| --- | --- |
-| `DATABASE_URL`, `REDIS_URL` | apontam para os serviços do próprio ambiente (nome do service no Swarm, não IP) |
-| `WEB_ORIGIN` | origem exata do front; o CORS espelha só ela |
-| `VITE_API_URL` (front) | build arg — ver aviso acima |
-| `PASSWORD_PEPPER`, `CSRF_SECRET` | **gerar novos por ambiente**; nunca reaproveitar da homologação |
-| `MASTER_EMAIL`, `MASTER_PASSWORD` | credencial do superusuário inicial |
-| `MYSQL_LEGACY_DATABASE` | conexão via `legacy-tunnel` |
-| `DATABASE_POOL_MAX` | teto de conexões do pool de aplicação; saturado → `PoolSaturatedError`, **503** com `Retry-After` (ADR 0089) |
-| `DATABASE_POOL_MAX_WAITING` | teto da fila de espera por conexão; acima disso a aquisição é recusada na hora (mesmo 503), em vez de enfileirar |
-| `DATABASE_IDLE_IN_TX_TIMEOUT_MS` | teto de transação aberta e ociosa; acima disso o Postgres encerra a sessão |
+| Variável                          | Observação                                                                                                       |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`, `REDIS_URL`       | apontam para os serviços do próprio ambiente (nome do service no Swarm, não IP)                                  |
+| `WEB_ORIGIN`                      | origem exata do front; o CORS espelha só ela                                                                     |
+| `VITE_API_URL` (front)            | build arg — ver aviso acima                                                                                      |
+| `PASSWORD_PEPPER`, `CSRF_SECRET`  | **gerar novos por ambiente**; nunca reaproveitar da homologação                                                  |
+| `MASTER_EMAIL`, `MASTER_PASSWORD` | credencial do superusuário inicial                                                                               |
+| `MYSQL_LEGACY_DATABASE`           | conexão via `legacy-tunnel`                                                                                      |
+| `DATABASE_POOL_MAX`               | teto de conexões do pool de aplicação; saturado → `PoolSaturatedError`, **503** com `Retry-After` (ADR 0089)     |
+| `DATABASE_POOL_MAX_WAITING`       | teto da fila de espera por conexão; acima disso a aquisição é recusada na hora (mesmo 503), em vez de enfileirar |
+| `DATABASE_IDLE_IN_TX_TIMEOUT_MS`  | teto de transação aberta e ociosa; acima disso o Postgres encerra a sessão                                       |
 
 O restante (parâmetros de sessão, Argon2, lockout, cookie, timeouts) é configuração pura
 e pode ser idêntico nos dois. A validação é fail-fast por módulo: falta ou formato errado

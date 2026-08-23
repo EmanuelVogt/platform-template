@@ -7,22 +7,25 @@ compartilhado. Nunca edite esse arquivo à mão.
 
 ## O que é kernel, o que é catálogo, o que é produto
 
-| Camada                                                                                   | Dono                                       | Onde                                                                       |
-| ----------------------------------------------------------------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------- |
-| Kernel da API (transação, outbox, ALS ator, tracing, idempotência, listagem, health, storage, guard de acesso) | plataforma                    | `apps/api/src/shared/**`                                                   |
-| Catálogo de módulos (entradas versionadas, fora do copier)                                | plataforma                                  | `catalog/<entry>[/<variant>]/`                                             |
-| Composition root                                                                          | **produto** (recebe as entradas instaladas) | `apps/api/src/app.module.ts`, `apps/api/src/platform-modules.ts` (gerado), `apps/api/src/db/schema.ts` |
-| Entrada do catálogo instalada                                                             | produto (copiada; dono a partir do `module add`) | `apps/api/src/modules/<entry>`                                        |
-| Módulos de negócio                                                                        | produto                                     | `apps/api/src/modules/<seu-modulo>`                                       |
-| Migrations do kernel                                                                      | plataforma                                  | `apps/api/drizzle/migrations/0000_*`, `0001_*`                            |
-| Migrations de entrada                                                                     | geradas no produto pelo `module add`        | `apps/api/drizzle/migrations` (gerado)                                    |
-| Migrations de negócio                                                                     | produto                                     | `apps/api/drizzle/migrations` a partir de `1000_`                         |
-| Contrato HTTP e cliente gerado                                                            | plataforma (mecanismo) / produto (rotas)    | `openapi.json`, `packages/api-client`                                     |
-| Front headless (transporte, CSRF, guard de acesso, layout sem estilo)                     | plataforma                                  | `apps/web/src/app/**`, `shared/{config,store,lib,test}`                   |
-| Parte web de uma entrada instalada                                                        | produto (copiada)                           | `apps/web/src/entities/<entry>/{core,react}`                              |
-| Rotas e telas do produto, kit de UI                                                       | produto                                     | `apps/web/src/app/router/product-routes.tsx` e tudo que ele importa       |
-| Harness de agentes (hooks, agentes, skills, `AGENTS.md`), handbooks, CI, Docker, deploy    | plataforma                                  | `.claude/`, `.agents/`, `docs/`, `.github/`, `apps/*/Dockerfile`          |
-| ADRs, specs, README                                                                       | produto                                     | `docs/adr/`, `.specs/`, `README.md`                                       |
+| Camada                                                                                                         | Dono                                             | Onde                                                                                                   |
+| -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| Kernel da API (transação, outbox, ALS ator, tracing, idempotência, listagem, health, storage, guard de acesso) | plataforma                                       | `apps/api/src/shared/**`                                                                               |
+| Catálogo de módulos (entradas versionadas, fora do copier)                                                     | plataforma                                       | `catalog/<entry>[/<variant>]/`                                                                         |
+| Composition root                                                                                               | **produto** (recebe as entradas instaladas)      | `apps/api/src/app.module.ts`, `apps/api/src/platform-modules.ts` (gerado), `apps/api/src/db/schema.ts` |
+| Entrada do catálogo instalada                                                                                  | produto (copiada; dono a partir do `module add`) | `apps/api/src/modules/<entry>`                                                                         |
+| Módulos de negócio                                                                                             | produto                                          | `apps/api/src/modules/<seu-modulo>`                                                                    |
+| Migrations do kernel                                                                                           | plataforma                                       | `apps/api/drizzle/migrations/0000_*`, `0001_*`                                                         |
+| Migrations de entrada                                                                                          | geradas no produto pelo `module add`             | `apps/api/drizzle/migrations` (gerado)                                                                 |
+| Migrations de negócio                                                                                          | produto                                          | `apps/api/drizzle/migrations` a partir de `1000_`                                                      |
+| Contrato HTTP e cliente gerado                                                                                 | plataforma (mecanismo) / produto (rotas)         | `openapi.json`, `packages/api-client`                                                                  |
+| Front headless (transporte, CSRF, guard de acesso, layout sem estilo)                                          | plataforma                                       | `apps/web/src/app/**`, `shared/{config,store,lib,test}`                                                |
+| Parte web de uma entrada instalada                                                                             | produto (copiada)                                | `apps/web/src/entities/<entry>/{core,react}`                                                           |
+| Rotas e telas do produto, kit de UI                                                                            | produto                                          | `apps/web/src/app/router/product-routes.tsx` e tudo que ele importa                                    |
+| Front headless (Next)                                                                                          | plataforma                                       | `apps/web/app/**`, `src/_app/{config,providers,layout/{root-layout,access-slot}}`, `src/shared/**`     |
+| Slot de layout do produto (Next)                                                                               | produto                                          | `src/_app/layout/product-shell.tsx`                                                                    |
+| Rotas do produto (Next)                                                                                        | produto                                          | `app/<rota>/page.tsx` + `src/_pages/<rota>`                                                            |
+| Harness de agentes (hooks, agentes, skills, `AGENTS.md`), handbooks, CI, Docker, deploy                        | plataforma                                       | `.claude/`, `.agents/`, `docs/`, `.github/`, `apps/*/Dockerfile`                                       |
+| ADRs, specs, README                                                                                            | produto                                          | `docs/adr/`, `.specs/`, `README.md`                                                                    |
 
 Regra que mantém o `copier update` sem conflito: **produto adiciona arquivos; não edita
 arquivos da plataforma**. Onde a plataforma precisa ser estendida, ela expõe uma entrada do
@@ -53,12 +56,12 @@ dia a dia.
 
 ### Comandos (`pnpm platform <cmd>`)
 
-| Comando                                                                          | O que faz                                                                                                             |
-| --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Comando                                                                             | O que faz                                                                                                                               |
+| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `module add <entry> [--variant v] [--with-deps] [--dry-run] [--force] [--rollback]` | copia a entrada para dentro do produto, gera as migrations, roda `pnpm contract` e os testes da entrada; grava `.platform-modules.lock` |
-| `module adopt <entry> [--variant v] [--version x.y.z]`                            | registra no lock uma entrada que o produto já tinha antes de existir o catálogo (migração de v0.2) — sem copiar arquivo |
-| `module list`                                                                     | compara a versão do lock com a HEAD do catálogo                                                                       |
-| `module update <entry>`                                                          | não copia nada — imprime as instruções da skill `port-module-update` (o porte é tarefa de agente, não de script)      |
+| `module adopt <entry> [--variant v] [--version x.y.z]`                              | registra no lock uma entrada que o produto já tinha antes de existir o catálogo (migração de v0.2) — sem copiar arquivo                 |
+| `module list`                                                                       | compara a versão do lock com a HEAD do catálogo                                                                                         |
+| `module update <entry>`                                                             | não copia nada — imprime as instruções da skill `port-module-update` (o porte é tarefa de agente, não de script)                        |
 
 ### `.platform-modules.lock`
 

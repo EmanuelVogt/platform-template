@@ -12,22 +12,22 @@ where it is decided. Detail belongs in the handbook or the ADR — never here.
 
 ## Read before you touch
 
-| Situation | Read |
-| --- | --- |
-| **Any code, no exceptions** | [`docs/code-quality.md`](docs/code-quality.md) |
-| `apps/web` — slice, entity, form, query, router | [`docs/front/front-arch.md`](docs/front/front-arch.md) |
-| `apps/api` — module, use case, port, outbox, transaction, ALS, tracing, cross-module, Kubb | [`docs/back/back-arch.md`](docs/back/back-arch.md) |
-| Tests — unit, integration, e2e, testcontainers | [`docs/test/testing.md`](docs/test/testing.md) |
-| Local environment — Docker, env, seed | [`docs/dev/ambiente-local.md`](docs/dev/ambiente-local.md) |
-| Deploy to dev/prod — Dockerfile, entrypoint, boot migrations, Dokploy | [`docs/dev/deploy.md`](docs/dev/deploy.md) |
-| Structural decision, or an exception to a rule | [`docs/adr/README.md`](docs/adr/README.md) |
-| Branch, worktree, commit scope, spec, gates | [`docs/agents/workflow.md`](docs/agents/workflow.md) |
-| Shell output looks wrong; skills; hooks | [`docs/agents/harness.md`](docs/agents/harness.md) |
-| Writing a reply to the user | [`docs/agents/communication.md`](docs/agents/communication.md) |
-| AWS, Dokploy, Cloudflare, Resend, env databases | [`docs/agents/infra.md`](docs/agents/infra.md) |
-| GitHub issues | [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md) |
-| Template origin, upstream updates (`copier update`), what is platform vs product | [`docs/dev/template.md`](docs/dev/template.md) |
-| Installing/updating a catalog entry, advisories, the pending-advisories hook | [`docs/dev/template.md`](docs/dev/template.md), [`docs/catalog/catalog.md`](docs/catalog/catalog.md) |
+| Situation                                                                                  | Read                                                                                                 |
+| ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| **Any code, no exceptions**                                                                | [`docs/code-quality.md`](docs/code-quality.md)                                                       |
+| `apps/web` — slice, entity, form, query, router                                            | [`docs/front/front-arch.md`](docs/front/front-arch.md)                                               |
+| `apps/api` — module, use case, port, outbox, transaction, ALS, tracing, cross-module, Kubb | [`docs/back/back-arch.md`](docs/back/back-arch.md)                                                   |
+| Tests — unit, integration, e2e, testcontainers                                             | [`docs/test/testing.md`](docs/test/testing.md)                                                       |
+| Local environment — Docker, env, seed                                                      | [`docs/dev/ambiente-local.md`](docs/dev/ambiente-local.md)                                           |
+| Deploy to dev/prod — Dockerfile, entrypoint, boot migrations, Dokploy                      | [`docs/dev/deploy.md`](docs/dev/deploy.md)                                                           |
+| Structural decision, or an exception to a rule                                             | [`docs/adr/README.md`](docs/adr/README.md)                                                           |
+| Branch, worktree, commit scope, spec, gates                                                | [`docs/agents/workflow.md`](docs/agents/workflow.md)                                                 |
+| Shell output looks wrong; skills; hooks                                                    | [`docs/agents/harness.md`](docs/agents/harness.md)                                                   |
+| Writing a reply to the user                                                                | [`docs/agents/communication.md`](docs/agents/communication.md)                                       |
+| AWS, Dokploy, Cloudflare, Resend, env databases                                            | [`docs/agents/infra.md`](docs/agents/infra.md)                                                       |
+| GitHub issues                                                                              | [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md)                                       |
+| Template origin, upstream updates (`copier update`), what is platform vs product           | [`docs/dev/template.md`](docs/dev/template.md)                                                       |
+| Installing/updating a catalog entry, advisories, the pending-advisories hook               | [`docs/dev/template.md`](docs/dev/template.md), [`docs/catalog/catalog.md`](docs/catalog/catalog.md) |
 
 Situation outside the table: start at the area handbook; one-off decisions live in the
 ADRs.
@@ -35,7 +35,7 @@ ADRs.
 ## Commands (from the repo root)
 
 ```
-pnpm dev                    turbo dev — brings everything up
+pnpm dev                    turbo dev — brings everything up{% if web_stack == 'next' %} (front on :3001){% endif %}
 pnpm check                  lint + typecheck — run before asking for review
 pnpm build | typecheck | lint:fix | format | clean
 pnpm test | test:int | test:e2e

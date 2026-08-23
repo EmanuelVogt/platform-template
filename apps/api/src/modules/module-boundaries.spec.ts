@@ -622,9 +622,16 @@ describe("module-boundaries — RULE C: o vocabulário do kernel não conhece m�
     expect(files).toContain(toPosix(resolve(SRC_DIR, "db", "schema.ts")))
   })
 
-  it("webShellRoots() resolve apps/web-vite neste repositório (CAT-03)", () => {
+  it("webShellRoots() resolve as cascas existentes neste repositório (CAT-03)", () => {
     const roots = webShellRoots().map(toPosix)
-    expect(roots).toEqual([toPosix(resolve(SRC_DIR, "..", "..", "web-vite"))])
+    const appsDir = resolve(SRC_DIR, "..", "..")
+    const expected = ["web-vite", "web-next"]
+      .map((name) => resolve(appsDir, name))
+      .filter((dir) => existsSync(dir))
+      .map(toPosix)
+    expect(roots).toContain(toPosix(resolve(appsDir, "web-vite")))
+    expect(roots).toEqual(expected)
+    expect(roots).not.toContain(toPosix(resolve(appsDir, "web")))
   })
 
   it("KERNEL_SURFACE inclui src/app/** e src/_app/** de cada casca web", () => {

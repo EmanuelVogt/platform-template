@@ -15,7 +15,7 @@ const MASTER_NAME = "Platform Admin"
 // PASSWORD_PEPPER incrementa este número.
 const PEPPER_VERSION = 1
 
-function resolveMasterPassword(): { password: string; generated: boolean } {
+export function resolveMasterPassword(): { password: string; generated: boolean } {
   const fromEnv = process.env.SEED_MASTER_PASSWORD
   if (fromEnv !== undefined && fromEnv.trim() !== "") {
     return { password: fromEnv, generated: false }

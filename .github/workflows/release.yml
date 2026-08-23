@@ -1,0 +1,107 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to tag, without the leading 'v' (must match the latest ## vX.Y.Z in docs/dev/template-changelog.md)"
+        required: true
+        type: string
+
+concurrency: release
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node scripts/platform/release-preflight.mjs "${{ inputs.version }}"
+      - run: pnpm check
+      - run: pnpm test
+      - run: pnpm test:scripts
+      - run: pnpm catalog:lint
+      - run: pnpm catalog:typecheck
+
+  catalog:
+    name: "catalog:check (${{ matrix.entry }})"
+    needs: verify
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        entry: [identity, attachment, audit, notification, tag]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: devuser
+          POSTGRES_PASSWORD: devpassword
+          POSTGRES_DB: devdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U devuser" --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgres://devuser:devpassword@localhost:5432/devdb
+      REDIS_URL: redis://localhost:6379
+      WEB_ORIGIN: http://localhost:3000
+      R2_ACCOUNT_ID: placeholder
+      R2_ACCESS_KEY_ID: placeholder
+      R2_SECRET_ACCESS_KEY: placeholder
+      R2_BUCKET: placeholder
+      R2_ENDPOINT: https://placeholder.r2.example.com
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pipx install copier
+      - run: pnpm catalog:check ${{ matrix.entry }}
+
+  tag:
+    name: Tag and push
+    needs: [verify, catalog]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Create and push the annotated tag
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          MESSAGE="$(node scripts/platform/release-preflight.mjs --message "$VERSION")"
+          git tag -a "v$VERSION" -m "$MESSAGE"
+          git push origin "v$VERSION"

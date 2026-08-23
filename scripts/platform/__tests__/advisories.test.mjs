@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import {
   AdvisoryParseError,
   computePending,
@@ -10,6 +11,9 @@ import {
   parseAdvisory,
   readLedger,
 } from "../lib/advisories.mjs";
+
+const TESTS_DIR = path.dirname(fileURLToPath(import.meta.url));
+const ADVISORIES_README_PATH = path.join(TESTS_DIR, "../../../docs/advisories/README.md");
 
 function advisoryMd(overrides = {}) {
   const fields = {
@@ -187,6 +191,14 @@ test("loadAdvisories: ADV-*.md com schema inválido falha alto (não é engolido
     () => loadAdvisories(dir),
     (error) => error instanceof AdvisoryParseError && /kind inválido/.test(error.message),
   );
+});
+
+test("DOC-03: docs/advisories/README.md documenta module: kernel e o feed remoto", () => {
+  const readme = readFileSync(ADVISORIES_README_PATH, "utf8");
+  assert.match(readme, /module:\s*<entry>\/<variant>\s*\|\s*kernel/);
+  assert.match(readme, /`module: kernel`/);
+  assert.match(readme, /Remote feed/);
+  assert.match(readme, /template-behind\.mjs/);
 });
 
 test("readLedger: arquivo ausente devolve lista vazia", () => {

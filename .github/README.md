@@ -152,7 +152,6 @@ cd my-product
 cp apps/api/.env.example apps/api/.env        # fill in the secrets
 docker compose up -d                           # Postgres + Redis
 pnpm --filter api db:migrate:run
-pnpm --filter api db:bootstrap
 pnpm dev
 ```
 

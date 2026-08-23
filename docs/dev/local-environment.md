@@ -37,9 +37,6 @@ With the containers up (Postgres `healthy`):
 
 ```bash
 pnpm --filter api db:migrate:run   # applies drizzle/migrations (creates the _kernel schema etc.)
-pnpm --filter api db:bootstrap     # optional: initial master user
-pnpm --filter api db:seed          # optional: single master user
-pnpm --filter api db:seed:demo     # optional: activities and demo data
 ```
 
 ## Run the app

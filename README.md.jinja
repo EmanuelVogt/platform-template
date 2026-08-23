@@ -36,7 +36,6 @@ cp apps/api/.env.example apps/api/.env
 docker compose up -d
 pnpm install
 pnpm --filter api db:migrate:run
-pnpm --filter api db:bootstrap
 pnpm dev
 ```
 

@@ -54,6 +54,7 @@ never opened one. The reasoning is at the link.
 
 - **Language** — identifiers English; comments, docstrings and user-facing errors pt-BR. Stack terms (`stream`, `cache`, `webhook`, `payload`, `outbox`) stay English. → [`code-quality.md`](docs/code-quality.md)
 - **Comments** — default is zero; only the 4 listed exceptions. → [`code-quality.md`](docs/code-quality.md)
+- **Docs are manuals** — mechanism, commands, the caveat that bites; reasoning and rejected alternatives only in an ADR. An edit grows a handbook ≤ 30 lines; the hook blocks more. → [`code-quality.md`](docs/code-quality.md)
 - **No `console.*`** in `src/` (it's a lint error); back uses `LoggerFactory`. → [`back.md`](docs/arch/back.md)
 - **`any` forbidden** — `unknown` + narrowing. → [`code-quality.md`](docs/code-quality.md)
 - **`throw` is the only error path** — never `Result<T>`/`Either`. → [`code-quality.md`](docs/code-quality.md)

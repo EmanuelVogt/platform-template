@@ -25,6 +25,13 @@ every child: the specs change runner and the five catalog entries move to `2.0.0
    api does not clear it yet (measured 87.70 / 74.21 / 91.30 / 88.44 at the merge), so the
    coverage step is red until that gap is covered; the web clears it (94.78 / 94.51 /
    95.56 / 96.58). A floor is never lowered to make a push pass.
+2. **Harness: `docs-stay-lean` hook** (`.claude/hooks/docs-stay-lean.mjs`, wired in
+   `.claude/settings.json` on `Edit|Write|MultiEdit` and `Bash`). A handbook edit that
+   grows the file by more than 30 lines, a new handbook over 80 / ADR over 60, rationale
+   prose outside `docs/adr` or a shell write into `docs/` is refused;
+   `PLATFORM_DOCS_LEAN_OFF=1` disables it. Rule in `docs/code-quality.md § Documentation`,
+   tripwire in `AGENTS.md`. `docs/agents/workflow.md` now states that push, release,
+   `v*` tag and deploy-branch moves are the user's acts. Not breaking.
 
 ### Child migration steps
 

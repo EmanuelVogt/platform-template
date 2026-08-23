@@ -48,6 +48,21 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/specs-in-english.mjs\"",
             "statusMessage": "Checking spec artifact language"
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/docs-stay-lean.mjs\"",
+            "statusMessage": "Checking doc growth and rationale prose"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/docs-stay-lean.mjs\"",
+            "statusMessage": "Checking shell writes into docs"
           }
         ]
       },

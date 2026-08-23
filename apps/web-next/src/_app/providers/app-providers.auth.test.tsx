@@ -16,7 +16,7 @@ describe("AppProviders cross-tab logout", () => {
   beforeEach(() => {
     Object.defineProperty(window, "location", {
       configurable: true,
-      value: { ...originalLocation, assign },
+      value: { href: originalLocation.href, assign },
     })
   })
 

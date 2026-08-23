@@ -49,7 +49,7 @@ rewritten — this document is the record of the reversal.
 | AC-4 | REV-03 | probe | `grep -n "template-update.yml\|template-update-ci" copier.yml` returns nothing. |
 | AC-5 | REV-03 | test | `copier-delivery.test.mjs`'s `release.yml`, `docs/dev/template-update.md` and `scripts/platform/migrations` tests still pass unchanged. |
 | AC-6 | REV-04 | test | The new guard fails if either file is restored (discrimination sensor target). |
-| AC-7 | REV-05 | probe | The `## v2.3.0` section (currently `template-changelog.md:7-36`) contains no `Weekly bot`; items run `1.`…`6.` with no gap; line 35 is still `None — copier update is enough.` |
+| AC-7 | REV-05 | probe | The `## v2.3.0` section (`template-changelog.md:7-34` after the edit; `7-36` before) contains no `Weekly bot`; items run `1.`…`6.` with no gap; `### Child migration steps` is still the literal `None — copier update is enough.` |
 | AC-8 | REV-06 | probe | `docs/dev/template-update.md` headings are exactly: `# Template update contract`, `## What the template promises per tag`, `## Cadence (recommended, never enforced)`, `## Feed: advisories before you update`, `## The product never updates itself`, `## Commands` — no `Bot`, no `weekly`, no `schedule`. |
 | AC-9 | REV-06 | gate | `pnpm test:scripts` — `template-behind.test.mjs` and `template-version.test.mjs` green (detection half untouched). |
 | AC-10 | REV-07 | probe | `.specs/STATE.md` AD-034 child side states the child never updates itself and no longer describes a weekly PR bot. |

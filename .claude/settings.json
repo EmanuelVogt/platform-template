@@ -105,6 +105,11 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/dispatch-log.mjs\" start",
             "statusMessage": "Logging the subagent start"
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/no-servers-left-behind.mjs\" arm",
+            "statusMessage": "Recording the servers already alive"
           }
         ]
       }
@@ -116,6 +121,11 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/dispatch-log.mjs\" stop",
             "statusMessage": "Logging the subagent run"
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/no-servers-left-behind.mjs\" sweep",
+            "statusMessage": "Terminating servers left behind"
           }
         ]
       }

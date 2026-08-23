@@ -329,6 +329,26 @@ head` isn't navigation — a filter after a pipe reduces what enters the context
   the agent to stop starting new work and hand off now, `/clear` by default. It only
   measures and reports; it never clears or compacts. Rule in
   [Token economy](#token-economy).
+- `.claude/hooks/no-servers-left-behind.mjs` — `SubagentStart` (`arm`), `SubagentStop`
+  (`sweep`): an agent leaves no dev server hanging. `arm` records, when the first agent of a
+  batch starts, which servers were already alive; `sweep` terminates, when the last one
+  exits, every family that appeared since — a `pnpm dev` or `nest start --watch` a worker
+  booted and never killed holds the port and keeps compiling until the machine reboots.
+  With a sibling still running the sweep is deferred: a fan-out shares the process table,
+  and only the last agent out tells a leak from a server another worker is still using. An
+  agent that dies without its stop event drops out of the batch after 90 min. Per-session
+  state in the tmpdir (`platform-servers-<session>.json`), never blocks a stop,
+  `PLATFORM_SERVER_SWEEP_OFF=1` disables it — the escape hatch for a server an agent booted
+  for the main thread to use.
+- `.claude/hooks/kill-orphan-dev-servers.mjs` — `SessionEnd`: the backstop of the one
+  above, over every checkout sharing the repo's git dir (linked worktrees included).
+  Detection in `lib/dev-servers.mjs`, shared by both: a process holding a port or a watcher
+  (vite, `nest start`, `next dev`, a `--watch` tsc/vitest/jest, nodemon/tsx, drizzle studio,
+  `node dist/main`, an attached `docker compose up`), climbing from the leaf to the wrapper
+  that owns the port (`pnpm dev`, `concurrently`) to kill the whole family — SIGTERM on the
+  leaf alone leaves the wrapper respawning it. A one-shot run (`vite build`, `vitest run`)
+  is not a server, and what runs in a **terminal of the main checkout** is the user's and is
+  never touched. **Claude Code only** — in Cursor and Codex, kill the server by hand.
 - `.claude/statusline.mjs` — status line showing the session's current context, dim below
   150k, yellow above, red above 300k. Both read the exact figure from the last `usage`
   entry in the transcript via `.claude/hooks/lib/transcript-context.mjs` — the file size

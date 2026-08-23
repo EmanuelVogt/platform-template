@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { EXIT_CODES } from "./lib/exit-codes.mjs";
 import { parseAdvisory } from "./lib/frontmatter.mjs";
+import { isMain } from "./lib/is-main.mjs";
 
 // Lazy optional prefix: tenta primeiro o segmento único (entrada sem variante); só recua para o
 // par "variant/entry" quando o segmento único não é seguido por um tier válido — assim uma
@@ -87,7 +88,7 @@ function report(failure) {
   process.stderr.write(`${prefix}advisory obrigatório ausente para: ${failure.missing.join(", ")}\n`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url, process.argv[1])) {
   const rangeFlag = process.argv.indexOf("--range");
   const commits =
     rangeFlag === -1

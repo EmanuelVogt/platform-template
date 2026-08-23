@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { isAdvisoryFilename, parseAdvisory } from "./lib/advisories.mjs";
+import { isMain } from "./lib/is-main.mjs";
 import { ChangelogVersionMissingError, readLatestChangelogVersion } from "./lib/kernel-version.mjs";
 import {
   discoverEntries,
@@ -126,7 +127,7 @@ export function runLint({
   return errors;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url, process.argv[1])) {
   const errors = runLint();
   if (errors.length > 0) {
     for (const error of errors) process.stderr.write(`${error}\n`);

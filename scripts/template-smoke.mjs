@@ -3,6 +3,7 @@ import { spawn, spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { EXIT_CODES } from "./platform/lib/exit-codes.mjs";
+import { isMain } from "./platform/lib/is-main.mjs";
 import {
   CHILD_ENV_DEFAULTS,
   childCleanup,
@@ -336,7 +337,7 @@ export async function runTemplateSmoke({
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url, process.argv[1])) {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
     process.stdout.write(`${helpText()}\n`);

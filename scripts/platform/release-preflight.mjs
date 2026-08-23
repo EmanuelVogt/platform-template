@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import semver from "semver";
 import { EXIT_CODES } from "./lib/exit-codes.mjs";
+import { isMain } from "./lib/is-main.mjs";
 import {
   lintChildMigrationSteps,
   readChangelogSection,
@@ -113,7 +114,7 @@ export function preflightMessage({ version, repoRoot = process.cwd() } = {}) {
   return sectionFirstParagraph(section);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url, process.argv[1])) {
   const argv = process.argv.slice(2);
   const messageIndex = argv.indexOf("--message");
   if (messageIndex !== -1) {

@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { run as runCliCommand } from "./cli.mjs";
 import { EXIT_CODES } from "./lib/exit-codes.mjs";
+import { isMain } from "./lib/is-main.mjs";
 import { CyclicDependencyError } from "./lib/plan.mjs";
 import { CatalogRootMissingError, UnknownEntryError, resolveInstallOrder } from "./lib/catalog-graph.mjs";
 import {
@@ -233,7 +234,7 @@ export function parseKeep(argv) {
   return argv.includes("--keep");
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url, process.argv[1])) {
   const argv = process.argv.slice(2);
   const kernelVersion = parseKernelVersion(argv);
   const keep = parseKeep(argv);

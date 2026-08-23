@@ -1,4 +1,5 @@
 import { EXIT_CODES } from "./lib/exit-codes.mjs";
+import { isMain } from "./lib/is-main.mjs";
 import { addCommand } from "./lib/commands/add.mjs";
 import { adoptCommand } from "./lib/commands/adopt.mjs";
 import { detectCommand } from "./lib/commands/advisory.mjs";
@@ -95,7 +96,7 @@ export async function run(argv, deps = {}) {
   return handler({ positionals, options, deps });
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url, process.argv[1])) {
   const exitCode = await run(process.argv.slice(2));
   process.exit(exitCode ?? EXIT_CODES.OK);
 }

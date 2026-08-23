@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { listEntries } from "./lib/catalog-graph.mjs";
 import { KERNEL_STAGE_PATHS } from "./lib/child-layout.mjs";
+import { isMain } from "./lib/is-main.mjs";
 
 export const STAGE_DIR = "apps/api/.catalog-stage";
 
@@ -33,7 +34,7 @@ export function stage({ repoRoot, entries }) {
   return plan;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url, process.argv[1])) {
   const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
   const catalogRoot = path.join(repoRoot, "catalog");
   // O catálogo fica fora do copier: num produto gerado não existe `catalog/`,

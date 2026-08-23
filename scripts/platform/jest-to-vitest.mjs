@@ -9,6 +9,7 @@
 import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import ts from "typescript";
+import { isMain } from "./lib/is-main.mjs";
 
 const TEST_FILE_RE = /\.(spec|int-spec|e2e-spec|test)\.tsx?$/;
 const EXCLUDED_DIRS = new Set(["node_modules", "dist", ".catalog-stage"]);
@@ -403,7 +404,7 @@ function printReport(result, { quiet, log = (line) => process.stdout.write(`${li
   );
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url, process.argv[1])) {
   const { paths, check, quiet } = parseArgv(process.argv.slice(2));
   const result = runCodemod(paths, { check });
   printReport(result, { quiet });

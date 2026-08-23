@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { ActivityAreaResolver } from "./activity-area-resolver"
 import { AuditRegistry } from "./audit-registry"
 
@@ -45,7 +47,11 @@ describe("ActivityAreaResolver", () => {
     for (const table of registry.auditedTables()) {
       const area = resolver.activityAreaOf(table)
       const seen = byKey.get(area.key)
-      if (seen !== undefined) expect(seen).toBe(area.label)
+      // SPEC_DEVIATION: fallback (?? area.label) no lugar de `if` guardando o
+      // expect. Reason: vitest/no-conditional-expect — quando a chave ainda
+      // não apareceu, comparar area.label consigo mesma é sempre verdadeiro e
+      // preserva o "só checa se já vista" original sem expect dentro de if.
+      expect(seen ?? area.label).toBe(area.label)
       byKey.set(area.key, area.label)
     }
   })

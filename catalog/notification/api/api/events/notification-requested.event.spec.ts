@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { NotificationRequested } from "./notification-requested.event"
 
 describe("NotificationRequested", () => {

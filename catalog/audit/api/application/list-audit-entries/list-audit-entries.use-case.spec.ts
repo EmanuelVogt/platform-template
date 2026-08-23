@@ -1,3 +1,5 @@
+import { type Mock, describe, expect, it, vi } from "vitest"
+
 import { ForbiddenError } from "../../../../shared/kernel/errors/forbidden.error"
 import { AuditRegistry } from "../services/audit-registry"
 
@@ -53,16 +55,16 @@ function makeUseCase(
   reader: RefLabelReader = fakeReader({})
 ): {
   useCase: ListAuditEntriesUseCase
-  findNamesByIds: jest.Mock
-  list: jest.Mock
+  findNamesByIds: Mock
+  list: Mock
 } {
   const page: PaginatedResult<AuditEntryReadRow> = {
     data: rows,
     page: { total: rows.length, page: 1, pageSize: 20, totalPages: 1 },
   }
-  const list = jest.fn().mockResolvedValue(page)
+  const list = vi.fn().mockResolvedValue(page)
   const repo = { list } as unknown as AuditRepository
-  const findNamesByIds = jest.fn().mockResolvedValue(names)
+  const findNamesByIds = vi.fn().mockResolvedValue(names)
   const facade = { findNamesByIds } as unknown as UserDirectoryFacade
   const masterCtx = {
     getExtension: () => ({ permissions: new Set<string>(), isMaster: true }),
@@ -199,13 +201,13 @@ describe("ListAuditEntriesUseCase", () => {
 describe("ListAuditEntriesUseCase — escopo por permissão (ADR 0049)", () => {
   function makeScopedUseCase(access: IdentityAccess | null) {
     const repo = {
-      list: jest.fn().mockResolvedValue({
+      list: vi.fn().mockResolvedValue({
         data: [],
         page: { page: 1, pageSize: 20, total: 0, totalPages: 0 },
       }),
     }
-    const users = { findNamesByIds: jest.fn().mockResolvedValue(new Map()) }
-    const refs = { findLabels: jest.fn().mockResolvedValue(new Map()) }
+    const users = { findNamesByIds: vi.fn().mockResolvedValue(new Map()) }
+    const refs = { findLabels: vi.fn().mockResolvedValue(new Map()) }
     const ctx = { getExtension: () => access ?? undefined }
     const useCase = new ListAuditEntriesUseCase(
       repo,
@@ -297,7 +299,7 @@ describe("ListAuditEntriesUseCase — escopo por permissão (ADR 0049)", () => {
 describe("ListAuditEntriesUseCase — trilha completa (ADR 0049, revisão 2026-08-02)", () => {
   function makeUseCase(permissions: Set<string>) {
     const repo = {
-      list: jest.fn().mockResolvedValue({
+      list: vi.fn().mockResolvedValue({
         data: [],
         page: { page: 1, pageSize: 20, total: 0, totalPages: 0 },
       }),
@@ -305,8 +307,8 @@ describe("ListAuditEntriesUseCase — trilha completa (ADR 0049, revisão 2026-0
     const ctx = { getExtension: () => ({ permissions, isMaster: false }) }
     const useCase = new ListAuditEntriesUseCase(
       repo,
-      { findNamesByIds: jest.fn().mockResolvedValue(new Map()) } as never,
-      { findLabels: jest.fn().mockResolvedValue(new Map()) },
+      { findNamesByIds: vi.fn().mockResolvedValue(new Map()) } as never,
+      { findLabels: vi.fn().mockResolvedValue(new Map()) },
       ctx as never,
       new AuditRegistry()
     )

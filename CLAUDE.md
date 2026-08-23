@@ -1,18 +1,19 @@
-# platform-template (repositório do template)
+# platform-template (template repository)
 
-Você está no repositório do TEMPLATE, não num produto. Leia `TEMPLATE.md` e
-`docs/dev/template.md`. As regras de código são as de `AGENTS.md.jinja` (idênticas ao
-produto): `docs/code-quality.md`, `docs/back/back-arch.md`, `docs/front/front-arch.md`,
+You are in the TEMPLATE repository, not in a product. Read `TEMPLATE.md` and
+`docs/dev/template.md`. The code rules are those of `AGENTS.md.jinja` (identical to the
+product's): `docs/code-quality.md`, `docs/arch/back.md`, `docs/arch/front.md`,
 `docs/test/testing.md`, `docs/agents/*`.
 
-O template distribui **só o kernel** — módulos são entradas versionadas em `catalog/`
-(fora do copier), instaladas no produto via `pnpm platform module add`.
+The template ships **only the kernel** — modules are versioned entries in `catalog/`
+(outside the copier), installed into the product via `pnpm platform module add`.
 
-Regras específicas daqui:
-- Nada de produto entra: sem domínio de negócio, marca, domínio DNS ou repositório real
-  fora dos placeholders Jinja (`{{ project_name }}`, `{{ github_org }}`, `{{ root_domain }}`…).
-- Só docs e manifests levam `.jinja`. Código-fonte lê configuração/env.
-- Kernel nunca importa entrada do catálogo; entradas não se importam entre si fora de
+Rules specific to this repository:
+
+- Nothing product-specific enters: no business domain, brand, DNS domain or real repository
+  outside the Jinja placeholders (`{{ project_name }}`, `{{ github_org }}`, `{{ root_domain }}`…).
+- Only docs and manifests carry `.jinja`. Source code reads configuration/env.
+- The kernel never imports a catalog entry; entries never import each other outside
   `dependsOn` (`module-boundaries.spec.ts`, RULE C).
-- Correção em `catalog/**` sem advisory correspondente não é aceita (hook de commit-msg).
-- Mudança que o produto deve receber = tag semver.
+- A fix in `catalog/**` without a matching advisory is not accepted (commit-msg hook).
+- A change the product should receive = semver tag.

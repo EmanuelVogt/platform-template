@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { PermissionTemplate } from "../../../domain/entities/permission-template.entity"
 import {
   InvalidPermissionSetError,
@@ -29,9 +31,9 @@ const BASE_INPUT = {
 
 function makeDeps(over: Record<string, any> = {}) {
   const templates = over.templates ?? {
-    findById: jest.fn().mockResolvedValue(existingTemplate()),
-    findByName: jest.fn().mockResolvedValue(null),
-    update: jest.fn().mockResolvedValue(undefined),
+    findById: vi.fn().mockResolvedValue(existingTemplate()),
+    findByName: vi.fn().mockResolvedValue(null),
+    update: vi.fn().mockResolvedValue(undefined),
   }
   const clock = { now: () => new Date("2026-06-13T00:00:00.000Z") }
   const uc = new UpdatePermissionTemplateUseCase(templates, clock)
@@ -47,11 +49,11 @@ describe("UpdatePermissionTemplateUseCase", () => {
   })
 
   it("id inexistente → 404 e não consulta nome nem persiste", async () => {
-    const findByName = jest.fn()
-    const update = jest.fn()
+    const findByName = vi.fn()
+    const update = vi.fn()
     const { uc } = makeDeps({
       templates: {
-        findById: jest.fn().mockResolvedValue(null),
+        findById: vi.fn().mockResolvedValue(null),
         findByName,
         update,
       },
@@ -70,9 +72,9 @@ describe("UpdatePermissionTemplateUseCase", () => {
     })
     const { uc, templates } = makeDeps({
       templates: {
-        findById: jest.fn().mockResolvedValue(existingTemplate()),
-        findByName: jest.fn().mockResolvedValue(other),
-        update: jest.fn(),
+        findById: vi.fn().mockResolvedValue(existingTemplate()),
+        findByName: vi.fn().mockResolvedValue(other),
+        update: vi.fn(),
       },
     })
     await expect(uc.execute(BASE_INPUT)).rejects.toThrow(
@@ -84,9 +86,9 @@ describe("UpdatePermissionTemplateUseCase", () => {
   it("mesmo nome no próprio id NÃO é colisão", async () => {
     const { uc, templates } = makeDeps({
       templates: {
-        findById: jest.fn().mockResolvedValue(existingTemplate()),
-        findByName: jest.fn().mockResolvedValue(existingTemplate()),
-        update: jest.fn().mockResolvedValue(undefined),
+        findById: vi.fn().mockResolvedValue(existingTemplate()),
+        findByName: vi.fn().mockResolvedValue(existingTemplate()),
+        update: vi.fn().mockResolvedValue(undefined),
       },
     })
     await uc.execute(BASE_INPUT)
@@ -96,9 +98,9 @@ describe("UpdatePermissionTemplateUseCase", () => {
   it("nome não existe no banco → persiste sem erro (sameName null)", async () => {
     const { uc, templates } = makeDeps({
       templates: {
-        findById: jest.fn().mockResolvedValue(existingTemplate()),
-        findByName: jest.fn().mockResolvedValue(null),
-        update: jest.fn().mockResolvedValue(undefined),
+        findById: vi.fn().mockResolvedValue(existingTemplate()),
+        findByName: vi.fn().mockResolvedValue(null),
+        update: vi.fn().mockResolvedValue(undefined),
       },
     })
     await uc.execute(BASE_INPUT)

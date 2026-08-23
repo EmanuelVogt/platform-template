@@ -1,5 +1,6 @@
 import { HttpException } from "@nestjs/common"
 import { Reflector } from "@nestjs/core"
+import { describe, expect, it, vi } from "vitest"
 
 import { RateLimitGuard, RATE_LIMIT_KEY, RateLimit } from "./rate-limit.guard"
 
@@ -29,7 +30,7 @@ function makeContext(handler: () => void, ip = "1.2.3.4"): ExecutionContext {
 describe("RateLimitGuard", () => {
   it("permite quando o limiter retorna allowed", async () => {
     const limiter: RateLimiter = {
-      consume: jest
+      consume: vi
         .fn()
         .mockResolvedValue({ allowed: true, retryAfterSeconds: 0 }),
     }
@@ -47,7 +48,7 @@ describe("RateLimitGuard", () => {
 
   it("lança 429 com retryAfter quando bloqueado", async () => {
     const limiter: RateLimiter = {
-      consume: jest
+      consume: vi
         .fn()
         .mockResolvedValue({ allowed: false, retryAfterSeconds: 42 }),
     }
@@ -58,20 +59,19 @@ describe("RateLimitGuard", () => {
       }
     }
     const guard = new RateLimitGuard(limiter, new Reflector())
-    try {
-      await guard.canActivate(makeContext(handlerOf(Ctrl.prototype, "h")))
-      throw new Error("deveria ter lançado")
-    } catch (err) {
-      expect(err).toBeInstanceOf(HttpException)
-      expect((err as HttpException).getStatus()).toBe(429)
-      expect((err as HttpException).getResponse()).toMatchObject({
-        retryAfter: 42,
-      })
-    }
+    // SPEC_DEVIATION: rejects.* no lugar de try/catch com expect dentro do catch.
+    // Reason: vitest/no-conditional-expect — o assert só roda se o catch for
+    // alcançado; rejects garante que a promise precisa rejeitar.
+    const result = guard.canActivate(makeContext(handlerOf(Ctrl.prototype, "h")))
+    await expect(result).rejects.toBeInstanceOf(HttpException)
+    await expect(result).rejects.toMatchObject({
+      status: 429,
+      response: { retryAfter: 42 },
+    })
   })
 
   it("ignora rota sem @RateLimit", async () => {
-    const consume = jest.fn()
+    const consume = vi.fn()
     const limiter: RateLimiter = { consume }
     class Ctrl {
       h(): void {

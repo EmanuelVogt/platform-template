@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto"
 
+import { describe, expect, it } from "vitest"
+
 import { HibpBreachCheck } from "./hibp-breach-check"
 import { NoopBreachCheck } from "./noop-breach-check"
 

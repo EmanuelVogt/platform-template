@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 
+import { describe, expect, it } from "vitest"
+
 import { expectContractSubset } from "../../../shared/test/parity/contract-snapshot"
 
 type SnapshotDocument = {
@@ -8,10 +10,10 @@ type SnapshotDocument = {
 }
 
 const SNAPSHOT_PATH = join(__dirname, "contract.snapshot.json")
-// cwd é sempre apps/api (pnpm --filter api roda o script na raiz do package,
-// no kernel ou num child renderizado) — subir dois níveis chega na raiz do
-// repo, onde o `pnpm contract` grava o openapi.json.
-const OPENAPI_PATH = join(process.cwd(), "..", "..", "openapi.json")
+// SPEC_DEVIATION: cwd passa a ser a raiz do repo (root `vitest run --project api`),
+// não mais `apps/api` — não sobe mais dois níveis para achar o openapi.json.
+// Reason: migração Jest -> Vitest trocou a invocação por pacote pelo `test` de raiz.
+const OPENAPI_PATH = join(process.cwd(), "openapi.json")
 
 const snapshot = JSON.parse(readFileSync(SNAPSHOT_PATH, "utf-8")) as SnapshotDocument
 

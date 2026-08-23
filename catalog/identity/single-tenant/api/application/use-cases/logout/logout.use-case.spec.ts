@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.error"
 import { fakeRequestContext } from "../../request-context.fixture"
 
@@ -5,8 +7,8 @@ import { LogoutUseCase } from "./logout.use-case"
 
 
 function makeDeps(ctxStore: Record<string, any>) {
-  const sessions = { deleteById: jest.fn().mockResolvedValue(1) }
-  const authEvents = { recordInTx: jest.fn().mockResolvedValue(undefined) }
+  const sessions = { deleteById: vi.fn().mockResolvedValue(1) }
+  const authEvents = { recordInTx: vi.fn().mockResolvedValue(undefined) }
   const ctx = fakeRequestContext(() => ({
       ip: null,
       userAgent: null,

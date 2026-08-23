@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { fakeRequestContext } from "../../request-context.fixture"
 
 import { ListAccessHistoryUseCase } from "./list-access-history.use-case"
@@ -12,7 +14,7 @@ function makeCtx(userId: string | null): RequestContext {
 
 describe("ListAccessHistoryUseCase", () => {
   it("repassa a allowlist e mapeia para a view sem campos sensíveis", async () => {
-    const listByUser = jest.fn().mockResolvedValue({
+    const listByUser = vi.fn().mockResolvedValue({
       data: [
         { props: {
           id: "ev-1", userId: "u-1", eventType: "login_success",
@@ -36,7 +38,7 @@ describe("ListAccessHistoryUseCase", () => {
   })
 
   it("lança sem usuário autenticado", async () => {
-    const repo = { listByUser: jest.fn() } as unknown as AuthEventRepository
+    const repo = { listByUser: vi.fn() } as unknown as AuthEventRepository
     const useCase = new ListAccessHistoryUseCase(repo, makeCtx(null))
     await expect(useCase.execute({ page: 1, pageSize: 20 })).rejects.toThrow()
   })

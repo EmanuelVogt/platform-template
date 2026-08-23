@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { PermissionTemplate } from "../../../domain/entities/permission-template.entity"
 import {
   InvalidPermissionSetError,
@@ -10,8 +12,8 @@ const NOW = new Date("2026-06-12T12:00:00.000Z")
 
 function makeDeps(over: Record<string, any> = {}) {
   const templates = over.templates ?? {
-    findByName: jest.fn().mockResolvedValue(null),
-    insert: jest.fn().mockResolvedValue(undefined),
+    findByName: vi.fn().mockResolvedValue(null),
+    insert: vi.fn().mockResolvedValue(undefined),
   }
   const clock = { now: () => NOW }
   const uc = new CreatePermissionTemplateUseCase(templates, clock)
@@ -38,8 +40,8 @@ describe("CreatePermissionTemplateUseCase", () => {
     )
     const { uc, templates } = makeDeps({
       templates: {
-        findByName: jest.fn().mockResolvedValue(existing),
-        insert: jest.fn(),
+        findByName: vi.fn().mockResolvedValue(existing),
+        insert: vi.fn(),
       },
     })
     await expect(

@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { BASE_TEMPLATE_SOURCES } from "../application/templates/base-template-sources"
 import { NotificationTemplateSourceRegistry } from "../application/templates/notification-template-registry"
 import { EmailChannel } from "../infrastructure/channels/email.channel"
@@ -25,10 +27,11 @@ describe("notification — fonte de template registrada (AD-007)", () => {
       const keys = Object.keys(source).sort()
       expect(keys).toEqual(expect.arrayContaining(["catalog", "type"]))
       expect(keys.every((key) => ["catalog", "email", "type"].includes(key))).toBe(true)
-      if (source.email) {
-        expect(typeof source.email.template).toBe("string")
-        expect(typeof source.email.subject).toBe("function")
-      }
+      // SPEC_DEVIATION: `if` vira early `continue` para tirar o `expect` de dentro do condicional.
+      // Reason: `@vitest/eslint-plugin` (LNT-01) passa a barrar `no-conditional-expect`.
+      if (!source.email) continue
+      expect(typeof source.email.template).toBe("string")
+      expect(typeof source.email.subject).toBe("function")
     }
   })
 

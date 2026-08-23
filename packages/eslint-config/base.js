@@ -19,7 +19,7 @@ export const baseConfig = tseslint.config(
       "**/*.config.cjs",
       "**/*.config.ts",
       "**/vite.config.*",
-      "**/jest.config.*",
+      "**/vitest.*.mts",
     ],
   },
   js.configs.recommended,

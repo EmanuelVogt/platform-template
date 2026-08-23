@@ -12,7 +12,7 @@
 
 2. **Feature-level validation (independent Verifier sub-agent, always-on, never prompted):** After the last wave's gate passed, validation runs automatically — the orchestrator dispatches a **fresh Verifier sub-agent** (see [sub-agents.md](sub-agents.md)). Do NOT ask the user whether to run it; it is the safety net, not an opt-in. User interaction is limited to interactive UAT (for user-facing features) and acting on a FAIL verdict ("fix these gaps now?"). The Verifier:
    - Never changes code or tests — sensor mutations are restored from HEAD before it reports (see Discrimination Sensor section); it runs alone, no worker in flight
-   - Delegates like a worker: locating assertions and consumers → scout (`file:line` back), every gate/test run → runner (exit code + literal failures back); its own context holds evidence, not logs
+   - Delegates like a worker: locating assertions and consumers → scout (`file:line` back) when the question cannot be scoped, the **Final gate** → runner (exit code + literal failures back), every other run redirected to a log it greps; its own context holds evidence, not logs
    - Scopes coverage to the feature's **git diff surface** (not the full repository)
    - Re-derives coverage independently using **evidence-or-zero**: every AC must be traced to a `file:line` + assertion expression; a criterion with no `file:line` citation counts as NOT covered
    - Runs the **spec-anchored outcome check** and the **discrimination sensor** (both described below)
@@ -57,7 +57,7 @@ For each acceptance criterion in `spec.md`, the Verifier re-derives the **spec-d
 - **Check the proof the spec declared** (traceability table, `Proof` column — `test` | `gate` |
   `probe: <command>`), nothing else. `test` → locate the assertion. `gate` → the Final gate's exit
   code is the evidence; do not build a second proof for it. `probe` → run the named command once
-  through the runner and record its output. An AC with no proof, or a `probe` with no command in
+  yourself, redirected to a log, and record its output. An AC with no proof, or a `probe` with no command in
   `spec.md`/`tasks.md`/`design.md`, is a **⚠️ spec-precision gap** in the report — the Verifier
   never invents a probe (a 265-turn Verifier once spent ~100 turns building resolver probes for
   ACs the design had already declared proven by CI).
@@ -99,17 +99,17 @@ The sensor provides the empirical guarantee that the tests can actually detect r
    - Change a return value (return a wrong status code, wrong field, zero instead of a computed value)
    - Off-by-one (shift a loop bound, change a slice index)
    - Remove a required side effect (delete a method call that the spec requires)
-3. **Run the tests** that cover the mutated code — only those, using the scoped Quick or Full gate command from tasks.md, through the runner. Never run the complete e2e/integration suite per mutation.
+3. **Run the tests** that cover the mutated code — only those, using the scoped Quick or Full gate command from tasks.md, run directly with the log on disk (`LOG=$(mktemp -t platform-run).log; <cmd> > "$LOG" 2>&1; echo exit=$?`, then `grep -n`/`tail -n 80`). Never run the complete e2e/integration suite per mutation.
 4. **Confirm the mutant is killed** (tests FAIL). Then **restore the file from HEAD**: `git checkout -- <file>`, and confirm `git status --short -- <file>` prints nothing before the next mutation.
 5. **If a mutant survives** (tests still pass after the fault), the tests are not discriminating for that behavior — add a fix task to strengthen the assertion.
 
-**Inject once, run once.** One injection and one scoped run per mutant, then restore. If the exit code or the counts got lost (a truncated answer, a dropped notification), **read the runner's log path** — never re-inject the same fault and never re-run the suite to "check again". A mutation run is the most expensive thing the Verifier does; repeating it burns the budget that the report needs, and a second injection on a file already restored can silently mutate the wrong line.
+**Inject once, run once.** One injection and one scoped run per mutant, then restore. If the exit code or the counts got lost (a truncated answer, a dropped notification), **read the log file** — never re-inject the same fault and never re-run the suite to "check again". A mutation run is the most expensive thing the Verifier does; repeating it burns the budget that the report needs, and a second injection on a file already restored can silently mutate the wrong line.
 
 **Tiering — fixed by risk, not by mood (inject once, run once each):**
 
 | Context | Sensor depth |
 | ------- | ------------ |
-| Light Execute (≤4-task plan) | **1–2** mutants on the riskiest AC |
+| Light Execute (≤3-task plan) | **1–2** mutants on the riskiest AC |
 | Default (every other feature — Medium and Large, tooling/CI/docs included) | **3** targeted behavior-level mutants on the highest-risk new code — not more; a tooling feature once got 5 mutants + 2 re-runs |
 | P0 / critical paths (payment, auth, availability/booking rules, data integrity) | **≥5** covering all branches; language-appropriate mutation tooling if available (Stryker, mutmut, cargo-mutants, pitest) |
 
@@ -353,8 +353,8 @@ Update spec.md requirement statuses:
 
 - **Validation is never prompted** — it always runs after the last task; do not ask the user whether to run it
 - **Spec-anchored, not just covered** — "there is an assertion" is not enough; the assertion must target the spec-defined outcome
-- **Sensor leaves no trace** — mutate in place, run the scoped tests through the runner, restore from HEAD (`git checkout -- <file>`); never `stash`, never a branch
-- **Delegate the noise** — assertions are located by a scout, gates run by a runner; the Verifier's context holds `file:line` evidence, not logs
+- **Sensor leaves no trace** — mutate in place, run the scoped tests yourself with the log on disk, restore from HEAD (`git checkout -- <file>`); never `stash`, never a branch
+- **Keep the noise out of context** — an open question goes to a scout, the Final gate to the runner, every other run to a log file you grep; the Verifier's context holds `file:line` evidence, not logs
 - **Surviving mutants are fix tasks** — do not mark the feature done if the sensor found weak tests
 - **P1 first** — MVP must work before P2/P3
 - **WHEN/THEN = Test** — Each criterion is a test case
@@ -365,5 +365,5 @@ Update spec.md requirement statuses:
 - **Max 3 diagnostic iterations** — Prevents infinite investigation loops
 - **Update traceability** — Every verified requirement updates spec.md status
 - **Always write the report file, once** — accumulate evidence in a scratch file, then a single `Write` of `.specs/features/[feature]/validation.md`; never polish it with `Edit`s
-- **Inject once, run once** — lost the mutation's exit code? read the runner's log, never re-inject and never re-run the suite
+- **Inject once, run once** — lost the mutation's exit code? read the log file, never re-inject and never re-run the suite
 - **Distill after writing** — turn grounded failures into lessons via `scripts/lessons.py` ([lessons.md](lessons.md)); clean PASS → no lesson

@@ -1,15 +1,26 @@
 import path from "node:path";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { run as runCliCommand } from "./cli.mjs";
 import { EXIT_CODES } from "./lib/exit-codes.mjs";
 import { CyclicDependencyError } from "./lib/plan.mjs";
 import { CatalogRootMissingError, UnknownEntryError, resolveInstallOrder } from "./lib/catalog-graph.mjs";
-import { installChild, renderChild } from "./lib/render-child.mjs";
+import {
+  CONTRACT_ENV_DEFAULTS,
+  childCleanup,
+  createScratchDir,
+  installChild,
+  onInterrupt,
+  renderChild,
+  runGates,
+  withEnvDefaults,
+} from "./lib/child.mjs";
 import { readLatestChangelogVersion, writeSimulatedKernelVersion } from "./lib/kernel-version.mjs";
 import { assertWebShell, InvalidWebStackError, parseWebStack } from "./lib/web-shell.mjs";
 
+// Gate final do child: check -> test -> test:db (runGates, lib/child.mjs). Sem
+// Docker, "test:db" falha rápido com a mensagem de ensureDockerRuntimeEnv
+// (apps/api/test/setup/global-setup.ts) em vez de travar — não é um hang.
 const DEFAULT_STEP_TIMEOUT_MS = 10 * 60 * 1000; // render/install/gate final
 const DEFAULT_CONTRACT_TIMEOUT_MS = 3 * 60 * 1000; // pnpm contract dentro de module add
 
@@ -34,10 +45,6 @@ function defaultRun(command, args = [], options = {}) {
     }
   }
   return { status: result.status ?? 1, stdout: result.stdout ?? "", stderr: result.stderr ?? "", timedOut };
-}
-
-function defaultScratchDir() {
-  return mkdtempSync(path.join(tmpdir(), "catalog-check-"));
 }
 
 // Encapsula o passo de timeout mais recente que estourou, pra que o loop de
@@ -73,10 +80,7 @@ function timeoutFailure(log, stepLabel, timeoutMs) {
 
 let activeCleanup = null;
 
-process.on("SIGINT", () => {
-  if (activeCleanup) activeCleanup();
-  process.exit(130);
-});
+onInterrupt(() => activeCleanup);
 
 export function parseEntries(argv) {
   return argv.filter((arg) => !arg.startsWith("-"));
@@ -101,32 +105,10 @@ function entryLabel(entry) {
   return entry.manifest.variant ? `${entry.name}/${entry.manifest.variant}` : entry.name;
 }
 
-// Placeholders inertes para o passo "contract" (só monta o grafo Nest, nunca
-// abre conexão) — o child renderizado não carrega o .env real do produto.
-// Nunca sobrescrevem um valor já presente no ambiente do processo. R2_* cobre
-// a validação Zod síncrona do storage (storage.config.ts), que é fail-fast
-// mas não abre conexão — sem esses defaults o passo falha (não trava) por
-// falta de env, mesmo com Redis/Postgres resolvidos.
-const CONTRACT_ENV_DEFAULTS = {
-  DATABASE_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder",
-  REDIS_URL: "redis://localhost:6379",
-  WEB_ORIGIN: "http://localhost:3000",
-  R2_ACCOUNT_ID: "placeholder",
-  R2_ACCESS_KEY_ID: "placeholder",
-  R2_SECRET_ACCESS_KEY: "placeholder",
-  R2_BUCKET: "placeholder",
-  R2_ENDPOINT: "https://placeholder.r2.example.com",
-};
-
 function withContractEnv(run) {
-  return (command, args = [], options = {}) => {
-    if (command !== "pnpm" || args[0] !== "contract") return run(command, args, options);
-    const defaults = Object.fromEntries(
-      Object.entries(CONTRACT_ENV_DEFAULTS).map(([key, value]) => [key, process.env[key] ?? value]),
-    );
-    const env = { ...process.env, ...defaults, ...options.env };
-    return run(command, args, { ...options, env });
-  };
+  return withEnvDefaults(run, CONTRACT_ENV_DEFAULTS, {
+    only: (command, args) => command === "pnpm" && args[0] === "contract",
+  });
 }
 
 export async function runCatalogCheck({
@@ -166,10 +148,8 @@ export async function runCatalogCheck({
   }
 
   const ownsChildDir = scratchDir === undefined;
-  const childDir = scratchDir ?? defaultScratchDir();
-  const cleanupChildDir = () => {
-    if (ownsChildDir && !keep) rmSync(childDir, { recursive: true, force: true });
-  };
+  const childDir = scratchDir ?? createScratchDir("catalog-check-");
+  const cleanupChildDir = childCleanup({ childDir, owns: ownsChildDir, keep });
   activeCleanup = cleanupChildDir;
 
   try {
@@ -219,7 +199,10 @@ export async function runCatalogCheck({
     for (const entry of order) {
       const label = entryLabel(entry);
       log(`catalog:check — module add ${label}`);
-      const args = ["module", "add", entry.name];
+      // --catalog-ref explícito: o copier normaliza o _src_path do child para o
+      // remote origin (gh:...), e este gate roda ANTES da tag simulada existir lá —
+      // a resolução tem de ficar no checkout local.
+      const args = ["module", "add", entry.name, "--catalog-ref", catalogRoot];
       if (entry.manifest.variant) args.push("--variant", entry.manifest.variant);
       timeoutTracker.reset();
       const exitCode = await runCli(args, { cwd: childDir, run: withContractEnv(timedRun) });
@@ -238,17 +221,11 @@ export async function runCatalogCheck({
       }
     }
 
-    log("catalog:check — gate final: pnpm check && pnpm test");
-    const checkResult = timedRun("pnpm", ["check"], { cwd: childDir });
-    if (checkResult.timedOut) return timeoutFailure(log, "pnpm check", stepTimeoutMs);
-    if (checkResult.status !== 0) {
-      log(`catalog:check — "pnpm check" falhou no child (código ${checkResult.status})`);
-      return EXIT_CODES.TEST_FAILURE;
-    }
-    const testResult = timedRun("pnpm", ["test"], { cwd: childDir });
-    if (testResult.timedOut) return timeoutFailure(log, "pnpm test", stepTimeoutMs);
-    if (testResult.status !== 0) {
-      log(`catalog:check — "pnpm test" falhou no child (código ${testResult.status})`);
+    log("catalog:check — gate final: pnpm check && pnpm test && pnpm test:db");
+    const gate = runGates(timedRun, { cwd: childDir });
+    if (!gate.ok) {
+      if (gate.result.timedOut) return timeoutFailure(log, gate.step, stepTimeoutMs);
+      log(`catalog:check — "${gate.step}" falhou no child (código ${gate.result.status})`);
       return EXIT_CODES.TEST_FAILURE;
     }
 

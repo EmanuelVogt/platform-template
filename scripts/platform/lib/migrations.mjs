@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { childLayout } from "./child-layout.mjs";
 import { EXIT_CODES } from "./exit-codes.mjs";
 
 export class MigrationFailureError extends Error {
@@ -19,7 +20,7 @@ function defaultRun(command, args, options) {
 }
 
 function migrationsDir(child) {
-  return path.join(child, "apps/api/drizzle/migrations");
+  return childLayout(child).migrationsDir;
 }
 
 function nextJournalIndex(child) {

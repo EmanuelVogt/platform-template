@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { TagUsageRegistry } from "../../tag-usage.registry"
 
 import { ListTagsUseCase } from "./list-tags.use-case"
@@ -26,7 +28,7 @@ function makeReader(counts: Record<string, number>): TagUsageReader {
 function makeUseCase(readers: TagUsageReader[]): ListTagsUseCase {
   const registry = new TagUsageRegistry()
   for (const reader of readers) registry.register(reader)
-  const tags = { list: jest.fn().mockResolvedValue({ data: [ROW], page: PAGE }) }
+  const tags = { list: vi.fn().mockResolvedValue({ data: [ROW], page: PAGE }) }
   return new ListTagsUseCase(tags as never, registry)
 }
 

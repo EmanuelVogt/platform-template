@@ -69,12 +69,15 @@ async function installAlpha(child) {
 
 test("module add instala alpha com sucesso: copia arquivo, grava lock e registries", async () => {
   const child = makeChild();
-  const { run: stubRun } = makeStubRun();
+  const { run: stubRun, calls } = makeStubRun();
 
   const exitCode = await run(["module", "add", "alpha", "--catalog-ref", CATALOG_ROOT], { cwd: child, run: stubRun });
 
   assert.equal(exitCode, EXIT_CODES.OK);
   assert.equal(readFileSync(alphaDestFile(child), "utf8"), "export class AlphaModule {}\n");
+
+  const apiTestCall = calls.find((call) => call.args.includes("--project"));
+  assert.deepEqual(apiTestCall.args, ["vitest", "run", "--project", "api", "apps/api/src/modules/alpha"]);
 
   const lock = lockOf(child);
   assert.equal(lock.modules.alpha.version, "1.0.0");

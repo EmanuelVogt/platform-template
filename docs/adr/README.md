@@ -1,39 +1,39 @@
-# ADRs — índice
+# ADRs — index
 
-Um registro por decisão, formato `NNNN-titulo.md`. Linha = título do ADR.
+One record per decision, format `NNNN-title.md`. Line = ADR title.
 
-## Como escrever um ADR
+## How to write an ADR
 
-Quatro blocos, nesta ordem, em pt-BR. Teto: **~30 linhas**; passar disso exige que o
-excedente seja decisão, nunca narrativa.
+Four blocks, in this order, in pt-BR. Ceiling: **~30 lines**; going beyond it requires that the
+excess be decision, never narrative.
 
 ```markdown
-# NNNN — Título
+# NNNN — Title
 
-Status: Aceito (AAAA-MM-DD)
+Status: Accepted (YYYY-MM-DD)
 
-**Decisão.** Os pontos, numerados quando houver mais de um.
+**Decision.** The points, numbered when there is more than one.
 
-**Porquê.** O racional NÃO-óbvio, em até 4 frases: a armadilha, o trade-off, o que
-outro dev tentaria e quebraria.
+**Why.** The NON-obvious rationale, in up to 4 sentences: the trap, the trade-off, what
+another dev would try and break.
 
-**Consequências.** Só as não-óbvias, em bullets. Nenhuma? Omita a seção.
+**Consequences.** Only the non-obvious ones, as bullets. None? Omit the section.
 ```
 
-**Fica de fora**: a história de como o bug foi descoberto, walkthrough de código,
-segundo exemplo, e detalhe de trava que o typecheck/lint/teste já garante (a trava vale
-meia linha). O leitor tem o código na mão — o ADR carrega o que o código não conta.
+**Left out**: the story of how the bug was discovered, a code walkthrough, a
+second example, and the detail of a conformance spec that typecheck/lint/test already
+guarantees (the conformance spec is worth half a line). The reader has the code at hand — the
+ADR carries what the code does not tell.
 
-**Decisão superada nunca é apagada.** Marque `~~tachado~~` + **superado/revertido**, e
-some ao `Status:` uma linha por revisão apontando para o ADR que a substituiu. Um ADR
-totalmente superado continua no índice: ele é a única explicação do que existiu antes.
+**A superseded decision is never deleted.** Mark it `~~strikethrough~~` + **superseded/reverted**,
+and add to `Status:` one line per revision pointing to the ADR that replaced it. A fully
+superseded ADR stays in the index: it is the only explanation of what existed before.
 
-**Antes de numerar, olhe o disco** (`ls docs/adr`) — o próximo número é o maior + 1.
-Branches paralelas já criaram uma colisão (dois `0035-*`), que obriga quem cita a
-desambiguar pelo nome do arquivo.
+**Before numbering, look at the disk** (`ls docs/adr`) — the next number is the highest + 1.
+Parallel branches have already created a collision (two `0035-*`), which forces whoever cites
+them to disambiguate by file name.
 
-
-**Referências herdadas.** Os handbooks (`docs/back`, `docs/front`) citam ADRs pelo número
-(`ADR 0089` etc.) — são decisões do projeto de origem do template e não viajam com ele.
-A regra citada continua válida onde está escrita; o ADR de origem é só o histórico.
-Este índice começa vazio: o primeiro ADR deste produto é o `0001`.
+**Inherited references.** Other handbooks, hooks and code comments may cite ADRs by number
+(`ADR 0089` etc.) — they are decisions of the template's origin project and do not travel
+with it. The cited rule remains valid where it is written; the origin ADR is only the
+history. This index starts empty: the first ADR of this product is `0001`.

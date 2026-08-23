@@ -1,3 +1,5 @@
+import { type Mock, describe, expect, it, vi } from "vitest"
+
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import { InvalidResetTokenError } from "../../../domain/errors"
 import { fakeRequestContext } from "../../request-context.fixture"
@@ -36,17 +38,17 @@ function makeUser(over: Partial<UserProps> = {}): User {
 
 function makeDeps(over: Record<string, any> = {}) {
   const verificationTokens = over.verificationTokens ?? {
-    consumeByHash: jest.fn().mockResolvedValue({ userId: "u-1" }),
+    consumeByHash: vi.fn().mockResolvedValue({ userId: "u-1" }),
   }
   const users = over.users ?? {
-    findById: jest.fn().mockResolvedValue(makeUser()),
-    update: jest.fn().mockResolvedValue(undefined),
+    findById: vi.fn().mockResolvedValue(makeUser()),
+    update: vi.fn().mockResolvedValue(undefined),
   }
   const tokens = over.tokens ?? {
-    hashOf: jest.fn().mockReturnValue("hash-of-raw"),
+    hashOf: vi.fn().mockReturnValue("hash-of-raw"),
   }
   const authEvents = over.authEvents ?? {
-    recordInTx: jest.fn().mockResolvedValue(undefined),
+    recordInTx: vi.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => NOW }
   const ctx = over.ctx ?? fakeRequestContext(() => ({
@@ -72,7 +74,7 @@ function makeDeps(over: Record<string, any> = {}) {
 describe("VerifyEmailUseCase", () => {
   it("token inválido (consume retorna null) lança e NÃO atualiza o usuário", async () => {
     const t = makeDeps({
-      verificationTokens: { consumeByHash: jest.fn().mockResolvedValue(null) },
+      verificationTokens: { consumeByHash: vi.fn().mockResolvedValue(null) },
     })
     await expect(t.uc.execute({ token: "tok" })).rejects.toBeInstanceOf(
       InvalidResetTokenError,
@@ -82,7 +84,7 @@ describe("VerifyEmailUseCase", () => {
 
   it("usuário removido (findById null) lança InvalidResetTokenError", async () => {
     const t = makeDeps({
-      users: { findById: jest.fn().mockResolvedValue(null), update: jest.fn() },
+      users: { findById: vi.fn().mockResolvedValue(null), update: vi.fn() },
     })
     await expect(t.uc.execute({ token: "tok" })).rejects.toBeInstanceOf(
       InvalidResetTokenError,
@@ -108,9 +110,9 @@ describe("VerifyEmailUseCase", () => {
   })
 
   it("usuário removido (findById null) NÃO chama authEvents", async () => {
-    const authEvents = { recordInTx: jest.fn() }
+    const authEvents = { recordInTx: vi.fn() }
     const t = makeDeps({
-      users: { findById: jest.fn().mockResolvedValue(null), update: jest.fn() },
+      users: { findById: vi.fn().mockResolvedValue(null), update: vi.fn() },
       authEvents,
     })
     await expect(t.uc.execute({ token: "tok" })).rejects.toBeInstanceOf(
@@ -122,14 +124,14 @@ describe("VerifyEmailUseCase", () => {
   it("happy: update é chamado com usuário com emailVerified=true", async () => {
     const t = makeDeps()
     await t.uc.execute({ token: "raw-tok" })
-    const [updatedUser] = (t.users.update as jest.Mock).mock.calls[0] as [User]
+    const [updatedUser] = (t.users.update as Mock).mock.calls[0] as [User]
     expect(updatedUser.props.emailVerified).toBe(true)
   })
 
   it("recordInTx lançando propaga o erro sem silenciar", async () => {
     const recordError = new Error("falha ao gravar evento")
     const t = makeDeps({
-      authEvents: { recordInTx: jest.fn().mockRejectedValue(recordError) },
+      authEvents: { recordInTx: vi.fn().mockRejectedValue(recordError) },
     })
     await expect(t.uc.execute({ token: "tok" })).rejects.toBe(recordError)
   })

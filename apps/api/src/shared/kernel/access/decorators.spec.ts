@@ -1,5 +1,7 @@
 import "reflect-metadata"
 
+import { describe, expect, it } from "vitest"
+
 import {
   ACCESS_REQUIREMENT,
   Authenticated,

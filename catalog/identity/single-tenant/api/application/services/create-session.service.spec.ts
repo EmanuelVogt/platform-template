@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { User, type UserProps } from "../../domain/entities/user.entity"
 import { makeIdentityConfig } from "../../identity.config.fixture"
 import { fakeRequestContext } from "../request-context.fixture"
@@ -36,18 +38,18 @@ function makeUser(over: Partial<UserProps> = {}): User {
 
 function makeDeps(over: { sessionCount?: number } = {}) {
   const sessions = {
-    create: jest.fn().mockResolvedValue(undefined),
-    countByUser: jest.fn().mockResolvedValue(over.sessionCount ?? 1),
-    deleteOldestOverCap: jest.fn().mockResolvedValue(undefined),
-    deleteByDevice: jest.fn().mockResolvedValue(undefined),
+    create: vi.fn().mockResolvedValue(undefined),
+    countByUser: vi.fn().mockResolvedValue(over.sessionCount ?? 1),
+    deleteOldestOverCap: vi.fn().mockResolvedValue(undefined),
+    deleteByDevice: vi.fn().mockResolvedValue(undefined),
   }
   const devices = {
-    findByUserAndCookieHash: jest.fn().mockResolvedValue(null),
-    create: jest.fn().mockResolvedValue(undefined),
+    findByUserAndCookieHash: vi.fn().mockResolvedValue(null),
+    create: vi.fn().mockResolvedValue(undefined),
   }
   const tokens = {
-    generate: jest.fn().mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
-    hashOf: jest.fn().mockReturnValue("cookie-hash"),
+    generate: vi.fn().mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
+    hashOf: vi.fn().mockReturnValue("cookie-hash"),
   }
   const ctx = fakeRequestContext(() => ({
       ip: "1.2.3.4",

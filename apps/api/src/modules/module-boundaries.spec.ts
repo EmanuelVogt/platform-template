@@ -1,6 +1,8 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
 import { dirname, resolve, sep } from "node:path"
 
+import { describe, expect, it } from "vitest"
+
 const MODULES_DIR = __dirname
 const SRC_DIR = resolve(MODULES_DIR, "..")
 const SHARED_DIR = resolve(SRC_DIR, "shared")

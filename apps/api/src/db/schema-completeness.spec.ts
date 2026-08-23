@@ -1,5 +1,9 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import { dirname, join, relative, resolve, sep } from "node:path"
+
+import { describe, expect, it } from "vitest"
+
+import { endsWith, listFiles } from "../shared/test/unit/source-survey"
 
 const SRC_DIR = resolve(__dirname, "..")
 const SCHEMA_FILE = join(__dirname, "schema.ts")
@@ -20,9 +24,7 @@ function toPosix(path: string): string {
 }
 
 function tableFiles(): string[] {
-  return readdirSync(SRC_DIR, { recursive: true, encoding: "utf8" })
-    .map(toPosix)
-    .filter((entry) => entry.endsWith(".table.ts"))
+  return listFiles(SRC_DIR, endsWith(".table.ts"))
 }
 
 function reexportsOf(source: string): string[] {

@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { User } from "../../../domain/entities/user.entity"
 
 import { ListUsersUseCase } from "./list-users.use-case"
@@ -54,36 +56,36 @@ function makePaginatedResult(
 function makeDeps(over: { listResult?: PaginatedResult<UserListRow> } = {}) {
   const listResult = over.listResult ?? makePaginatedResult([makeUserRow()])
   const users = {
-    list: jest.fn().mockResolvedValue(listResult),
-    findByEmail: jest.fn(),
-    findById: jest.fn(),
-    findVisibleById: jest.fn(),
-    insert: jest.fn(),
-    update: jest.fn(),
-    registerFailedAttempt: jest.fn(),
-    findByIdForUpdate: jest.fn(),
-    findByIdWithPermissions: jest.fn(),
-    findPermissions: jest.fn(),
-    replacePermissions: jest.fn(),
-    replaceProfessionalAreas: jest.fn(),
-    replaceProfessionalServices: jest.fn(),
-    replaceSchedulingAreas: jest.fn(),
-    findProfessionalScope: jest.fn(),
-    findProfessionalAreaIdsByUserIds: jest.fn(),
-    findByIds: jest.fn(),
-    findStaleEmailChanges: jest.fn(),
-    hardDeleteByIds: jest.fn(),
-    existsActiveProfessional: jest.fn(),
-    existsProfessional: jest.fn(),
-    searchAssignableProfessionals: jest.fn(),
-    findProfessionalsByIds: jest.fn(),
-    listActiveProfessionals: jest.fn(),
-    listActiveProfessionalsByArea: jest.fn(),
-    findActiveProfessionalIdsByServices: jest.fn(),
-    findActiveProfessionalLinksByServices: jest.fn(),
-    findNamesByIds: jest.fn(),
-    findIdsByNameLike: jest.fn(),
-    findNotificationTargetsByPermission: jest.fn(),
+    list: vi.fn().mockResolvedValue(listResult),
+    findByEmail: vi.fn(),
+    findById: vi.fn(),
+    findVisibleById: vi.fn(),
+    insert: vi.fn(),
+    update: vi.fn(),
+    registerFailedAttempt: vi.fn(),
+    findByIdForUpdate: vi.fn(),
+    findByIdWithPermissions: vi.fn(),
+    findPermissions: vi.fn(),
+    replacePermissions: vi.fn(),
+    replaceProfessionalAreas: vi.fn(),
+    replaceProfessionalServices: vi.fn(),
+    replaceSchedulingAreas: vi.fn(),
+    findProfessionalScope: vi.fn(),
+    findProfessionalAreaIdsByUserIds: vi.fn(),
+    findByIds: vi.fn(),
+    findStaleEmailChanges: vi.fn(),
+    hardDeleteByIds: vi.fn(),
+    existsActiveProfessional: vi.fn(),
+    existsProfessional: vi.fn(),
+    searchAssignableProfessionals: vi.fn(),
+    findProfessionalsByIds: vi.fn(),
+    listActiveProfessionals: vi.fn(),
+    listActiveProfessionalsByArea: vi.fn(),
+    findActiveProfessionalIdsByServices: vi.fn(),
+    findActiveProfessionalLinksByServices: vi.fn(),
+    findNamesByIds: vi.fn(),
+    findIdsByNameLike: vi.fn(),
+    findNotificationTargetsByPermission: vi.fn(),
   }
   const uc = new ListUsersUseCase(users)
   return { uc, users }
@@ -236,7 +238,7 @@ describe("ListUsersUseCase", () => {
   })
 
   it("repositório lança erro: propaga sem consumir outros métodos", async () => {
-    const users = { list: jest.fn().mockRejectedValue(new Error("db offline")) }
+    const users = { list: vi.fn().mockRejectedValue(new Error("db offline")) }
     const uc = new ListUsersUseCase(users as never)
 
     await expect(uc.execute({ page: 1, pageSize: 20 })).rejects.toThrow("db offline")

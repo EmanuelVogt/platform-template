@@ -1,11 +1,11 @@
 <!--
-Ledger de advisories aplicados neste filho. Nunca edite os arquivos em
-docs/advisories/ADV-*.md nem apague ou mova este arquivo — `copier update`
-os restaura (`docs/advisories/APPLIED.md` está em `_skip_if_exists` no
-copier.yml). Ao resolver um advisory pendente, acrescente uma linha abaixo;
-nunca remova uma já registrada.
+Ledger of advisories applied in this child. Never edit the files in
+docs/advisories/ADV-*.md nor delete or move this file — `copier update`
+restores them (`docs/advisories/APPLIED.md` is in `_skip_if_exists` in
+copier.yml). When resolving a pending advisory, add a line below;
+never remove one already recorded.
 -->
 
-# Advisories aplicados
+# Applied advisories
 
-<!-- formato: - ADV-YYYYMMDD-NN — YYYY-MM-DD — <commit> -->
+<!-- format: - ADV-YYYYMMDD-NN — YYYY-MM-DD — <commit> -->

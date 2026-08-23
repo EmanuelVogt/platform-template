@@ -1,5 +1,6 @@
 import { join } from "node:path"
 
+import { beforeAll, describe, expect, it } from "vitest"
 import { z } from "zod"
 
 import { defineCatalogEntry } from "../../application/catalog/notification-catalog"

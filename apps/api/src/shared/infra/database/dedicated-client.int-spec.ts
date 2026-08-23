@@ -1,3 +1,5 @@
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+
 import { createTestPool, testDatabaseUrl } from "../../../../test/setup/test-db"
 import { makeTestLogger } from "../../../../test/setup/test-logger"
 import { parseEnv } from "../../config/env"
@@ -288,7 +290,7 @@ describe("clients dedicados (integração)", () => {
           REDIS_URL: process.env.REDIS_URL ?? "redis://localhost:6379",
         })
       )
-      const spy = jest.spyOn(foraDoAr, "create")
+      const spy = vi.spyOn(foraDoAr, "create")
       const gerenciado = new ManagedDedicatedClient(foraDoAr, "outbox-listen")
 
       const primeira = await gerenciado.ensure().catch((err: unknown) => err)
@@ -327,7 +329,7 @@ describe("clients dedicados (integração)", () => {
     it("nunca mantém dois clients vivos ao trocar de conexão", async () => {
       const liveAtCreate: number[] = []
       const create = factory.create.bind(factory)
-      const spy = jest
+      const spy = vi
         .spyOn(factory, "create")
         .mockImplementation((purpose: string) => {
           liveAtCreate.push(factory.liveCount())

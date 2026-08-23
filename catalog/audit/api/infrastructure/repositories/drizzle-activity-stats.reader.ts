@@ -3,7 +3,7 @@ import { and, eq, gte, isNotNull, lt, sql } from "drizzle-orm"
 
 import { bucketOf } from "../../../../shared/kernel/clock/bucket-sql"
 import { TransactionManager } from "../../../../shared/kernel/transactional/transaction-manager"
-import { auditEntries } from "../tables/audit-entry.table"
+import { auditEntries } from "../tables/audit-entry.readmodel"
 
 import type { DrizzleExecutor } from "../../../../shared/infra/database/drizzle.provider"
 import type {

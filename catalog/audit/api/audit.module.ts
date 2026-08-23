@@ -1,7 +1,5 @@
 import { Module } from "@nestjs/common"
 
-import { IdentityModule } from "../identity/identity.module"
-
 import { AuditController } from "./api/controllers/audit.controller"
 import { UsageActivityFacade } from "./api/facades/usage-activity.facade"
 import { ListAuditEntriesUseCase } from "./application/list-audit-entries/list-audit-entries.use-case"
@@ -18,12 +16,15 @@ import { AuditTrailModule } from "./infrastructure/trail/audit-trail.module"
 /**
  * Módulo da trilha de auditoria: leitura (GET /v1/audit) e manutenção/purge
  * (AuditTrailModule, importado de infrastructure/trail — captura é do trigger,
- * migration 0054). Importa IdentityModule para resolver o nome do ator
- * (UserDirectoryFacade); não é importado de volta pelo identity, então não há
- * ciclo. Ver ADR 0041.
+ * migration 0054). O nome do ator (UserDirectoryFacade) chega pelo
+ * IdentityModule global montado na raiz — importar a classe aqui criaria uma
+ * segunda instância vazia (mesma armadilha documentada em
+ * attachment.module.ts; era a causa de "Nest can't resolve dependencies of
+ * the AuthMiddleware... SessionRepository", exposta pela 1ª vez pelo gate de
+ * DB tier por entrada, AC3, com identity+audit instalados juntos). Ver ADR 0041.
  */
 @Module({
-  imports: [IdentityModule, AuditTrailModule],
+  imports: [AuditTrailModule],
   controllers: [AuditController],
   providers: [
     { provide: AUDIT_REPOSITORY, useClass: DrizzleAuditRepository },

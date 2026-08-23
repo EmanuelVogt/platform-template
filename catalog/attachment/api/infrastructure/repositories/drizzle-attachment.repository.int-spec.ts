@@ -1,7 +1,8 @@
-import { readFileSync } from "node:fs"
+import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 
 import { ulid } from "ulid"
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest"
 
 import {
   createTestDb,
@@ -16,10 +17,24 @@ import { DrizzleAttachmentRepository } from "./drizzle-attachment.repository"
 
 import type { Pool } from "pg"
 
-const MIGRATION_0005_PATH = join(
-  __dirname,
-  "../../../../../drizzle/migrations/0005_attachment_generic_upload_profiles.sql",
-)
+const MIGRATIONS_DIR = join(__dirname, "../../../../../drizzle/migrations")
+
+// SPEC_DEVIATION: acha o arquivo pelo sufixo em vez do número fixo "0005".
+// Reason: a numeração de customMigrations é sequencial pela ordem de install
+// do child (kernel/notification/identity antes de attachment), não fixa —
+// só o sufixo depois do <seq>_<entry>_ é estável (module.json.customMigrations
+// "01_generic_upload_profiles.sql" vira "<seq>_attachment_generic_upload_profiles.sql").
+function findMigration0005Path(): string {
+  const file = readdirSync(MIGRATIONS_DIR).find((name) =>
+    name.endsWith("_attachment_generic_upload_profiles.sql"),
+  )
+  if (!file) {
+    throw new Error(
+      "migração 0005 (generic_upload_profiles) não encontrada em drizzle/migrations",
+    )
+  }
+  return join(MIGRATIONS_DIR, file)
+}
 
 describe("DrizzleAttachmentRepository", () => {
   let pool: Pool
@@ -125,7 +140,7 @@ describe("DrizzleAttachmentRepository", () => {
       [id, now],
     )
 
-    await pool.query(readFileSync(MIGRATION_0005_PATH, "utf-8"))
+    await pool.query(readFileSync(findMigration0005Path(), "utf-8"))
 
     const found = await repo.findById(id)
     expect(found?.props.profile).toBe("multi")

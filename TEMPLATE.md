@@ -1,32 +1,37 @@
 # platform-template
 
-Template copier da plataforma: **só o kernel** da API NestJS (sem módulo nenhum) + front
-React/Vite headless, harness de agentes, handbooks, CI e Docker. Módulos de plataforma
-vivem fora do copier, como entradas versionadas em `catalog/`, e entram no produto via
-`pnpm platform module add` (ver [`docs/dev/template.md`](docs/dev/template.md)). Correção
-numa entrada do catálogo sem advisory correspondente (`docs/advisories/ADV-*.md` ou o
-trailer `Advisory: none — <motivo>` no commit) não é aceita. Este arquivo e o `CLAUDE.md`
-existem só no repositório do template (excluídos no `copier.yml`); o produto gerado recebe
-`README.md` e `AGENTS.md`/`CLAUDE.md` próprios.
+Copier template for the platform: **only the kernel** of the NestJS API (no module at
+all) + headless React/Vite front, agent harness, handbooks, CI and Docker. Platform
+modules live outside the copier, as versioned entries in `catalog/`, and enter the product
+via `pnpm platform module add` (see [`docs/dev/template.md`](docs/dev/template.md)). A fix
+to a catalog entry without a matching advisory (`docs/advisories/ADV-*.md` or the
+`Advisory: none — <reason>` trailer on the commit) is not accepted. This file and
+`CLAUDE.md` exist only in the template repository (excluded in `copier.yml`), as does the
+repository's public face — [`.github/README.md`](.github/README.md), `.github/assets/` and
+`LICENSE`; the generated product gets its own `README.md` and `AGENTS.md`/`CLAUDE.md` and
+decides its own license.
 
-## Gerar um produto
+## Generating a product
+
+The step-by-step for template consumers is in the [README](.github/README.md). The
+repository is public: `copier` and `module add` clone over HTTPS, no SSH key needed.
 
 ```
-pipx install copier              # ou uv tool install copier
-copier copy gh:EmanuelVogt/platform-template ./meu-produto
+pipx install copier              # or uv tool install copier
+copier copy --trust gh:EmanuelVogt/platform-template ./my-product
 ```
 
-## Publicar uma versão
+## Publishing a version
 
-Toda mudança que os produtos devem receber vira tag semver: `git tag v1.2.0 && git push --tags`.
-O produto atualiza com `copier update` (ver `docs/dev/template.md`).
+Every change products should receive becomes a semver tag: `git tag v1.2.0 && git push --tags`.
+The product updates with `copier update` (see `docs/dev/template.md`).
 
-## Testar o template
+## Testing the template
 
 ```
 copier copy --defaults --data project_name=Demo --data github_org=acme . /tmp/demo
 cd /tmp/demo && pnpm check && pnpm test
 ```
 
-Arquivos `.jinja` são renderizados; os demais copiados literalmente. Mantenha o Jinja
-restrito a docs e manifests — código-fonte não leva placeholder (usa config/env).
+`.jinja` files are rendered; all others are copied verbatim. Keep Jinja restricted to
+docs and manifests — source code carries no placeholder (it uses config/env).

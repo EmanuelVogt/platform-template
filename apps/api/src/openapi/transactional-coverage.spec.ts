@@ -1,5 +1,9 @@
-import { readdirSync, readFileSync } from "node:fs"
-import { join, sep } from "node:path"
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
+
+import { describe, expect, it } from "vitest"
+
+import { listFiles } from "../shared/test/unit/source-survey"
 
 const MODULES_DIR = join(__dirname, "..", "modules")
 
@@ -18,12 +22,10 @@ const TX_MARKER =
   /@Transactional\(|@ReadOnly\(|@NonTransactional\(\s*"[^"]+"\s*\)|txManager\.run\(|txm\.run\(/
 
 function useCaseFiles(): string[] {
-  return readdirSync(MODULES_DIR, { recursive: true, encoding: "utf8" })
-    .map((entry) => entry.split(sep).join("/"))
-    .filter(
-      (entry) =>
-        entry.endsWith(".use-case.ts") && entry.includes("/application/")
-    )
+  return listFiles(
+    MODULES_DIR,
+    (rel) => rel.endsWith(".use-case.ts") && rel.includes("/application/")
+  )
 }
 
 function hasTxMarker(relPath: string): boolean {

@@ -1,4 +1,5 @@
 import { Subject } from "rxjs"
+import { describe, expect, it, vi } from "vitest"
 
 import { SseController } from "./sse.controller"
 
@@ -10,8 +11,8 @@ import type { Request } from "express"
 describe("SseController", () => {
   it("registra a conexão pro recipient autenticado e fecha no close do request", () => {
     const subject = new Subject<MessageEvent>()
-    const close = jest.fn()
-    const register = jest.fn().mockReturnValue({ stream: subject.asObservable(), close })
+    const close = vi.fn()
+    const register = vi.fn().mockReturnValue({ stream: subject.asObservable(), close })
     const registry = { register } as unknown as ConnectionRegistryPort
     const ctx = { getActor: () => ({ id: "u1", kind: "user" }) } as unknown as RequestContext
 
@@ -29,9 +30,9 @@ describe("SseController", () => {
   })
 
   it("sem userId no contexto → lança (rota exige sessão)", () => {
-    const registry = { register: jest.fn() } as unknown as ConnectionRegistryPort
+    const registry = { register: vi.fn() } as unknown as ConnectionRegistryPort
     const ctx = { getActor: () => null } as unknown as RequestContext
-    const req = { on: jest.fn() } as unknown as Request
+    const req = { on: vi.fn() } as unknown as Request
     expect(() => new SseController(registry, ctx).stream(req)).toThrow()
   })
 })

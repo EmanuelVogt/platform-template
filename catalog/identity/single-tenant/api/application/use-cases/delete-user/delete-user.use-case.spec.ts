@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.error"
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import { UserNotFoundError } from "../../../domain/errors"
@@ -34,14 +36,14 @@ function makeUser(over: Partial<UserProps> = {}): User {
 
 function makeDeps(over: Record<string, any> = {}) {
   const users = over.users ?? {
-    findById: jest.fn().mockResolvedValue(makeUser()),
-    update: jest.fn().mockResolvedValue(undefined),
+    findById: vi.fn().mockResolvedValue(makeUser()),
+    update: vi.fn().mockResolvedValue(undefined),
   }
   const sessions = over.sessions ?? {
-    deleteAllForUser: jest.fn().mockResolvedValue(undefined),
+    deleteAllForUser: vi.fn().mockResolvedValue(undefined),
   }
   const authEvents = over.authEvents ?? {
-    recordInTx: jest.fn().mockResolvedValue(undefined),
+    recordInTx: vi.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => new Date("2026-06-10T12:00:00.000Z") }
   const ctx = over.ctx ?? fakeRequestContext(() => ({
@@ -61,17 +63,17 @@ describe("DeleteUserUseCase", () => {
     await uc.execute({ userId: "u-target" })
 
     expect(users.update).toHaveBeenCalledTimes(1)
-    const updated = users.update.mock.calls[0][0] as User
+    const updated = users.update.mock.calls[0]?.[0] as User
     expect(updated.isDeleted()).toBe(true)
     expect(sessions.deleteAllForUser).toHaveBeenCalledWith("u-target")
-    expect(authEvents.recordInTx.mock.calls[0][0].props.eventType).toBe(
+    expect(authEvents.recordInTx.mock.calls[0]?.[0].props.eventType).toBe(
       "user_deleted",
     )
   })
 
   it("404 quando o usuário não existe", async () => {
     const { uc, users } = makeDeps({
-      users: { findById: jest.fn().mockResolvedValue(null), update: jest.fn() },
+      users: { findById: vi.fn().mockResolvedValue(null), update: vi.fn() },
     })
     await expect(uc.execute({ userId: "x" })).rejects.toThrow(UserNotFoundError)
     expect(users.update).not.toHaveBeenCalled()
@@ -80,8 +82,8 @@ describe("DeleteUserUseCase", () => {
   it("404 quando já está soft-deleted (idempotente)", async () => {
     const { uc } = makeDeps({
       users: {
-        findById: jest.fn().mockResolvedValue(makeUser({ deletedAt: new Date() })),
-        update: jest.fn(),
+        findById: vi.fn().mockResolvedValue(makeUser({ deletedAt: new Date() })),
+        update: vi.fn(),
       },
     })
     await expect(uc.execute({ userId: "u-target" })).rejects.toThrow(UserNotFoundError)
@@ -90,8 +92,8 @@ describe("DeleteUserUseCase", () => {
   it("recusa excluir o usuário master", async () => {
     const { uc, users } = makeDeps({
       users: {
-        findById: jest.fn().mockResolvedValue(makeUser({ accessProfile: "master" })),
-        update: jest.fn(),
+        findById: vi.fn().mockResolvedValue(makeUser({ accessProfile: "master" })),
+        update: vi.fn(),
       },
     })
     await expect(uc.execute({ userId: "u-target" })).rejects.toThrow(ForbiddenError)

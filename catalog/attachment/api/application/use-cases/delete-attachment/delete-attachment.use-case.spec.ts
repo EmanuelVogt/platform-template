@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { Attachment } from "../../../domain/attachment.entity"
 
 import { DeleteAttachmentUseCase } from "./delete-attachment.use-case"
@@ -5,27 +7,27 @@ import { DeleteAttachmentUseCase } from "./delete-attachment.use-case"
 function makeDeps(found: Attachment | null) {
   const onCommitCbs: (() => Promise<void> | void)[] = []
   const storage = {
-    delete: jest.fn(),
-    put: jest.fn(),
-    getStream: jest.fn(),
-    head: jest.fn(),
-    putStream: jest.fn(),
+    delete: vi.fn(),
+    put: vi.fn(),
+    getStream: vi.fn(),
+    head: vi.fn(),
+    putStream: vi.fn(),
   }
   const repo = {
-    findById: jest.fn().mockResolvedValue(found),
-    update: jest.fn(),
-    insert: jest.fn(),
-    insertMany: jest.fn(),
-    findByIds: jest.fn(),
-    saveMany: jest.fn(),
-    findPendingOlderThan: jest.fn(),
-    deleteByIds: jest.fn(),
+    findById: vi.fn().mockResolvedValue(found),
+    update: vi.fn(),
+    insert: vi.fn(),
+    insertMany: vi.fn(),
+    findByIds: vi.fn(),
+    saveMany: vi.fn(),
+    findPendingOlderThan: vi.fn(),
+    deleteByIds: vi.fn(),
   }
   const log = {
-    record: jest.fn(),
-    recordInTx: jest.fn(),
-    listByAttachment: jest.fn(),
-    deleteBatchOlderThan: jest.fn(),
+    record: vi.fn(),
+    recordInTx: vi.fn(),
+    listByAttachment: vi.fn(),
+    deleteBatchOlderThan: vi.fn(),
   }
   const tx = { onCommit: (cb: () => Promise<void> | void) => onCommitCbs.push(cb) }
   const ctx = {

@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { fakeRequestContext } from "../../request-context.fixture"
 
 import { ListDevicesUseCase } from "./list-devices.use-case"
@@ -8,7 +10,7 @@ import type { IdentityConfig } from "../../../identity.config"
 describe("ListDevicesUseCase", () => {
   it("marca current pelo deviceId do contexto e mapeia para a view", async () => {
     const now = new Date("2026-06-01T00:00:00Z")
-    const listActiveByUser = jest.fn().mockResolvedValue([
+    const listActiveByUser = vi.fn().mockResolvedValue([
       {
         id: "d-1",
         firstSeenAt: now,

@@ -42,7 +42,7 @@ export const fsdConfig = tseslint.config({
       {
         default: "disallow",
         message:
-          "FSD: {{ from.type }} não pode importar {{ to.type }} daqui (camada acima ou slice irmão) — docs/front/front-arch.md, Regras de Ouro 1-2",
+          "FSD: {{ from.type }} não pode importar {{ to.type }} daqui (camada acima ou slice irmão) — docs/arch/front.md, Golden Rules 1-2",
         policies: [
           {
             from: fromType("app"),

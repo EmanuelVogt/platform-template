@@ -1,4 +1,5 @@
 import { ulid } from "ulid"
+import { describe, expect, it } from "vitest"
 
 import { RequestContext } from "./request-context"
 import { createRequestContextMiddleware } from "./request-context.middleware"
@@ -15,6 +16,20 @@ function runWith(correlationHeader: string | undefined): RequestContextStore {
     headers: { "x-correlation-id": correlationHeader },
     ip: "1.2.3.4",
   } as unknown as Request
+  mw(req, {} as Response, () => {
+    result.push(ctx.get())
+  })
+  return result[0]!
+}
+
+function runWithReq(
+  headers: Record<string, string | string[] | undefined>,
+  ip: string | undefined
+): RequestContextStore {
+  const ctx = new RequestContext()
+  const mw = createRequestContextMiddleware(ctx)
+  const result: RequestContextStore[] = []
+  const req = { headers, ip } as unknown as Request
   mw(req, {} as Response, () => {
     result.push(ctx.get())
   })
@@ -45,5 +60,32 @@ describe("requestContextMiddleware — correlationId", () => {
   it("sem header usa o requestId gerado", () => {
     const store = runWith(undefined)
     expect(store.correlationId).toBe(store.requestId)
+  })
+
+  it("cabeçalho array-valued usa o primeiro valor, não um valor qualquer", () => {
+    const first = ulid()
+    const second = ulid()
+    const store = runWithReq({ "x-correlation-id": [first, second] }, "1.2.3.4")
+    expect(store.correlationId).toBe(first.toUpperCase())
+  })
+
+  it("cabeçalho array-valued vazio cai no requestId gerado", () => {
+    const store = runWithReq({ "x-correlation-id": [] }, "1.2.3.4")
+    expect(store.correlationId).toBe(store.requestId)
+  })
+})
+
+describe("requestContextMiddleware — demais campos do store", () => {
+  it("sem Accept-Language usa pt-BR; com o header, usa o valor enviado", () => {
+    const semHeader = runWithReq({}, "1.2.3.4")
+    expect(semHeader.locale).toBe("pt-BR")
+
+    const comHeader = runWithReq({ "accept-language": "en-US" }, "1.2.3.4")
+    expect(comHeader.locale).toBe("en-US")
+  })
+
+  it("sem req.ip grava ip nulo no store", () => {
+    const store = runWithReq({}, undefined)
+    expect(store.ip).toBeNull()
   })
 })

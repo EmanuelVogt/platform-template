@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import {
   InvalidAccessLinkError,
   ProfileImageStoreMissingError,
@@ -20,15 +22,15 @@ function pendingUserProps() {
 
 function makeDeps(over: Record<string, any> = {}) {
   const verificationTokens = over.verificationTokens ?? {
-    findActiveByHash: jest.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2099-01-01") }),
+    findActiveByHash: vi.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2099-01-01") }),
   }
-  const users = over.users ?? { findById: jest.fn().mockResolvedValue(pendingUserProps()) }
-  const tokens = over.tokens ?? { hashOf: jest.fn().mockReturnValue("hash-of-raw") }
+  const users = over.users ?? { findById: vi.fn().mockResolvedValue(pendingUserProps()) }
+  const tokens = over.tokens ?? { hashOf: vi.fn().mockReturnValue("hash-of-raw") }
   const clock = over.clock ?? { now: () => NOW }
   const attachments =
     "attachments" in over
       ? over.attachments
-      : { upload: jest.fn().mockResolvedValue({ id: "att-1" }) }
+      : { upload: vi.fn().mockResolvedValue({ id: "att-1" }) }
   const uc = new UploadAccessLinkAvatarUseCase(verificationTokens, users, tokens, clock, attachments)
   return { uc, verificationTokens, users, tokens, attachments }
 }
@@ -59,16 +61,16 @@ describe("UploadAccessLinkAvatarUseCase", () => {
 
   it("token inválido/expirado lança InvalidAccessLinkError sem chamar facade", async () => {
     const t = makeDeps({
-      verificationTokens: { findActiveByHash: jest.fn().mockResolvedValue(null) },
+      verificationTokens: { findActiveByHash: vi.fn().mockResolvedValue(null) },
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidAccessLinkError)
     expect(t.attachments.upload).not.toHaveBeenCalled()
   })
 
   it("token inválido não consulta repositório de usuários", async () => {
-    const users = { findById: jest.fn().mockResolvedValue(pendingUserProps()) }
+    const users = { findById: vi.fn().mockResolvedValue(pendingUserProps()) }
     const t = makeDeps({
-      verificationTokens: { findActiveByHash: jest.fn().mockResolvedValue(null) },
+      verificationTokens: { findActiveByHash: vi.fn().mockResolvedValue(null) },
       users,
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidAccessLinkError)
@@ -77,7 +79,7 @@ describe("UploadAccessLinkAvatarUseCase", () => {
 
   it("usuário não-pending lança InvalidAccessLinkError sem chamar facade", async () => {
     const t = makeDeps({
-      users: { findById: jest.fn().mockResolvedValue({ props: { status: "active" } }) },
+      users: { findById: vi.fn().mockResolvedValue({ props: { status: "active" } }) },
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidAccessLinkError)
     expect(t.attachments.upload).not.toHaveBeenCalled()
@@ -85,7 +87,7 @@ describe("UploadAccessLinkAvatarUseCase", () => {
 
   it("usuário com status suspended lança InvalidAccessLinkError", async () => {
     const t = makeDeps({
-      users: { findById: jest.fn().mockResolvedValue({ props: { status: "suspended" } }) },
+      users: { findById: vi.fn().mockResolvedValue({ props: { status: "suspended" } }) },
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidAccessLinkError)
     expect(t.attachments.upload).not.toHaveBeenCalled()
@@ -93,7 +95,7 @@ describe("UploadAccessLinkAvatarUseCase", () => {
 
   it("token sem user correspondente lança InvalidAccessLinkError", async () => {
     const t = makeDeps({
-      users: { findById: jest.fn().mockResolvedValue(null) },
+      users: { findById: vi.fn().mockResolvedValue(null) },
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidAccessLinkError)
     expect(t.attachments.upload).not.toHaveBeenCalled()
@@ -101,7 +103,7 @@ describe("UploadAccessLinkAvatarUseCase", () => {
 
   it("user undefined (porta retorna undefined) lança InvalidAccessLinkError", async () => {
     const t = makeDeps({
-      users: { findById: jest.fn().mockResolvedValue(undefined) },
+      users: { findById: vi.fn().mockResolvedValue(undefined) },
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidAccessLinkError)
     expect(t.attachments.upload).not.toHaveBeenCalled()

@@ -68,7 +68,8 @@ declarada (ver § Dependências); ela não fecha ciclo, já que `identity` não 
 ## Paridade
 
 Os specs em `parity/*.parity.spec.ts` são copiados para `apps/api/src/modules/tag/__parity__/`
-junto com `parity/contract.snapshot.json` e rodam no jest do app filho:
+junto com `parity/contract.snapshot.json` e rodam via `pnpm vitest run --project api
+apps/api/src/modules/tag` no app filho:
 
 - `contract.parity.spec.ts` — compara `openapi.json` do filho contra `contract.snapshot.json`
   via `expectContractSubset`, garantindo que as oito operações de CRUD/lixeira continuam

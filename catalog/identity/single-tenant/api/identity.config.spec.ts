@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { loadIdentityConfig, parseIdentityConfig } from "./identity.config"
 
 const BASE = {

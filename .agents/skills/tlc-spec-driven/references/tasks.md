@@ -147,12 +147,16 @@ For each task:
 - **One owner per file.** A file that would collect one-line edits from many tasks (a NestJS module registering providers, a router, an FSD slice's `model/` index, a shared type barrel) becomes **its own wiring task** at the end of the chain that needs it, instead of five tasks each touching it. Five tasks sharing `module.ts` are one serial cluster; five tasks plus one wiring task are one parallel wave and a tail.
 - **Tests travel with their code** — the spec file is in the same task's `Touches`; never a shared "write the tests" task that spans areas.
 - **Independent roots.** Prefer several small tasks with `Depends on: none` (interface, DTO, fixture, entity) over one "foundation" task everything hangs from.
+- **Touches audit (mandatory, one scout call per cluster)** — audit the **whole vertical the cluster owns** (module file, ports, repositories, facades, api, specs), not one task at a time: the cluster is the ownership unit, so a file missed anywhere in the slice stops the same worker. A `Touches` list written from the design alone under-specifies the blast radius (measured 2026-08-20: 3 of 4 `blocked-by-ownership` stops were files no task listed — a module file the design named wrongly, a builder in a sibling dataset, one line in a permission types file). Before the Wave Plan, ask `repo-scout` (sonnet, one call per area): for every file the tasks create — which file must import/register it; for every exported symbol they change — who consumes it. Each answer lands in a task's `Touches` (or becomes a wiring task). A file named by `design.md` is verified on disk, never copied.
+- **Layer completeness.** A `Touches` that names only the layer the task is "about" is the other half of the blast radius (measured 2026-08-20: 3 further stops in one feature — two API read models and a facade, each needing a port + repository nobody listed). Before presenting, every task that persists or reads data names the **whole vertical**: port under `domain/ports/` + its implementation under `infrastructure/repositories/` (+ int spec) — no module runs SQL from `application/` or `api/`; every cross-module read names the **facade method in the owning module** plus that module's port/repo files when the method does not exist yet. A narrowed glob (`application/**`, `api/**`) is never an ownership grant for a vertical.
 
 ### 4. Create the Wave Plan
 
-Compute waves and clusters from `Depends on` / `Touches` / `Exclusive` with the algorithm in [sub-agents.md](sub-agents.md) § *Waves and clusters* — level → wave; shared files → cluster; fold linear chains; exclusive → own wave; **1–5 tasks per cluster, ≤4 clusters in flight**. Objective: maximise clusters per wave, then minimise waves, then keep clusters small.
+Compute waves and clusters from `Depends on` / `Touches` / `Exclusive` with the algorithm in [sub-agents.md](sub-agents.md) § *Waves and clusters* — level → wave; shared files and the rest of the same vertical → cluster; fold linear chains; exclusive → own wave. A cluster is a **vertical slice of 4–8 tasks** (domain, ports, repositories, api, tests of one area, wiring last), a wave holds **2–4 clusters**, and a single-task cluster is only for an exclusive or a genuinely isolated task. Objective: fewest workers with disjoint ownership, then parallelism, then small clusters — every worker pays a warm-up of ~20 turns before its first edit, so a plan of one-task clusters pays it once per task.
 
-Render the plan as the `## Wave Plan` section of `tasks.md` (template below): waves in order, clusters per wave with their task order and file union, exclusive waves marked. A cluster of 8+ tasks or a wave with a single non-exclusive cluster while other tasks wait is an authoring smell — go back to step 3 and split the shared file, not the wave.
+**The in-flight cap is not a wave boundary.** At most 4 clusters run at once, but a level with more than 4 clusters is still **one wave** — the orchestrator dispatches four and queues the rest FIFO, one gate at the end. Never split a level into "wave 8" and "wave 8b" to honour the cap: each extra wave is a barrier plus a Build gate (a runner run and an orchestrator turn) that buys nothing. A wave that exists only because of the cap is an authoring error, not a plan.
+
+Render the plan as the `## Wave Plan` section of `tasks.md` (template below): waves in order, clusters per wave with their task order and file union, exclusive waves marked. **Three or more single-task non-exclusive clusters in one wave** is an authoring smell — the vertical was cut by layer instead of by area; merge them into the slice's cluster (wiring last). So is a wave with a single non-exclusive cluster while other tasks wait — go back to step 3 and split the shared file, not the wave.
 
 ### 5. Validate Before Presenting (MANDATORY)
 
@@ -217,18 +221,15 @@ Waves run in order (barrier + Build gate between them). Clusters inside a wave r
 
 | Wave | Cluster | Tasks (in order) | Files (union of Touches) | Notes |
 | ---- | ------- | ---------------- | ------------------------ | ----- |
-| 1 | C1 | T1 | `src/path/to/file.ts` | root · gate: scoped |
-| 1 | C2 | T3 | `src/components/ZComponent.tsx`, `src/components/ZComponent.spec.tsx` | root, disjoint from C1 |
-| 2 | C3 | T2 → T4 | `src/services/YService.ts`, `src/services/YService.spec.ts` | T4 folded (sole dependent of T2) · gate: scoped |
-| 2 | C4 | T5 | `src/hooks/useZ.ts`, `src/hooks/useZ.spec.ts` | depends on T3 only |
-| 3 | C5 | T6 | `src/module.ts`, `src/router.tsx` | wiring — depends on C3 + C4 · gate: full-unit (module wiring) |
-| 4 (exclusive) | C6 | T7 | `*.contract.ts`, `openapi.json`, `generated/**` | contract regen — alone · gate: full-unit |
+| 1 | C1 | T1 → T2 → T4 | `src/path/to/file.ts`, `src/services/YService.ts`, `src/services/YService.spec.ts` | service vertical · gate: scoped |
+| 1 | C2 | T3 → T5 | `src/components/ZComponent.tsx`, `src/components/ZComponent.spec.tsx`, `src/hooks/useZ.ts`, `src/hooks/useZ.spec.ts` | screen vertical, disjoint from C1 · gate: scoped |
+| 2 | C3 | T6 | `src/module.ts`, `src/router.tsx` | wiring — depends on C1 + C2, so it folds into neither · gate: full-unit (module wiring) |
+| 3 (exclusive) | C4 | T7 | `*.contract.ts`, `openapi.json`, `generated/**` | contract regen — alone · gate: full-unit |
 
 ```
-Wave 1:  [C1: T1]        ∥ [C2: T3]
-Wave 2:  [C3: T2 → T4]   ∥ [C4: T5]
-Wave 3:  [C5: T6]
-Wave 4:  [C6: T7]  (exclusive)
+Wave 1:  [C1: T1 → T2 → T4]  ∥ [C2: T3 → T5]
+Wave 2:  [C3: T6]
+Wave 3:  [C4: T7]  (exclusive)
 ```
 
 ---
@@ -346,21 +347,21 @@ Wave 4:  [C6: T7]  (exclusive)
 Waves run in sequence; clusters inside a wave run in parallel; tasks inside a cluster run in order:
 
 ```
-Wave 1:  [C1: T1]        ∥ [C2: T3]
-Wave 2:  [C3: T2 → T4]   ∥ [C4: T5]
-Wave 3:  [C5: T6]
-Wave 4:  [C6: T7]  (exclusive)
+Wave 1:  [C1: T1 → T2 → T4]  ∥ [C2: T3 → T5]
+Wave 2:  [C3: T6]
+Wave 3:  [C4: T7]  (exclusive)
 ```
 
 **How wave-based execution works:**
 
-At Execute the orchestrator never implements. For each wave it dispatches **one cheap worker per
+At Execute the orchestrator never implements a cluster. For each wave it dispatches **one cheap worker per
 cluster, all at once** (≤4 in flight; more queue FIFO), waits for every compact summary, runs the
 Build gate **once** through the runner (scoped or full-unit as the Wave Plan says), records results
 in `tasks.md`, and moves to the next wave.
 After the last wave it dispatches the Verifier. Workers execute their cluster's tasks in order
 (implement → scoped gate → atomic, pathspec-limited commit), own only the files in their `Touches`
-union, delegate navigation to a scout and heavy commands to a runner, and report a compact summary.
+union, run their own scoped gate redirected to a log, delegate an open navigation question to a
+scout, and report a compact summary.
 See [sub-agents.md](sub-agents.md) for the full model — clustering algorithm, dispatch protocol,
 worker payload and rules, git protocol for parallel workers, compact summary contract, failure
 handling.
@@ -419,15 +420,19 @@ Before approving tasks, verify the wave plan is dispatchable as written. Two clu
 
 | Wave | Cluster | Tasks (order) | Files (union of Touches) | Deps outside earlier waves / own cluster? | Files shared with a sibling cluster? | Exclusive alone? | Status |
 | ---- | ------- | ------------- | ------------------------ | ----------------------------------------- | ----------------------------------- | ---------------- | ------ |
-| 2 | C3 | T2 → T4 | `src/services/YService.ts`, `src/services/YService.spec.ts` | none | none | n/a | ✅ |
-| 4 | C6 | T7 | `*.contract.ts`, `openapi.json`, `generated/**` | none | none | yes — only cluster in wave 4 | ✅ |
+| 1 | C1 | T1 → T2 → T4 | `src/path/to/file.ts`, `src/services/YService.ts`, `src/services/YService.spec.ts` | none | none | n/a | ✅ |
+| 3 | C4 | T7 | `*.contract.ts`, `openapi.json`, `generated/**` | none | none | yes — only cluster in wave 3 | ✅ |
 
 **Rules:**
 
 - Every dependency of every task resolves to an earlier wave or to an earlier task in the same cluster.
 - Sibling clusters in one wave share **no** file (compare the `Touches` unions, tests included).
 - A task with `Exclusive: yes` is the only task in its wave.
-- Cluster size 1–5 tasks; a larger cluster or a wave with one non-exclusive cluster while unrelated tasks wait later → go back to step 3 (split the shared file into a wiring task) before presenting.
+- Cluster size 4–8 tasks (one vertical slice, wiring last); a single-task cluster only for an exclusive or genuinely isolated task. Three or more single-task non-exclusive clusters in one wave, or a wave with one non-exclusive cluster while unrelated tasks wait later → go back to step 3 (merge the vertical; split the shared file into a wiring task) before presenting.
+- No wave exists only because of the 4-in-flight cap: clusters of the same dependency level share one wave and queue FIFO (step 4).
+- Every task that reads or persists data names its port + repository files; every cross-module read names the owning module's facade (+ port/repo if new) — step 3 *Layer completeness*.
+
+In Claude Code, `.claude/hooks/wave-plan-check.mjs` re-runs the sibling-overlap (exact path or glob containment — `a/b/**` covers `a/b/c.ts`) and exclusive-alone checks on every write of `tasks.md`, reading the `### T<n>` `Touches` fields and the `## Wave Plan` table; a violation comes back as one line per pair. The dependency and cluster-size rules stay yours to check.
 
 ---
 

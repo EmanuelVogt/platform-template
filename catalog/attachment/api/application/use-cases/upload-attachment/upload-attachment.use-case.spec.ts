@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { PayloadTooLargeError, UnsupportedMediaTypeError } from "../../../domain/errors"
 import { buildUploadProfiles } from "../../../domain/upload-profiles"
 
@@ -8,27 +10,27 @@ const pdf = Buffer.from("%PDF-1.4\n1 0 obj\n")
 
 function makeDeps() {
   const storage = {
-    put: jest.fn(),
-    getStream: jest.fn(),
-    head: jest.fn(),
-    delete: jest.fn(),
-    putStream: jest.fn(),
+    put: vi.fn(),
+    getStream: vi.fn(),
+    head: vi.fn(),
+    delete: vi.fn(),
+    putStream: vi.fn(),
   }
   const repo = {
-    insert: jest.fn(),
-    insertMany: jest.fn(),
-    findById: jest.fn(),
-    findByIds: jest.fn(),
-    update: jest.fn(),
-    saveMany: jest.fn(),
-    findPendingOlderThan: jest.fn(),
-    deleteByIds: jest.fn(),
+    insert: vi.fn(),
+    insertMany: vi.fn(),
+    findById: vi.fn(),
+    findByIds: vi.fn(),
+    update: vi.fn(),
+    saveMany: vi.fn(),
+    findPendingOlderThan: vi.fn(),
+    deleteByIds: vi.fn(),
   }
   const log = {
-    record: jest.fn(),
-    recordInTx: jest.fn(),
-    listByAttachment: jest.fn(),
-    deleteBatchOlderThan: jest.fn(),
+    record: vi.fn(),
+    recordInTx: vi.fn(),
+    listByAttachment: vi.fn(),
+    deleteBatchOlderThan: vi.fn(),
   }
   const tx = { run: (fn: () => Promise<void>) => fn() }
   const ctx = {

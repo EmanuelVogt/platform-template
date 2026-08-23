@@ -20,6 +20,19 @@ const FIXTURES_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "f
 const alphaManifest = readManifest(path.join(FIXTURES_ROOT, "alpha", "module.json"));
 const betaManifest = readManifest(path.join(FIXTURES_ROOT, "beta", "module.json"));
 
+const REPO_CATALOG = path.join(path.dirname(fileURLToPath(import.meta.url)), "../../../catalog");
+
+test("resolveDeps --with-deps resolve dependência que mora sob uma variante", () => {
+  const attachment = readManifest(path.join(REPO_CATALOG, "attachment", "module.json"));
+  const { order } = resolveDeps({
+    catalogRoot: REPO_CATALOG,
+    manifest: attachment,
+    lock: { modules: {} },
+    withDeps: true,
+  });
+  assert.ok(order.indexOf("identity") < order.indexOf("attachment"));
+});
+
 test("checkKernelRange não lança quando a versão do template satisfaz o range", () => {
   assert.doesNotThrow(() => checkKernelRange(alphaManifest, "1.5.0"));
 });

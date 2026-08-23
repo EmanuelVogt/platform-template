@@ -8,11 +8,15 @@
 // checkpoint that told the agent to "ignore silently if mid-task" — median
 // final context 174k.
 //
-// Below HARD_ALERT the hook asks for a Handoff at the next natural boundary,
-// without abandoning work in flight. At or above HARD_ALERT it asks the
-// agent to stop starting new work altogether and hand off now. It still
-// only MEASURES and WARNS: it clears nothing, and deciding where the
-// boundary is stays with the agent's judgement, not the hook's.
+// Below HARD_ALERT the hook asks the agent to reach the next natural boundary
+// and then choose between two exits and say so to the user: /compact when the
+// work goes on in the same direction (the recent turns are still the working
+// set), /clear when what remains is a new stretch of work or the direction
+// changed — with the Handoff written and a ready-to-paste prompt for the next
+// session. At or above HARD_ALERT it asks the agent to stop starting new work
+// and hand off now, /clear by default. It still only MEASURES and WARNS: it
+// clears nothing, compacts nothing, and which exit fits — and where the
+// boundary is — stays with the agent's judgement, not the hook's.
 // Harness tooling — not app code.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -39,16 +43,24 @@ try {
 
   const thousands = Math.round(contextTokens / 1000);
   const ratio = (contextTokens / 46_000).toFixed(1);
+  const exits = [
+    "Two exits — you decide which fits, then tell the user in their language, in one line:",
+    "• `/compact` — the work continues in the same direction and the recent turns are still the working set (a follow-up of a few turns; a wave mid-feature whose plan is in tasks.md). A summary keeps the thread at a fraction of the cost. Say what must survive the summary (feature, step, constraint).",
+    "• `/clear` — what remains is a new stretch of work (dozens of turns) or the direction changed: the conversation is dead weight and disk holds the memory. First write the Handoff (.specs/STATE.md § Handoff, section-scoped), then hand the user a ready-to-paste prompt for the next session, fenced, in their language:",
+    "```\nContinue <feature/task>. Load: .specs/STATE.md § Handoff entry \"<name>\"; <spec/tasks/design paths>. Checkout: <worktree path>, branch <branch>. Next: <the exact next step>. Keep: <1–3 constraints or decisions that must not be lost>.\n```",
+  ].join("\n");
   const context =
     contextTokens >= HARD_ALERT
       ? [
-          `Context is at ~${thousands}k tokens — beyond the point where continuing is cheaper than restarting. Do NOT start new work: finish only what is mid-flight (a running sub-agent, an uncommitted edit), write the Handoff now and ask the user for /clear before anything else.`,
+          `Context is at ~${thousands}k tokens — beyond the point where continuing is cheaper than restarting. Do NOT start new work: finish only what is mid-flight (a running sub-agent, an uncommitted edit), then hand off now. /clear is the default at this size; /compact only if a wave or fix is mid-flight and its plan is on disk.`,
+          exits,
           "If a sub-agent is running, wait for its result, record it, then hand off.",
         ].join("\n\n")
       : [
           `Context checkpoint: ~${thousands}k tokens (fresh session floor ≈ 46k; each turn now costs ~${ratio}× a fresh one).`,
-          "Finish the step in progress — never abandon a half-done edit or an in-flight wave — then STOP at the next natural boundary (task committed, wave gated, verifier returned, fix landed): write the Handoff (.specs/STATE.md § Handoff, section-scoped) and tell the user explicitly, in their language, that it is time for /clear and exactly what to load next (spec/tasks path, worktree, branch, next step).",
-          "Do not push the boundary further than the current step. Do not mention cost figures to the user; one line is enough.",
+          "Finish the step in progress — never abandon a half-done edit or an in-flight wave — then STOP at the next natural boundary (task committed, wave gated, verifier returned, fix landed).",
+          exits,
+          "Do not push the boundary further than the current step. Do not mention cost figures to the user; one line plus the prompt (when /clear) is enough.",
         ].join("\n\n");
 
   process.stdout.write(

@@ -1,4 +1,5 @@
 import pino from "pino"
+import { describe, expect, it } from "vitest"
 
 import { redactConfig, redactValue, SENSITIVE_FIELDS } from "./log.redact"
 

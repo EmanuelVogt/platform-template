@@ -1,6 +1,6 @@
 ---
 name: repo-discovery
-description: Use ao procurar código neste repo — onde um símbolo é definido, quem consome uma rota, componente ou operationId, onde mora a regra de um módulo, o que existe dentro de um arquivo grande. Vale tanto para buscar direto quanto para instruir um subagente de descoberta. Navegar é ~87% de toda a saída de shell aqui, e o que grep enxerga não cobre os dois acoplamentos mais importantes do projeto.
+description: How to find code in this repo — where a symbol is defined, who consumes a route/component/operationId, where a module's rule lives — directly or when briefing a discovery subagent. Covers the two couplings grep cannot see.
 ---
 
 # Descoberta de código

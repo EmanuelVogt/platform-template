@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.error"
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import {
@@ -52,29 +54,29 @@ function makeDeps(over: Record<string, any> = {}) {
   }
 
   const users = over.users ?? {
-    findById: jest.fn().mockResolvedValue(makeUser()),
-    findByIdForUpdate: jest.fn().mockResolvedValue(makeUser()),
-    findByEmail: jest.fn().mockResolvedValue(null),
-    update: jest.fn().mockResolvedValue(undefined),
+    findById: vi.fn().mockResolvedValue(makeUser()),
+    findByIdForUpdate: vi.fn().mockResolvedValue(makeUser()),
+    findByEmail: vi.fn().mockResolvedValue(null),
+    update: vi.fn().mockResolvedValue(undefined),
   }
   const sessions = over.sessions ?? {
-    deleteAllForUser: jest.fn().mockResolvedValue(undefined),
+    deleteAllForUser: vi.fn().mockResolvedValue(undefined),
   }
   const verificationTokens = over.verificationTokens ?? {
-    invalidateAllForUser: jest.fn().mockResolvedValue(undefined),
-    create: jest.fn().mockResolvedValue(undefined),
+    invalidateAllForUser: vi.fn().mockResolvedValue(undefined),
+    create: vi.fn().mockResolvedValue(undefined),
   }
   const tokens = over.tokens ?? {
-    generate: jest.fn().mockReturnValue({ raw: "raw-tok", hash: "hash-tok" }),
+    generate: vi.fn().mockReturnValue({ raw: "raw-tok", hash: "hash-tok" }),
   }
   const hasher = over.hasher ?? {
-    verify: jest.fn().mockResolvedValue(true),
+    verify: vi.fn().mockResolvedValue(true),
   }
   const outbox = over.outbox ?? {
-    publish: jest.fn().mockResolvedValue(undefined),
+    publish: vi.fn().mockResolvedValue(undefined),
   }
   const authEvents = over.authEvents ?? {
-    recordInTx: jest.fn().mockResolvedValue(undefined),
+    recordInTx: vi.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => NOW }
   const ctx = over.ctx ?? fakeRequestContext(() => authedStore)
@@ -166,9 +168,9 @@ describe("RequestEmailChangeUseCase", () => {
     it("lança ForbiddenError quando usuário não é encontrado no repositório", async () => {
       const t = makeDeps({
         users: {
-          findById: jest.fn().mockResolvedValue(null),
-          findByEmail: jest.fn(),
-          update: jest.fn(),
+          findById: vi.fn().mockResolvedValue(null),
+          findByEmail: vi.fn(),
+          update: vi.fn(),
         },
       })
       await expect(
@@ -182,9 +184,9 @@ describe("RequestEmailChangeUseCase", () => {
     it("lança InvalidCredentialsError quando usuário não tem passwordHash (conta sem senha)", async () => {
       const t = makeDeps({
         users: {
-          findById: jest.fn().mockResolvedValue(makeUser({ passwordHash: null })),
-          findByEmail: jest.fn(),
-          update: jest.fn(),
+          findById: vi.fn().mockResolvedValue(makeUser({ passwordHash: null })),
+          findByEmail: vi.fn(),
+          update: vi.fn(),
         },
       })
       await expect(
@@ -195,7 +197,7 @@ describe("RequestEmailChangeUseCase", () => {
 
     it("lança InvalidCredentialsError quando senha está errada", async () => {
       const t = makeDeps({
-        hasher: { verify: jest.fn().mockResolvedValue(false) },
+        hasher: { verify: vi.fn().mockResolvedValue(false) },
       })
       await expect(
         t.uc.execute({ currentPassword: "errada", newEmail: "novo@example.com" }),
@@ -220,11 +222,11 @@ describe("RequestEmailChangeUseCase", () => {
       const tenSecondsAgo = new Date(NOW.getTime() - 10_000)
       const t = makeDeps({
         users: {
-          findById: jest.fn().mockResolvedValue(
+          findById: vi.fn().mockResolvedValue(
             makeUser({ lastEmailChangeRequestedAt: tenSecondsAgo }),
           ),
-          findByEmail: jest.fn().mockResolvedValue(null),
-          update: jest.fn(),
+          findByEmail: vi.fn().mockResolvedValue(null),
+          update: vi.fn(),
         },
       })
       await expect(
@@ -237,11 +239,11 @@ describe("RequestEmailChangeUseCase", () => {
       const tenSecondsAgo = new Date(NOW.getTime() - 10_000)
       const t = makeDeps({
         users: {
-          findById: jest.fn().mockResolvedValue(
+          findById: vi.fn().mockResolvedValue(
             makeUser({ lastEmailChangeRequestedAt: tenSecondsAgo }),
           ),
-          findByEmail: jest.fn().mockResolvedValue(null),
-          update: jest.fn(),
+          findByEmail: vi.fn().mockResolvedValue(null),
+          update: vi.fn(),
         },
         config: { EMAIL_CHANGE_COOLDOWN_SECONDS: 60 },
       })
@@ -256,14 +258,14 @@ describe("RequestEmailChangeUseCase", () => {
     it("não aplica cooldown quando lastEmailChangeRequestedAt é null (primeira solicitação)", async () => {
       const t = makeDeps({
         users: {
-          findById: jest.fn().mockResolvedValue(
+          findById: vi.fn().mockResolvedValue(
             makeUser({ lastEmailChangeRequestedAt: null }),
           ),
-          findByIdForUpdate: jest.fn().mockResolvedValue(
+          findByIdForUpdate: vi.fn().mockResolvedValue(
             makeUser({ lastEmailChangeRequestedAt: null }),
           ),
-          findByEmail: jest.fn().mockResolvedValue(null),
-          update: jest.fn().mockResolvedValue(undefined),
+          findByEmail: vi.fn().mockResolvedValue(null),
+          update: vi.fn().mockResolvedValue(undefined),
         },
       })
       await expect(
@@ -275,14 +277,14 @@ describe("RequestEmailChangeUseCase", () => {
       const longAgo = new Date(NOW.getTime() - 120_000)
       const t = makeDeps({
         users: {
-          findById: jest.fn().mockResolvedValue(
+          findById: vi.fn().mockResolvedValue(
             makeUser({ lastEmailChangeRequestedAt: longAgo }),
           ),
-          findByIdForUpdate: jest.fn().mockResolvedValue(
+          findByIdForUpdate: vi.fn().mockResolvedValue(
             makeUser({ lastEmailChangeRequestedAt: longAgo }),
           ),
-          findByEmail: jest.fn().mockResolvedValue(null),
-          update: jest.fn().mockResolvedValue(undefined),
+          findByEmail: vi.fn().mockResolvedValue(null),
+          update: vi.fn().mockResolvedValue(undefined),
         },
       })
       await expect(
@@ -295,14 +297,14 @@ describe("RequestEmailChangeUseCase", () => {
       const exactlyAtCooldown = new Date(NOW.getTime() - 60_000)
       const t = makeDeps({
         users: {
-          findById: jest.fn().mockResolvedValue(
+          findById: vi.fn().mockResolvedValue(
             makeUser({ lastEmailChangeRequestedAt: exactlyAtCooldown }),
           ),
-          findByIdForUpdate: jest.fn().mockResolvedValue(
+          findByIdForUpdate: vi.fn().mockResolvedValue(
             makeUser({ lastEmailChangeRequestedAt: exactlyAtCooldown }),
           ),
-          findByEmail: jest.fn().mockResolvedValue(null),
-          update: jest.fn().mockResolvedValue(undefined),
+          findByEmail: vi.fn().mockResolvedValue(null),
+          update: vi.fn().mockResolvedValue(undefined),
         },
         config: { EMAIL_CHANGE_COOLDOWN_SECONDS: 60 },
       })
@@ -316,11 +318,11 @@ describe("RequestEmailChangeUseCase", () => {
       const halfSecondShort = new Date(NOW.getTime() - 59_500)
       const t = makeDeps({
         users: {
-          findById: jest.fn().mockResolvedValue(
+          findById: vi.fn().mockResolvedValue(
             makeUser({ lastEmailChangeRequestedAt: halfSecondShort }),
           ),
-          findByEmail: jest.fn().mockResolvedValue(null),
-          update: jest.fn(),
+          findByEmail: vi.fn().mockResolvedValue(null),
+          update: vi.fn(),
         },
         config: { EMAIL_CHANGE_COOLDOWN_SECONDS: 60 },
       })
@@ -336,9 +338,9 @@ describe("RequestEmailChangeUseCase", () => {
     it("lança EmailAlreadyInUseError quando o novo e-mail pertence a usuário ativo", async () => {
       const t = makeDeps({
         users: {
-          findById: jest.fn().mockResolvedValue(makeUser()),
-          findByEmail: jest.fn().mockResolvedValue(makeUser({ id: "u-2", email: "novo@example.com" })),
-          update: jest.fn(),
+          findById: vi.fn().mockResolvedValue(makeUser()),
+          findByEmail: vi.fn().mockResolvedValue(makeUser({ id: "u-2", email: "novo@example.com" })),
+          update: vi.fn(),
         },
       })
       await expect(
@@ -355,9 +357,9 @@ describe("RequestEmailChangeUseCase", () => {
       })
       const t = makeDeps({
         users: {
-          findById: jest.fn().mockResolvedValue(makeUser()),
-          findByEmail: jest.fn().mockResolvedValue(deletedUser),
-          update: jest.fn(),
+          findById: vi.fn().mockResolvedValue(makeUser()),
+          findByEmail: vi.fn().mockResolvedValue(deletedUser),
+          update: vi.fn(),
         },
       })
       await expect(
@@ -381,7 +383,7 @@ describe("RequestEmailChangeUseCase", () => {
     })
 
     it("InvalidCredentialsError (senha errada): nenhuma porta de escrita chamada", async () => {
-      const t = makeDeps({ hasher: { verify: jest.fn().mockResolvedValue(false) } })
+      const t = makeDeps({ hasher: { verify: vi.fn().mockResolvedValue(false) } })
       await expect(
         t.uc.execute({ currentPassword: "errada", newEmail: "novo@example.com" }),
       ).rejects.toThrow()
@@ -396,9 +398,9 @@ describe("RequestEmailChangeUseCase", () => {
       const tenSecondsAgo = new Date(NOW.getTime() - 10_000)
       const t = makeDeps({
         users: {
-          findById: jest.fn().mockResolvedValue(makeUser({ lastEmailChangeRequestedAt: tenSecondsAgo })),
-          findByEmail: jest.fn().mockResolvedValue(null),
-          update: jest.fn(),
+          findById: vi.fn().mockResolvedValue(makeUser({ lastEmailChangeRequestedAt: tenSecondsAgo })),
+          findByEmail: vi.fn().mockResolvedValue(null),
+          update: vi.fn(),
         },
       })
       await expect(

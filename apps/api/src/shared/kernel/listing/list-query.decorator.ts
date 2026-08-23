@@ -28,10 +28,14 @@ export function ListQuery(schema: z.ZodObject<z.ZodRawShape>): MethodDecorator {
     io: "input",
     unrepresentable: "any",
   }) as {
-    properties?: Record<string, QuerySchema>
+    // Sem `?`: `objectProcessor` (zod/v4/core/json-schema-processors.js) fixa
+    // `json.properties = {}` incondicionalmente antes de povoar — para um
+    // `ZodObject`, a chave nunca vem ausente. `required`, ao contrário, só é
+    // emitida quando há ao menos uma chave obrigatória.
+    properties: Record<string, QuerySchema>
     required?: string[]
   }
-  const properties = json.properties ?? {}
+  const properties = json.properties
   const required = new Set(json.required ?? [])
   const params = Object.entries(properties).map(([name, propSchema]) =>
     ApiQuery({ name, required: required.has(name), schema: propSchema })

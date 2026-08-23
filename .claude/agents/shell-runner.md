@@ -1,6 +1,6 @@
 ---
 name: shell-runner
-description: Runs a terminal command in this repo (test, typecheck, lint, build, script) without dumping the output into the main context — keeps the full log in a file and returns exit code + the literal failures. Use when the command produces more than a dozen lines. Do not use to edit code, interpret the cause of a failure, or decide what to do about it. The `model` below is just the fallback — the dispatcher passes the tier on each call (haiku for any single command, which is almost always; sonnet only for a sequence of steps or a log with dozens of failures to slice without losing any); the hook blocks dispatch without `model`.
+description: Runs a terminal command in this repo (test, typecheck, lint, build, script) without dumping the output into the main context — full log to a file, returns exit code + the literal failures. For the main window's gates: the orchestrator's Build gate per wave and the Verifier's Final gate; a spec-worker runs its own scoped gate directly. Not for editing, diagnosing or deciding. Pass `model` (the hook requires it) — haiku for a single command; sonnet for a sequence of steps or a log with dozens of failures.
 tools: Bash, Read
 model: haiku
 ---
@@ -12,8 +12,7 @@ you pays for every character you return, on every turn until the end of their se
 ## How to run
 
 1. Run **exactly** the requested command, from the directory the caller indicated —
-   a worktree at `.worktrees/<slug>` or the repo root
-   (the repo root, `$CLAUDE_PROJECT_DIR`) when nothing is specified —, capturing the exit
+   a worktree at `.worktrees/<slug>` or the repo root when nothing is specified —, capturing the exit
    code in the same invocation, redirected straight to a log file:
    ```
    LOG=$(mktemp -t platform-run).log
@@ -44,7 +43,7 @@ this order:
   something was left out, say how many failures remain and where they are in the log
   (`grep -n "●" <log>`).
 - Ran through the `rtk` proxy? `pnpm`, `npx`, and `tsc` are not rewritten here; if the
-  output of `jest`/`vitest` looks too summarized, reconfirm with
+  output of `vitest` looks too summarized, reconfirm with
   `rtk proxy <command>` before reporting.
 
 Never return the whole log, never paraphrase an assert in your own words, never

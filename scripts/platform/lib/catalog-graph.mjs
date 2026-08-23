@@ -2,7 +2,6 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { readManifest } from "./manifest.mjs";
 import { discoverEntries } from "./lint.mjs";
-import { CyclicDependencyError } from "./plan.mjs";
 
 export class UnknownEntryError extends Error {
   constructor(name) {
@@ -20,30 +19,44 @@ export class CatalogRootMissingError extends Error {
   }
 }
 
-function loadEntryByName(catalogRoot, name, cache) {
-  if (cache.has(name)) return cache.get(name);
-  for (const dir of discoverEntries(catalogRoot)) {
-    const manifest = readManifest(path.join(dir, "module.json"));
-    if (manifest.name === name) {
-      const entry = { name, dir, manifest };
-      cache.set(name, entry);
-      return entry;
-    }
+export class CyclicDependencyError extends Error {
+  constructor(chain) {
+    super(`ciclo de dependências detectado: ${chain.join(" -> ")}`);
+    this.name = "CyclicDependencyError";
+    this.chain = chain;
   }
-  throw new UnknownEntryError(name);
 }
 
-/**
- * Resolve a ordem topológica cumulativa de instalação para as entradas pedidas
- * (inclui `dependsOn` transitivo). Sem argumentos -> todas as entradas
- * encontradas em `catalogRoot`, em uma ordem topológica válida.
- */
-export function resolveInstallOrder({ catalogRoot, requested = [] }) {
+export function entryRootFor(catalogRoot, name, variant) {
+  return variant ? path.join(catalogRoot, name, variant) : path.join(catalogRoot, name);
+}
+
+function indexEntries(catalogRoot) {
   if (!existsSync(catalogRoot)) {
     throw new CatalogRootMissingError(catalogRoot);
   }
+  const index = new Map();
+  for (const dir of discoverEntries(catalogRoot)) {
+    const manifest = readManifest(path.join(dir, "module.json"));
+    if (!index.has(manifest.name)) {
+      index.set(manifest.name, { name: manifest.name, dir, manifest });
+    }
+  }
+  return index;
+}
 
-  const cache = new Map();
+export function listEntries(catalogRoot) {
+  return [...indexEntries(catalogRoot).values()];
+}
+
+export function findEntry(catalogRoot, name) {
+  const entry = indexEntries(catalogRoot).get(name);
+  if (!entry) throw new UnknownEntryError(name);
+  return entry;
+}
+
+export function resolveInstallOrder({ catalogRoot, requested = [], isSatisfied = () => false }) {
+  const index = indexEntries(catalogRoot);
   const order = [];
   const visiting = new Set();
   const visited = new Set();
@@ -53,23 +66,18 @@ export function resolveInstallOrder({ catalogRoot, requested = [] }) {
     if (visiting.has(name)) {
       throw new CyclicDependencyError([...chain, name]);
     }
+    const entry = index.get(name);
+    if (!entry) throw new UnknownEntryError(name);
     visiting.add(name);
-    const entry = loadEntryByName(catalogRoot, name, cache);
     for (const dep of entry.manifest.dependsOn ?? []) {
-      visit(dep.name, [...chain, name]);
+      if (!isSatisfied(dep)) visit(dep.name, [...chain, name]);
     }
     visiting.delete(name);
     visited.add(name);
     order.push(entry);
   }
 
-  const roots =
-    requested.length > 0
-      ? requested
-      : discoverEntries(catalogRoot)
-          .map((dir) => readManifest(path.join(dir, "module.json")).name)
-          .filter((name, index, all) => all.indexOf(name) === index);
-
+  const roots = requested.length > 0 ? requested : [...index.keys()];
   for (const name of roots) visit(name, []);
 
   return order;

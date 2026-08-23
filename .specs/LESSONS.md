@@ -68,37 +68,73 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: .github/workflows/catalog.yml:29-34
 - last seen: 2026-08-21T14:56:46Z
 
-### L-010 — A spec that also runs inside a rendered child must derive its expected paths from the directories it finds, never from the template's own directory names
+### L-010 — A per-entry catalog:check pass does not prove multi-entry compatibility — run the combined catalog:check (every entry installed together, the default no-args scope) at least once before closing a catalog change that touches more than one entry.
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `catalog` · harmful: 0
+- features: vitest-migration
+- evidence: CAT-03 / catalog/audit/api/domain/audit-coverage.int-spec.ts:78 (Final gate: pnpm catalog:check, exit 7) (catalog)
+- last seen: 2026-08-22T21:54:31Z
+
+### L-011 — An advisory's 'Correção adicional' for a structural fix must give products already on the old version the same manual DDL step other structural corrections in the same document give, not just describe the code-side change.
+- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `catalog` · harmful: 0
+- features: vitest-migration
+- evidence: tasks.md Deviation 24b / docs/advisories/ADV-20260821-03.md (missing manual ALTER COLUMN instruction) (catalog)
+- last seen: 2026-08-22T21:54:31Z
+
+### L-012 — A 'no leftover <old-tool>' grep probe must exclude prose that documents the migration itself (advisories, changelogs, absence-assertions), not just the tool's own script name, or it flags expected documentation as a failure.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `docs` · harmful: 0
+- features: vitest-migration
+- evidence: CAT-02 probe: rg -c 'jest\.' apps/api catalog (returns 5 CHANGELOG.md matches) (docs) (+1 more)
+- last seen: 2026-08-22T21:54:31Z
+
+### L-013 — When two catalog entries are siblings (install order not forced by dependsOn) and one attaches DDL that depends on the other, a combined multi-entry install can silently skip the attach — cover it with a coverage-enforcement test that simulates the documented manual re-apply, and document the manual step in both entries' advisories, not just the code comment.
+- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `catalog` · harmful: 0
+- features: vitest-migration
+- evidence: catalog/audit/api/domain/audit-coverage.int-spec.ts:34-38 (SPEC_DEVIATION) / tasks.md Deviation 27 (catalog)
+- last seen: 2026-08-22T22:14:32Z
+
+### L-014 — A worker's scoped gate that runs only typecheck + the test file leaves lint to the wave gate, so a whole wave's specs land before the first lint error is seen; put the package's lint in the cluster gate whenever the cluster writes test files.
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: api-coverage-to-90
+- evidence: 9ff5e57 (wave-2 Build gate: pnpm check exit 1, 6 eslint errors) (testing)
+- last seen: 2026-08-23T00:06:13Z
+
+### L-015 — @typescript-eslint/no-unnecessary-condition firing on a ?? or ?. inside a test is a vacuity detector, not a style nit: an always-nullish operand usually means control-flow narrowing proved the assertion cannot see the value (a let mutated inside a nested closure), so the test asserts nothing. Fix by returning the value out of the awaited chain, never by an eslint-disable.
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: api-coverage-to-90
+- evidence: transaction-manager.int-spec.ts:285 (pre-9ff5e57) (testing)
+- last seen: 2026-08-23T00:06:13Z
+
+### L-016 — A spec that also runs inside a rendered child must derive its expected paths from the directories it finds, never from the template's own directory names
 - signal: `ac_gap` · recurrence: 1 feature(s) · scope: `gates` · harmful: 0
 - features: web-stack-next
 - evidence: apps/api/src/modules/module-boundaries.spec.ts:615,632,639 (gates)
 - last seen: 2026-08-23T17:11:55Z
 
-### L-011 — When a lockfile bump upgrades the linter, re-run lint over catalog/** as well — an entry's spec is only linted inside a rendered child
+### L-017 — When a lockfile bump upgrades the linter, re-run lint over catalog/** as well — an entry's spec is only linted inside a rendered child
 - signal: `gate_fail` · recurrence: 1 feature(s) · scope: `catalog` · harmful: 0
 - features: web-stack-next
 - evidence: catalog/identity/single-tenant/api/application/access-policy.spec.ts:116,139,183 (catalog)
 - last seen: 2026-08-23T17:11:55Z
 
-### L-012 — Give every build-time env var an ARG default in the Dockerfile, or the acceptance criterion that runs a bare docker build can never pass
+### L-018 — Give every build-time env var an ARG default in the Dockerfile, or the acceptance criterion that runs a bare docker build can never pass
 - signal: `ac_gap` · recurrence: 1 feature(s) · scope: `docker` · harmful: 0
 - features: web-stack-next
 - evidence: apps/web-next/Dockerfile:24 (docker)
 - last seen: 2026-08-23T17:11:55Z
 
-### L-013 — Add the framework's build output directory to .gitignore in the same commit that adds a new app, or the artifacts get committed and ship to every rendered child
+### L-019 — Add the framework's build output directory to .gitignore in the same commit that adds a new app, or the artifacts get committed and ship to every rendered child
 - signal: `ac_gap` · recurrence: 1 feature(s) · scope: `repo` · harmful: 0
 - features: web-stack-next
 - evidence: .gitignore:1-68 (237 tracked files under apps/web-next/.next) (repo)
 - last seen: 2026-08-23T17:11:55Z
 
-### L-014 — A zero-diff acceptance criterion must list every path the change legitimately touches, lockfile and shared config packages included, or it fails by construction
+### L-020 — A zero-diff acceptance criterion must list every path the change legitimately touches, lockfile and shared config packages included, or it fails by construction
 - signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
 - features: web-stack-next
 - evidence: .specs/features/web-stack-next/spec.md ACC-01/ACC-02 (spec)
 - last seen: 2026-08-23T17:11:55Z
 
-### L-015 — Adding a path to .gitignore does not untrack what is already committed — pair it with git rm -r --cached in the same commit and verify with git ls-files
+### L-021 — Adding a path to .gitignore does not untrack what is already committed — pair it with git rm -r --cached in the same commit and verify with git ls-files
 - signal: `ac_gap` · recurrence: 1 feature(s) · scope: `repo` · harmful: 0
 - features: web-stack-next
 - evidence: d74104c (.gitignore:13) — git ls-files apps/web-next/.next still 237 at HEAD 0e08d3d (repo)

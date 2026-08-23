@@ -1,13 +1,13 @@
-# Contrato do README de entrada do catálogo
+# Catalog entry README contract
 
-Todo `README.md` de uma entrada do catálogo (`catalog/<name>[/<variant>]/README.md`) segue
-uma estrutura fixa de seções H2 (`##`). O `catalog-lint` (script
-`scripts/platform/catalog-lint.mjs`) lê a lista abaixo como **fonte única** das seções
-obrigatórias e falha se alguma estiver ausente, fora de ordem, ou com título diferente do
-literal exigido.
+Every `README.md` of a catalog entry (`catalog/<name>[/<variant>]/README.md`) follows a
+fixed structure of H2 sections (`##`). The `catalog-lint` (script
+`scripts/platform/catalog-lint.mjs`) reads the list below as the **single source** of the
+required sections and fails if any of them is missing, out of order, or titled differently
+from the required literal.
 
-**A ordem é obrigatória.** As seções devem aparecer no README exatamente nesta sequência, com
-o texto exato de cada título (sem variações de acentuação, caixa ou pontuação):
+**The order is mandatory.** The sections must appear in the README in exactly this sequence,
+with the exact text of each title (no variations in accents, case or punctuation):
 
 ```
 ## Contrato
@@ -20,30 +20,35 @@ o texto exato de cada título (sem variações de acentuação, caixa ou pontua�
 ## Follow-ups absorvidos
 ```
 
-## O que cada seção documenta
+These heading literals are parsed by `scripts/platform/catalog-lint.mjs` and used by every
+entry README under `catalog/**`; they stay in Portuguese until the catalog entries are migrated
+together (see follow-up).
 
-- **`## Contrato`** — tabela de rotas HTTP expostas pela entrada, com colunas de método, path,
-  `operationId`, eventos publicados/consumidos e facades (serviços de aplicação) envolvidas.
-- **`## Portas do kernel consumidas`** — lista das portas do kernel (`shared/kernel/**`,
-  `shared/infra/**`) que os adaptadores da entrada implementam ou consomem.
-- **`## Dados`** — schema (tabelas Drizzle em `api/**/tables`), lista das tabelas que a
-  entrada possui e as migrações manuais em `migrations/custom/*.sql` (triggers, funções — nunca
-  criação de tabela, que vem do código TS).
-- **`## Decisões`** — lista estilo ADR das decisões de design específicas da entrada; é onde
-  moram os sucessores locais de AD-003/004/007/008/009/010 quando a entrada precisa de uma
-  variação desses acordos.
-- **`## Paridade`** — como rodar os testes de paridade (`parity/*.parity.spec.ts`) e o que eles
-  garantem (comparação contra `contract.snapshot.json`).
-- **`## Dependências`** — outras entradas do catálogo exigidas via `dependsOn` e as variáveis de
-  ambiente (`env` do `module.json`) que a entrada declara.
-- **`## Parte web`** — o que existe em `web/core` e `web/react` (se houver) e receitas de
-  integração (como consumir os hooks/opções em uma página ou rota do app filho).
-- **`## Follow-ups absorvidos`** — issues do sweep v0.2 que esta entrada absorveu (campo
-  `absorbs` do `module.json`), com um link ou identificador por item.
+## What each section documents
 
-## Regras adicionais
+- **`## Contrato`** — table of the HTTP routes exposed by the entry, with columns for method,
+  path, `operationId`, events published/consumed and the facades (application services)
+  involved.
+- **`## Portas do kernel consumidas`** — list of the kernel ports (`shared/kernel/**`,
+  `shared/infra/**`) that the entry's adapters implement or consume.
+- **`## Dados`** — schema (Drizzle tables in `api/**/tables`), list of the tables the entry
+  owns and the manual migrations in `migrations/custom/*.sql` (triggers, functions — never
+  table creation, which comes from the TS code).
+- **`## Decisões`** — ADR-style list of the entry-specific design decisions; this is where
+  the local successors of AD-003/004/007/008/009/010 live when the entry needs a variation
+  of those agreements.
+- **`## Paridade`** — how to run the parity tests (`parity/*.parity.spec.ts`) and what they
+  guarantee (comparison against `contract.snapshot.json`).
+- **`## Dependências`** — other catalog entries required via `dependsOn` and the environment
+  variables (`env` in `module.json`) that the entry declares.
+- **`## Parte web`** — what exists in `web/core` and `web/react` (if any) and integration
+  recipes (how to consume the hooks/options in a page or route of the child app).
+- **`## Follow-ups absorvidos`** — issues from the v0.2 sweep that this entry absorbed
+  (`absorbs` field of `module.json`), with a link or identifier per item.
 
-- Seções vazias não são permitidas: se uma entrada não tem parte web, a seção `## Parte web`
-  deve dizer explicitamente que não se aplica, não pode ser omitida.
-- Nenhuma seção fora desta lista é obrigatória; seções extras podem existir após
-  `## Follow-ups absorvidos`, mas nunca entre as oito acima.
+## Additional rules
+
+- Empty sections are not allowed: if an entry has no web part, the `## Parte web` section
+  must state explicitly that it does not apply; it cannot be omitted.
+- No section outside this list is mandatory; extra sections may exist after
+  `## Follow-ups absorvidos`, but never between the eight above.

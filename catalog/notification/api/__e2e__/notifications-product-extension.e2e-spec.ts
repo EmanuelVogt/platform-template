@@ -2,10 +2,11 @@ import { join } from "node:path"
 
 import { Injectable, Module } from "@nestjs/common"
 import { ulid } from "ulid"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { z } from "zod"
 
 import { createE2eApp } from "../../../../test/setup/app-factory"
-import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
+import { createTestPool, truncateKernel } from "../../../../test/setup/test-db"
 import { buildJobContextStore } from "../../../shared/kernel/context/job-context"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
 import { OutboxDispatcher } from "../../../shared/kernel/outbox/outbox.dispatcher"
@@ -43,7 +44,7 @@ class FakeProductNotificationSource implements OnModuleInit {
       }),
       email: {
         template: "sample-welcome",
-        templateDir: join(__dirname, "fixtures", "sample-templates"),
+        templateDir: join(__dirname, "..", "testing", "sample-templates"),
         subject: (data) => `Bem-vindo, ${String(data.name)}`,
       },
     })
@@ -62,7 +63,12 @@ describe("Produto registra um tipo de e-mail ponta a ponta (e2e)", () => {
 
   beforeAll(async () => {
     const pool = createTestPool()
-    await truncateIdentity(pool)
+    // SPEC_DEVIATION: sem `truncateIdentity` — este e2e não depende de identity
+    // (recipientId é um ulid() solto, sem FK para identity.users, per AD-025/5ef5e9e);
+    // chamá-lo falha com schema "identity" does not exist quando o filho renderizado
+    // só contém notification (catalog:check standalone).
+    // Reason: o gate de DB tier por entrada (AC3) agora roda de fato e expôs a chamada
+    // órfã deixada pelo refactor que tirou o e2e cruzado do notification.
     await truncateKernel(pool)
     await pool.query(
       "truncate table notification.notifications, notification.notification_deliveries",

@@ -1,6 +1,6 @@
 ---
 name: repo-scout
-description: Locates code in this repo without polluting the main context — where a symbol is defined, who consumes a route or component, where a module's rule lives, what's in a large file, the map of an entire module or feature (files, layers, entry points) before touching it. Use before grepping around: navigating costs ~87% of all shell output, and that output gets repaid every subsequent turn if it lands in the main context. Do not use for editing, reviewing, or deciding architecture. The `model` below is just the fallback — the dispatcher passes the tier on each call (haiku for a pinpoint question: where X is defined, who consumes Y, what's in file Z; sonnet for the map of a module/feature or when finding requires judging where a rule lives); the hook blocks dispatch without `model`.
+description: Locates code in this repo without polluting the main context — where a symbol is defined, who consumes a route/component, where a module's rule lives, what's in a large file, the map of a module or feature. Use instead of grepping around. Not for editing, reviewing or deciding architecture. Pass `model` (the hook requires it) — haiku for a pinpoint question, sonnet for a module map or when judging where a rule lives.
 tools: Bash, Read
 model: sonnet
 ---

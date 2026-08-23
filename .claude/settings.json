@@ -68,6 +68,33 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/subagent-model-required.mjs\"",
             "statusMessage": "Checking the subagent tier"
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/dispatch-log.mjs\" dispatch",
+            "statusMessage": "Logging the dispatch"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/dispatch-log.mjs\" start",
+            "statusMessage": "Logging the subagent start"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/dispatch-log.mjs\" stop",
+            "statusMessage": "Logging the subagent run"
           }
         ]
       }
@@ -116,6 +143,11 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/contract-consumers.mjs\"",
             "statusMessage": "Mapping contract consumers"
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/wave-plan-check.mjs\"",
+            "statusMessage": "Checking the wave plan"
           }
         ]
       }
@@ -125,7 +157,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/kill-orphan-dev-servers.mjs\" 2>/dev/null || true",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/kill-orphan-dev-servers.mjs\"",
             "statusMessage": "Terminating orphan dev servers"
           }
         ]

@@ -1,5 +1,6 @@
-import { readdirSync } from "node:fs"
-import { sep } from "node:path"
+import { describe, expect, it } from "vitest"
+
+import { listDirectories, listFiles } from "../shared/test/unit/source-survey"
 
 const MODULES_DIR = __dirname
 
@@ -11,19 +12,14 @@ const MODULES_DIR = __dirname
 // instalação, quando o fato deixa de ser verdade no produto.
 describe("template-kernel-only — o template sobe sem entrada instalada (KRN-01)", () => {
   it("src/modules não tem pasta de módulo", () => {
-    const dirs = readdirSync(MODULES_DIR, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => entry.name)
-    expect(dirs).toEqual([])
+    expect(listDirectories(MODULES_DIR)).toEqual([])
   })
 
   it("src/modules não tem arquivo de produção — só os guards do próprio ponto de montagem", () => {
-    const production = readdirSync(MODULES_DIR, {
-      recursive: true,
-      encoding: "utf8",
-    })
-      .map((entry) => entry.split(sep).join("/"))
-      .filter((entry) => entry.endsWith(".ts") && !entry.endsWith(".spec.ts"))
+    const production = listFiles(
+      MODULES_DIR,
+      (rel) => rel.endsWith(".ts") && !rel.endsWith(".spec.ts")
+    )
     expect(production).toEqual([])
   })
 })

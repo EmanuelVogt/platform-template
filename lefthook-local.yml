@@ -1,0 +1,21 @@
+# Gates que só existem no repositório do template. O lefthook mescla este arquivo
+# por cima de `lefthook.yml`; `copier.yml` o exclui da cópia, então o produto não
+# herda hook apontando para script que ele não recebe (`catalog/` e os validadores
+# ficam aqui). Comandos chamam o módulo direto, sem passar por script de
+# `package.json`, porque o `package.json` do filho não tem esses scripts.
+pre-push:
+  piped: true
+  commands:
+    catalog-typecheck:
+      run: node scripts/platform/catalog-stage.mjs
+
+pre-commit:
+  commands:
+    catalog-lint:
+      glob: "{catalog/**,docs/advisories/**}"
+      run: node scripts/platform/catalog-lint.mjs
+
+commit-msg:
+  commands:
+    advisory-required:
+      run: node scripts/platform/advisory-required.mjs {1}

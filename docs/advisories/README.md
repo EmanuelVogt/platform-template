@@ -1,13 +1,13 @@
 <!--
-Canal de advisories da plataforma. Arquivos `ADV-YYYYMMDD-NN.md` desta pasta
-são imutáveis no filho — nunca edite, apague ou mova; `copier update`
-reescreve o conteúdo do template a cada release. Aplicou a correção?
-Acrescente uma linha em `APPLIED.md`, nunca edite o advisory.
+Platform advisory channel. The `ADV-YYYYMMDD-NN.md` files in this folder
+are immutable in the child — never edit, delete or move them; `copier update`
+rewrites the template's content on every release. Applied the fix?
+Add a line to `APPLIED.md`; never edit the advisory.
 -->
 
 # docs/advisories
 
-Cada advisory é um arquivo `ADV-<YYYYMMDD>-<NN>.md` com frontmatter:
+Each advisory is a file `ADV-<YYYYMMDD>-<NN>.md` with frontmatter:
 
 ```yaml
 id: ADV-20260901-01
@@ -16,16 +16,16 @@ module: <entry>/<variant>
 affects: ">=1.0.0 <1.2.0" # semver range
 severity: low | medium | high | critical
 detect: "pnpm platform advisory detect ADV-20260901-01"
-fix: "resumo + link para o changelog"
-parity: "caminho/para/o.parity.spec.ts"
+fix: "summary + link to the changelog"
+parity: "path/to/the.parity.spec.ts"
 ```
 
-Corpo em pt-BR: contexto, impacto, passos.
+Body in pt-BR: context, impact, steps.
 
-- `pnpm platform advisory detect <id>` roda o `detect` do advisory (exit 1 =
-  filho afetado).
-- No início da sessão, `.claude/hooks/pending-advisories.mjs` computa quais
-  advisories afetam os módulos instalados (`.platform-modules.lock`) e ainda
-  não constam em `APPLIED.md`, e mostra um resumo.
-- Correção em `catalog/**` sem advisory correspondente é barrada no commit
+- `pnpm platform advisory detect <id>` runs the advisory's `detect` (exit 1 =
+  child affected).
+- At session start, `.claude/hooks/pending-advisories.mjs` computes which
+  advisories affect the installed modules (`.platform-modules.lock`) and are not
+  yet listed in `APPLIED.md`, and shows a summary.
+- A fix in `catalog/**` without a matching advisory is blocked at commit time
   (`scripts/platform/advisory-required.mjs`).

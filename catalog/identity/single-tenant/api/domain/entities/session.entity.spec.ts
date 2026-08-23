@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { Session } from './session.entity';
 
 const DAY = 86_400; // segundos

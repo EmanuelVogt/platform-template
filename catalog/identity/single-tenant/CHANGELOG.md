@@ -4,18 +4,27 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 [semver](https://semver.org/lang/pt-BR/). Toda versão que leva código lista os advisories
 (`docs/advisories/ADV-*.md`) que carrega.
 
-## [1.0.1]
+## [2.0.0]
 
-### Corrigido
+### Breaking
 
-- `api/application/access-policy.spec.ts`: `makeScope()` deixa de tipar o mock como
-  `ProfessionalScope & { assertValid: jest.Mock }` (interseção com a interface da porta) e
-  passa a retornar só `{ assertValid: jest.Mock }`, o que satisfaz `@typescript-eslint/unbound-method`
-  após o bump do `typescript-eslint` para 8.67.
+- Specs migradas de Jest para Vitest via `node scripts/platform/jest-to-vitest.mjs
+  catalog/identity/single-tenant` (ADV-20260821-03): `jest.*` → `vi.*`, `jest.requireActual` →
+  `await vi.importActual`, tipos `jest.Mock*`/`jest.SpyInstance` → `Mock`/`Mocked`/
+  `MockedFunction`/`MockInstance` de `"vitest"`. `dependsOn` notification sobe para
+  `>=2.0.0 <3.0.0`. Filhos em `>=1.0.0 <2.0.0` precisam rodar o codemod antes de atualizar.
 
-### Advisories
+### Fixed
 
-- `ADV-20260823-01`
+- `module.json` `schemaExports` não listava `tables/identity.schema` (a declaração
+  `pgSchema("identity")`): o snapshot do drizzle-kit gerava `"schemas": {}` e a migração
+  baseline não emitia `CREATE SCHEMA "identity"`, quebrando `pnpm catalog:check` em bancos novos.
+- `user_professional_services.created_at` usava `defaultNow()` (hora de início da transação, não
+  por linha): um `INSERT` em lote de vários vínculos (`replaceForService`) empatava o
+  `created_at` de todas as linhas, e `listByServiceIds` desempatava por `user_id` (ULID), sem
+  relação com a ordem de inserção — exposto por `pnpm catalog:check attachment` (identity como
+  dependência), nunca pelo `catalog:check identity` isolado. Passa a usar `clock_timestamp()`
+  (ADV-20260821-03).
 
 ## [1.0.0]
 

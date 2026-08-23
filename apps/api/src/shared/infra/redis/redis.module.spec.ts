@@ -1,20 +1,22 @@
+import { type Mock, describe, expect, it, vi } from "vitest"
+
 import { RedisConnection } from "./redis.module"
 
 import type { LoggerFactory } from "../../kernel/logging/logger.factory"
 import type Redis from "ioredis"
 
-function makeConnection(quit: jest.Mock): {
+function makeConnection(quit: Mock): {
   conn: RedisConnection
-  disconnect: jest.Mock
+  disconnect: Mock
 } {
-  const disconnect = jest.fn()
-  const redis = { quit, disconnect, on: jest.fn() } as unknown as Redis
+  const disconnect = vi.fn()
+  const redis = { quit, disconnect, on: vi.fn() } as unknown as Redis
   const lf = {
     forModule: () => ({
-      error: jest.fn(),
-      warn: jest.fn(),
-      info: jest.fn(),
-      debug: jest.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
     }),
   } as unknown as LoggerFactory
   return { conn: new RedisConnection(redis, lf), disconnect }
@@ -23,14 +25,14 @@ function makeConnection(quit: jest.Mock): {
 describe("RedisConnection.onApplicationShutdown", () => {
   it("quit resolve → sem disconnect forçado", async () => {
     const { conn, disconnect } = makeConnection(
-      jest.fn().mockResolvedValue("OK")
+      vi.fn().mockResolvedValue("OK")
     )
     await conn.onApplicationShutdown()
     expect(disconnect).not.toHaveBeenCalled()
   })
 
   it("quit rejeita (socket ainda conectando) → não propaga e cai para disconnect", async () => {
-    const quit = jest.fn().mockRejectedValue(
+    const quit = vi.fn().mockRejectedValue(
       new Error("Stream isn't writeable and enableOfflineQueue options is false")
     )
     const { conn, disconnect } = makeConnection(quit)

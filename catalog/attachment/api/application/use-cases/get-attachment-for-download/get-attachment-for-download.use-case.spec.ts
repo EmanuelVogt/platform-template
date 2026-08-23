@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { Attachment } from "../../../domain/attachment.entity"
 import { AttachmentNotFoundError } from "../../../domain/errors"
 
@@ -13,27 +15,27 @@ function entity(visibility: "public" | "authenticated" | "restricted", owner: st
 
 function makeDeps(userId: string | null) {
   const storage = {
-    getStream: jest.fn().mockResolvedValue("STREAM"),
-    put: jest.fn(),
-    head: jest.fn(),
-    delete: jest.fn(),
-    putStream: jest.fn(),
+    getStream: vi.fn().mockResolvedValue("STREAM"),
+    put: vi.fn(),
+    head: vi.fn(),
+    delete: vi.fn(),
+    putStream: vi.fn(),
   }
   const repo = {
-    findById: jest.fn(),
-    insert: jest.fn(),
-    update: jest.fn(),
-    insertMany: jest.fn(),
-    findByIds: jest.fn(),
-    saveMany: jest.fn(),
-    findPendingOlderThan: jest.fn(),
-    deleteByIds: jest.fn(),
+    findById: vi.fn(),
+    insert: vi.fn(),
+    update: vi.fn(),
+    insertMany: vi.fn(),
+    findByIds: vi.fn(),
+    saveMany: vi.fn(),
+    findPendingOlderThan: vi.fn(),
+    deleteByIds: vi.fn(),
   }
   const log = {
-    record: jest.fn(),
-    recordInTx: jest.fn(),
-    listByAttachment: jest.fn(),
-    deleteBatchOlderThan: jest.fn(),
+    record: vi.fn(),
+    recordInTx: vi.fn(),
+    listByAttachment: vi.fn(),
+    deleteBatchOlderThan: vi.fn(),
   }
   const ctx = {
     get: () => ({ ip: "2.2.2.2", userAgent: "ua", correlationId: "c2" }),

@@ -11,7 +11,8 @@ error messages follow [`../code-quality.md`](../code-quality.md) as always.
   a long session pays that surcharge on every thinking block.
 - **Agent-facing docs: English** — this file, everything under `docs/agents/`, and
   everything born in `.specs/`.
-- **Human handbooks: pt-BR** — the rest of `docs/`. Don't translate them.
+- **Human handbooks: English too** — the rest of `docs/`. The user is addressed in pt-BR;
+  the docs are not.
 - Product strings quoted from the UI (screen labels, error messages) stay in pt-BR inside
   English text.
 
@@ -35,7 +36,7 @@ pattern names — only when asked.
 > sumir da tela."
 
 **Don't name variables, functions, classes or files** mid-explanation. Point at what the
-thing does ("a tela da agenda do hóspede") and put the file link beside it. If a
+thing does ("a tela de configurações da conta") and put the file link beside it. If a
 technical term is unavoidable, translate it in the same sentence.
 
 **Analogies come from the adult world**, preferably from the business itself — front

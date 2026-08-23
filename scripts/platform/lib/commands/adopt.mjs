@@ -1,22 +1,20 @@
 import path from "node:path";
 import { writeLock as persistEntry } from "../apply.mjs";
+import { entryRootFor } from "../catalog-graph.mjs";
 import { resolveCatalog } from "../catalog-source.mjs";
+import { childLayout, webRootFor } from "../child-layout.mjs";
 import { EXIT_CODES } from "../exit-codes.mjs";
 import { readLock } from "../lock.mjs";
 import { readManifest } from "../manifest.mjs";
 import { planCopy } from "../plan.mjs";
 
-function entryRootFor(catalogRoot, name, variant) {
-  return variant ? path.join(catalogRoot, name, variant) : path.join(catalogRoot, name);
-}
-
 export async function adoptCommand({ name, options, cwd = process.cwd() }) {
-  const lockPath = path.join(cwd, ".platform-modules.lock");
+  const { lockPath, copierAnswersPath } = childLayout(cwd);
 
   let catalog;
   let manifest;
   try {
-    catalog = resolveCatalog(options["catalog-ref"], { copierAnswersPath: path.join(cwd, ".copier-answers.yml") });
+    catalog = resolveCatalog(options["catalog-ref"], { copierAnswersPath });
     manifest = readManifest(path.join(entryRootFor(catalog.root, name, options.variant), "module.json"));
   } catch (err) {
     process.stderr.write(`catálogo inacessível ou módulo ausente: ${err.message}\n`);
@@ -24,7 +22,7 @@ export async function adoptCommand({ name, options, cwd = process.cwd() }) {
   }
 
   const entryRoot = entryRootFor(catalog.root, name, options.variant);
-  const webRoot = options["web-root"] ? path.join(options["web-root"], "entities", name) : undefined;
+  const webRoot = options["web-root"] ? webRootFor(name, options["web-root"]) : undefined;
   const { files } = planCopy(entryRoot, manifest, { webRoot, targetRoot: cwd });
 
   const version = options.version ?? manifest.version;

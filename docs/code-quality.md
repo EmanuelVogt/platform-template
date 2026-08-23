@@ -1,144 +1,144 @@
-# Code Quality — Regras obrigatórias
+# Code Quality — Mandatory Rules
 
-Cross-cutting. Vale `apps/api` e `apps/web`. **Leitura obrigatória antes de qualquer código.** Cada regra aqui reprova PR se violada. Arquitetura de área: `back/back-arch.md`, `front/front-arch.md`.
+Cross-cutting. Applies to `apps/api` and `apps/web`. **Required reading before writing any code.** Every rule here fails the PR if violated. Area architecture: `arch/back.md`, `arch/front.md`.
 
-## Princípios
+## Principles
 
-1. **YAGNI** — não implemente pra futuro hipotético. 3 linhas iguais > abstração prematura.
-2. **Cirurgia, não rewrite** — edit foca no que muda. Refactor adjacente só quando reduz risco do fix.
-3. **Trust the types** — sem defensivo redundante onde o tipo/framework garante. Boundary real (input externo, IO, parse) ainda precisa handling.
-4. **Sem shim de compatibilidade** — mude direto. Sem feature flag pra coisa que não reverte.
-5. **No comments by default** — código bem-nomeado se explica.
-6. **Idioma fixo** — identificador em inglês; comentário/docstring/erro user-facing em pt-BR.
+1. **YAGNI** — do not implement for a hypothetical future. 3 identical lines > premature abstraction.
+2. **Surgery, not rewrite** — an edit focuses on what changes. Adjacent refactor only when it reduces the risk of the fix.
+3. **Trust the types** — no redundant defensive code where the type/framework guarantees it. A real boundary (external input, IO, parse) still needs handling.
+4. **No compatibility shim** — change it directly. No feature flag for something that does not get reverted.
+5. **No comments by default** — well-named code explains itself.
+6. **Fixed language** — identifiers in English; comments/docstrings/user-facing errors in pt-BR.
 
-## Comentários
+## Comments
 
-**Default: ZERO.** Comentário é exceção que o autor justifica. Sem caso válido apontado → defeito, review deleta. Arquivo com comentário em vários blocos reprova o PR.
+**Default: ZERO.** A comment is an exception the author justifies. No valid case pointed out → defect, review deletes it. A file with comments in several blocks fails the PR.
 
-**Teste de deleção — um "sim" deleta:**
+**Deletion test — one "yes" deletes:**
 
-1. Nome melhor elimina a necessidade? → renomeie.
-2. Tipo/assinatura já garante? → redundante.
-3. `git blame` + commit carregam (motivo, autor, PR, data)? → vai pro commit.
+1. Would a better name eliminate the need? → rename.
+2. Does the type/signature already guarantee it? → redundant.
+3. Do `git blame` + the commit carry it (reason, author, PR, date)? → it goes in the commit.
 
-**Casos válidos (lista FECHADA — 4):**
+**Valid cases (CLOSED list — 4):**
 
-1. Invariante não-óbvio que o tipo não captura — `// requer ORDER BY id ASC; cursor depende disso`.
-2. Workaround de bug externo com referência — `// Safari <17: requestIdleCallback não dispara em background tab`.
-3. Constraint de domínio fora do código adjacente — `// CPF pode ter zeros à esquerda — manter string`.
-4. Decisão contraintuitiva que outro dev "consertaria" — `// sleep intencional: rate-limit Meta = 1 req/s`.
+1. Non-obvious invariant the type does not capture — `// requires ORDER BY id ASC; the cursor depends on it`.
+2. Workaround for an external bug, with a reference — `// Safari <17: requestIdleCallback does not fire in a background tab`.
+3. Domain constraint outside the adjacent code — `// CPF may have leading zeros — keep it a string`.
+4. Counterintuitive decision another dev "would fix" — `// intentional sleep: Meta rate limit = 1 req/s`.
 
-Não é um dos 4 → código mal-nomeado/mal-estruturado, conserte a causa.
+Not one of the 4 → badly named/badly structured code, fix the cause.
 
-**Comentário de IA — deletar à vista.** Reprovam PR: narração de passo (`// Step 1`, `// Now loop`), reafirmar a linha (`// incrementa contador`), parafrasear símbolo, sumário de bloco, banner/separador, JSDoc que repete assinatura, `// TODO: implement`. Ao revisar output de IA: apague todo comentário gerado, re-justifique do zero o que mantiver.
+**AI comments — delete on sight.** These fail the PR: step narration (`// Step 1`, `// Now loop`), restating the line (`// increment counter`), paraphrasing a symbol, block summary, banner/separator, JSDoc that repeats the signature, `// TODO: implement`. When reviewing AI output: delete every generated comment, re-justify from scratch whatever you keep.
 
-**Boy-scout ao editar.** Tocou num arquivo → audite os comentários pré-existentes da **região que mexeu** contra os 4 casos e apague o ruído (sobretudo gerado por IA) no mesmo edit. Escopo = região tocada, não o arquivo inteiro: não vira refactor amplo nem mistura com `feat`/`fix` no mesmo PR (edit cirúrgico).
+**Boy-scout when editing.** Touched a file → audit the pre-existing comments of the **region you changed** against the 4 cases and delete the noise (especially AI-generated) in the same edit. Scope = the touched region, not the whole file: it does not become a broad refactor nor gets mixed with `feat`/`fix` in the same PR (surgical edit).
 
-**Também vetado:** TODO sem condição mensurável (ok: `// TODO(2026-Q3): remover após migração auth, issue #142`), comentário desatualizado ao editar adjacente, bloco multi-parágrafo em função (extrai função), código comentado (git guarda).
+**Also banned:** TODO without a measurable condition (ok: `// TODO(2026-Q3): remove after the auth migration, issue #142`), comment left stale when editing adjacent code, multi-paragraph block inside a function (extract a function), commented-out code (git keeps it).
 
-**JSDoc/TSDoc:** só em API pública (export consumido fora do módulo/slice) E quando a assinatura não cobre o contrato (idempotência, side-effect, ordering, lock). Documenta contrato, nunca implementação. Texto pt-BR; tags/tipos inglês. Parafrasear assinatura = comentário de IA, deletar.
+**JSDoc/TSDoc:** only on public API (export consumed outside the module/slice) AND when the signature does not cover the contract (idempotency, side effect, ordering, lock). Documents the contract, never the implementation. Text in pt-BR; tags/types in English. Paraphrasing the signature = AI comment, delete.
 
-## Idioma
+## Language
 
-- Identificadores (var, função, tipo, arquivo, branch, módulo): **inglês**.
-- Comentário, docstring, erro user-facing: **pt-BR**.
-- Termo técnico de stack (`stream`, `cache`, `webhook`, `payload`, `idempotente`, `outbox`): inglês.
-- Log interno: pt-BR com termos de stack inglês (`unauthorized`, `forbidden`, `not found`, `timeout`).
-- Nunca vazar stack/SQL/path interno em mensagem user-facing.
+- Identifiers (variable, function, type, file, branch, module): **English**.
+- Comments, docstrings, user-facing errors: **pt-BR**.
+- Stack technical terms (`stream`, `cache`, `webhook`, `payload`, `idempotente`, `outbox`): English.
+- Internal logs: pt-BR with English stack terms (`unauthorized`, `forbidden`, `not found`, `timeout`).
+- Never leak stack traces/SQL/internal paths in a user-facing message.
 
-## Nomenclatura
+## Naming
 
-Tabela de casing por tipo e naming de arquivo: back em `back-arch.md`, front em `front-arch.md` (DB Postgres no `back-arch.md`). Cross-cutting:
+Casing table by kind and file naming: back in `arch/back.md`, front in `arch/front.md` (Postgres DB in `arch/back.md`). Cross-cutting:
 
-- Nome descreve **o que é**, não como funciona. `invoices` > `invoiceArray`.
-- Boolean nunca negativo (`is/has/can/should`): `isEnabled`, nunca `isNotDisabled`.
-- Função = verbo; classe/tipo = substantivo.
-- Abreviação só universal no domínio (`id`, `url`, `db`, `ctx`). Sem `usr`, `mgr`.
-- Singular = entidade; plural = coleção.
+- The name describes **what it is**, not how it works. `invoices` > `invoiceArray`.
+- Booleans never negative (`is/has/can/should`): `isEnabled`, never `isNotDisabled`.
+- Function = verb; class/type = noun.
+- Abbreviations only when universal in the domain (`id`, `url`, `db`, `ctx`). No `usr`, `mgr`.
+- Singular = entity; plural = collection.
 
-## Funções
+## Functions
 
-- Curtas. Sinal em ~30 linhas; gate hard em 50 (review reprova).
-- 1 responsabilidade; nome reflete a única coisa.
-- Early return; evite aninhamento profundo.
-- Até 3 parâmetros posicionais; mais = objeto `{ }`.
-- Sem flag booleana (`send(invoice, true)`) — quebre em duas funções.
-- Pura quando possível. `domain/` é exclusivamente puro.
+- Short. Warning sign at ~30 lines; hard gate at 50 (review fails).
+- 1 responsibility; the name reflects that single thing.
+- Early return; avoid deep nesting.
+- Up to 3 positional parameters; more = `{ }` object.
+- No boolean flag (`send(invoice, true)`) — split into two functions.
+- Pure when possible. `domain/` is exclusively pure.
 
-## Tipagem TS
+## TS typing
 
-- `tsconfig` strict: `strict`, `noUncheckedIndexedAccess`, `noImplicitOverride`, `exactOptionalPropertyTypes`. Vale nos dois apps, sem exceção — acesso por índice sempre entrega `| undefined` e o caso ausente tem que ser tratado.
-- **`any` proibido** (ESLint error). `unknown` + narrowing.
-- `unknown` em boundary externo (parse, IO); `never` em exhaustive check.
-- `type` por padrão; `interface` só pra declaration merging.
-- `as` só em boundary ou após narrowing. Nunca `as any` / `as unknown as X`.
-- Discriminated union pra modelar estado/forma, **nunca** controle de fluxo de erro (use throw).
-- Inferência em local; anote retorno de função exportada.
-- Readonly em props, config, retorno de selector.
-- Branded types pra IDs e VOs primitivos.
+- Strict `tsconfig`: `strict`, `noUncheckedIndexedAccess`, `noImplicitOverride`, `exactOptionalPropertyTypes`. Applies to both apps, no exception — index access always yields `| undefined` and the missing case has to be handled.
+- **`any` is forbidden** (ESLint error). `unknown` + narrowing.
+- `unknown` at external boundaries (parse, IO); `never` in exhaustive checks.
+- `type` by default; `interface` only for declaration merging.
+- `as` only at a boundary or after narrowing. Never `as any` / `as unknown as X`.
+- Discriminated unions to model state/shape, **never** error control flow (use throw).
+- Inference for locals; annotate the return type of exported functions.
+- Readonly on props, config, selector returns.
+- Branded types for IDs and primitive VOs.
 
 ## Imports
 
-- Ordem (grupos separados por linha em branco): builtins Node → libs externas → aliases (`@/`) → relativos → `import type` → side-effects.
-- `import type` em tudo que é só tipo.
-- Sem `import *` salvo namespace idiomático (`import * as z from 'zod'`).
-- Sem default export salvo lazy route (TanStack/`React.lazy`) e config de plugin.
-- Sem import circular (lint pega).
-- Subpath > barrel em packages (`@platform/api-client/hooks/*` | `zod/*` | `models/*`).
+- Order (groups separated by a blank line): Node builtins → external libs → aliases (`@/`) → relative → `import type` → side effects.
+- `import type` for everything that is type-only.
+- No `import *` except idiomatic namespaces (`import * as z from 'zod'`).
+- No default export except lazy routes (TanStack/`React.lazy`) and plugin config.
+- No circular imports (lint catches it).
+- Subpath > barrel in packages (`@platform/api-client/hooks/*` | `zod/*` | `models/*`).
 
-## Erros
+## Errors
 
-- **Throw é o único caminho de erro.** Nunca `Result<T>`/`Either`.
-- Throw `Error` ou subclasse, nunca string/objeto solto.
-- Classes customizadas no `domain/` (`extends DomainError`); filter global mapeia → RFC 7807.
-- Sem swallow. `try/catch` que loga e continua precisa razão escrita (comentário caso 4).
-- `unknown` no catch, sempre narrowing; re-throw o que não tratou.
-- User-facing: pt-BR, sem stack/SQL/path. `correlationId` no envelope (RFC 7807 no back).
-- Logs: passe `{ err }`, nunca `err.message` (perde stack).
+- **Throw is the only error path.** Never `Result<T>`/`Either`.
+- Throw `Error` or a subclass, never a bare string/object.
+- Custom classes in `domain/` (`extends DomainError`); the global filter maps → RFC 7807.
+- No swallowing. A `try/catch` that logs and continues needs a written reason (comment case 4).
+- `unknown` in catch, always narrowing; re-throw what you did not handle.
+- User-facing: pt-BR, no stack/SQL/path. `correlationId` in the envelope (RFC 7807 on the back).
+- Logs: pass `{ err }`, never `err.message` (loses the stack).
 
 ## Async
 
-- **Sem floating promise** (ESLint error). `await`, `.then()` ou `void` explícito.
-- `Promise.all` em independentes; `await` em loop só com dependência.
-- `AbortSignal` em fetch/IO longo (handler de evento, job).
-- Sem `async` sem `await` dentro.
-- Sem `new Promise((resolve, reject))` quando há API async nativa.
+- **No floating promises** (ESLint error). `await`, `.then()` or explicit `void`.
+- `Promise.all` on independent calls; `await` in a loop only with a dependency.
+- `AbortSignal` on fetch/long IO (event handler, job).
+- No `async` without an `await` inside.
+- No `new Promise((resolve, reject))` when a native async API exists.
 
 ## Lint / format
 
-- Prettier = formatador único, sem debate de estilo.
-- ESLint: `typescript-eslint` strictTypeChecked + stylisticTypeChecked, `import-x` (ordem, no-cycle), `unused-imports`; front adiciona react/react-hooks/jsx-a11y.
-- **Proibido suprimir lint** — sem `eslint-disable` em nenhuma forma, sem desligar regra no arquivo. Conflito com padrão obrigatório de framework → escalar ao user, nunca suprimir inline.
-- CI bloqueia merge em lint/format/typecheck error.
+- Prettier = the single formatter, no style debate.
+- ESLint: `typescript-eslint` strictTypeChecked + stylisticTypeChecked, `import-x` (order, no-cycle), `unused-imports`; front adds react/react-hooks/jsx-a11y.
+- **Suppressing lint is forbidden** — no `eslint-disable` in any form, no turning a rule off in the file. Conflict with a mandatory framework pattern → escalate to the user, never suppress inline.
+- CI blocks merge on lint/format/typecheck error.
 
-## Testes
+## Tests
 
-- Pirâmide: unit (`domain/` puro) > integration (`application/` + Postgres real) > e2e.
-- Sem mock de banco em integration/e2e — `testcontainers`.
-- Nome do teste descreve comportamento, não implementação.
+- Pyramid: unit (pure `domain/`) > integration (`application/` + real Postgres) > e2e.
+- No database mock in integration/e2e — `testcontainers`.
+- The test name describes behavior, not implementation.
 - AAA: arrange, act, assert.
-- Sem teste de getter/setter trivial.
-- Cobertura: `domain/` (entidades + VOs) ≥ 80%. Restante = consequência, não meta.
-- Snapshot só pra estrutura estável (OpenAPI, schema), nunca componente React.
+- No tests for trivial getters/setters.
+- Coverage: `domain/` (entities + VOs) ≥ 80%. The rest = consequence, not target.
+- Snapshots only for stable structure (OpenAPI, schema), never a React component.
 
-## PR / escopo
+## PR / scope
 
-- Escopo único declarado: `feat:` / `fix:` / `refactor:` não se misturam.
-- Refactor adjacente só quando reduz risco do fix — justificar.
-- Renomear em PR separado; move + rename = 2 commits.
-- Sem reformatação massiva (sem PR "format only").
+- Single declared scope: `feat:` / `fix:` / `refactor:` do not mix.
+- Adjacent refactor only when it reduces the risk of the fix — justify it.
+- Rename in a separate PR; move + rename = 2 commits.
+- No mass reformatting (no "format only" PR).
 
-## Checklist de code review
+## Code review checklist
 
-CI cobre lint, format, typecheck, `any`, `console.log`, floating promise, import order. Review foca no resto.
+CI covers lint, format, typecheck, `any`, `console.log`, floating promises, import order. Review focuses on the rest.
 
 ```
-□ Comentário só nos 4 casos; nada descritivo; JSDoc só contrato não-óbvio
-□ Função: 1 responsabilidade, sem flag booleana, ≤50 linhas
-□ Erro: subclasse de DomainError, throw é único caminho (sem Result<T>); sem swallow
-□ Promise.all em paralelizáveis (await-in-loop só com dependência)
-□ Testes nomeiam comportamento; sem mock de banco em integration/e2e; domain/ ≥ 80%
-□ PR de escopo único; sem reformat massivo; sem eslint-disable
-□ Idioma: identificador inglês; comentário/erro user-facing pt-BR
-□ Cumpre handbook da camada (back-arch / front-arch)
+□ Comments only in the 4 cases; nothing descriptive; JSDoc only for a non-obvious contract
+□ Function: 1 responsibility, no boolean flag, ≤50 lines
+□ Error: DomainError subclass, throw is the only path (no Result<T>); no swallowing
+□ Promise.all on parallelizable calls (await-in-loop only with a dependency)
+□ Tests name behavior; no database mock in integration/e2e; domain/ ≥ 80%
+□ Single-scope PR; no mass reformat; no eslint-disable
+□ Language: identifiers in English; comments/user-facing errors in pt-BR
+□ Follows the layer handbook (arch/back / arch/front)
 ```

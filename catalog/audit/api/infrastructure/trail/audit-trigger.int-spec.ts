@@ -1,15 +1,19 @@
 import { sql } from "drizzle-orm"
 import { ulid } from "ulid"
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 import {
   createTestDb,
   createTestPool,
   truncateIdentity,
-  truncateTag,
 } from "../../../../../test/setup/test-db"
 import { makeTestLogger } from "../../../../../test/setup/test-logger"
 import { RequestContext, type RequestContextStore } from "../../../../shared/kernel/context/request-context"
 import { TransactionManager } from "../../../../shared/kernel/transactional/transaction-manager"
+import {
+  detachIdentityTables,
+  reattachIdentityTables,
+} from "../../testing/reattach-identity-tables"
 
 import type { Pool } from "pg"
 
@@ -22,13 +26,19 @@ describe("audit trigger (int)", () => {
   let pool: Pool
   let db: ReturnType<typeof createTestDb>
 
-  beforeAll(() => {
+  beforeAll(async () => {
     pool = createTestPool()
     db = createTestDb(pool)
+    // SPEC_DEVIATION: reanexa as tabelas do identity ao trigger.
+    // Reason: `catalog:check audit` instala identity antes de audit
+    // (dependsOn), e a migration custom de identity que chama `audit.attach`
+    // roda antes de `audit.attach` existir — sai sem anexar nada (guard
+    // documentado nela mesma). Simula o passo manual que um produto real
+    // reaplicaria depois de instalar audit (idempotente).
+    await reattachIdentityTables(pool)
   })
 
   beforeEach(async () => {
-    await truncateTag(pool)
     await truncateIdentity(pool)
     // audit.entries é append-only, mas TRUNCATE não dispara o trigger de mutação
     // e o superuser do container retém o privilégio (REVOKE só atinge a role da app).
@@ -36,6 +46,7 @@ describe("audit trigger (int)", () => {
   })
 
   afterAll(async () => {
+    await detachIdentityTables(pool)
     await pool.end()
   })
 
@@ -47,9 +58,15 @@ describe("audit trigger (int)", () => {
     return rows
   }
 
-  async function insertTag(id: string, name: string): Promise<void> {
+  // SPEC_DEVIATION: veículo trocado de tag.tags para identity.permission_templates.
+  // Reason: audit não depende de tag (siblings sob identity) — um
+  // `catalog:check audit` standalone nunca tem o schema "tag". O mecanismo
+  // testado aqui é o trigger genérico (attach em qualquer tabela); a garantia
+  // real do que muda de disco pertence a Deviation-style Fixed em base-audit-
+  // registrations.ts/audit-coverage.ts, não a esta suíte.
+  async function insertTemplate(id: string, name: string): Promise<void> {
     await pool.query(
-      `INSERT INTO tag.tags (id, name, created_at, updated_at)
+      `INSERT INTO identity.permission_templates (id, name, created_at, updated_at)
        VALUES ($1, $2, now(), now())`,
       [id, name]
     )
@@ -57,13 +74,13 @@ describe("audit trigger (int)", () => {
 
   it("INSERT grava op=insert, row_new completo, changed_keys vazio e origin unknown sem contexto", async () => {
     const id = ulid()
-    await insertTag(id, "Óleo essencial")
+    await insertTemplate(id, "Óleo essencial")
 
-    const rows = await auditRows("tags")
+    const rows = await auditRows("permission_templates")
     expect(rows).toHaveLength(1)
     const row = rows[0]
     expect(row!.op).toBe("insert")
-    expect(row!.schema_name).toBe("tag")
+    expect(row!.schema_name).toBe("identity")
     expect(row!.entity_id).toBe(id)
     expect((row!.row_new as { name: string }).name).toBe("Óleo essencial")
     expect(row!.row_old).toBeNull()
@@ -75,13 +92,13 @@ describe("audit trigger (int)", () => {
 
   it("UPDATE grava changed_keys só do campo mudado, excluindo updated_at", async () => {
     const id = ulid()
-    await insertTag(id, "Antes")
+    await insertTemplate(id, "Antes")
     await pool.query(
-      "UPDATE tag.tags SET name = $2, updated_at = now() WHERE id = $1",
+      "UPDATE identity.permission_templates SET name = $2, updated_at = now() WHERE id = $1",
       [id, "Depois"]
     )
 
-    const rows = await auditRows("tags")
+    const rows = await auditRows("permission_templates")
     const update = rows.find((r) => r.op === "update")!
     expect(update).toBeDefined()
     expect(update.changed_keys).toEqual(["name"])
@@ -91,23 +108,23 @@ describe("audit trigger (int)", () => {
 
   it("no-op UPDATE (só updated_at muda) é suprimido", async () => {
     const id = ulid()
-    await insertTag(id, "Igual")
+    await insertTemplate(id, "Igual")
     await pool.query(
-      "UPDATE tag.tags SET updated_at = now() WHERE id = $1",
+      "UPDATE identity.permission_templates SET updated_at = now() WHERE id = $1",
       [id]
     )
 
-    const rows = await auditRows("tags")
+    const rows = await auditRows("permission_templates")
     expect(rows.filter((r) => r.op === "update")).toHaveLength(0)
     expect(rows).toHaveLength(1)
   })
 
   it("DELETE grava op=delete, row_old completo e row_new null", async () => {
     const id = ulid()
-    await insertTag(id, "Some")
-    await pool.query("DELETE FROM tag.tags WHERE id = $1", [id])
+    await insertTemplate(id, "Some")
+    await pool.query("DELETE FROM identity.permission_templates WHERE id = $1", [id])
 
-    const rows = await auditRows("tags")
+    const rows = await auditRows("permission_templates")
     const del = rows.find((r) => r.op === "delete")!
     expect(del).toBeDefined()
     expect((del.row_old as { name: string }).name).toBe("Some")
@@ -146,8 +163,8 @@ describe("audit trigger (int)", () => {
 
   it("escape hatch: DELETE em audit.entries lança sem GUC e passa com app.audit_maintenance=on", async () => {
     const id = ulid()
-    await insertTag(id, "Alvo")
-    const seq = (await auditRows("tags"))[0]!.seq
+    await insertTemplate(id, "Alvo")
+    const seq = (await auditRows("permission_templates"))[0]!.seq
 
     await expect(
       pool.query("DELETE FROM audit.entries WHERE seq = $1", [seq])
@@ -162,13 +179,13 @@ describe("audit trigger (int)", () => {
     } finally {
       client.release()
     }
-    expect(await auditRows("tags")).toHaveLength(0)
+    expect(await auditRows("permission_templates")).toHaveLength(0)
   })
 
   it("UPDATE em audit.entries sempre lança (append-only), mesmo com GUC", async () => {
     const id = ulid()
-    await insertTag(id, "X")
-    const seq = (await auditRows("tags"))[0]!.seq
+    await insertTemplate(id, "X")
+    const seq = (await auditRows("permission_templates"))[0]!.seq
 
     const client = await pool.connect()
     try {
@@ -186,7 +203,7 @@ describe("audit trigger (int)", () => {
   it("contexto do ator: TransactionManager carimba actor_user_id, origin e correlation_id", async () => {
     const rc = new RequestContext()
     const txm = new TransactionManager(db, makeTestLogger().loggerFactory, rc)
-    const tagId = ulid()
+    const templateId = ulid()
     const store: RequestContextStore = {
       requestId: ulid(),
       correlationId: "CORR-ATOR",
@@ -208,12 +225,12 @@ describe("audit trigger (int)", () => {
         await txm
           .getExecutor()
           .execute(
-            sql`INSERT INTO tag.tags (id, name, created_at, updated_at) VALUES (${tagId}, ${"Com ator"}, now(), now())`
+            sql`INSERT INTO identity.permission_templates (id, name, created_at, updated_at) VALUES (${templateId}, ${"Com ator"}, now(), now())`
           )
       })
     )
 
-    const rows = await auditRows("tags")
+    const rows = await auditRows("permission_templates")
     expect(rows).toHaveLength(1)
     expect(rows[0]!.actor_user_id).toBe("actor-1")
     expect(rows[0]!.origin).toBe("http")
@@ -226,7 +243,7 @@ describe("audit trigger (int)", () => {
       await client.query("BEGIN")
       await client.query("SELECT set_config('app.audit_skip', 'on', true)")
       await client.query(
-        `INSERT INTO tag.tags (id, name, created_at, updated_at)
+        `INSERT INTO identity.permission_templates (id, name, created_at, updated_at)
          VALUES ($1, 'Fantasma', now(), now())`,
         [ulid()]
       )
@@ -234,6 +251,6 @@ describe("audit trigger (int)", () => {
     } finally {
       client.release()
     }
-    expect(await auditRows("tags")).toHaveLength(0)
+    expect(await auditRows("permission_templates")).toHaveLength(0)
   })
 })

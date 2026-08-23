@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { User } from "../../../domain/entities/user.entity"
 import { InvalidResetTokenError, WeakPasswordError } from "../../../domain/errors"
 import { makeIdentityConfig } from "../../../identity.config.fixture"
@@ -9,11 +11,11 @@ import { ResetPasswordUseCase } from "./reset-password.use-case"
  
 function makeDeps(over: Record<string, any> = {}) {
   const verificationTokens = over.verificationTokens ?? {
-    consumeByHash: jest.fn().mockResolvedValue({ userId: "u-1" }),
-    invalidateAllForUser: jest.fn().mockResolvedValue(undefined),
+    consumeByHash: vi.fn().mockResolvedValue({ userId: "u-1" }),
+    invalidateAllForUser: vi.fn().mockResolvedValue(undefined),
   }
   const users = over.users ?? {
-    findById: jest.fn().mockResolvedValue(
+    findById: vi.fn().mockResolvedValue(
       User.fromProps({
         id: "u-1",
         name: "Carol",
@@ -38,20 +40,20 @@ function makeDeps(over: Record<string, any> = {}) {
         createdByUserId: null,
       }),
     ),
-    update: jest.fn().mockResolvedValue(undefined),
+    update: vi.fn().mockResolvedValue(undefined),
   }
   const sessions = over.sessions ?? {
-    deleteAllForUser: jest.fn().mockResolvedValue(undefined),
+    deleteAllForUser: vi.fn().mockResolvedValue(undefined),
   }
-  const hasher = over.hasher ?? { hash: jest.fn().mockResolvedValue("argon2-new") }
-  const strength = over.strength ?? { score: jest.fn().mockReturnValue(4) }
-  const breach = over.breach ?? { isBreached: jest.fn().mockResolvedValue(false) }
+  const hasher = over.hasher ?? { hash: vi.fn().mockResolvedValue("argon2-new") }
+  const strength = over.strength ?? { score: vi.fn().mockReturnValue(4) }
+  const breach = over.breach ?? { isBreached: vi.fn().mockResolvedValue(false) }
   const tokens = over.tokens ?? {
-    hashOf: jest.fn().mockReturnValue("hash-of-raw"),
+    hashOf: vi.fn().mockReturnValue("hash-of-raw"),
   }
-  const outbox = over.outbox ?? { publish: jest.fn().mockResolvedValue(undefined) }
+  const outbox = over.outbox ?? { publish: vi.fn().mockResolvedValue(undefined) }
   const authEvents = over.authEvents ?? {
-    recordInTx: jest.fn().mockResolvedValue(undefined),
+    recordInTx: vi.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => new Date("2026-05-30T00:00:00.000Z") }
   const ctx = over.ctx ?? fakeRequestContext(() => ({
@@ -85,8 +87,8 @@ describe("ResetPasswordUseCase", () => {
   it("token inválido (consume retorna null) lança InvalidResetTokenError", async () => {
     const t = makeDeps({
       verificationTokens: {
-        consumeByHash: jest.fn().mockResolvedValue(null),
-        invalidateAllForUser: jest.fn(),
+        consumeByHash: vi.fn().mockResolvedValue(null),
+        invalidateAllForUser: vi.fn(),
       },
     })
     await expect(
@@ -136,7 +138,7 @@ describe("ResetPasswordUseCase", () => {
   })
 
   it("senha fraca lança e NÃO troca a senha", async () => {
-    const t = makeDeps({ strength: { score: jest.fn().mockReturnValue(0) } })
+    const t = makeDeps({ strength: { score: vi.fn().mockReturnValue(0) } })
     await expect(
       t.uc.execute({ token: "tok", password: "123" }),
     ).rejects.toThrow()
@@ -145,7 +147,7 @@ describe("ResetPasswordUseCase", () => {
 
   it("senha vazada (fail_closed) lança WeakPasswordError ANTES de tocar o banco", async () => {
     const t = makeDeps({
-      breach: { isBreached: jest.fn().mockResolvedValue(true) },
+      breach: { isBreached: vi.fn().mockResolvedValue(true) },
       config: makeIdentityConfig({ BREACH_CHECK_MODE: "fail_closed" }),
     })
     await expect(
@@ -158,7 +160,7 @@ describe("ResetPasswordUseCase", () => {
   })
 
   it("modo fail_open: breach NÃO é consultado mesmo que senha esteja vazada", async () => {
-    const isBreached = jest.fn().mockResolvedValue(true)
+    const isBreached = vi.fn().mockResolvedValue(true)
     const t = makeDeps({
       breach: { isBreached },
       config: makeIdentityConfig({ BREACH_CHECK_MODE: "fail_open" }),
@@ -171,8 +173,8 @@ describe("ResetPasswordUseCase", () => {
   it("usuário não encontrado após consumir token lança InvalidResetTokenError", async () => {
     const t = makeDeps({
       users: {
-        findById: jest.fn().mockResolvedValue(null),
-        update: jest.fn(),
+        findById: vi.fn().mockResolvedValue(null),
+        update: vi.fn(),
       },
     })
     await expect(

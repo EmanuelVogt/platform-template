@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { PermissionTemplate } from "./permission-template.entity"
 
 const NOW = new Date("2026-06-12T12:00:00.000Z")

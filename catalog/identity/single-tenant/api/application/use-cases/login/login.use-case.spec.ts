@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { Device } from "../../../domain/entities/device.entity"
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import { InvalidCredentialsError } from "../../../domain/errors"
@@ -40,33 +42,33 @@ function makeUser(over: { props?: Partial<UserProps> } = {}): User {
 
 function makeDeps(over: Record<string, any> = {}) {
   const users = over.users ?? {
-    findByEmail: jest.fn().mockResolvedValue(makeUser()),
-    findByIdForUpdate: jest.fn().mockResolvedValue(makeUser()),
-    update: jest.fn().mockResolvedValue(undefined),
-    registerFailedAttempt: jest.fn().mockResolvedValue(undefined),
-    findPermissions: jest.fn().mockResolvedValue([]),
+    findByEmail: vi.fn().mockResolvedValue(makeUser()),
+    findByIdForUpdate: vi.fn().mockResolvedValue(makeUser()),
+    update: vi.fn().mockResolvedValue(undefined),
+    registerFailedAttempt: vi.fn().mockResolvedValue(undefined),
+    findPermissions: vi.fn().mockResolvedValue([]),
   }
   const sessions = over.sessions ?? {
-    create: jest.fn().mockResolvedValue(undefined),
-    countByUser: jest.fn().mockResolvedValue(1),
-    deleteOldestOverCap: jest.fn().mockResolvedValue(undefined),
-    deleteByDevice: jest.fn().mockResolvedValue(undefined),
+    create: vi.fn().mockResolvedValue(undefined),
+    countByUser: vi.fn().mockResolvedValue(1),
+    deleteOldestOverCap: vi.fn().mockResolvedValue(undefined),
+    deleteByDevice: vi.fn().mockResolvedValue(undefined),
   }
   const hasher = over.hasher ?? {
-    verify: jest.fn().mockResolvedValue(true),
-    needsRehash: jest.fn().mockReturnValue(false),
-    hash: jest.fn().mockResolvedValue("argon2-rehashed"),
+    verify: vi.fn().mockResolvedValue(true),
+    needsRehash: vi.fn().mockReturnValue(false),
+    hash: vi.fn().mockResolvedValue("argon2-rehashed"),
   }
   const tokens = over.tokens ?? {
-    generate: jest.fn().mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
-    hashOf: jest.fn().mockReturnValue("email-hash"),
+    generate: vi.fn().mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
+    hashOf: vi.fn().mockReturnValue("email-hash"),
   }
   const rateLimiter = over.rateLimiter ?? {
-    consume: jest.fn().mockResolvedValue({ allowed: true, retryAfterSeconds: 0 }),
+    consume: vi.fn().mockResolvedValue({ allowed: true, retryAfterSeconds: 0 }),
   }
   const authEvents = over.authEvents ?? {
-    record: jest.fn().mockResolvedValue(undefined),
-    recordInTx: jest.fn().mockResolvedValue(undefined),
+    record: vi.fn().mockResolvedValue(undefined),
+    recordInTx: vi.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => new Date("2026-05-30T00:00:00.000Z") }
   const ctx = over.ctx ?? fakeRequestContext(() => ({
@@ -77,10 +79,10 @@ function makeDeps(over: Record<string, any> = {}) {
       userId: null,
       sessionId: null,
     }))
-  const outbox = over.outbox ?? { publish: jest.fn().mockResolvedValue(undefined) }
+  const outbox = over.outbox ?? { publish: vi.fn().mockResolvedValue(undefined) }
   const devices = over.devices ?? {
-    findByUserAndCookieHash: jest.fn().mockResolvedValue(null),
-    create: jest.fn().mockResolvedValue(undefined),
+    findByUserAndCookieHash: vi.fn().mockResolvedValue(null),
+    create: vi.fn().mockResolvedValue(undefined),
   }
   const config = makeIdentityConfig()
   const createSession = new CreateSessionService(sessions, devices, tokens, config, ctx)
@@ -132,7 +134,7 @@ describe("LoginUseCase", () => {
   it("rate-limit estourado lança SEM chamar verify (pré-argon2)", async () => {
     const t = makeDeps({
       rateLimiter: {
-        consume: jest
+        consume: vi
           .fn()
           .mockResolvedValue({ allowed: false, retryAfterSeconds: 30 }),
       },
@@ -156,7 +158,7 @@ describe("LoginUseCase", () => {
 
   it("usuário inexistente: roda verify dummy e lança InvalidCredentialsError", async () => {
     const t = makeDeps({
-      users: { findByEmail: jest.fn().mockResolvedValue(null), update: jest.fn() },
+      users: { findByEmail: vi.fn().mockResolvedValue(null), update: vi.fn() },
     })
     await expect(
       t.uc.execute({
@@ -174,10 +176,10 @@ describe("LoginUseCase", () => {
     })
     const t = makeDeps({
       users: {
-        findByEmail: jest.fn().mockResolvedValue(locked),
-        findByIdForUpdate: jest.fn().mockResolvedValue(locked),
-        update: jest.fn().mockResolvedValue(undefined),
-        findPermissions: jest.fn().mockResolvedValue([]),
+        findByEmail: vi.fn().mockResolvedValue(locked),
+        findByIdForUpdate: vi.fn().mockResolvedValue(locked),
+        update: vi.fn().mockResolvedValue(undefined),
+        findPermissions: vi.fn().mockResolvedValue([]),
       },
     })
     const out = await t.uc.execute({
@@ -200,9 +202,9 @@ describe("LoginUseCase", () => {
   it("senha errada: grava login_failed FORA da tx e NÃO incrementa lockout", async () => {
     const t = makeDeps({
       hasher: {
-        verify: jest.fn().mockResolvedValue(false),
+        verify: vi.fn().mockResolvedValue(false),
         needsRehash: () => false,
-        hash: jest.fn(),
+        hash: vi.fn(),
       },
     })
     await expect(
@@ -230,10 +232,10 @@ describe("LoginUseCase", () => {
   it("usuário pending (sem senha) é rejeitado com InvalidCredentialsError", async () => {
     const t = makeDeps({
       users: {
-        findByEmail: jest.fn().mockResolvedValue(
+        findByEmail: vi.fn().mockResolvedValue(
           User.create({ name: "Ana", email: "ana@x.test", accessProfile: "admin" }),
         ),
-        registerFailedAttempt: jest.fn().mockResolvedValue(null),
+        registerFailedAttempt: vi.fn().mockResolvedValue(null),
       },
     })
     await expect(
@@ -244,9 +246,9 @@ describe("LoginUseCase", () => {
   it("rehash-on-login: needsRehash true re-hasheia e persiste", async () => {
     const t = makeDeps({
       hasher: {
-        verify: jest.fn().mockResolvedValue(true),
+        verify: vi.fn().mockResolvedValue(true),
         needsRehash: () => true,
-        hash: jest.fn().mockResolvedValue("argon2-new"),
+        hash: vi.fn().mockResolvedValue("argon2-new"),
       },
     })
     await t.uc.execute({
@@ -270,12 +272,12 @@ describe("LoginUseCase", () => {
       })
       const t = makeDeps({
         devices: {
-          findByUserAndCookieHash: jest.fn().mockResolvedValue(existing),
-          create: jest.fn(),
+          findByUserAndCookieHash: vi.fn().mockResolvedValue(existing),
+          create: vi.fn(),
         },
         tokens: {
-          generate: jest.fn().mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
-          hashOf: jest.fn().mockReturnValue("h"),
+          generate: vi.fn().mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
+          hashOf: vi.fn().mockReturnValue("h"),
         },
       })
       const out = await t.uc.execute({
@@ -295,8 +297,8 @@ describe("LoginUseCase", () => {
     it("sem cookie (miss): gera token novo e cria device", async () => {
       const t = makeDeps({
         tokens: {
-          generate: jest.fn().mockReturnValue({ raw: "new-raw", hash: "new-hash" }),
-          hashOf: jest.fn().mockReturnValue("email-hash"),
+          generate: vi.fn().mockReturnValue({ raw: "new-raw", hash: "new-hash" }),
+          hashOf: vi.fn().mockReturnValue("email-hash"),
         },
       })
       const out = await t.uc.execute({
@@ -312,12 +314,12 @@ describe("LoginUseCase", () => {
     it("cookie de outro user: cria row nova com o MESMO hash, mantém o cookie", async () => {
       const t = makeDeps({
         devices: {
-          findByUserAndCookieHash: jest.fn().mockResolvedValue(null),
-          create: jest.fn().mockResolvedValue(undefined),
+          findByUserAndCookieHash: vi.fn().mockResolvedValue(null),
+          create: vi.fn().mockResolvedValue(undefined),
         },
         tokens: {
-          generate: jest.fn().mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
-          hashOf: jest.fn().mockReturnValue("shared-hash"),
+          generate: vi.fn().mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
+          hashOf: vi.fn().mockReturnValue("shared-hash"),
         },
       })
       const out = await t.uc.execute({
@@ -345,12 +347,12 @@ describe("LoginUseCase", () => {
       })
       const t = makeDeps({
         devices: {
-          findByUserAndCookieHash: jest.fn().mockResolvedValue(existing),
-          create: jest.fn(),
+          findByUserAndCookieHash: vi.fn().mockResolvedValue(existing),
+          create: vi.fn(),
         },
         tokens: {
-          generate: jest.fn().mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
-          hashOf: jest.fn().mockReturnValue("h"),
+          generate: vi.fn().mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
+          hashOf: vi.fn().mockReturnValue("h"),
         },
       })
       await t.uc.execute({
@@ -401,10 +403,10 @@ describe("LoginUseCase", () => {
     it("login com device cookie CONHECIDO não publica", async () => {
       const t = makeDeps({
         devices: {
-          findByUserAndCookieHash: jest.fn().mockResolvedValue({
+          findByUserAndCookieHash: vi.fn().mockResolvedValue({
             props: { id: "d-1" },
           }),
-          create: jest.fn(),
+          create: vi.fn(),
         },
       })
       await t.uc.execute({

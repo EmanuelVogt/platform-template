@@ -6,11 +6,20 @@
 // explicit `model` is blocked with that agent's tier guide, and the call comes
 // back with the chosen tier. It applies on the main thread and inside subagents
 // that nest (spec-worker → repo-scout). Rationale in docs/agents/harness.md.
+// It also holds the nesting shape: a spec-worker or spec-verifier dispatches
+// only repo-scout and shell-runner; repo-scout and shell-runner never dispatch.
+// Measured 2026-08-20: 24 of 24 `fork` agents spawned by spec-workers were
+// `Agent(subagent_type: "fork", prompt: "noop")` placeholders "to wait for a
+// background notification" — each one re-served the worker's whole context
+// for nothing, since a dispatched scout/runner re-invokes its caller when it
+// finishes. Blocked with the reason.
 // Escape hatch for debugging the harness itself: PLATFORM_DELEGATE_OFF=1.
 // Harness tooling — not app code.
 import { readFileSync } from 'node:fs';
 
-const MODELS = new Set(['haiku', 'sonnet', 'opus']);
+const MODELS = new Set(['haiku', 'sonnet', 'opus', 'fable']);
+const NESTING_AGENTS = new Set(['spec-worker', 'spec-verifier']);
+const LEAF_AGENTS = new Set(['repo-scout', 'shell-runner']);
 
 const GUIDE = {
   'repo-scout': [
@@ -19,8 +28,9 @@ const GUIDE = {
     'opus   — only when the question crosses couplings grep cannot see (Zod→Kubb, outbox) and the answer decides architecture; before that, split the question in two for haiku.',
   ],
   'shell-runner': [
-    'haiku  — any single command: the output is returned literally, not interpreted.',
-    'sonnet — a multi-step command or one in a worktree/env that must be set up carefully, or a log with dozens of failures to slice without losing any.',
+    'haiku  — the main window\'s gates: the orchestrator\'s Build gate per wave, the Verifier\'s Final gate. Output returned literally, not interpreted.',
+    'sonnet — one of those gates whose log carries dozens of failures to slice without losing any, or a multi-step run in a worktree/env to set up carefully.',
+    'not for a worker\'s scoped gate: a spec-worker and the Verifier\'s sensor run their own commands (`cmd > log 2>&1; echo exit=$?`, then grep the log).',
   ],
   'spec-worker': [
     'sonnet — default for every cluster: CRUD, screen, form, query, tests, root config, tooling, CI, docs.',
@@ -47,6 +57,22 @@ const type = data.tool_input?.subagent_type;
 const guide = GUIDE[type];
 const model = data.tool_input?.model;
 
+const block = (msg) => {
+  process.stderr.write(msg);
+  process.exit(2);
+};
+
+if (LEAF_AGENTS.has(data.agent_type)) {
+  block(`Dispatch of \`${type}\` blocked — scouts and runners never nest: answer from what you have.\n`);
+}
+if (NESTING_AGENTS.has(data.agent_type) && !LEAF_AGENTS.has(type)) {
+  block(
+    `\`${type}\` cannot be dispatched from a ${data.agent_type}: workers and the Verifier nest only \`repo-scout\` and \`shell-runner\`.
+A \`fork\` inherits your whole context (every placeholder re-serves it); a 'noop' agent to wait for a notification is never needed — a dispatched scout/runner re-invokes you when it finishes: end your turn with nothing else pending, its result arrives as a notification.
+`,
+  );
+}
+
 // The footer of the terminal lists running agents as `<type>  <description>`
 // and has no slot for the model — so the tier is prefixed to the description
 // itself, and the label survives into the footer.
@@ -71,7 +97,7 @@ if (typeof model === 'string' && MODELS.has(model)) tagDescription();
 
 const reason =
   typeof model === 'string'
-    ? `\`model: "${model}"\` is not a tier of this repo (haiku, sonnet, opus)`
+    ? `\`model: "${model}"\` is not a tier of this repo (haiku, sonnet, opus, fable)`
     : 'no explicit `model`';
 
 process.stderr.write(
@@ -79,7 +105,7 @@ process.stderr.write(
 
 The tier is your choice on every dispatch; the agent's frontmatter does not decide. Repeat the call with
 \`model\` and state the reason for the choice in your dispatch line:
-  Agent(subagent_type: "${type}", model: "<haiku|sonnet|opus>", prompt: "…")
+  Agent(subagent_type: "${type}", model: "<haiku|sonnet|opus|fable>", prompt: "…")
 
 Guide for ${type}:
 ${guide.map((line) => `  ${line}`).join('\n')}

@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { parseNotificationConfig } from "./notification.config"
 
 describe("notificationConfig", () => {

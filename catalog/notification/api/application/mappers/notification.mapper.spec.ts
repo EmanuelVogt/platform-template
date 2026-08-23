@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { Notification } from "../../domain/entities/notification.entity"
 
 import { NotificationMapper } from "./notification.mapper"

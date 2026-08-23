@@ -1,7 +1,10 @@
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import semver from "semver";
-import { readManifest } from "./manifest.mjs";
+import { CyclicDependencyError, resolveInstallOrder } from "./catalog-graph.mjs";
+import { childLayout } from "./child-layout.mjs";
+
+export { CyclicDependencyError };
 
 export class AlreadyInstalledError extends Error {
   constructor(name, version) {
@@ -27,14 +30,6 @@ export class MissingDepsError extends Error {
   }
 }
 
-export class CyclicDependencyError extends Error {
-  constructor(chain) {
-    super(`ciclo de dependências detectado: ${chain.join(" -> ")}`);
-    this.name = "CyclicDependencyError";
-    this.chain = chain;
-  }
-}
-
 export function checkKernelRange(manifest, templateVersion) {
   if (!semver.satisfies(templateVersion, manifest.kernelRange)) {
     throw new KernelRangeError(manifest.kernelRange, templateVersion);
@@ -53,10 +48,6 @@ function isSatisfiedByLock(lock, dep) {
   return Boolean(entry) && semver.satisfies(entry.version, dep.range);
 }
 
-function loadDepManifest(catalogRoot, name) {
-  return readManifest(path.join(catalogRoot, name, "module.json"));
-}
-
 export function resolveDeps({ catalogRoot, manifest, lock, withDeps = false }) {
   const missing = (manifest.dependsOn ?? []).filter((dep) => !isSatisfiedByLock(lock, dep));
 
@@ -68,28 +59,11 @@ export function resolveDeps({ catalogRoot, manifest, lock, withDeps = false }) {
     throw new MissingDepsError(missing);
   }
 
-  const order = [];
-  const visiting = new Set();
-  const visited = new Set();
-
-  function visit(name, chain) {
-    if (visited.has(name)) return;
-    if (visiting.has(name)) {
-      throw new CyclicDependencyError([...chain, name]);
-    }
-    visiting.add(name);
-    const depManifest = name === manifest.name ? manifest : loadDepManifest(catalogRoot, name);
-    for (const dep of depManifest.dependsOn ?? []) {
-      if (!isSatisfiedByLock(lock, dep)) {
-        visit(dep.name, [...chain, name]);
-      }
-    }
-    visiting.delete(name);
-    visited.add(name);
-    order.push(name);
-  }
-
-  visit(manifest.name, []);
+  const order = resolveInstallOrder({
+    catalogRoot,
+    requested: [manifest.name],
+    isSatisfied: (dep) => isSatisfiedByLock(lock, dep),
+  }).map((entry) => entry.name);
 
   return { order, missing: [] };
 }
@@ -108,15 +82,13 @@ function listFilesRecursive(dir) {
 }
 
 export function planCopy(catalogEntryRoot, manifest, { webRoot, targetRoot = "" } = {}) {
+  const layout = childLayout(targetRoot);
   const files = [];
 
   const apiDir = path.join(catalogEntryRoot, "api");
   if (existsSync(apiDir)) {
     for (const rel of listFilesRecursive(apiDir)) {
-      files.push({
-        from: path.join(apiDir, rel),
-        to: path.join(targetRoot, "apps/api/src/modules", manifest.name, rel),
-      });
+      files.push({ from: path.join(apiDir, rel), to: path.join(layout.moduleDir(manifest.name), rel) });
     }
   }
 
@@ -134,10 +106,7 @@ export function planCopy(catalogEntryRoot, manifest, { webRoot, targetRoot = "" 
   if (existsSync(parityDir)) {
     for (const rel of listFilesRecursive(parityDir)) {
       if (rel.endsWith(".parity.spec.ts") || rel === "contract.snapshot.json") {
-        files.push({
-          from: path.join(parityDir, rel),
-          to: path.join(targetRoot, "apps/api/src/modules", manifest.name, "__parity__", rel),
-        });
+        files.push({ from: path.join(parityDir, rel), to: path.join(layout.parityDir(manifest.name), rel) });
       }
     }
   }

@@ -1,102 +1,105 @@
-# Catálogo de módulos
+# Module catalog
 
-O template distribui apenas o kernel; os módulos que antes formavam o base-set (identity,
-attachment, audit, notification, tag, …) vivem como **entradas do catálogo** em `catalog/`,
-fora do copier. Um app filho adiciona uma entrada com `pnpm platform module add <name>
-[--variant]`, que copia o código para dentro do filho e registra a versão em
-`.platform-modules.lock`. Uma entrada por módulo; variantes (ex.: `single-tenant`,
-`multi-tenant`) são sub-entradas; não há bundles — composição vem de `dependsOn`.
+The template ships only the kernel; the modules that used to form the base-set (identity,
+attachment, audit, notification, tag, …) live as **catalog entries** in `catalog/`,
+outside the copier. A child app adds an entry with `pnpm platform module add <name>
+[--variant]`, which copies the code into the child and records the version in
+`.platform-modules.lock`. One entry per module; variants (e.g. `single-tenant`,
+`multi-tenant`) are sub-entries; there are no bundles — composition comes from `dependsOn`.
 
-## Modelo de uma entrada
+## Model of an entry
 
 ```
 catalog/
-  README.md                       # índice: entradas, versões, como adicionar/autorar
-  schema/module.schema.json       # schema JSON de module.json
+  README.md                       # index: entries, versions, how to add/author
+  schema/module.schema.json       # JSON schema of module.json
   identity/single-tenant/
     module.json  README.md  CHANGELOG.md
-    api/         # espelha apps/api/src/modules/identity/** (código + *.spec.ts + *.int-spec.ts + *.e2e-spec.ts)
+    api/         # mirrors apps/api/src/modules/identity/** (code + *.spec.ts + *.int-spec.ts + *.e2e-spec.ts)
     web/core/  web/react/
-    migrations/custom/NN_<slug>.sql   # apenas passos SQL manuais (triggers, funções); tabelas vêm de api/**/tables
-    parity/      # *.parity.spec.ts (copiados ao lado do módulo, rodam no jest do filho) + contract.snapshot.json
+    migrations/custom/NN_<slug>.sql   # only manual SQL steps (triggers, functions); tables come from api/**/tables
+    parity/      # *.parity.spec.ts (copied next to the module, run with `pnpm vitest run --project api <path>` in the child) + contract.snapshot.json
 ```
 
-`module.json` é validado por `catalog/schema/module.schema.json` e segue convenção sobre
-configuração: `api/**` mapeia para `apps/api/src/modules/<name>/**`; `web/core|react` mapeia
-para `<webRoot>/core|react`; `parity/*.parity.spec.ts` mapeia para
-`apps/api/src/modules/<name>/__parity__/`, junto com `parity/contract.snapshot.json`. Só os
-campos descritos no schema são explícitos — o resto é convenção de path.
+`module.json` is validated by `catalog/schema/module.schema.json` and follows convention over
+configuration: `api/**` maps to `apps/api/src/modules/<name>/**`; `web/core|react` maps
+to `<webRoot>/core|react`; `parity/*.parity.spec.ts` maps to
+`apps/api/src/modules/<name>/__parity__/`, together with `parity/contract.snapshot.json`. Only
+the fields described in the schema are explicit — the rest is path convention.
 
-Cada entrada versiona via `module.json.version` e ganha uma tag `catalog/<name>[-<variant>]@x.y.z`
-no repositório do template quando uma versão é cortada (AD-016). O `CHANGELOG.md` segue
-keep-a-changelog; todo título de versão que carrega código também lista os ids de advisory
-que ela carrega.
+Each entry is versioned via `module.json.version` and gets a tag `catalog/<name>[-<variant>]@x.y.z`
+in the template repository when a version is cut (AD-016). The `CHANGELOG.md` follows
+keep-a-changelog; every version title that carries code also lists the ids of the advisories
+it carries.
 
-## Autoria de uma entrada
+## Authoring an entry
 
-1. Código em `api/**` espelha a estrutura de `apps/api/src/modules/<name>/**`, incluindo os
-   próprios testes (`*.spec.ts`, `*.int-spec.ts`, `*.e2e-spec.ts`).
-2. Parte web, se houver, é `web/core` (TS puro) e `web/react` (hooks/opções de react-query) —
-   ver a regra raw-web abaixo.
-3. Migrações manuais (triggers, funções — nunca criação de tabela) ficam em
-   `migrations/custom/NN_<slug>.sql`; o app filho gera as migrações reais com
-   `drizzle-kit generate` no momento do `module add`, então numeração, `when` e a cadeia de
-   snapshots são do filho.
-4. `README.md` segue o contrato fixo de seções descrito em
+1. Code in `api/**` mirrors the structure of `apps/api/src/modules/<name>/**`, including its
+   own tests (`*.spec.ts`, `*.int-spec.ts`, `*.e2e-spec.ts`).
+2. The web part, if any, is `web/core` (pure TS) and `web/react` (react-query hooks/options) —
+   see the raw-web rule below.
+3. Manual migrations (triggers, functions — never table creation) live in
+   `migrations/custom/NN_<slug>.sql`; the child app generates the real migrations with
+   `drizzle-kit generate` at `module add` time, so the numbering, `when` and the snapshot
+   chain belong to the child.
+4. `README.md` follows the fixed section contract described in
    [`README-contract.md`](./README-contract.md).
-5. `CHANGELOG.md` segue keep-a-changelog e cita advisories carregadas por versão.
-6. Testes de paridade em `parity/*.parity.spec.ts` comparam o comportamento da entrada contra
+5. `CHANGELOG.md` follows keep-a-changelog and cites the advisories carried by each version.
+6. Parity tests in `parity/*.parity.spec.ts` compare the entry's behavior against
    `parity/contract.snapshot.json`.
 
-## Regra raw-web
+## Raw-web rule
 
-Para manter as entradas portáveis entre apps filhos com stacks web diferentes (Vite, Next…):
+To keep entries portable across child apps with different web stacks (Vite, Next…):
 
-- **`web/core/**`**: apenas TypeScript puro. Imports permitidos: `zod`, `@platform/api-client`,
-  imports relativos. Nenhum componente, página ou roteador.
-- **`web/react/**`**: além dos imports de `web/core`, também `react` e
-  `@tanstack/react-query`. Só hooks e opções de react-query — nunca componentes, páginas ou
-  roteadores.
-- **Exceção nos arquivos de teste** (`*.test.ts(x)`): `web/core` soma `vitest`; `web/react`
-  soma `vitest` + `@testing-library/react` (para `renderHook`) — o resto da lista continua
-  proibido mesmo em teste.
-- Qualquer outro import (`@tanstack/react-router`, `next/*`, bibliotecas de componentes) falha
-  no `catalog-lint`. Integração de UI/roteador é responsabilidade do app filho, documentada
-  como receita na seção `## Parte web` do README da entrada.
-- O cliente HTTP gerado nunca é versionado na entrada; `module add` roda `pnpm contract` no
-  filho para gerá-lo.
-- `--web-root` por padrão é `apps/web/src/entities/<module>/` (então `core/` vira
-  `entities/<module>/core/` e `react/` vira `entities/<module>/react/`); filhos Next passam a
-  própria raiz `src/`.
+- **`web/core/**`**: pure TypeScript only. Allowed imports: `zod`, `@platform/api-client`,
+  relative imports. No components, pages or routers.
+- **`web/react/**`**: in addition to the `web/core` imports, also `react` and
+  `@tanstack/react-query`. Only react-query hooks and options — never components, pages or
+  routers.
+- **Exception in test files** (`*.test.ts(x)`): `web/core` adds `vitest`; `web/react`
+  adds `vitest` + `@testing-library/react` (for `renderHook`) — the rest of the list stays
+  forbidden even in tests.
+- Any other import (`@tanstack/react-router`, `next/*`, component libraries) fails
+  in `catalog-lint`. UI/router integration is the child app's responsibility, documented
+  as a recipe in the `## Parte web` section of the entry's README.
+- The generated HTTP client is never versioned in the entry; `module add` runs `pnpm contract`
+  in the child to generate it.
+- `--web-root` defaults to `apps/web/src/entities/<module>/` (so `core/` becomes
+  `entities/<module>/core/` and `react/` becomes `entities/<module>/react/`); Next children
+  pass their own `src/` root.
 
-## Lint e checks
+## Lint and checks
 
-- **`pnpm catalog:lint`** (`scripts/platform/catalog-lint.mjs`), acionado pelo hook lefthook
-  **pre-commit** em `catalog/**` e `docs/advisories/**`, valida: `module.json` contra o schema;
-  presença e ordem das seções do README conforme `README-contract.md`; allow-list de imports em
-  `web/**`; existência de um título de versão no `CHANGELOG.md` correspondente a
-  `module.json.version`; e o frontmatter das advisories.
-- **Regra advisory-required**: hook lefthook **commit-msg**
-  (`scripts/platform/advisory-required.mjs`) — se algum path staged está sob
-  `catalog/<entry>/(api|web|migrations|parity)/**`, precisa existir um
-  `docs/advisories/ADV-*.md` staged com `module: <entry>`, ou a mensagem de commit precisa
-  carregar o trailer `Advisory: none — <motivo>`; caso contrário o commit falha (exit 1) com a
-  regra impressa.
-- **`pnpm catalog:check [entry…]`** (`scripts/platform/catalog-check.mjs`) não é hook de git
-  (leva minutos): renderiza um filho kernel-only via copier num diretório de scratch, roda
-  `pnpm install`, e para cada entrada em ordem topológica faz `module add` cumulativo + testes
-  escopados; ao final roda `pnpm check && pnpm test` mais paridade. É o **gate pré-tag**,
-  documentado aqui e acionado manualmente ou em CI antes de cortar uma tag de entrada.
+- **`pnpm catalog:lint`** (`scripts/platform/catalog-lint.mjs`), triggered by the lefthook
+  **pre-commit** hook in `lefthook-local.yml` on `catalog/**` and `docs/advisories/**`, validates:
+  `module.json` against the schema; presence and order of the README sections per
+  `README-contract.md`; the import allow-list in `web/**`; the existence of a version title in
+  `CHANGELOG.md` matching `module.json.version`; and the advisories' frontmatter.
+- **advisory-required rule** (`scripts/platform/advisory-required.mjs`): if any path is under
+  `catalog/<entry>/(api|web|migrations|parity)/**`, a
+  `docs/advisories/ADV-*.md` with `module: <entry>` must exist in the same commit, or that
+  commit's message must carry the trailer `Advisory: none — <reason>`; otherwise it fails
+  (exit 1) with the rule printed. Two triggers, one module: the lefthook **commit-msg** hook in
+  `lefthook-local.yml` (local commit, staged files) and the `gates` job of
+  `.github/workflows/catalog.yml`, which calls
+  `--range <base>..<head>` and judges **each commit of the PR by its own message** — a trailer
+  in the last commit does not exempt the previous ones.
+- **`pnpm catalog:check [entry…]`** (`scripts/platform/catalog-check.mjs`) is not a git hook
+  (it takes minutes): it renders a kernel-only child via copier into a scratch directory, runs
+  `pnpm install`, and for each entry in topological order does a cumulative `module add` +
+  scoped tests; at the end it runs `pnpm check && pnpm test` plus parity. It is the **pre-tag
+  gate**, documented here and triggered manually or in CI before cutting an entry tag.
 
 ## Advisories
 
-Correções, falhas de segurança e mudanças quebradoras em uma entrada já tagueada são
-documentadas como advisories em `docs/advisories/ADV-YYYYMMDD-NN.md`, com frontmatter
-`id, kind (bug|security|breaking), module, affects (faixa semver na versão da entrada),
-severity, detect, fix, parity`. O corpo, em pt-BR, descreve contexto, impacto e passos. Uma vez
-tagueado, o arquivo é imutável — o app filho nunca apaga ou move advisories. O filho mantém um
-ledger em `docs/advisories/APPLIED.md` (`- ADV-… — YYYY-MM-DD — <commit>`), listado em
-`_skip_if_exists` no `copier.yml`. O hook `.claude/hooks/pending-advisories.mjs` imprime a
-diferença entre advisories e ledger, filtrada pelas versões travadas no lockfile.
+Fixes, security flaws and breaking changes in an already-tagged entry are
+documented as advisories in `docs/advisories/ADV-YYYYMMDD-NN.md`, with frontmatter
+`id, kind (bug|security|breaking), module, affects (semver range on the entry version),
+severity, detect, fix, parity`. The body, in pt-BR, describes context, impact and steps. Once
+tagged, the file is immutable — the child app never deletes or moves advisories. The child keeps
+a ledger in `docs/advisories/APPLIED.md` (`- ADV-… — YYYY-MM-DD — <commit>`), listed in
+`_skip_if_exists` in `copier.yml`. The hook `.claude/hooks/pending-advisories.mjs` prints the
+difference between advisories and ledger, filtered by the versions pinned in the lockfile.
 
-Ver detalhes completos do fluxo de advisories em [`../advisories/`](../advisories/).
+See the full details of the advisory flow in [`../advisories/`](../advisories/).

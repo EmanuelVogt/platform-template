@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.error"
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import { SessionNotFoundError } from "../../../domain/errors"
@@ -35,7 +37,7 @@ function makeUser(over: Partial<UserProps> = {}): User {
 
 function makeDeps(over: Record<string, any> = {}) {
   const users = over.users ?? {
-    findByIdWithPermissions: jest.fn().mockResolvedValue({
+    findByIdWithPermissions: vi.fn().mockResolvedValue({
       user: makeUser(),
       permissions: ["admin.users.read"],
     }),
@@ -61,7 +63,7 @@ describe("GetCurrentUserUseCase", () => {
 
   it("usuário removido lança SessionNotFoundError", async () => {
     const t = makeDeps({
-      users: { findByIdWithPermissions: jest.fn().mockResolvedValue(null) },
+      users: { findByIdWithPermissions: vi.fn().mockResolvedValue(null) },
     })
     await expect(t.uc.execute({})).rejects.toBeInstanceOf(SessionNotFoundError)
   })
@@ -69,7 +71,7 @@ describe("GetCurrentUserUseCase", () => {
   it("usuário soft-deleted lança SessionNotFoundError (hard gate preservado)", async () => {
     const t = makeDeps({
       users: {
-        findByIdWithPermissions: jest.fn().mockResolvedValue({
+        findByIdWithPermissions: vi.fn().mockResolvedValue({
           user: makeUser({ deletedAt: new Date("2026-06-01T00:00:00Z") }),
           permissions: [],
         }),

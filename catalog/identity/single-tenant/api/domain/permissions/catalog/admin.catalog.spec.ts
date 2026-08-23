@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { PERMISSION_KEYS } from "../permission-catalog"
 
 import { ADMIN_CATALOG } from "./admin.catalog"

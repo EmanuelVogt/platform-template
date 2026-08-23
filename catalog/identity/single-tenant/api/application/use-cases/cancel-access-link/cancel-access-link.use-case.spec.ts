@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { InvalidAccessLinkError } from "../../../domain/errors"
 import { fakeRequestContext } from "../../request-context.fixture"
 
@@ -7,10 +9,10 @@ const NOW = new Date("2026-06-08T00:00:00.000Z")
 
 function makeDeps(over: Record<string, any> = {}) {
   const verificationTokens = over.verificationTokens ?? {
-    consumeByHash: jest.fn().mockResolvedValue({ userId: "u-1" }),
+    consumeByHash: vi.fn().mockResolvedValue({ userId: "u-1" }),
   }
-  const tokens = over.tokens ?? { hashOf: jest.fn().mockReturnValue("hash-of-raw") }
-  const authEvents = over.authEvents ?? { recordInTx: jest.fn().mockResolvedValue(undefined) }
+  const tokens = over.tokens ?? { hashOf: vi.fn().mockReturnValue("hash-of-raw") }
+  const authEvents = over.authEvents ?? { recordInTx: vi.fn().mockResolvedValue(undefined) }
   const clock = over.clock ?? { now: () => NOW }
   const ctx = over.ctx ?? fakeRequestContext(() => ({
       ip: "1.2.3.4",
@@ -45,7 +47,7 @@ describe("CancelAccessLinkUseCase", () => {
 
   it("token inválido (consumeByHash null) lança InvalidAccessLinkError sem gravar evento", async () => {
     const t = makeDeps({
-      verificationTokens: { consumeByHash: jest.fn().mockResolvedValue(null) },
+      verificationTokens: { consumeByHash: vi.fn().mockResolvedValue(null) },
     })
     await expect(t.uc.execute({ token: "raw" })).rejects.toBeInstanceOf(InvalidAccessLinkError)
     expect(t.authEvents.recordInTx).not.toHaveBeenCalled()
@@ -53,15 +55,15 @@ describe("CancelAccessLinkUseCase", () => {
 
   it("token inválido (consumeByHash undefined) lança InvalidAccessLinkError sem gravar evento", async () => {
     const t = makeDeps({
-      verificationTokens: { consumeByHash: jest.fn().mockResolvedValue(undefined) },
+      verificationTokens: { consumeByHash: vi.fn().mockResolvedValue(undefined) },
     })
     await expect(t.uc.execute({ token: "raw" })).rejects.toBeInstanceOf(InvalidAccessLinkError)
     expect(t.authEvents.recordInTx).not.toHaveBeenCalled()
   })
 
   it("passa o hash do token e o propósito correto para consumeByHash", async () => {
-    const consumeByHash = jest.fn().mockResolvedValue({ userId: "u-2" })
-    const hashOf = jest.fn().mockReturnValue("hashed-token")
+    const consumeByHash = vi.fn().mockResolvedValue({ userId: "u-2" })
+    const hashOf = vi.fn().mockReturnValue("hashed-token")
     const t = makeDeps({
       verificationTokens: { consumeByHash },
       tokens: { hashOf },
@@ -74,7 +76,7 @@ describe("CancelAccessLinkUseCase", () => {
   it("registra evento com userId do token consumido", async () => {
     const t = makeDeps({
       verificationTokens: {
-        consumeByHash: jest.fn().mockResolvedValue({ userId: "u-specific" }),
+        consumeByHash: vi.fn().mockResolvedValue({ userId: "u-specific" }),
       },
     })
     await t.uc.execute({ token: "raw" })

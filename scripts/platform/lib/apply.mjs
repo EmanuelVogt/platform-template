@@ -14,7 +14,11 @@ export function copyFiles(files) {
 // a primeira instalação torna falso — o produto herda a regra, não o fato. Sem
 // caminho de volta: `--rollback` não os recria, porque um repositório que já
 // instalou não volta a ser o template.
-export const TEMPLATE_ONLY_FILES = ["apps/api/src/modules/template-kernel-only.spec.ts"];
+export const TEMPLATE_ONLY_FILES = [
+  "apps/api/src/modules/template-kernel-only.spec.ts",
+  "apps/api/test/openapi-contract.e2e-spec.ts",
+  "apps/api/test/__snapshots__/openapi-contract.e2e-spec.ts.snap",
+];
 
 export function removeTemplateOnlyFiles(cwd) {
   const removed = [];

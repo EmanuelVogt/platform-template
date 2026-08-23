@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { WeakPasswordError } from './errors';
 import { validatePasswordPolicy } from './password-policy';
 

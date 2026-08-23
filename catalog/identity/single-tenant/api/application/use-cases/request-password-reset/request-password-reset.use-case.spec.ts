@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import { makeIdentityConfig } from "../../../identity.config.fixture"
 import { fakeRequestContext } from "../../request-context.fixture"
@@ -36,19 +38,19 @@ function makeUser(over: Partial<UserProps> = {}): User {
 
 function makeDeps(over: Record<string, any> = {}) {
   const users = over.users ?? {
-    findByEmail: jest.fn().mockResolvedValue(makeUser()),
-    update: jest.fn().mockResolvedValue(undefined),
+    findByEmail: vi.fn().mockResolvedValue(makeUser()),
+    update: vi.fn().mockResolvedValue(undefined),
   }
   const verificationTokens = over.verificationTokens ?? {
-    invalidateAllForUser: jest.fn().mockResolvedValue(undefined),
-    create: jest.fn().mockResolvedValue(undefined),
+    invalidateAllForUser: vi.fn().mockResolvedValue(undefined),
+    create: vi.fn().mockResolvedValue(undefined),
   }
   const tokens = over.tokens ?? {
-    generate: jest.fn().mockReturnValue({ raw: "raw-tok", hash: "hash-tok" }),
+    generate: vi.fn().mockReturnValue({ raw: "raw-tok", hash: "hash-tok" }),
   }
-  const outbox = over.outbox ?? { publish: jest.fn().mockResolvedValue(undefined) }
+  const outbox = over.outbox ?? { publish: vi.fn().mockResolvedValue(undefined) }
   const authEvents = over.authEvents ?? {
-    recordInTx: jest.fn().mockResolvedValue(undefined),
+    recordInTx: vi.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => NOW }
   const ctx = over.ctx ?? fakeRequestContext(() => ({
@@ -77,7 +79,7 @@ function makeDeps(over: Record<string, any> = {}) {
 describe("RequestPasswordResetUseCase", () => {
   it("e-mail inexistente: gera token dummy e NÃO publica nem audita (anti-enum)", async () => {
     const t = makeDeps({
-      users: { findByEmail: jest.fn().mockResolvedValue(null), update: jest.fn() },
+      users: { findByEmail: vi.fn().mockResolvedValue(null), update: vi.fn() },
     })
     await t.uc.execute({ email: "ghost@example.com" })
     expect(t.tokens.generate).toHaveBeenCalledTimes(1)
@@ -89,10 +91,10 @@ describe("RequestPasswordResetUseCase", () => {
   it("cooldown ativo: não invalida, não publica, não audita", async () => {
     const t = makeDeps({
       users: {
-        findByEmail: jest.fn().mockResolvedValue(
+        findByEmail: vi.fn().mockResolvedValue(
           makeUser({ lastResetRequestedAt: NOW }),
         ),
-        update: jest.fn(),
+        update: vi.fn(),
       },
     })
     await t.uc.execute({ email: "carol@example.com" })
@@ -106,8 +108,8 @@ describe("RequestPasswordResetUseCase", () => {
     const expiredAt = new Date(NOW.getTime() - 3601 * 1000)
     const t = makeDeps({
       users: {
-        findByEmail: jest.fn().mockResolvedValue(makeUser({ lastResetRequestedAt: expiredAt })),
-        update: jest.fn().mockResolvedValue(undefined),
+        findByEmail: vi.fn().mockResolvedValue(makeUser({ lastResetRequestedAt: expiredAt })),
+        update: vi.fn().mockResolvedValue(undefined),
       },
     })
     await t.uc.execute({ email: "carol@example.com" })

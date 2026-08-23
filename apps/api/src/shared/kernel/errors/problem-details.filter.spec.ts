@@ -1,5 +1,8 @@
 import { type ArgumentsHost, HttpException, HttpStatus } from "@nestjs/common"
+import { ZodValidationException } from "nestjs-zod"
 import pino from "pino"
+import { describe, expect, it } from "vitest"
+import { z } from "zod"
 
 import { RequestContext } from "../context/request-context"
 import { LoggerFactory } from "../logging/logger.factory"
@@ -11,12 +14,15 @@ import { ProblemDetailsFilter } from "./problem-details.filter"
 
 import type { RequestContextStore } from "../context/request-context"
 
-function makeHost(captured: {
-  status?: number
-  contentType?: string
-  headers: Record<string, string>
-  body?: unknown
-}): ArgumentsHost {
+function makeHost(
+  captured: {
+    status?: number
+    contentType?: string
+    headers: Record<string, string>
+    body?: unknown
+  },
+  url = "/v1/auth/login"
+): ArgumentsHost {
   const res = {
     status(code: number) {
       captured.status = code
@@ -35,7 +41,7 @@ function makeHost(captured: {
       return res
     },
   }
-  const req = { originalUrl: "/v1/auth/login" }
+  const req = { originalUrl: url }
   return {
     switchToHttp: () => ({ getRequest: () => req, getResponse: () => res }),
   } as unknown as ArgumentsHost
@@ -58,7 +64,7 @@ describe("ProblemDetailsFilter — 429", () => {
     )
 
     expect(captured.status).toBe(429)
-    expect(captured.headers["Retry-After"]).toBeDefined()
+    expect(captured.headers["Retry-After"]).toBe("60")
   })
 })
 
@@ -100,20 +106,47 @@ type Captured = {
   body?: unknown
 }
 
-function run(exception: unknown, correlationId?: string): Captured {
+type LoggedError = { event: string; fields: unknown }
+
+type RunOptions = {
+  correlationId?: string
+  url?: string
+}
+
+function runWith(
+  exception: unknown,
+  options: RunOptions = {}
+): Captured & { logged: LoggedError[] } {
+  const logged: LoggedError[] = []
   const ctx = new RequestContext()
-  const factory = new LoggerFactory(ctx, pino({ level: "silent" }))
+  const factory = {
+    forModule: () => ({
+      error: (event: string, fields: unknown) => {
+        logged.push({ event, fields })
+      },
+    }),
+  } as unknown as LoggerFactory
   const filter = new ProblemDetailsFilter(factory, ctx)
   const captured: Captured = { headers: {} }
   const emit = (): void => {
-    filter.catch(exception, makeHost(captured))
+    filter.catch(exception, makeHost(captured, options.url))
   }
-  if (correlationId === undefined) {
+  if (options.correlationId === undefined) {
     emit()
-    return captured
+  } else {
+    ctx.run(makeStore(options.correlationId), emit)
   }
-  ctx.run(makeStore(correlationId), emit)
-  return captured
+  return { ...captured, logged }
+}
+
+function run(exception: unknown, correlationId?: string): Captured {
+  return correlationId === undefined
+    ? runWith(exception)
+    : runWith(exception, { correlationId })
+}
+
+function bodyOf(captured: Captured): Record<string, unknown> {
+  return captured.body as Record<string, unknown>
 }
 
 function makeStore(correlationId: string): RequestContextStore {
@@ -274,5 +307,170 @@ describe("ProblemDetailsFilter — mapeamento por classe DomainError", () => {
     expect(body.status).toBe(status)
     expect(typeof body.type).toBe("string")
     expect(typeof body.title).toBe("string")
+  })
+})
+
+class FakeConflictError extends DomainError {
+  readonly status = 409
+  readonly type = "https://errors.example.com/conflict"
+  constructor() {
+    super("Conflito de agenda", "O horário já está reservado")
+  }
+}
+
+class FakeThrottledError extends DomainError {
+  readonly status = 429
+  readonly type = "https://errors.example.com/throttled"
+  constructor() {
+    super("Muitas tentativas")
+  }
+}
+
+function zodFailure(): { exception: ZodValidationException; issues: unknown } {
+  const parsed = z.object({ age: z.number() }).safeParse({ age: "não é número" })
+  if (parsed.success) {
+    throw new Error("o payload de teste precisa falhar na validação")
+  }
+  return {
+    exception: new ZodValidationException(parsed.error),
+    issues: parsed.error.issues,
+  }
+}
+
+describe("ProblemDetailsFilter — corpo do DomainError", () => {
+  it("copia type, title, status e detail do erro", () => {
+    const r = runWith(new FakeConflictError())
+    expect(r.status).toBe(409)
+    expect(r.body).toEqual({
+      type: "https://errors.example.com/conflict",
+      title: "Conflito de agenda",
+      status: 409,
+      detail: "O horário já está reservado",
+      instance: "/v1/auth/login",
+      correlationId: null,
+    })
+  })
+
+  it("fora de um escopo de request o correlationId sai nulo", () => {
+    const r = runWith(new Error("boom"))
+    expect(bodyOf(r).correlationId).toBeNull()
+  })
+
+  it("dentro do escopo o correlationId do contexto entra no corpo", () => {
+    const r = runWith(new Error("boom"), { correlationId: "corr-500" })
+    expect(bodyOf(r).correlationId).toBe("corr-500")
+  })
+})
+
+describe("ProblemDetailsFilter — falha de validação", () => {
+  it("ZodValidationException vira 400 com as issues do zod em errors", () => {
+    const { exception, issues } = zodFailure()
+    const r = runWith(exception)
+    const body = bodyOf(r)
+    expect(r.status).toBe(400)
+    expect(body.type).toBe("https://errors.example.com/validation")
+    expect(body.title).toBe("Erro de validação")
+    expect(body.detail).toBe("Payload inválido")
+    expect(body.errors).toEqual(issues)
+  })
+
+  it("erro de validação sem issues sai com errors ausente", () => {
+    const r = runWith(new ZodValidationException({ message: "sem issues" }))
+    const body = bodyOf(r)
+    expect(r.status).toBe(400)
+    expect(body.errors).toBeUndefined()
+    expect(body.title).toBe("Erro de validação")
+  })
+})
+
+describe("ProblemDetailsFilter — título da HttpException", () => {
+  it("resposta string vira o próprio título", () => {
+    const r = runWith(new HttpException("Acesso negado", 403))
+    const body = bodyOf(r)
+    expect(r.status).toBe(403)
+    expect(body.type).toBe("https://errors.example.com/http/403")
+    expect(body.title).toBe("Acesso negado")
+  })
+
+  it("message string do objeto de resposta vira o título", () => {
+    const r = runWith(new HttpException({ message: "Campo obrigatório" }, 400))
+    expect(bodyOf(r).title).toBe("Campo obrigatório")
+  })
+
+  it("message em lista é juntada por vírgula", () => {
+    const r = runWith(
+      new HttpException({ message: ["email inválido", "senha curta"] }, 400)
+    )
+    expect(bodyOf(r).title).toBe("email inválido, senha curta")
+  })
+
+  it("message de outro tipo cai na mensagem da exceção", () => {
+    const exception = new HttpException({ message: 42 }, 400)
+    const r = runWith(exception)
+    expect(bodyOf(r).title).toBe(exception.message)
+  })
+
+  it("resposta sem message cai na mensagem da exceção", () => {
+    const exception = new HttpException({ error: "Bad Request" }, 400)
+    const r = runWith(exception)
+    expect(bodyOf(r).title).toBe(exception.message)
+  })
+})
+
+describe("ProblemDetailsFilter — instance sem PII", () => {
+  it("trunca a url no primeiro ? e não ecoa a query", () => {
+    const r = runWith(new ForbiddenError(), {
+      url: "/v1/auth/login?token=segredo&email=ana@example.com",
+    })
+    expect(bodyOf(r).instance).toBe("/v1/auth/login")
+    const json = JSON.stringify(r.body)
+    expect(json).not.toContain("segredo")
+    expect(json).not.toContain("ana@example.com")
+  })
+
+  it("url sem query string entra inteira", () => {
+    const r = runWith(new ForbiddenError(), { url: "/v1/things/42" })
+    expect(bodyOf(r).instance).toBe("/v1/things/42")
+  })
+})
+
+describe("ProblemDetailsFilter — log do que é 5xx", () => {
+  it("status 500 ou mais registra unhandled_exception com o erro original", () => {
+    const exception = new Error("boom")
+    const r = runWith(exception)
+    expect(r.status).toBe(500)
+    expect(r.logged).toEqual([
+      { event: "unhandled_exception", fields: { err: exception } },
+    ])
+  })
+
+  it("status 4xx não registra nada", () => {
+    const r = runWith(new ForbiddenError())
+    expect(r.status).toBe(403)
+    expect(r.logged).toEqual([])
+  })
+})
+
+describe("ProblemDetailsFilter — fallback do Retry-After", () => {
+  it("DomainError 429 sem retryAfterSeconds cai em 60", () => {
+    const r = runWith(new FakeThrottledError())
+    expect(r.status).toBe(429)
+    expect(r.headers["Retry-After"]).toBe("60")
+  })
+
+  it("retryAfter que não é número cai em 60", () => {
+    const r = runWith(new HttpException({ message: "rate", retryAfter: "45" }, 429))
+    expect(r.headers["Retry-After"]).toBe("60")
+  })
+
+  it("objeto de resposta sem retryAfter cai em 60", () => {
+    const r = runWith(new HttpException({ message: "rate" }, 429))
+    expect(r.headers["Retry-After"]).toBe("60")
+  })
+
+  it("400 nunca recebe Retry-After", () => {
+    const r = runWith(new HttpException("Requisição inválida", 400))
+    expect(r.status).toBe(400)
+    expect(r.headers["Retry-After"]).toBeUndefined()
   })
 })

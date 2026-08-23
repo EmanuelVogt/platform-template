@@ -1,5 +1,9 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
+
+import { describe, expect, it } from "vitest"
+
+import { listDirectories } from "../../test/unit/source-survey"
 
 const MODULES_DIR = join(__dirname, "..", "..", "..", "modules")
 
@@ -8,11 +12,10 @@ const TYPE_BASE_RE = /const TYPE_BASE = ["']([^"']+)["']/
 type ModuleErrorsFile = { module: string; content: string }
 
 function moduleErrorsFiles(): ModuleErrorsFile[] {
-  return readdirSync(MODULES_DIR, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => ({
-      module: entry.name,
-      path: join(MODULES_DIR, entry.name, "domain", "errors.ts"),
+  return listDirectories(MODULES_DIR)
+    .map((module) => ({
+      module,
+      path: join(MODULES_DIR, module, "domain", "errors.ts"),
     }))
     .filter(({ path }) => existsSync(path))
     .map(({ module, path }) => ({

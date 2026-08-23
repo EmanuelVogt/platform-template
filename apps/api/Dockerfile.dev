@@ -15,24 +15,10 @@ RUN corepack enable \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 # Instala o workspace inteiro (não há prune aqui), então as deps do web entram
-# junto — inclusive @bryntum/scheduler, licenciado e servido por registry privado.
-# Token por secret do BuildKit, com build-arg de fallback para runner sem secret;
-# o ~/.npmrc morre no mesmo RUN e não sobra em layer. Ver docs/dev/deploy.md.
-# O Dockerfile de prod do api não precisa disto: o turbo prune corta o web fora.
-ARG BRYNTUM_NPM_TOKEN=""
+# junto. O Dockerfile de prod do api faz diferente: o turbo prune corta o web fora.
 COPY . .
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    --mount=type=secret,id=bryntum_npm_token,required=false \
-    token="$(cat /run/secrets/bryntum_npm_token 2>/dev/null || printf '%s' "$BRYNTUM_NPM_TOKEN")"; \
-    if [ -z "$token" ]; then \
-      echo "ERRO: token do registry Bryntum ausente (secret bryntum_npm_token ou build-arg BRYNTUM_NPM_TOKEN)" >&2; \
-      exit 1; \
-    fi; \
-    printf '//npm.bryntum.com/:_authToken=%s\n' "$token" > /root/.npmrc; \
-    pnpm install --frozen-lockfile --store-dir=/pnpm/store; \
-    rc=$?; \
-    rm -f /root/.npmrc; \
-    exit $rc
+    pnpm install --frozen-lockfile --store-dir=/pnpm/store
 # Entrypoint fora de /app: o bind-mount do compose sobrescreveria se estivesse dentro.
 COPY --chmod=0755 apps/api/docker-entrypoint.dev.sh /usr/local/bin/entrypoint.dev.sh
 WORKDIR /app/apps/api

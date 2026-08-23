@@ -1,10 +1,10 @@
 # {{ project_name }}
 
-Monorepo pnpm + Turbo: API NestJS (monólito modular, kernel + entradas de catálogo
-instaladas via `pnpm platform module add`) e front React/Vite headless, gerado a partir do
-`platform-template` (versão em `.copier-answers.yml`).
+pnpm + Turbo monorepo: NestJS API (modular monolith, kernel + catalog entries installed
+via `pnpm platform module add`) and headless React/Vite front, generated from
+`platform-template` (version in `.copier-answers.yml`).
 
-## Começar
+## Getting started
 
 ```
 cp apps/api/.env.example apps/api/.env
@@ -15,13 +15,13 @@ pnpm --filter api db:bootstrap
 pnpm dev
 ```
 
-Front em `http://localhost:{% if web_stack == 'next' %}3001{% else %}5173{% endif %}`, API em `http://localhost:3000` (Scalar em `/docs`).
+Front at `http://localhost:{% if web_stack == 'next' %}3001{% else %}5173{% endif %}`, API at `http://localhost:3000` (Scalar at `/docs`).
 
-## Mapa
+## Map
 
-- `AGENTS.md` — regras de leitura obrigatória e tripwires (também é o `CLAUDE.md`).
-- `docs/dev/template.md` — o que é plataforma, o que é produto, como atualizar, catálogo
-  de módulos, advisories.
-- `docs/catalog/catalog.md` — como uma entrada do catálogo funciona.
-- `docs/back/back-arch.md`, `docs/front/front-arch.md`, `docs/test/testing.md` — handbooks.
-- `docs/dev/deploy.md`, `docs/agents/infra.md` — deploy e infra.
+- `AGENTS.md` — mandatory-reading rules and tripwires (it is also `CLAUDE.md`).
+- `docs/dev/template.md` — what is platform, what is product, how to update, module
+  catalog, advisories.
+- `docs/catalog/catalog.md` — how a catalog entry works.
+- `docs/arch/back.md`, `docs/arch/front.md`, `docs/test/testing.md` — handbooks.
+- `docs/dev/deploy.md`, `docs/agents/infra.md` — deploy and infra.

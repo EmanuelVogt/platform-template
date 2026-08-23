@@ -1,8 +1,33 @@
 # {{ project_name }}
 
-pnpm + Turbo monorepo: NestJS API (modular monolith, kernel + catalog entries installed
-via `pnpm platform module add`) and headless React/Vite front, generated from
-`platform-template` (version in `.copier-answers.yml`).
+[![CI](https://img.shields.io/github/actions/workflow/status/{{ github_org }}/{{ github_repo }}/ci.yml?branch=main&label=CI&logo=githubactions&logoColor=white)](https://github.com/{{ github_org }}/{{ github_repo }}/actions/workflows/ci.yml)
+![TypeScript 6 strict](https://img.shields.io/badge/TypeScript-6%20strict-3178C6?logo=typescript&logoColor=white)
+![Vitest 4](https://img.shields.io/badge/Vitest-4-6E9F18?logo=vitest&logoColor=white)
+![Coverage floor 90%](https://img.shields.io/badge/coverage%20floor-90%25%20every%20metric-22c55e)
+
+NestJS modular monolith and headless React front end whose architecture is **executable**:
+layer boundaries, authorization, transaction participation, the HTTP contract and the
+migration journal are enforced by specs, lint and the type checker — not by convention or
+code review.
+
+## What the codebase guarantees
+
+| Guarantee                       | How it is enforced                                                                                                                                                       |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Layer boundaries are real       | `module-boundaries.spec.ts` resolves every production import; across modules only `api/facades`, `api/events` and `*.module.ts` are legal targets                        |
+| Authorization is fail-closed    | every route declares exactly one access mode; no declaration → authenticated, no policy provider → 403; `authz-coverage` fails an undeclared route                       |
+| Transactions are declared       | `@Transactional` / `@ReadOnly` / `@NonTransactional("reason")` on every use case (`transactional-coverage`); the pool is private to the kernel, the executor lives in ALS |
+| Events cannot be lost           | transactional outbox: publishing outside a transaction throws; at-least-once, backoff, dead-letter, per-aggregate FIFO, replay; direct `EventEmitter.emit` is forbidden |
+| Mutations are idempotent        | `Idempotency-Key` store with request hash and response snapshot — same payload replays, different payload is rejected                                                   |
+| Context is never a parameter    | `RequestContext` over AsyncLocalStorage carries correlation/causation, actor and tenant; every dispatcher opens one                                                      |
+| The HTTP contract has one truth | Zod → DTOs → `openapi.json` → generated client (`@platform/api-client`); CI fails on an uncommitted contract; a change breaks on the front, never silently in the API    |
+| Errors are a contract           | every error is RFC 7807 `application/problem+json` with `correlationId`, never a stack, SQL or path                                                                     |
+
+Quality gates: TypeScript `strict` + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes`,
+`any` and `eslint-disable` are errors; Vitest 4 as the single runner over four projects
+(`api`, `api-int`, `api-e2e`, `web`) against real Postgres and Redis (testcontainers);
+coverage floor of 90 % on every metric, never lowered; pre-push runs
+`db:check:journal → typecheck → test:coverage`.
 
 ## Getting started
 
@@ -17,11 +42,28 @@ pnpm dev
 
 Front at `http://localhost:5173`, API at `http://localhost:3000` (Scalar at `/docs`).
 
+```
+apps/api/      NestJS — kernel in src/shared, modules in src/modules
+apps/web/      headless React/Vite — transport, router, access guard, unstyled layout
+packages/      api-client (generated from openapi.json), eslint and tsconfig presets
+docs/          handbooks, ADRs, advisories
+.claude/ .agents/   agent harness (hooks, skills, agents); AGENTS.md is also CLAUDE.md
+```
+
+## Platform origin and updates
+
+The kernel, the front-end shell, the harness and the handbooks come from
+`platform-template` (version in `.copier-answers.yml` — never edit by hand). Platform
+modules are installed on demand from a versioned catalog with
+`pnpm platform module add <entry>`; fixes to installed entries arrive as advisories and
+the platform itself updates with `copier update`. The rule that keeps updates
+conflict-free: **this repository adds files; it does not edit platform files**.
+
 ## Map
 
 - `AGENTS.md` — mandatory-reading rules and tripwires (it is also `CLAUDE.md`).
-- `docs/dev/template.md` — what is platform, what is product, how to update, module
-  catalog, advisories.
-- `docs/catalog/catalog.md` — how a catalog entry works.
-- `docs/arch/back.md`, `docs/arch/front.md`, `docs/test/testing.md` — handbooks.
+- `docs/arch/back.md`, `docs/arch/front.md` — the rules behind every spec above.
+- `docs/test/testing.md`, `docs/code-quality.md` — runner, coverage floor, lint and TS policy.
+- `docs/dev/template.md` — what is platform, what is product, how to update.
+- `docs/catalog/catalog.md` — how a catalog entry works and how advisories apply.
 - `docs/dev/deploy.md`, `docs/agents/infra.md` — deploy and infra.

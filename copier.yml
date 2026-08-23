@@ -28,6 +28,10 @@ _exclude:
   # o copier testa o caminho de destino como Path, que nunca traz a barra — com ela
   # o diretório-raiz escapa e é criado vazio no filho
   - /catalog
+  # auditorias e análises internas do template — mesma âncora do `/catalog`:
+  # sem a barra inicial casaria qualquer diretório com esse nome em qualquer
+  # profundidade; sem a final o diretório-raiz escapa e nasce vazio no filho
+  - /docs/platform_template
   - .github/workflows/catalog.yml
   - .claude/settings.local.json
   - apps/api/.env

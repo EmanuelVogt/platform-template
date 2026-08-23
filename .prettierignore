@@ -4,3 +4,4 @@ node_modules/
 coverage/
 pnpm-lock.yaml
 .pnpm-store/
+docs/platform_template/

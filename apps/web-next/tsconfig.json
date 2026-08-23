@@ -1,4 +1,10 @@
 {
   "extends": "@workspace/typescript-config/next.json",
-  "include": ["app", "src", "next-env.d.ts", "*.ts"]
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "customConditions": ["development"]
+  },
+  "include": ["app", "src", "test", "next-env.d.ts", "*.ts"]
 }

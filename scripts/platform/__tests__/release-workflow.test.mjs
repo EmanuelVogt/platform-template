@@ -27,3 +27,37 @@ test("REL-01: o primeiro passo de verify é um guard incondicional que falha qua
   assert.match(firstStep.run, /refs\/heads\/main/);
   assert.match(firstStep.run, /exit 1/);
 });
+
+test("REL-02: o job tag depende de verify e catalog", () => {
+  const { jobs } = readWorkflow();
+  assert.deepEqual(jobs.tag.needs, ["verify", "catalog"]);
+});
+
+test("REL-02: verify roda o release-preflight antes de qualquer passo de gate", () => {
+  const { jobs } = readWorkflow();
+  const runs = jobs.verify.steps.map((step) => step.run).filter(Boolean);
+  const preflightIndex = runs.findIndex((run) =>
+    /release-preflight\.mjs "\$\{\{ inputs\.version \}\}"/.test(run),
+  );
+  assert.ok(preflightIndex >= 0, "release-preflight.mjs não encontrado nos passos de verify");
+  const gatePatterns = [
+    /^pnpm check$/,
+    /^pnpm test$/,
+    /^pnpm test:scripts$/,
+    /^pnpm catalog:lint$/,
+    /^pnpm catalog:typecheck$/,
+  ];
+  for (const pattern of gatePatterns) {
+    const gateIndex = runs.findIndex((run) => pattern.test(run.trim()));
+    assert.ok(gateIndex >= 0, `passo de gate ${pattern} não encontrado`);
+    assert.ok(preflightIndex < gateIndex, `preflight deve rodar antes de ${pattern}`);
+  }
+});
+
+test("REL-02: tag é o único job com permissions.contents write", () => {
+  const { jobs } = readWorkflow();
+  const jobsWithWrite = Object.entries(jobs)
+    .filter(([, job]) => job.permissions?.contents === "write")
+    .map(([name]) => name);
+  assert.deepEqual(jobsWithWrite, ["tag"]);
+});

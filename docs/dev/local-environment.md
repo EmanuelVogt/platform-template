@@ -24,7 +24,7 @@ docker compose ps           # checks the status (healthy)
 docker compose logs -f      # follows the logs
 ```
 
-Credentials (already reflected in `apps/api/.env`):
+Credentials (match `apps/api/.env.example`):
 
 | Service  | Port | Connection                                            |
 | -------- | ---- | ----------------------------------------------------- |

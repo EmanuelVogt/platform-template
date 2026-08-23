@@ -40,11 +40,19 @@ function createParser(req: Request, limits: MultipartLimits): ReturnType<typeof 
   try {
     return busboy({
       headers: req.headers,
-      // `parts` no teto de `files`: só arquivos do campo esperado passam por
-      // aqui (campo estranho é rejeitado antes de contar), então parts/files
-      // colapsam no mesmo número. `fields` em 0 — a rota não aceita nenhum
-      // campo não-arquivo.
-      limits: { fileSize: limits.maxBytes, files: limits.maxFiles, parts: limits.maxFiles, fields: 0 },
+      // `parts` = `files` + 1 de propósito: o busboy emite `partsLimit` quando
+      // a contagem ALCANÇA o teto (`++parts === partsLimit`), enquanto
+      // `filesLimit` só dispara na parte ALÉM do teto (`files === filesLimit`
+      // antes de contar). Com os dois no mesmo número, um lote no limite exato
+      // (1 arquivo com maxFiles=1) morria em 413. Quem barra o excesso de
+      // arquivos é `files`; `parts` fica como rede para partes fora do padrão.
+      // `fields` em 0 — a rota não aceita nenhum campo não-arquivo.
+      limits: {
+        fileSize: limits.maxBytes,
+        files: limits.maxFiles,
+        parts: limits.maxFiles + 1,
+        fields: 0,
+      },
     })
   } catch {
     // Content-type ausente ou fora do multipart: pedido malformado, não falha

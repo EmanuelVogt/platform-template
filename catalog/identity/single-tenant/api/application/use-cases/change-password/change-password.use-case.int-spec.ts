@@ -1,3 +1,5 @@
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
+
 import {
   createTestDb,
   createTestPool,
@@ -13,7 +15,6 @@ import { ChangePasswordUseCase } from "./change-password.use-case"
 
 import type { RequestContextStore } from "../../../../../shared/kernel/context/request-context"
 import type { Pool } from "pg"
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
 function makeUser(): User {
   return User.fromProps({

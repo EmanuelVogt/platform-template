@@ -2,9 +2,9 @@ import { Controller, Delete, HttpCode, HttpStatus, Param } from "@nestjs/common"
 import { ApiOperation, ApiTags } from "@nestjs/swagger"
 
 import { RequirePermission } from "../../../../../shared/kernel/access/decorators"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 import { DeleteUserUseCase } from "../../../application/use-cases/delete-user/delete-user.use-case"
 import { IdParamDto } from "../../contracts/identity.contract"
-import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 @ApiTags("Admin")
 @Controller("admin/users")

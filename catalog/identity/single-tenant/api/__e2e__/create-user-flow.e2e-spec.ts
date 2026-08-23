@@ -14,9 +14,9 @@ import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
 import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
 import { OutboxDispatcher } from "../../../shared/kernel/outbox/outbox.dispatcher"
+import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
 import { MAILER } from "../../notification/domain/ports/mailer"
 import { DeliveryDispatcher } from "../../notification/infrastructure/delivery/delivery.dispatcher"
-import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
 import { fakeMailer } from "../testing/fake-mailer"
 import { seedUser } from "../testing/seed-user"
 
@@ -26,6 +26,7 @@ const ORIGIN = "http://localhost:5173"
 
 const allowAll = {
   consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
+  reset: () => Promise.resolve(),
 }
 
 /** Extrai o href renderizado no botão de ação do e-mail (link com token). */

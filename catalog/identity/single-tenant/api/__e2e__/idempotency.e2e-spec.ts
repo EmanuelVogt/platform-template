@@ -16,6 +16,7 @@ const ORIGIN = "http://localhost:5173"
 // do mesmo IP. O foco aqui são os ramos do interceptor de idempotência.
 const allowAll = {
   consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
+  reset: () => Promise.resolve(),
 }
 
 describe("IdempotencyInterceptor (e2e)", () => {

@@ -8,8 +8,8 @@ import { AppModule } from "../../../app.module"
 import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
 import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
-import { MAILER } from "../../notification/domain/ports/mailer"
 import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
+import { MAILER } from "../../notification/domain/ports/mailer"
 import { fakeMailer } from "../testing/fake-mailer"
 import { seedUser } from "../testing/seed-user"
 
@@ -20,6 +20,7 @@ const PASSWORD = "Senha-Muito-Forte-AuthZ-2026!"
 
 const allowAll = {
   consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
+  reset: () => Promise.resolve(),
 }
 
 describe("authz — AuthMiddleware + AccessGuard + validações (e2e)", () => {

@@ -3,9 +3,9 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger"
 
 import { Public } from "../../../../../shared/kernel/access/decorators"
 import { Idempotent } from "../../../../../shared/kernel/idempotency/idempotent.decorator"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 import { ResetPasswordUseCase } from "../../../application/use-cases/reset-password/reset-password.use-case"
 import { ResetPasswordDto } from "../../contracts/identity.contract"
-import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 @ApiTags("Auth")
 @Controller("auth")

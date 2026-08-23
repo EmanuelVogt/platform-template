@@ -3,6 +3,7 @@ import { join } from "node:path"
 
 import { describe, expect, it } from "vitest"
 
+
 import { expectContractSubset } from "../../../shared/test/parity/contract-snapshot"
 
 type SnapshotDocument = {

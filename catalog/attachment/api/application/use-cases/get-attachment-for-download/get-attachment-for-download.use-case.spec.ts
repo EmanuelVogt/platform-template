@@ -1,8 +1,9 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { Attachment } from "../../../domain/attachment.entity"
 import { AttachmentNotFoundError } from "../../../domain/errors"
 
 import { GetAttachmentForDownloadUseCase } from "./get-attachment-for-download.use-case"
-import { describe, expect, it, vi } from "vitest"
 
 function entity(visibility: "public" | "authenticated" | "restricted", owner: string | null) {
   return Attachment.fromProps({

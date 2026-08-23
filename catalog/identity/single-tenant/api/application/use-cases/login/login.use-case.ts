@@ -3,6 +3,10 @@ import { Inject, type OnModuleInit } from "@nestjs/common"
 import { CLOCK, type Clock } from "../../../../../shared/kernel/clock/clock"
 import { RequestContext } from "../../../../../shared/kernel/context/request-context"
 import { OutboxPublisher } from "../../../../../shared/kernel/outbox/outbox.publisher"
+import {
+  RATE_LIMITER,
+  type RateLimiter,
+} from "../../../../../shared/kernel/rate-limit/rate-limiter.port"
 import { Traced } from "../../../../../shared/kernel/tracing/traced.decorator"
 import { Transactional } from "../../../../../shared/kernel/transactional/transactional.decorator"
 import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
@@ -17,10 +21,6 @@ import {
   PASSWORD_HASHER,
   type PasswordHasher,
 } from "../../../domain/ports/password-hasher"
-import {
-  RATE_LIMITER,
-  type RateLimiter,
-} from "../../../../../shared/kernel/rate-limit/rate-limiter.port"
 import {
   TOKEN_GENERATOR,
   type TokenGenerator,

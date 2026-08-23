@@ -3,6 +3,7 @@ import { Readable } from "node:stream"
 import { type INestApplication, VersioningType } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import {
   createTestPool,
@@ -20,12 +21,12 @@ import { seedUser } from "../../identity/testing/seed-user"
 
 import type { ObjectStoragePort } from "../../../shared/infra/storage/object-storage.port"
 import type { Pool } from "pg"
-import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 const ORIGIN = "http://localhost:5173"
 
 const allowAll = {
   consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
+  reset: () => Promise.resolve(),
 }
 
 // 1x1 PNG válido (assinatura 0x89 'PNG').
@@ -112,6 +113,7 @@ describe("Attachment (e2e): upload em lote", () => {
     const res = await request(app.getHttpServer())
       .post("/v1/attachments/uploads")
       .query({ profile: "image" })
+      .set("Origin", ORIGIN)
       .set("Cookie", cookies)
       .attach("file", PNG_1PX, { filename: "avatar.png", contentType: "image/png" })
       .expect(201)
@@ -129,6 +131,7 @@ describe("Attachment (e2e): upload em lote", () => {
     const res = await request(app.getHttpServer())
       .post("/v1/attachments/uploads")
       .query({ profile: "image" })
+      .set("Origin", ORIGIN)
       .set("Cookie", cookies)
       .attach("file", HTML_BYTES, { filename: "fake.png", contentType: "image/png" })
       .expect(415)

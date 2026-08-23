@@ -1,6 +1,6 @@
-import "reflect-metadata"
-
 import { describe, expect, it } from "vitest"
+
+import "reflect-metadata"
 
 import {
   ACCESS_REQUIREMENT,

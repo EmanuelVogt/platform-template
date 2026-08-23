@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { User } from "../../../domain/entities/user.entity"
 import {
   BreachCheckUnavailableError,
@@ -10,7 +12,6 @@ import { fakeRequestContext } from "../../request-context.fixture"
 import { CreateSessionService } from "../../services/create-session.service"
 
 import { SetPasswordUseCase } from "./set-password.use-case"
-import { describe, expect, it, vi } from "vitest"
 
 const VALID_INPUT = {
   token: "raw",

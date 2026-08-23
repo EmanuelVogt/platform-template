@@ -1,7 +1,8 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { Attachment } from "../../../domain/attachment.entity"
 
 import { DeleteAttachmentUseCase } from "./delete-attachment.use-case"
-import { describe, expect, it, vi } from "vitest"
 
 function makeDeps(found: Attachment | null) {
   const onCommitCbs: (() => Promise<void> | void)[] = []

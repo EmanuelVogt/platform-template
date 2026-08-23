@@ -57,7 +57,9 @@ export function sniffImageStream(stream: Readable): Promise<SupportedImage | nul
       stream.unshift(chunk)
       finish(sniffImageContentType(chunk))
     }
-    const onEnd = (): void => finish(null)
+    const onEnd = (): void => {
+      finish(null)
+    }
     const onError = (error: Error): void => {
       if (settled) return
       settled = true

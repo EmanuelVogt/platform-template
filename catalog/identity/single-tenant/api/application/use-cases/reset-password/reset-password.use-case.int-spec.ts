@@ -1,3 +1,5 @@
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
+
 import {
   createTestDb,
   createTestPool,
@@ -13,7 +15,6 @@ import { ResetPasswordUseCase } from "./reset-password.use-case"
 import type { RequestContextStore } from "../../../../../shared/kernel/context/request-context"
 import type { BreachVerdict } from "../../../domain/ports/breach-check"
 import type { Pool } from "pg"
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
 const NOW = new Date("2026-06-10T12:00:00.000Z")
 

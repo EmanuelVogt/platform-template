@@ -20,6 +20,7 @@ const SESSION_COOKIE = "rit_session"
 
 const allowAll = {
   consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
+  reset: () => Promise.resolve(),
 }
 
 /** Extrai o valor de um cookie específico do header Set-Cookie. */

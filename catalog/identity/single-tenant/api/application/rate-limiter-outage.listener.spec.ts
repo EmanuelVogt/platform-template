@@ -1,14 +1,15 @@
 import { EventEmitter2 } from "@nestjs/event-emitter"
+import { describe, expect, it, vi } from "vitest"
 
 import { InMemoryRateLimiter } from "../../../shared/kernel/rate-limit/in-memory-rate-limiter"
 import { ResilientRateLimiter } from "../../../shared/kernel/rate-limit/resilient-rate-limiter"
-import { ACCESS_HISTORY_EVENT_TYPES } from "./use-cases/list-access-history/types"
 
 import { RateLimiterOutageListener } from "./rate-limiter-outage.listener"
+import { ACCESS_HISTORY_EVENT_TYPES } from "./use-cases/list-access-history/types"
+
 
 import type { LoggerFactory } from "../../../shared/kernel/logging/logger.factory"
 import type { RateLimiter } from "../../../shared/kernel/rate-limit/rate-limiter.port"
-import { describe, expect, it, vi } from "vitest"
 
 const SINCE = new Date("2026-08-22T10:00:00.000Z")
 

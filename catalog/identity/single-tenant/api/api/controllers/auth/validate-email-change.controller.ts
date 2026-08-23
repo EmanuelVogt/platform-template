@@ -3,13 +3,13 @@ import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger"
 
 import { Public } from "../../../../../shared/kernel/access/decorators"
 import { ListQuery } from "../../../../../shared/kernel/listing/list-query.decorator"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 import { ValidateEmailChangeQuery } from "../../../application/use-cases/validate-email-change/validate-email-change.use-case"
 import {
   EmailChangeInfoDto,
   ValidateEmailChangeQueryDto,
   validateEmailChangeQuerySchema,
 } from "../../contracts/identity.contract"
-import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 @ApiTags("Auth")
 @Controller("auth")

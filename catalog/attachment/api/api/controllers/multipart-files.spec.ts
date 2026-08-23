@@ -1,5 +1,7 @@
 import { PassThrough, Readable } from "node:stream"
 
+import { type Mock, describe, expect, it, vi } from "vitest"
+
 import {
   InvalidMultipartRequestError,
   PayloadTooLargeError,
@@ -12,7 +14,6 @@ import { readMultipartFiles } from "./multipart-files"
 import type { MultipartLimits } from "./multipart-files"
 import type { IncomingFile } from "../../domain/incoming-file"
 import type { Request, Response } from "express"
-import { type Mock, describe, expect, it, vi } from "vitest"
 
 const BOUNDARY = "----teste"
 
@@ -156,11 +157,21 @@ describe("readMultipartFiles", () => {
     ).rejects.toBeInstanceOf(PayloadTooLargeError)
   })
 
-  // `files` e `parts` recebem o MESMO `profile.maxFiles` (fields: 0 já barra
-  // qualquer parte não-arquivo antes dela contar) — nesta config as duas
-  // bordas do busboy disparam juntas para um lote maior que `maxFiles`; um
-  // teste só já prova as duas passagens de `limits` ao parser.
-  it("recusa lote acima de maxFiles — files e parts do busboy compartilham o mesmo teto (413)", async () => {
+  // Lote no limite exato passa: o teto de `parts` do busboy é `maxFiles + 1`
+  // porque ele avisa ao ALCANÇAR o teto, não ao ultrapassá-lo (REM-08, e2e de
+  // upload pegava 413 num único PNG com maxFiles=1).
+  it("aceita lote no limite exato de maxFiles", async () => {
+    const req = fakeRequest(
+      bodyWith([{ field: "file", filename: "a.txt", content: "um" }]),
+    )
+
+    expect(await collect(req, fakeResponse(), { maxBytes: 1_000_000, maxFiles: 1 })).toEqual([
+      { filename: "a.txt", content: "um" },
+    ])
+  })
+
+  // Quem barra o excesso é `files`; `fields: 0` já derruba parte não-arquivo.
+  it("recusa lote acima de maxFiles (413)", async () => {
     const req = fakeRequest(
       bodyWith([
         { field: "file", filename: "a.txt", content: "um" },

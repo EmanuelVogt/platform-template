@@ -274,7 +274,8 @@ describe("MaintenanceRuntime (integração)", () => {
     // compartilhado, o que invalidaria a checagem de "ainda sem outcome"
     // logo depois do disparo.
     const detachedJob = "detached-probe"
-    const detachedLockId = 6
+    // Fora dos ids reservados pelo kernel (1, 2, 6): o registry reprova colisão.
+    const detachedLockId = 98
 
     beforeAll(() => {
       registerMaintenanceJob({

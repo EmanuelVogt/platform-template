@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { Device } from "../../../domain/entities/device.entity"
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import { InvalidCredentialsError, RateLimitedError } from "../../../domain/errors"
@@ -6,7 +8,6 @@ import { fakeRequestContext } from "../../request-context.fixture"
 import { CreateSessionService } from "../../services/create-session.service"
 
 import { LoginUseCase } from "./login.use-case"
-import { describe, expect, it, vi } from "vitest"
 
 
 const DUMMY_HASH = "argon2-dummy"
@@ -19,7 +20,7 @@ function limiterDenying(denied: Record<string, number>) {
     consume: vi.fn((key: string) =>
       Promise.resolve(
         key in denied
-          ? { allowed: false, retryAfterSeconds: denied[key] as number }
+          ? { allowed: false, retryAfterSeconds: denied[key]! }
           : { allowed: true, retryAfterSeconds: 0 },
       ),
     ),
@@ -209,12 +210,15 @@ describe("LoginUseCase", () => {
         t.uc
           .execute({ email, password: "x", rememberMe: false })
           .then(() => null)
-          .catch((e: RateLimitedError) => ({
-            name: e.constructor.name,
-            status: e.status,
-            retryAfterSeconds: e.retryAfterSeconds,
-            message: e.message,
-          }))
+          .catch((error: unknown) => {
+            const e = error as RateLimitedError
+            return {
+              name: e.constructor.name,
+              status: e.status,
+              retryAfterSeconds: e.retryAfterSeconds,
+              message: e.message,
+            }
+          })
 
       expect(await errorOf(unknown, "nao-existe@example.com")).toEqual(
         await errorOf(known, "ana@example.com"),

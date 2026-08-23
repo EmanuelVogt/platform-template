@@ -1,3 +1,5 @@
+import { type Mock, describe, expect, it, vi } from "vitest"
+
 import { RequestContext } from "../../../../../shared/kernel/context/request-context"
 import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.error"
 import { IDENTITY_ACCESS } from "../../../../identity/api/facades/identity-access.facade"
@@ -7,7 +9,6 @@ import { ListTagsUseCase } from "./list-tags.use-case"
 
 import type { RequestContextStore } from "../../../../../shared/kernel/context/request-context"
 import type { TagUsageReader } from "../../../domain/ports/tag-usage.reader"
-import { type Mock, describe, expect, it, vi } from "vitest"
 
 const NOW = new Date("2026-07-27T10:00:00.000Z")
 

@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { RATE_LIMITER } from '../../../../shared/kernel/rate-limit/rate-limiter.port';
 
 import { AUTH_EVENT_REPOSITORY } from './auth-event.repository';
@@ -9,7 +11,6 @@ import { SESSION_REPOSITORY } from './session.repository';
 import { TOKEN_GENERATOR } from './token-generator';
 import { USER_REPOSITORY } from './user.repository';
 import { VERIFICATION_TOKEN_REPOSITORY } from './verification-token.repository';
-import { describe, expect, it } from "vitest"
 
 describe('ports — tokens de injeção', () => {
   const entries = [

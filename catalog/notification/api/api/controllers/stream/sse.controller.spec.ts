@@ -1,4 +1,5 @@
 import { Subject } from "rxjs"
+import { describe, expect, it, vi } from "vitest"
 
 import { SseController } from "./sse.controller"
 
@@ -6,7 +7,6 @@ import type { RequestContext } from "../../../../../shared/kernel/context/reques
 import type { ConnectionRegistryPort } from "../../../domain/ports/connection-registry.port"
 import type { MessageEvent } from "@nestjs/common"
 import type { Request } from "express"
-import { describe, expect, it, vi } from "vitest"
 
 // WEB_ORIGIN em process.env vem de test/setup/unit-env.ts.
 const SAME_ORIGIN = "http://localhost:5173"

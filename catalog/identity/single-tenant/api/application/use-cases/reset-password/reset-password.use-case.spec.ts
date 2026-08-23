@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { User } from "../../../domain/entities/user.entity"
 import {
   BreachCheckUnavailableError,
@@ -8,7 +10,6 @@ import { makeIdentityConfig } from "../../../identity.config.fixture"
 import { fakeRequestContext } from "../../request-context.fixture"
 
 import { ResetPasswordUseCase } from "./reset-password.use-case"
-import { describe, expect, it, vi } from "vitest"
 
 
  

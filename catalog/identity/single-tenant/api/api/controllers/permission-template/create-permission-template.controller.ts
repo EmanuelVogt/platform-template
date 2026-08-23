@@ -3,12 +3,12 @@ import { ApiCreatedResponse, ApiOperation, ApiTags } from "@nestjs/swagger"
 
 import { RequirePermission } from "../../../../../shared/kernel/access/decorators"
 import { Idempotent } from "../../../../../shared/kernel/idempotency/idempotent.decorator"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 import { CreatePermissionTemplateUseCase } from "../../../application/use-cases/create-permission-template/create-permission-template.use-case"
 import {
   PermissionTemplateBodyDto,
   PermissionTemplateResponseDto,
 } from "../../contracts/permission-template.contract"
-import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 import type { CreatePermissionTemplateOutput } from "../../../application/use-cases/create-permission-template/types"
 

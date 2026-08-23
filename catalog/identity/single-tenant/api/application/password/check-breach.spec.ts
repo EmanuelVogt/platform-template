@@ -1,9 +1,10 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { WeakPasswordError } from "../../domain/errors"
 
 import { checkBreach } from "./check-breach"
 
 import type { BreachCheck } from "../../domain/ports/breach-check"
-import { describe, expect, it, vi } from "vitest"
 
 const breachReturning = (verdict: Awaited<ReturnType<BreachCheck["check"]>>) => ({
   check: vi.fn().mockResolvedValue(verdict),

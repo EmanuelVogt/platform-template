@@ -1,7 +1,8 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { Attachment } from "../../domain/attachment.entity"
 
 import { PurgePendingAttachmentsJob } from "./purge-pending-attachments.job"
-import { describe, expect, it, vi } from "vitest"
 
 function stale() {
   return Attachment.createPending({

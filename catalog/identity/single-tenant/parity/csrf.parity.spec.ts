@@ -2,6 +2,7 @@ import "reflect-metadata"
 
 import { ForbiddenException } from "@nestjs/common"
 import { APP_GUARD, Reflector } from "@nestjs/core"
+import { describe, expect, it } from "vitest"
 
 import {
   ACCESS_REQUIREMENT,
@@ -15,7 +16,6 @@ import type { AccessRequirement } from "../../../shared/kernel/access/access-pol
 import type { CsrfConfig } from "../api/guards/csrf.guard"
 import type { Csrf } from "../domain/ports/csrf"
 import type { ExecutionContext } from "@nestjs/common"
-import { describe, expect, it } from "vitest"
 
 const WEB_ORIGIN = "https://app.example.com"
 
@@ -143,10 +143,10 @@ describe("paridade da ordem dos guards globais", () => {
   // O Nest aplica os APP_GUARD na ordem em que são registrados no array de
   // providers, e a ordem não aparece em nenhum tipo: só um teste a segura.
   const appGuards = (
-    IdentityModule.forRoot().providers as Array<{
+    IdentityModule.forRoot().providers as {
       provide?: unknown
       useClass?: unknown
-    }>
+    }[]
   )
     .filter((p) => p.provide === APP_GUARD)
     .map((p) => p.useClass)

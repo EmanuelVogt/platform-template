@@ -1,11 +1,10 @@
+import { drizzle } from "drizzle-orm/node-postgres"
+import { Pool } from "pg"
 import { ulid } from "ulid"
 
 import * as schema from "../../../db/schema"
 import { loadDotenvForDev } from "../../../shared/config/load-dotenv"
-import {
-  createDrizzle,
-  createPool,
-} from "../../../shared/infra/database/drizzle.provider"
+import { poolConfig } from "../../../shared/infra/database/connection-config"
 import { loadIdentityConfig } from "../identity.config"
 import { Argon2PasswordHasher } from "../infrastructure/hashing/argon2-password-hasher"
 import { users } from "../infrastructure/tables/user.table"
@@ -55,8 +54,11 @@ async function main(): Promise<void> {
   const passwordHash = await hasher.hash(password)
   const now = new Date()
 
-  const pool = createPool()
-  const db = createDrizzle(pool, schema)
+  // Pool próprio, não o `createPool` do kernel: nada sob `src/modules` pode
+  // importar a conexão raiz (module-boundaries). Script one-off, uma conexão,
+  // a mesma configuração de `poolConfig` que o app usa no boot.
+  const pool = new Pool(poolConfig())
+  const db = drizzle(pool, { schema })
   try {
     // onConflictDoNothing por e-mail: re-rodar não duplica nem reescreve a senha
     // de um master já existente (idempotente). `returning` vazio = já existia.

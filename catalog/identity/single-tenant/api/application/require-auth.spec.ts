@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { RequestContext } from "../../../shared/kernel/context/request-context"
 import { ForbiddenError } from "../../../shared/kernel/errors/forbidden.error"
 
@@ -5,7 +7,6 @@ import { IDENTITY_SESSION } from "./identity-context"
 import { requireAuth } from "./require-auth"
 
 import type { RequestContextStore } from "../../../shared/kernel/context/request-context"
-import { describe, expect, it } from "vitest"
 
 function storeOf(): RequestContextStore {
   return {
@@ -61,11 +62,13 @@ describe("requireAuth", () => {
     expect(() =>
       inRequest({ session: true }, (ctx) => requireAuth(ctx))
     ).toThrow(ForbiddenError)
+    let caught: unknown
     try {
       inRequest({ session: true }, (ctx) => requireAuth(ctx))
     } catch (error) {
-      expect((error as ForbiddenError).status).toBe(403)
+      caught = error
     }
+    expect((caught as ForbiddenError).status).toBe(403)
   })
 
   it("sem sessão publicada lança 403", () => {

@@ -30,6 +30,7 @@ const ORIGIN = "http://localhost:5173"
 
 const allowAll = {
   consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
+  reset: () => Promise.resolve(),
 }
 
 // 1x1 PNG válido (assinatura 0x89 'PNG').
@@ -427,7 +428,7 @@ describe("Attachment (e2e): download com ACL", () => {
       .get(`/v1/attachments/${id}`)
       .set("Cookie", cookies!)
       .expect(200)
-    const etag = firstRes.headers.etag as string
+    const etag = firstRes.headers.etag!
     const callsAfterFirst = getStreamCallCount()
     expect(callsAfterFirst).toBeGreaterThan(0)
 
@@ -461,10 +462,11 @@ describe("Attachment (e2e): download com ACL", () => {
       .get(`/v1/attachments/${id}`)
       .set("Cookie", cookies!)
       .expect(200)
-    const etag = firstRes.headers.etag as string
+    const etag = firstRes.headers.etag!
 
-    const originalGetStream = storage.getStream
-    storage.getStream = makeSocketLimitedStorage(storage, 2).getStream
+    const originalGetStream = storage.getStream.bind(storage)
+    const limited = makeSocketLimitedStorage(storage, 2)
+    storage.getStream = limited.getStream.bind(limited)
     try {
       const responses = await Promise.all(
         Array.from({ length: 51 }, () =>
@@ -501,7 +503,7 @@ describe("Attachment (e2e): download com ACL", () => {
 
     // Stream lento e controlável: dá tempo do teste abortar antes do fim do corpo.
     let slowStream: Readable | undefined
-    const originalGetStream = storage.getStream
+    const originalGetStream = storage.getStream.bind(storage)
     storage.getStream = () => {
       slowStream = new Readable({
         read() {
@@ -512,9 +514,7 @@ describe("Attachment (e2e): download com ACL", () => {
     }
 
     const server = app.getHttpServer() as Server
-    if (!server.listening) {
-      await new Promise<void>((resolve) => server.listen(0, resolve))
-    }
+    await ensureListening(server)
     const address = server.address()
     const port = typeof address === "object" && address !== null ? address.port : 0
 
@@ -526,8 +526,12 @@ describe("Attachment (e2e): download com ACL", () => {
             res.once("data", () => req.destroy())
           },
         )
-        req.on("error", () => resolve())
-        req.on("close", () => resolve())
+        req.on("error", () => {
+          resolve()
+        })
+        req.on("close", () => {
+          resolve()
+        })
         req.end()
       })
       await new Promise((resolve) => setTimeout(resolve, 50))

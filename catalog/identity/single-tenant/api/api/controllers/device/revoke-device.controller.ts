@@ -2,9 +2,9 @@ import { Controller, Delete, HttpCode, HttpStatus, Param } from "@nestjs/common"
 import { ApiOperation, ApiTags } from "@nestjs/swagger"
 
 import { SelfService } from "../../../../../shared/kernel/access/decorators"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 import { RevokeDeviceUseCase } from "../../../application/use-cases/revoke-device/revoke-device.use-case"
 import { IdParamDto } from "../../contracts/identity.contract"
-import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 @ApiTags("Device")
 @Controller("auth")

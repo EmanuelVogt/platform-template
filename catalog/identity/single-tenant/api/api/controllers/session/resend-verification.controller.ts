@@ -2,8 +2,8 @@ import { Controller, HttpCode, HttpStatus, Post } from "@nestjs/common"
 import { ApiOperation, ApiTags } from "@nestjs/swagger"
 
 import { SelfService } from "../../../../../shared/kernel/access/decorators"
-import { ResendVerificationUseCase } from "../../../application/use-cases/resend-verification/resend-verification.use-case"
 import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
+import { ResendVerificationUseCase } from "../../../application/use-cases/resend-verification/resend-verification.use-case"
 
 @ApiTags("Session")
 @Controller("auth")

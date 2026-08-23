@@ -8,6 +8,11 @@ process.env.DATABASE_SSL = "disable"
 process.env.REDIS_URL = containerRedisUri()
 process.env.NODE_ENV = "test"
 process.env.LOG_LEVEL = "silent"
+// Fila de espera do pool larga no e2e: há prova de rajada (51 downloads
+// simultâneos, sockets do storage) que estouraria o teto fail-closed padrão
+// (10 + 20) e devolveria 503 antes de exercitar o que o teste mede. O guard de
+// saturação tem prova própria em unit/int — aqui ele só mascararia o assunto.
+process.env.DATABASE_POOL_MAX_WAITING = "200"
 process.env.BREACH_CHECK_ENABLED = "false"
 process.env.OTEL_EXPORTER_OTLP_ENDPOINT = ""
 process.env.OTEL_SDK_DISABLED = "true"

@@ -11,6 +11,7 @@ import {
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger"
 
 import { Public } from "../../../../../shared/kernel/access/decorators"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 import { LoginUseCase } from "../../../application/use-cases/login/login.use-case"
 import { CSRF } from "../../../domain/ports/csrf"
 import { IDENTITY_CONFIG } from "../../../identity.config"
@@ -24,7 +25,6 @@ import {
   setDeviceCookie,
   setSessionCookie,
 } from "../../guards/cookie"
-import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 import type { UserView } from "../../../application/views"
 import type { Csrf } from "../../../domain/ports/csrf"

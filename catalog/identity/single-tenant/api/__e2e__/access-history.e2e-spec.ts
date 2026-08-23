@@ -17,6 +17,7 @@ const PASSWORD = "Senha-Muito-Forte-2026!"
 
 const allowAll = {
   consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
+  reset: () => Promise.resolve(),
 }
 
 async function loginAndGetCookie(app: INestApplication): Promise<string> {

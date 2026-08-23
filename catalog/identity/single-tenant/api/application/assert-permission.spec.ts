@@ -1,3 +1,5 @@
+import { describe, expect, it } from "vitest"
+
 import { RequestContext } from "../../../shared/kernel/context/request-context"
 import { ForbiddenError } from "../../../shared/kernel/errors/forbidden.error"
 
@@ -6,7 +8,6 @@ import { IDENTITY_ACCESS } from "./identity-context"
 
 import type { RequestContextStore } from "../../../shared/kernel/context/request-context"
 import type { PermissionKey } from "../domain/permissions/permission-catalog"
-import { describe, expect, it } from "vitest"
 
 function storeOf(): RequestContextStore {
   return {
@@ -31,7 +32,7 @@ function check(
   access?: { permissions: string[]; isMaster: boolean }
 ): () => void {
   const ctx = new RequestContext()
-  return () =>
+  return () => {
     ctx.run(storeOf(), () => {
       if (access !== undefined) {
         ctx.setExtension(IDENTITY_ACCESS, {
@@ -41,6 +42,7 @@ function check(
       }
       assertPermission(key)
     })
+  }
 }
 
 describe("assertPermission", () => {
@@ -59,12 +61,14 @@ describe("assertPermission", () => {
       isMaster: false,
     })
     expect(run).toThrow(ForbiddenError)
+    let thrown: unknown = null
     try {
       run()
-      fail("deveria ter lançado")
     } catch (error) {
-      expect((error as ForbiddenError).status).toBe(403)
+      thrown = error
     }
+    expect(thrown).toBeInstanceOf(ForbiddenError)
+    expect((thrown as ForbiddenError).status).toBe(403)
   })
 
   it("master passa sem a chave", () => {

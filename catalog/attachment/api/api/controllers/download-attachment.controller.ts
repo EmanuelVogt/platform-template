@@ -1,6 +1,7 @@
+import { pipeline } from "node:stream/promises"
+
 import { Controller, Get, Param, Req, Res } from "@nestjs/common"
 import { ApiOperation, ApiTags } from "@nestjs/swagger"
-import { pipeline } from "node:stream/promises"
 
 import { OptionalAuth } from "../../../../shared/kernel/access/decorators"
 import { buildContentDisposition } from "../../../../shared/kernel/http/content-disposition"

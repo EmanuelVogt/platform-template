@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.error"
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import {
@@ -9,7 +11,6 @@ import { makeIdentityConfig } from "../../../identity.config.fixture"
 import { fakeRequestContext } from "../../request-context.fixture"
 
 import { ChangePasswordUseCase } from "./change-password.use-case"
-import { describe, expect, it, vi } from "vitest"
 
 const NOW = new Date("2026-06-16T00:00:00.000Z")
 

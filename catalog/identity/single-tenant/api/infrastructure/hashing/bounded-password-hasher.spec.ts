@@ -1,23 +1,24 @@
+import { type Mock, describe, expect, it, vi } from "vitest"
+
 import { PasswordHashingSaturatedError } from "../../domain/errors"
 
 import { BoundedPasswordHasher } from "./bounded-password-hasher"
 
 import type { PasswordHasher } from "../../domain/ports/password-hasher"
-import { type Mock, describe, expect, it, vi } from "vitest"
 
 /** Hasher interno cujas promessas só resolvem quando o teste mandar. */
 function pendingHasher() {
-  const pending: Array<(value: never) => void> = []
+  const pending: ((value: never) => void)[] = []
   const inner: PasswordHasher & {
     hash: Mock
     verify: Mock
     needsRehash: Mock
   } = {
     hash: vi.fn(
-      () => new Promise<string>((resolve) => pending.push(resolve as never)),
+      () => new Promise<string>((resolve) => pending.push(resolve)),
     ),
     verify: vi.fn(
-      () => new Promise<boolean>((resolve) => pending.push(resolve as never)),
+      () => new Promise<boolean>((resolve) => pending.push(resolve)),
     ),
     needsRehash: vi.fn().mockReturnValue(false),
   }

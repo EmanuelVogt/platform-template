@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { RequestContext } from "../../../../../shared/kernel/context/request-context"
 import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.error"
 import { User } from "../../../domain/entities/user.entity"
@@ -5,10 +7,9 @@ import { IDENTITY_ACCESS } from "../../identity-context"
 
 import { ListUsersUseCase } from "./list-users.use-case"
 
-import type { PaginatedResult } from "../../../../../shared/kernel/listing/paginated"
 import type { RequestContextStore } from "../../../../../shared/kernel/context/request-context"
+import type { PaginatedResult } from "../../../../../shared/kernel/listing/paginated"
 import type { UserListRow } from "../../../domain/ports/user.repository"
-import { describe, expect, it, vi } from "vitest"
 
 /** Roda o use-case dentro de um request com as permissões dadas ao ator. */
 async function asActor<T>(

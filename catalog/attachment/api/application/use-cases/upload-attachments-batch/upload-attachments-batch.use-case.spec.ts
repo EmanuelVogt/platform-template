@@ -1,5 +1,8 @@
 import { Readable } from "node:stream"
 
+import { type Mock, describe, expect, it, vi } from "vitest"
+
+
 import { parseAttachmentConfig } from "../../../attachment.config"
 import {
   EmptyUploadBatchError,
@@ -13,7 +16,6 @@ import { UploadAttachmentsBatchUseCase } from "./upload-attachments-batch.use-ca
 
 import type { Attachment } from "../../../domain/attachment.entity"
 import type { IncomingFile } from "../../../domain/incoming-file"
-import { type Mock, describe, expect, it, vi } from "vitest"
 
 const baseConfig = parseAttachmentConfig({
   ATTACHMENT_MULTI_MAX_FILE_BYTES: "100",

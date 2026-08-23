@@ -16,10 +16,10 @@ import {
 } from "@nestjs/swagger"
 
 import { SelfService } from "../../../../../shared/kernel/access/decorators"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 import { UploadAvatarUseCase } from "../../../application/use-cases/upload-avatar/upload-avatar.use-case"
 import { AvatarFileRequiredError } from "../../../domain/errors"
 import { AvatarUploadResponseDto } from "../../contracts/identity.contract"
-import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 

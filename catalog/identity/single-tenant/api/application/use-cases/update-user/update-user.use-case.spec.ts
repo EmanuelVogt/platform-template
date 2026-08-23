@@ -1,3 +1,5 @@
+import { describe, expect, it, vi } from "vitest"
+
 import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.error"
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import {
@@ -9,7 +11,6 @@ import {
 import { fakeRequestContext } from "../../request-context.fixture"
 
 import { UpdateUserUseCase } from "./update-user.use-case"
-import { describe, expect, it, vi } from "vitest"
 
 const BASE_INPUT = {
   userId: "u-target",
@@ -338,15 +339,16 @@ describe("UpdateUserUseCase", () => {
         users: attendingUser(),
         commitments: { listFuture: vi.fn().mockResolvedValue([COMMITMENT]) },
       })
+      let caught: unknown
       try {
         await uc.execute({ ...BASE_INPUT, servesClients: false })
-        throw new Error("deveria ter recusado")
       } catch (error) {
-        expect(error).toBeInstanceOf(ProfessionalHasCommitmentsError)
-        expect(
-          (error as ProfessionalHasCommitmentsError).extensions
-        ).toEqual({ commitments: [COMMITMENT] })
+        caught = error
       }
+      expect(caught).toBeInstanceOf(ProfessionalHasCommitmentsError)
+      expect((caught as ProfessionalHasCommitmentsError).extensions).toEqual({
+        commitments: [COMMITMENT],
+      })
     })
 
     it("sem compromisso futuro grava e zera o escopo de atuação", async () => {
@@ -359,7 +361,7 @@ describe("UpdateUserUseCase", () => {
       })
       expect(users.update).toHaveBeenCalledTimes(1)
       expect(
-        (users.update.mock.calls[0][0] as User).props.servesClients
+        (users.update.mock.calls[0]?.[0] as User).props.servesClients
       ).toBe(false)
       expect(users.replaceProfessionalAreas).toHaveBeenCalledWith("u-target", [])
     })

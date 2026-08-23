@@ -370,17 +370,15 @@ describe("assertCanGrant (concessão limitada ao ator)", () => {
   })
 
   it("o 403 carrega o type permission-grant-not-allowed", () => {
+    let caught: unknown
     try {
-      assertCanGrant(
-        { actor: actorOf([]), current: ["admin.tags.read"] },
-        []
-      )
-      throw new Error("deveria ter lançado")
+      assertCanGrant({ actor: actorOf([]), current: ["admin.tags.read"] }, [])
     } catch (error) {
-      const denied = error as PermissionGrantNotAllowedError
-      expect(denied.status).toBe(403)
-      expect(denied.type).toMatch(/permission-grant-not-allowed$/)
+      caught = error
     }
+    const denied = caught as PermissionGrantNotAllowedError
+    expect(denied.status).toBe(403)
+    expect(denied.type).toMatch(/permission-grant-not-allowed$/)
   })
 
   it("a mensagem não enumera as chaves negadas", () => {

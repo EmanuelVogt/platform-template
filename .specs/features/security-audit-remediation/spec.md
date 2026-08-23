@@ -241,7 +241,7 @@ The 2026-08-22 white-box audit of the backend (kernel + the five catalog entries
 | REM-45 | AUTH-9 | P3 | test | Tasks | Pending |
 | REM-46 | NOTIF-1 | P3 | test | Tasks | Pending |
 | REM-47 | SUPPLY-6/7, KERNEL-7 | P3 | probe: `grep -En "uses: .*@v[0-9]" .github/workflows/*.yml \| grep -v '#' ; grep -L "^permissions:" .github/workflows/*.yml` (both empty) | Tasks | Pending |
-| REM-48 | — (Vitest port, AC 1) | P1 Port | probe: `grep -rEn "\bjest\.|@jest/globals|ts-jest" apps/api/src apps/api/test catalog --include='*.ts' ; ls apps/api/test/jest-*.json ; grep -En '^\s*"test[^"]*":' apps/api/package.json` (all empty — the last grep matches script keys only, not the `format` glob or the `testcontainers` devDependency) | Tasks | Pending |
+| REM-48 | — (Vitest port, AC 1) | P1 Port | probe: `grep -rEn "\bjest\.|@jest/globals|ts-jest" apps/api/src apps/api/test catalog --include='*.ts' ; ls apps/api/test/jest-*.json ; jq -r '.scripts | keys[]' apps/api/package.json | grep -E '^test'` (all empty — the last arm reads the `scripts` block only, so neither the `format` glob nor the `testcontainers` devDependency can match) | Tasks | Pending |
 | REM-49 | — (Vitest port, AC 2) | P1 Port | gate: `pnpm test && pnpm test:int && pnpm test:e2e` | Tasks | Pending |
 | REM-50 | — (Vitest port, AC 3) | P1 Port | gate: `pnpm catalog:check` | Tasks | Pending |
 | REM-51 | — (Vitest port, ACs 4–5) | P1 Port | gate: `pnpm test:coverage` + `pnpm test:scripts`; probes REM-26, REM-47 | Tasks | Pending |

@@ -526,6 +526,94 @@ test("status --json soma template.latestPublishedDaysAgo a partir da tagDate do 
   assert.equal(JSON.parse(output).template.latestPublishedDaysAgo, 10);
 });
 
+test("status --json surfaces the feed error and still prints template/modules/advisories (spec edge case)", async () => {
+  const cwd = mkdtempSync(path.join(tmpdir(), "cli-status-"));
+  writeFileSync(path.join(cwd, ".copier-answers.yml"), "_src_path: gh:EmanuelVogt/platform-template\n_commit: v2.0.0\n", "utf8");
+
+  const { output } = await captureOutput("stdout", () =>
+    run(["status", "--json"], {
+      cwd,
+      fetchTags: () => ["v2.0.0", "v2.1.0"],
+      fetchFeed: () => {
+        throw new Error("feed do template inacessível: offline");
+      },
+    }),
+  );
+
+  const status = JSON.parse(output);
+  assert.match(status.template.feedError, /offline/);
+  assert.deepEqual(status.template.behind, ["v2.1.0"]);
+  assert.deepEqual(status.advisories, { noLock: true, pending: [] });
+});
+
+test("status (texto) mostra a falha do feed sem derrubar o resto da saída (spec edge case)", async () => {
+  const cwd = mkdtempSync(path.join(tmpdir(), "cli-status-"));
+  writeFileSync(path.join(cwd, ".copier-answers.yml"), "_src_path: gh:EmanuelVogt/platform-template\n_commit: v2.0.0\n", "utf8");
+  writeFileSync(path.join(cwd, ".platform-modules.lock"), JSON.stringify({ modules: { alpha: { version: "1.0.0" } } }));
+
+  const { output } = await captureOutput("stdout", () =>
+    run(["status"], {
+      cwd,
+      fetchTags: () => ["v2.0.0", "v2.1.0"],
+      fetchFeed: () => {
+        throw new Error("offline");
+      },
+    }),
+  );
+
+  assert.equal(
+    output,
+    "template: gh:EmanuelVogt/platform-template installed=v2.0.0 latest=v2.1.0 — 1 versão(ões) atrás: v2.1.0\n" +
+      "template: feed não consultado — offline\n" +
+      "modules: alpha lock=1.0.0 (catálogo: pnpm platform module list)\n" +
+      "advisories: nenhuma pendente\n",
+  );
+});
+
+test("status --json names the remote advisory files the feed skipped for failing to parse (spec edge case)", async () => {
+  const cwd = mkdtempSync(path.join(tmpdir(), "cli-status-"));
+  writeFileSync(path.join(cwd, ".copier-answers.yml"), "_src_path: gh:EmanuelVogt/platform-template\n_commit: v2.0.0\n", "utf8");
+
+  const { output } = await captureOutput("stdout", () =>
+    run(["status", "--json"], {
+      cwd,
+      fetchTags: () => ["v2.0.0", "v2.1.0"],
+      fetchFeed: () => ({
+        tag: "v2.1.0",
+        tagDate: "2026-08-13T10:00:00-03:00",
+        advisories: [],
+        skipped: [{ file: "ADV-20260901-09.md", reason: "campo obrigatório ausente: fix" }],
+      }),
+      now: Date.parse("2026-08-23T00:00:00Z"),
+    }),
+  );
+
+  assert.deepEqual(JSON.parse(output).advisories.feedSkipped, [
+    { file: "ADV-20260901-09.md", reason: "campo obrigatório ausente: fix" },
+  ]);
+});
+
+test("status (texto) nomeia o arquivo do feed ignorado por falha de parse (spec edge case)", async () => {
+  const cwd = mkdtempSync(path.join(tmpdir(), "cli-status-"));
+  writeFileSync(path.join(cwd, ".copier-answers.yml"), "_src_path: gh:EmanuelVogt/platform-template\n_commit: v2.0.0\n", "utf8");
+
+  const { output } = await captureOutput("stdout", () =>
+    run(["status"], {
+      cwd,
+      fetchTags: () => ["v2.0.0", "v2.1.0"],
+      fetchFeed: () => ({
+        tag: "v2.1.0",
+        tagDate: "2026-08-13T10:00:00-03:00",
+        advisories: [],
+        skipped: [{ file: "ADV-20260901-09.md", reason: "campo obrigatório ausente: fix" }],
+      }),
+      now: Date.parse("2026-08-23T00:00:00Z"),
+    }),
+  );
+
+  assert.match(output, /advisories: 1 arquivo\(s\) do feed remoto ignorado\(s\) — ADV-20260901-09\.md \(campo obrigatório ausente: fix\)/);
+});
+
 test("status (texto) permanece byte-idêntico ao formato atual quando não há tags atrás nem advisories pendentes (CAD-03)", async () => {
   const cwd = mkdtempSync(path.join(tmpdir(), "cli-status-"));
   writeFileSync(path.join(cwd, ".copier-answers.yml"), "_src_path: gh:EmanuelVogt/platform-template\n_commit: v2.0.0\n", "utf8");

@@ -37,15 +37,22 @@ export function collectStatus({
   }
 
   // CAD-02: só busca o feed quando há tag(s) atrás — reaproveita a tagDate do feed
-  // sem exigir novo fetch quando o produto já está atualizado.
+  // sem exigir novo fetch quando o produto já está atualizado. Ao contrário do hook
+  // (FEED-03/04, silencioso), `status` é consulta explícita: uma falha do feed vira
+  // `template.feedError` e arquivos remotos que não parseiam viram
+  // `advisories.feedSkipped` — ambos aditivos, nunca substituem o resto da saída.
+  let feedSkipped;
   if (origin && !offline && template.behind?.length > 0 && template.latest) {
     try {
       const feed = fetchFeed(origin.source, template.latest, { now });
       if (feed?.tagDate) {
         template.latestPublishedDaysAgo = ageDays(feed.tagDate.slice(0, 10), now);
       }
-    } catch {
-      // FEED-03: o feed é best-effort aqui também — sem tagDate, sem a linha extra.
+      if (Array.isArray(feed?.skipped) && feed.skipped.length > 0) {
+        feedSkipped = feed.skipped;
+      }
+    } catch (err) {
+      template.feedError = err.message;
     }
   }
 
@@ -69,6 +76,7 @@ export function collectStatus({
   } catch (err) {
     advisories = { noLock: false, pending: [], error: err.message };
   }
+  if (feedSkipped) advisories.feedSkipped = feedSkipped;
 
   return { template, modules, advisories };
 }
@@ -103,6 +111,12 @@ function formatAdvisories(advisories) {
   return `advisories: ${advisories.pending.length} pendente(s) — ${list}`;
 }
 
+function formatFeedSkipped(advisories) {
+  if (!advisories.feedSkipped?.length) return undefined;
+  const list = advisories.feedSkipped.map((s) => `${s.file} (${s.reason})`).join(", ");
+  return `advisories: ${advisories.feedSkipped.length} arquivo(s) do feed remoto ignorado(s) — ${list}`;
+}
+
 export async function statusCommand({ options = {}, cwd = process.cwd(), fetchTags, fetchFeed, now } = {}) {
   const status = collectStatus({ cwd, offline: options.offline === true, fetchTags, fetchFeed, now });
 
@@ -119,10 +133,13 @@ export async function statusCommand({ options = {}, cwd = process.cwd(), fetchTa
     if (typeof status.template.latestPublishedDaysAgo === "number") {
       lines.push(`latest ${status.template.latest} published ${status.template.latestPublishedDaysAgo} days ago`);
     }
+    if (status.template.feedError) lines.push(`template: feed não consultado — ${status.template.feedError}`);
     if (status.template.error) lines.push(`template: remoto não consultado — ${status.template.error}`);
     if (options.offline) lines.push("template: --offline, última versão não consultada");
   }
   lines.push(formatModules(status.modules), formatAdvisories(status.advisories));
+  const skippedLine = formatFeedSkipped(status.advisories);
+  if (skippedLine) lines.push(skippedLine);
 
   process.stdout.write(`${lines.join("\n")}\n`);
   return EXIT_CODES.OK;

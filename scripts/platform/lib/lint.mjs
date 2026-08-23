@@ -4,6 +4,8 @@ import semver from "semver";
 import { AdvisoryParseError, parseAdvisory } from "./frontmatter.mjs";
 import { ManifestValidationError, validateManifest } from "./manifest.mjs";
 
+export { discoverEntries } from "./entries.mjs";
+
 const WEB_CORE_ALLOWED = ["zod", "@platform/api-client"];
 const WEB_REACT_ALLOWED = [...WEB_CORE_ALLOWED, "@tanstack/react-query"];
 const WEB_CORE_TEST_EXTRA = ["vitest"];
@@ -139,22 +141,4 @@ export function lintAdvisoryFrontmatter(content, filePath) {
 export function lintAdvisoryModule(advisory, entryNames) {
   if (advisory.module === "kernel" || entryNames.includes(advisory.module)) return [];
   return [`module "${advisory.module}" não é "kernel" nem uma entrada existente do catálogo (${advisory.id})`];
-}
-
-// Para em módulos com variant: catalog/<name>/<variant>/module.json não descende além do module.json encontrado.
-export function discoverEntries(root) {
-  if (!existsSync(root)) return [];
-  const entries = [];
-  const stack = [root];
-  while (stack.length > 0) {
-    const dir = stack.pop();
-    if (existsSync(path.join(dir, "module.json"))) {
-      entries.push(dir);
-      continue;
-    }
-    for (const child of readdirSync(dir, { withFileTypes: true })) {
-      if (child.isDirectory()) stack.push(path.join(dir, child.name));
-    }
-  }
-  return entries;
 }

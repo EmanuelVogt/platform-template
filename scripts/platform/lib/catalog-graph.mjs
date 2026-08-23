@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { readManifest } from "./manifest.mjs";
-import { discoverEntries } from "./lint.mjs";
+import { discoverEntries } from "./entries.mjs";
 
 export class UnknownEntryError extends Error {
   constructor(name) {

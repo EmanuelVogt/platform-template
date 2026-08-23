@@ -8,7 +8,7 @@ import {
   readLatestChangelogVersion,
   sectionFirstParagraph,
 } from "./lib/kernel-version.mjs";
-import { discoverEntries } from "./lib/lint.mjs";
+import { discoverEntries } from "./lib/entries.mjs";
 import { stableTagsFromLsRemote } from "./lib/template-version.mjs";
 
 function defaultExec(command, args, options = {}) {

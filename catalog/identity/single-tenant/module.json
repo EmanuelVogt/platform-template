@@ -23,8 +23,7 @@
   ],
   "customMigrations": [
     "01_auth_events_append_only.sql",
-    "02_audit_attach.sql",
-    "03_audit_redact_token_hashes.sql"
+    "04_audit_attach_hook.sql"
   ],
   "env": [
     {

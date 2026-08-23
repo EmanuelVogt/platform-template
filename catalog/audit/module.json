@@ -6,7 +6,7 @@
   "dependsOn": [{ "name": "identity", "range": ">=2.0.0 <3.0.0" }],
   "apiModule": { "export": "AuditModule", "path": "modules/audit/audit.module" },
   "schemaExports": ["modules/audit/infrastructure/tables/audit.schema"],
-  "customMigrations": ["01_audit_trail_capture.sql"],
+  "customMigrations": ["01_audit_trail_capture.sql", "02_attach_module_hooks.sql"],
   "env": [],
   "absorbs": []
 }

@@ -29,25 +29,12 @@ describe("audit trigger (int)", () => {
   beforeAll(async () => {
     pool = createTestPool()
     db = createTestDb(pool)
-    // SPEC_DEVIATION: reanexa as tabelas do identity ao trigger.
-    // Reason: `catalog:check audit` instala identity antes de audit
-    // (dependsOn), e a migration custom de identity que chama `audit.attach`
-    // roda antes de `audit.attach` existir — sai sem anexar nada (guard
-    // documentado nela mesma). Simula o passo manual que um produto real
-    // reaplicaria depois de instalar audit (idempotente).
+    // Reexecuta o passo de instalação do audit (`audit.attach_module_hooks()`),
+    // idempotente: a instalação já anexou as tabelas do identity com as listas
+    // de redação declaradas em `04_audit_attach_hook.sql`, mas o `afterAll` das
+    // outras suítes de audit desanexa os triggers e o banco do `test:db` é
+    // compartilhado entre arquivos.
     await reattachIdentityTables(pool)
-    // SPEC_DEVIATION: reanexa sessions/devices/verification_tokens com a lista de
-    // redação de 03_audit_redact_token_hashes.sql (REM-40).
-    // Reason: `reattachIdentityTables` espelha só 02_audit_attach.sql (redact list
-    // vazia para essas três tabelas); a migration 03 do identity sofre o mesmo guard
-    // de ordem (`catalog:check audit` roda identity antes de audit existir) e nunca
-    // redige os hashes num catalog:check real — este reanexo simula o mesmo passo
-    // manual pós-install que um produto real faria (audit.attach é idempotente).
-    await pool.query(`
-      SELECT audit.attach('identity', 'sessions', '{id}', '{token_hash}');
-      SELECT audit.attach('identity', 'devices', '{id}', '{cookie_token_hash}');
-      SELECT audit.attach('identity', 'verification_tokens', '{id}', '{token_hash}');
-    `)
   })
 
   beforeEach(async () => {

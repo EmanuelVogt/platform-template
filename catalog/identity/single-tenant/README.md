@@ -112,17 +112,22 @@ Migrações manuais (`migrations/custom/`, aplicadas nesta ordem, depois das tab
   `auth_events_append_only` que bloqueia `UPDATE` sempre e `DELETE` a menos que a transação
   ligue o GUC `app.auth_events_purge=on` (o job de retenção liga; SQLi precisaria do
   `set_config` na mesma transação).
-- `02_audit_attach.sql` — anexa 14 tabelas do identity à trilha da entrada `audit`
-  (`users` com `password_hash` redigido, `devices`, `sessions`, `verification_tokens`,
-  `permission_templates` + `permission_template_permissions`, `user_permissions` e as seis
-  tabelas do recorte `professional`). Cada módulo anexa as suas tabelas: a entrada `audit`
-  entrega o schema, a tabela e o helper `audit.attach`, nunca a lista de quem é auditado.
+- `04_audit_attach_hook.sql` — declara `identity.attach_audit()`, a função idempotente com as
+  14 tabelas do identity que vão para a trilha da entrada `audit` (`users` com `password_hash`
+  redigido, `sessions` com `token_hash`, `devices` com `cookie_token_hash`,
+  `verification_tokens` com `token_hash`, `permission_templates` +
+  `permission_template_permissions`, `user_permissions` e as seis tabelas do recorte
+  `professional`). Cada módulo declara as suas tabelas: a entrada `audit` entrega o schema, a
+  tabela, o helper `audit.attach` e o replay dos hooks, nunca a lista de quem é auditado.
   `identity.auth_events` fica de fora de propósito — já tem trilha própria (01).
 
-  A entrada `audit` é **opcional**: o passo 02 é um bloco `DO` guardado por
+  A entrada `audit` é **opcional**: `identity.attach_audit()` é guardada por
   `to_regprocedure('audit.attach(text,text,text[],text[])') IS NULL`, então um child
-  kernel-only + identity migra sem erro e sem anexar nada. É dependência de **ordem**, não de
-  instalação — por isso `audit` não entra em `dependsOn`. Quem instalar `audit` depois do
+  kernel-only + identity migra sem erro e sem anexar nada — por isso `audit` não entra em
+  `dependsOn`. Quem executa a função quando a entrada existe é a migração
+  `02_attach_module_hooks.sql` do próprio `audit`, no fim da instalação dela (o inverso — child
+  que já tem `audit` e adiciona o identity depois — é coberto pelo `PERFORM` no fim de
+  `04_audit_attach_hook.sql`). Quem instalar `audit` depois do
   identity precisa reexecutar este passo; `audit.attach` é idempotente (recria o trigger
   `audit_row`), então reaplicar é seguro.
 
@@ -254,8 +259,8 @@ instalação é acíclico.
 Sem a entrada `attachment` (ou qualquer outro provider de `PROFILE_IMAGE_STORE`) o
 `IdentityModule` resolve normalmente no boot; só as operações de imagem de perfil respondem `501`.
 
-A entrada `audit` **não** é dependência: `migrations/custom/02_audit_attach.sql` é guardado e não
-faz nada quando `audit.attach` não existe (§ Dados). O purge LGPD da trilha em `purgeUsers` também
+A entrada `audit` **não** é dependência: `migrations/custom/04_audit_attach_hook.sql` só declara
+`identity.attach_audit()`, guardada, que não faz nada quando `audit.attach` não existe (§ Dados). O purge LGPD da trilha em `purgeUsers` também
 virou porta — `AUDIT_TRAIL_PURGER` (`shared/kernel/audit-trail/audit-trail-purger.port.ts`, no
 kernel pela AD-024), resolvida com
 `@Optional()`. Quem liga é a entrada `audit`; sem provider a purga da trilha é no-op, e não `501`

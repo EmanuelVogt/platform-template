@@ -45,6 +45,18 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
   relação com a ordem de inserção — exposto por `pnpm catalog:check attachment` (identity como
   dependência), nunca pelo `catalog:check identity` isolado. Passa a usar `clock_timestamp()`
   (ADV-20260821-03).
+- `migrations/custom/02_audit_attach.sql` e `03_audit_redact_token_hashes.sql` **removidos**,
+  substituídos por `04_audit_attach_hook.sql`. Os dois chamavam `audit.attach` direto sob um
+  guard "entrada audit ausente" que, na prática, era **sempre** verdadeiro: a entrada `audit`
+  declara `dependsOn: identity`, então a ordem topológica do instalador gera as migrações do
+  identity antes das do audit e `audit.attach` ainda não existe quando elas rodam — um filho
+  recém-gerado nascia com a trilha vazia para todo o identity, inclusive sem a redação de
+  `users.password_hash`, `sessions.token_hash`, `devices.cookie_token_hash` e
+  `verification_tokens.token_hash` (auditoria de segurança 2026-08-22, ADV-20260822-01). O novo
+  arquivo só **declara** a lista, na função idempotente `identity.attach_audit()`; quem a executa
+  é `audit.attach_module_hooks()`, no fim da instalação da entrada `audit`. Um filho sem `audit`
+  segue migrando sem erro e sem anexar nada, e um filho que já tem `audit` anexa na hora (o
+  `PERFORM` no fim do arquivo).
 
 ## [1.0.0]
 

@@ -1,34 +1,20 @@
 import type { Pool } from "pg"
 
 /**
- * Reaplica `identity/migrations/custom/02_audit_attach.sql` — o `audit.attach`
- * daquele arquivo só existe quando `audit` já está instalado, e no
- * `catalog:check audit` (identity primeiro, audit depois: `dependsOn`) ele
- * roda ANTES de `audit.attach` existir, então sai sem anexar nada (guard
- * documentado no próprio arquivo, `to_regprocedure(...) IS NULL`). O mesmo
- * arquivo documenta a saída: "instalar audit depois do identity exige
- * reexecutar este passo... o helper é idempotente, então reaplicar é
- * seguro" — é exatamente essa reaplicação que um produto real faria depois
- * de instalar audit, e que os testes de audit precisam simular para exercitar
- * o trigger contra tabelas do identity.
+ * Reexecuta o passo de instalação `audit/migrations/custom/02_attach_module_hooks.sql`:
+ * `audit.attach_module_hooks()` roda o hook `<schema>.attach_audit()` de cada módulo
+ * instalado — para o identity, a lista declarada em
+ * `identity/migrations/custom/04_audit_attach_hook.sql`, com `password_hash`,
+ * `token_hash` e `cookie_token_hash` redigidos.
+ *
+ * Não é uma cópia da migração: é a mesma função que a migração chama, então uma
+ * lista errada no arquivo do identity chega aqui como teste vermelho. Existe
+ * porque `detachIdentityTables` (abaixo) derruba os triggers no `afterAll` de
+ * cada suíte e o banco do `test:db` é compartilhado — sem reaplicar, a suíte
+ * seguinte encontraria o que a anterior desanexou.
  */
 export async function reattachIdentityTables(pool: Pool): Promise<void> {
-  await pool.query(`
-    SELECT audit.attach('identity', 'users', '{id}', '{password_hash}');
-    SELECT audit.attach('identity', 'devices', '{id}', '{}');
-    SELECT audit.attach('identity', 'sessions', '{id}', '{}');
-    SELECT audit.attach('identity', 'verification_tokens', '{id}', '{}');
-    SELECT audit.attach('identity', 'permission_templates', '{id}', '{}');
-    SELECT audit.attach('identity', 'permission_template_permissions', '{template_id,permission}', '{}');
-    SELECT audit.attach('identity', 'user_permissions', '{user_id,permission}', '{}');
-    SELECT audit.attach('identity', 'user_professional_areas', '{user_id,area_id}', '{}');
-    SELECT audit.attach('identity', 'user_professional_services', '{user_id,service_id}', '{}');
-    SELECT audit.attach('identity', 'user_scheduling_areas', '{user_id,area_id}', '{}');
-    SELECT audit.attach('identity', 'professional_default_hours', '{id}', '{}');
-    SELECT audit.attach('identity', 'user_professional_schedule_configs', '{user_id}', '{}');
-    SELECT audit.attach('identity', 'user_professional_schedule_config_slots', '{id}', '{}');
-    SELECT audit.attach('identity', 'user_professional_schedule_config_blocks', '{id}', '{}');
-  `)
+  await pool.query("SELECT audit.attach_module_hooks()")
 }
 
 const IDENTITY_TABLES = [

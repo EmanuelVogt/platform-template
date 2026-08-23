@@ -16,9 +16,14 @@ permissions:
 jobs:
   verify:
     name: Verify
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
+      - name: Guard against dispatch from a non-main ref
+        run: |
+          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            echo "::error::release dispatched from '${{ github.ref }}', but tags can only be cut from refs/heads/main" >&2
+            exit 1
+          fi
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0

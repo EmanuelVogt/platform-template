@@ -53,6 +53,23 @@ export function planSteps() {
   ];
 }
 
+// pnpm platform status/list rodam de verdade dentro do próprio child renderizado (CLI-03):
+// se algum caminho excluído por copier.yml voltar a ser importado (CLI-01/CLI-02), a CLI
+// quebra em tempo de import aqui, não só no teste unitário do guard.
+function checkPlatformCli({ childDir, run, log }) {
+  const statusResult = run("pnpm", ["platform", "status"], { cwd: childDir });
+  if (statusResult.status !== 0) {
+    log(`template:smoke — "pnpm platform status" falhou no child (código ${statusResult.status})`);
+    return EXIT_CODES.TEST_FAILURE;
+  }
+  const listResult = run("pnpm", ["platform", "list"], { cwd: childDir });
+  if (listResult.status !== 0) {
+    log(`template:smoke — "pnpm platform list" falhou no child (código ${listResult.status})`);
+    return EXIT_CODES.TEST_FAILURE;
+  }
+  return null;
+}
+
 export function parseSchemaList(stdout) {
   return stdout
     .split("\n")
@@ -327,7 +344,11 @@ export async function runTemplateSmoke({
     const ruleCExit = checkRuleC({ childDir, run, log });
     if (ruleCExit !== null) return ruleCExit;
 
-    log("\nSmoke do template passou: as quatro checagens ficaram verdes.");
+    log("template:smoke — checagem extra: pnpm platform status/list dentro do child renderizado");
+    const cliExit = checkPlatformCli({ childDir, run, log });
+    if (cliExit !== null) return cliExit;
+
+    log("\nSmoke do template passou: as quatro checagens ficaram verdes, e a CLI roda dentro do child.");
     return EXIT_CODES.OK;
   } finally {
     if (postgres) run("docker", ["stop", postgres.containerId]);

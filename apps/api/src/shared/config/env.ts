@@ -11,7 +11,7 @@ export const nodeEnvSchema = z.enum([
 const envSchema = z
   .object({
     NODE_ENV: nodeEnvSchema,
-    PORT: z.coerce.number().int().positive().default(3222),
+    PORT: z.coerce.number().int().positive().default(3000),
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
       .optional(),

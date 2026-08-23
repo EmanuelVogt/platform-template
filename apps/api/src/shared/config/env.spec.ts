@@ -13,7 +13,7 @@ const BASE = {
 describe("parseEnv", () => {
   it("aplica defaults quando opcionais ausentes", () => {
     const e = parseEnv(BASE)
-    expect(e.PORT).toBe(3222)
+    expect(e.PORT).toBe(3000)
     expect(e.DATABASE_POOL_MAX).toBe(10)
     expect(e.OTEL_SERVICE_NAME).toBe("api")
     expect(e.SERVICE_VERSION).toBe("0.0.1")

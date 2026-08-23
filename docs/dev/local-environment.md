@@ -45,7 +45,7 @@ pnpm --filter api db:seed:demo     # optional: activities and demo data
 ## Run the app
 
 ```bash
-pnpm dev        # at the root — brings up api (3222) and web (5173)
+pnpm dev        # at the root — brings up api (3000) and web (5173)
 ```
 
 ## Useful compose commands

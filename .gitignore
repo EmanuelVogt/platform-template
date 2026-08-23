@@ -55,6 +55,9 @@ storybook-static
 # git worktrees locais
 .worktrees/
 
+# rascunhos do fluxo platform-feedback (issue upstream) — transitórios, nunca versionados
+.platform-feedback/
+
 # design-sync (claude.ai/design) — build artifacts, staged scripts, verification state
 .design-sync/sb-reference/
 .design-sync/learnings/

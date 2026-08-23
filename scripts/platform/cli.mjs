@@ -2,6 +2,7 @@ import { EXIT_CODES } from "./lib/exit-codes.mjs";
 import { addCommand } from "./lib/commands/add.mjs";
 import { adoptCommand } from "./lib/commands/adopt.mjs";
 import { detectCommand } from "./lib/commands/advisory.mjs";
+import { feedbackCommand } from "./lib/commands/feedback.mjs";
 import { listCommand } from "./lib/commands/list.mjs";
 import { statusCommand } from "./lib/commands/status.mjs";
 
@@ -60,6 +61,10 @@ registerCommand("module", async ({ positionals, options, deps }) => {
 });
 
 registerCommand("status", async ({ options, deps }) => statusCommand({ options, ...deps }));
+
+registerCommand("feedback", async ({ positionals, options, deps }) =>
+  feedbackCommand({ draftPath: positionals[0], options, ...deps }),
+);
 
 registerCommand("advisory", async ({ positionals, deps }) => {
   const [sub, id] = positionals;

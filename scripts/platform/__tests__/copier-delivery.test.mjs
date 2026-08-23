@@ -22,10 +22,20 @@ test("release.yml is excluded — template-only, tags this repo, never ships to 
   );
 });
 
-test("template-update.yml ships to the child (not excluded)", () => {
-  assert.ok(
-    !excludes().includes(".github/workflows/template-update.yml"),
-    "copier.yml must NOT exclude .github/workflows/template-update.yml — the weekly update bot runs in the child",
+// Absence, not exclusion: a _exclude entry for a file that does not exist proves nothing
+// and rots. The child never updates itself (owner decision, 2026-08-23).
+test("no self-updating bot ships to the child — the bot files do not exist", () => {
+  const tracked = execFileSync(
+    "git",
+    ["ls-files", "-z", ".github/workflows/template-update.yml", "scripts/platform/template-update-ci.mjs"],
+    { cwd: ROOT, encoding: "utf8" },
+  )
+    .split("\0")
+    .filter(Boolean);
+  assert.deepEqual(
+    tracked,
+    [],
+    "a product must not open its own update PR on a schedule — running the check is the operator's act",
   );
 });
 

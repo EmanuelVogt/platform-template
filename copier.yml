@@ -35,7 +35,9 @@ _exclude:
   - .github/workflows/catalog.yml
   # gate de tag do próprio template — assume `_copier_conf.answers_file` ausente
   # e o `.copier-answers.yml.jinja` da raiz; no filho seria inerte, mas não deve
-  # nem chegar lá (o bot semanal em `template-update.yml` é quem o filho recebe)
+  # nem chegar lá. O filho não ganha workflow de atualização nenhum: ele nunca se
+  # atualiza sozinho — detectar o atraso é automático (hook `template-behind`),
+  # aplicar é ato do operador, pela skill `template-update`
   - .github/workflows/release.yml
   - .claude/settings.local.json
   - apps/api/.env

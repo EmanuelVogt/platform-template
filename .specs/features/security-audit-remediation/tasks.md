@@ -1730,6 +1730,32 @@ Wave 6:  [C11: T53→T58]
 
 ---
 
+> **Fix tasks — Verifier round 2 (2026-08-23)**. Wave 8 = C15 (T69, opus — migration + install order, cross-entry). Touches `catalog/**` → Build gate includes `pnpm catalog:check`. The REM-48 probe is tightened by the orchestrator in `spec.md` (`jq -r '.scripts | keys[]'`).
+
+### T69: Make the token-hash redaction attach run in the real install order (REM-40)
+
+**What**: In a stock child, `identity` is installed before `audit`, so `03_audit_redact_token_hashes.sql` hits its `audit.attach`-missing guard and no-ops — the trail keeps clear `token_hash` / `cookie_token_hash` values. The attach must execute in the real install path, and the proof must fail when the redact list is emptied (Verifier mutant 7 at `03_audit_redact_token_hashes.sql:19`).
+**Where**: `catalog/identity/single-tenant/migrations/custom/03_audit_redact_token_hashes.sql`
+**Touches**: `catalog/identity/single-tenant/migrations/custom/03_audit_redact_token_hashes.sql`, `catalog/identity/single-tenant/migrations/custom/02_*.sql` (same guard — the `users.password_hash` attach has the same ordering hole; fix both or prove 02 is reached), `catalog/audit/api/infrastructure/trail/audit-trigger.int-spec.ts:46-50` (delete the inline re-attach), `catalog/audit/api/testing/**` (`reattachIdentityTables` helper — delete or align), and ONE of: (a) an audit custom migration that, guarded on `to_regclass('identity.sessions')`, (re)attaches the identity tables with the lists identity declares — installed after identity by `dependsOn`; or (b) the catalog installer re-runs a dependency's `customMigrations` tagged as attach-after (`scripts/platform/**`, `module.json` schema) — pick (a) unless the installer already has such a hook (scout first); record the choice in the summary. If (a): `catalog/audit/module.json` `customMigrations` + `catalog/audit/CHANGELOG.md` `## [2.0.0]` item + `docs/advisories/ADV-20260822-04.md` `fix`/`detect` updated; `catalog/identity/single-tenant/README.md`/`CHANGELOG.md` line if identity's migration changes meaning.
+**Depends on**: T67
+**Exclusive**: **yes** — single cluster of wave 8 (migrations + two entries)
+**Reuses**: the existing guard pattern in `02_*.sql`/`03_*.sql`; `audit.attach(schema, table, pk, redact[])` signature (`catalog/audit/migrations/**`); `catalog:check` install order = topological on `dependsOn` (`scripts/platform/**` — confirm)
+**Requirement**: REM-40 (and the `users.password_hash` case of the original audit finding)
+
+**Done when**:
+
+- [ ] `pnpm catalog:check audit` renders a child with identity then audit and, **without any inline re-attach in tests**, an insert into `sessions`/`devices`/`verification_tokens`/`users` yields trail rows with the hash columns `"[REDACTED]"`
+- [ ] Mutant 7 (redact list → `'{}'` in the migration that now carries the list) turns `pnpm catalog:check audit` red — state the failing test names, restore the file
+- [ ] The inline re-attach at `audit-trigger.int-spec.ts:46-50` and its "never redacts in a real catalog:check" note are gone; `reattachIdentityTables` deleted or reduced to the real path
+- [ ] Advisory/changelog updated for whichever entry carries the attach; `pnpm catalog:lint` 0
+- [ ] Gate check passes: `pnpm catalog:check audit` and `pnpm catalog:check identity`
+
+**Tests**: int in the child (matrix: custom SQL migration → int-spec)
+**Gate**: full (entry)
+**Commit**: `fix(audit,identity): attach the token-hash redaction in the real install order` (+ `Advisory: none — covered by ADV-20260822-04 (security-audit-remediation)` for audit files, `…-01` for identity files — one commit, both trailers)
+
+---
+
 ## Wave Execution Map
 
 ```
@@ -1795,6 +1821,17 @@ Plan corrections from wave 3: (a) `contract.parity.spec.ts` is green on the Vite
 | Cluster | Tier | Tasks → commits | Notes |
 | --- | --- | --- | --- |
 | C11 | sonnet | T53 `f1e76ca` · T54 `d975c1e` · T55 `e8d7195` · T56 `b9b0ca1` · T57 `5bb31ff` · T58 `a4ebe34` | T53–T56 each stage their `ADV-20260822-NN.md` with the catalog change (01 identity `breaking/high` · 02 attachment `security/high` · 03 notification `security/medium` · 04 audit `bug/low` · 05 tag `security/low`). READMEs edited only for identity and attachment (the only Done-when items naming README lines). T57: `## v2.0.0` in `template-changelog.md` lists every fail-closed change with the child's action, `outbox-dead.purge` **`lockId` 6** (task body said 3 — stale since the wave-2 fix), the tag-by-maintainer note, the pointer to the Vitest entry and the `pnpm contract` kernel-env DX note. T58: `deploy.md.jinja` drops the `legacy-import` entrypoint step for the seed glob and gains a "Fail-closed configuration" table (`TRUST_PROXY_HOPS=2` for Cloudflare → Traefik, `DOCS_ENABLED`, `REDIS_ALLOW_PLAINTEXT`, `DATABASE_SSL_CA`, `OUTBOX_DEAD_RETENTION_DAYS`, `STORAGE_*`, identity/attachment vars); `local-environment.md` lists the variables a developer now sets explicitly. No `SPEC_DEVIATION` in this wave. |
+
+**Verifier round 1 (2026-08-23, opus) — FAIL**: 45/51 ACs evidenced, Final gate 10/11 (`pnpm audit` residue = Out-of-Scope `api-client>axios`), sensor 4/5 (mutant 2 survived). `validation.md` committed on the branch at `e46790a`; fix tasks T63–T68 + spec precision (REM-39 filtered gate, REM-48 probe, Success Criteria #2) on `main` at `44d8fd4`, merged into the worktree at `3b7554f`.
+
+**Wave 7 (fix round 1) — DONE (2026-08-23), Build gate PASS on the 1st run** (`pnpm check` 0 · `pnpm test` 89 files / 585 tests · `module-boundaries.spec.ts` 32/32 · `catalog:typecheck` 0 · `catalog:lint` 0 · `catalog:check` 0 — child 221 unit files / 1548 tests + 70 test:db files / 510 tests; attachment 20/117, identity 74/677 + 3/15, audit 6/44). Commit range `3b7554f..ca6bb6f`, 6 commits.
+
+| Cluster | Tier | Tasks → commits | Notes |
+| --- | --- | --- | --- |
+| C13 | sonnet | T63 `b3b1259` · T64 `1937907` · T65 `b721676` · T66 `ca6bb6f` | **Mutant 2 kill verified**: re-injected the `sniffed !== file.contentType` drop at `upload-attachments-batch.use-case.ts:67`, `catalog:check attachment` went red on "recusa PNG válido declarado como image/jpeg…" and "recusa JPEG válido declarado como image/png e descarta o objeto já enviado do lote", file restored. T64: new `upload-attachments.controller.spec.ts` (503/413 wiring) + 3 e2e blocks (429 real limiter, 413 seeded pending rows, 503 pre-acquired `UploadGate`), body-not-read asserted. T65: fake `LoggerFactory` spy proves `attachment.download_stream_failed`; a cross-test socket-pool flake (`Parse Error: Expected HTTP/`) fixed with `agent: false` on the raw `http.request`. T66: `fields`/`fieldSize` configurable on `MultipartLimits` (defaults 0 / 1024 keep callers unchanged), `field` handler rejects `nameTruncated`/`valueTruncated` → 400, `partsLimit` isolated with `stream.destroyed === true`. Plan correction: the multipart parser lives at `catalog/attachment/api/api/controllers/multipart-files.ts` (T66's `api/multipart/` path was wrong). |
+| C14 | sonnet | T67 `63f1e5e` · T68 `1ec6034` | T67 hosted in `catalog/audit/api/infrastructure/trail/audit-trigger.int-spec.ts` (precedent), not a new identity file: `catalog:check identity` resolves only identity's `dependsOn` (notification), so `audit.entries` does not exist in an identity-only child and migration 03 no-ops there; `audit` depends on `identity`, so `catalog:check audit` proves both. **SPEC_DEVIATION for the Verifier** (inline in that spec's `beforeAll`): it re-attaches `sessions`/`devices`/`verification_tokens` with migration 03's redact lists because the shared `reattachIdentityTables` helper (outside C14's ownership) mirrors migration 02's empty lists. T68: `resolveMasterPassword` exported (no behaviour change), env-set/absent branches + 32-char base64url + printed-once; no literal password in the file. |
+
+**Verifier round 2 (2026-08-23, opus, same agent resumed) — FAIL, 1 Major**: 50/51 ACs evidenced; Final gate 12/12 (REM-39 filtered gate exit 0); sensor round 2 3 injected / 2 killed (mutant 2 now killed by T63, fresh mutant 6 on the REM-14 quota arithmetic killed), **mutant 7 survived** — `03_audit_redact_token_hashes.sql:19` redact list → `'{}'` leaves `catalog:check audit` green because `audit-trigger.int-spec.ts:46-50` re-attaches the tables inline with hand-copied literals, and in a stock install (identity before audit) the migration hits its guard and never runs: **REM-40 is not closed in product**. Closed this round: REM-08, REM-12, REM-14, REM-15, REM-28. Cosmetics carried (REM-09/10/19/25/27, REM-12 server socket). → fix task **T69** (wave 8, C15, opus, exclusive); REM-48 probe re-tightened in `spec.md` (`jq -r '.scripts | keys[]'`). Lessons L-022..L-024 (L-023 restates L-013).
 
 ---
 

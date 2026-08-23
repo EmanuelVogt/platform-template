@@ -7,7 +7,7 @@ Execute flow and Critical Rules.** Do not search for skill files by filesystem p
 skill cannot be activated, STOP and tell the user.
 
 **Design**: `.specs/features/template-update-contract/design.md`
-**Status**: Draft
+**Status**: Execute — waves 1–2 DONE (gates green); next: wave 3 (C8, exclusive), then Verifier
 
 **Execute preconditions (hard):**
 1. Clean working tree. At authoring time a parallel session holds uncommitted WIP on
@@ -277,3 +277,69 @@ Granularity: every task = one script/lib/workflow/doc set with its tests; none s
 ## Coverage
 
 31 ACs → all mapped: REL-01/04/05→T10 (REL-05 rule T9), REL-02/03→T11, KADV-01/02/04→T1(+T2), KADV-03→T2/T8, KADV-05→T3, KADV-06→T4, KADV-07→T2, FEED-01/03→T5(+T7), FEED-02/04→T7, CAD-01→T6/T8, CAD-02/03→T8, CAD-04→T17+T16, BOT-01/03→T12, BOT-02/04/06→T13, BOT-05→T14+T16, BOT-07→T12/T13, MIG-01/02→T15, MIG-03→T17, DOC-01→orchestrator@wave-2 record, DOC-02→T17, DOC-03→T4. 0 unmapped.
+
+## Execution Record
+
+| Wave | Cluster | Task | Commit | Status |
+| --- | --- | --- | --- | --- |
+| 1 | C1 | T1 | `db8149d` | DONE |
+| 1 | C1 | T3 | `779eb8a` | DONE |
+| 1 | C1 | T2 | `484326b` | DONE |
+| 1 | C1 | T4 | `73ddcbd` | DONE |
+| 1 | C1 | gate fix | `b2cb486` | DONE |
+| 1 | C2 | T5 | `34f7d1a` | DONE |
+| 1 | C2 | T6 | `fc3b249` | DONE |
+| 1 | C3 | T9 | `057aad6` | DONE |
+| 1 | C3 | T10 | `03bfaa1` | DONE |
+| 1 | C3 | T11 | `fd5fb30` | DONE |
+
+**Wave 1 Build gate**: `pnpm test:scripts` 314/314 pass (pre-feature baseline 279), `pnpm catalog:lint` exit 0.
+First run failed on `copier-answers-leak.test.mjs` — C1's new hook fixtures shipped a tracked
+`.copier-answers.yml` (the leak class `ADV-20260823-02` documents); fixed in `b2cb486` by building
+those fixtures at test setup in a temp dir. All workers sonnet.
+
+**Wave 1 deviations recorded**
+- T2: `lib/commands/advisory.mjs` untouched — it only exports `detectCommand`, which never calls
+  `computePending`; design.md's "all three callers" does not match the current code, so there was
+  nothing to wire (the two real callers, `status.mjs` and the hook, do pass `templateVersion`).
+- T2: `templateVersion` is passed as `parseInstalledVersion(...)?.version` (a string) rather than the
+  parse object design.md names in shorthand — required by `semver.satisfies`.
+- T10: no new exit codes; reuses `USAGE_ERROR` (version mismatch), `ALREADY_INSTALLED` (tag exists),
+  `TEST_FAILURE` (entry changed without bump), `MIGRATION_FAILURE` (manual step in a non-major).
+- T5: unparseable remote advisories are collected by a per-file scan catching `AdvisoryParseError`
+  into `skipped[]`, not by `loadAdvisories` (which throws on the first bad file) — satisfies the
+  FEED unparseable edge case.
+
+### Wave 2
+
+| Wave | Cluster | Task | Commit | Status |
+| --- | --- | --- | --- | --- |
+| 2 | C4 | T7 | `1520338` | DONE |
+| 2 | C4 | T8 | `ff592f2` + `6e82a92` | DONE |
+| 2 | C5 | T12 | `038e54f` | DONE |
+| 2 | C5 | T13 | `b4eedd3` | DONE |
+| 2 | C5 | T14 | `82cbe41` | DONE |
+| 2 | C6 | T15 | `68da35e` | DONE |
+| 2 | C7 | T17 | `8ee1323` | DONE |
+
+**Wave 2 Build gate**: `pnpm test:scripts` 345/345 pass, `pnpm catalog:lint` exit 0. All workers sonnet.
+**AD-034 appended to `.specs/STATE.md` § Decisions at this record (DOC-01).**
+
+**Wave 2 deviations recorded**
+- T8 was returned DONE with the feed `error`/`skipped` surfacing unwritten (the worker read no AC as
+  naming it). Not accepted: tasks.md T8 *What* and spec.md § Edge Cases both require `status` to
+  surface the parse error. Worker resumed; closed in `6e82a92` with additive keys
+  `template.feedError` and `advisories.feedSkipped[]` plus plain-text lines; hook stays silent.
+- T13: **design.md's conflict assumption was wrong.** Installed copier 9.17.2 defaults to
+  `--conflict inline`, not `rej` (a `.rej` is transient, deleted after the 3-way `git merge-file`).
+  The scan is `git grep` for the literal `<<<<<<< before updating` / `>>>>>>> after updating`
+  markers, not `**/*.rej` (`template-update-ci.mjs:36-40`). This is the verification the task
+  demanded before trusting the artifact.
+- T13: `runUpdate` also configures `git user.name/email` and commits before pushing — the task text
+  omitted the commit step and the PR branch would otherwise carry no diff.
+- T14: `hashFiles()` is not valid in a job-level `if` (actionlint). The BOT-05 inert-in-template
+  guard moved to every step after checkout.
+- T12: `openIssues` stays in `planUpdate`'s signature for design parity but is unused — the four
+  tested outcomes need only `status`/`openPrs`/`closedPrs`.
+- T7/T8/C1: no fixture ever commits a literal `.copier-answers.yml`; all child fixtures are built at
+  test setup under `mkdtempSync`.

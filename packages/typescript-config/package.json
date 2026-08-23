@@ -6,6 +6,7 @@
     "base.json",
     "react-vite.json",
     "react-library.json",
-    "nest.json"
+    "nest.json",
+    "next.json"
   ]
 }

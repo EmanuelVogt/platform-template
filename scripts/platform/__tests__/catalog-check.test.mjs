@@ -659,3 +659,26 @@ test("runCatalogCheck fails fast when the rendered apps/web does not match --web
     rmSync(scratchDir, { recursive: true, force: true });
   }
 });
+
+test("catalog.yml carries web_stack: [vite, next] in both the catalog and smoke job matrices and passes it to the command (ACC-11)", () => {
+  const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..", "..", "..");
+  const workflow = parseYaml(readFileSync(path.join(repoRoot, ".github", "workflows", "catalog.yml"), "utf8"));
+
+  const catalogJob = workflow.jobs.catalog;
+  assert.deepEqual(catalogJob.strategy.matrix.web_stack, ["vite", "next"]);
+  assert.ok(
+    catalogJob.steps.some((step) => typeof step.run === "string" && step.run.includes("--web-stack ${{ matrix.web_stack }}")),
+    "o step de catalog:check precisa repassar --web-stack",
+  );
+
+  const smokeJob = workflow.jobs.smoke;
+  assert.deepEqual(smokeJob.strategy.matrix.web_stack, ["vite", "next"]);
+  assert.ok(
+    smokeJob.steps.some((step) => typeof step.run === "string" && step.run.includes("--web-stack ${{ matrix.web_stack }}")),
+    "o step de template:smoke precisa repassar --web-stack",
+  );
+  assert.ok(
+    smokeJob.steps.some((step) => typeof step.run === "string" && step.run.includes("turbo test:cov --filter=web-next")),
+    "o job smoke precisa rodar a cobertura do web-next (ACC-07 em CI)",
+  );
+});

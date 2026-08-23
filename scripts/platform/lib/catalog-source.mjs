@@ -17,9 +17,8 @@ export function isGitRef(source) {
   return /^(git@|https?:\/\/|gh:|file:\/\/)/.test(source) || source.endsWith(".git");
 }
 
-// O copier grava `_src_path` no shorthand dele (`gh:`/`gl:`) — inclusive quando o
-// template foi passado como caminho local (ele normaliza para o remote origin).
-// `git clone` não entende esses prefixos; expande para a URL https equivalente.
+// O copier grava `_src_path` como o usuário passou — o shorthand `gh:`/`gl:` é o caso do
+// README. `git clone` não entende esses prefixos; expande para a URL https equivalente.
 export function expandGitShorthand(source) {
   const match = /^(gh|gl):(?!\/\/)(.+)$/.exec(source);
   if (!match) return source;

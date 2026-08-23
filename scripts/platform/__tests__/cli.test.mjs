@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -14,6 +14,9 @@ const CHILD_FIXTURE = path.join(TESTS_DIR, "fixtures/child");
 function makeChild() {
   const dir = mkdtempSync(path.join(tmpdir(), "cli-child-"));
   cpSync(CHILD_FIXTURE, dir, { recursive: true });
+  // The fixture cannot carry the real name: copier writes any file called
+  // `.copier-answers.yml` to the product root (copier-answers-leak.test.mjs).
+  renameSync(path.join(dir, "copier-answers.yml"), path.join(dir, ".copier-answers.yml"));
   return dir;
 }
 

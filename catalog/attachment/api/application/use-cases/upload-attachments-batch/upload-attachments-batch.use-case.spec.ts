@@ -40,6 +40,7 @@ const imageBatchProfiles = buildUploadProfiles(baseConfig, [
 ])
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+const JPEG_SIGNATURE = Buffer.from([0xff, 0xd8, 0xff])
 
 function makeUseCase(catalog = profiles) {
   const inserted: Attachment[] = []
@@ -328,6 +329,39 @@ describe("UploadAttachmentsBatchUseCase", () => {
       expect(repo.insertMany).not.toHaveBeenCalled()
       // O primeiro arquivo (válido) já tinha ido ao bucket antes do segundo
       // falhar o sniff — o discard do lote apaga exatamente esse objeto.
+      expect(storage.putStream).toHaveBeenCalledTimes(1)
+      expect(storage.delete).toHaveBeenCalledTimes(1)
+    })
+
+    it("recusa PNG válido declarado como image/jpeg (farejado difere do declarado, não é null)", async () => {
+      const { useCase, repo } = makeUseCase(imageBatchProfiles)
+
+      await expect(
+        useCase.execute({
+          profile: "image-batch-test" as never,
+          ownerUserId: "user-1",
+          files: iterate(typedFile("swapped.png", "image/jpeg", [PNG_SIGNATURE])),
+        }),
+      ).rejects.toBeInstanceOf(UnsupportedMediaTypeError)
+
+      expect(repo.insertMany).not.toHaveBeenCalled()
+    })
+
+    it("recusa JPEG válido declarado como image/png e descarta o objeto já enviado do lote", async () => {
+      const { useCase, repo, storage } = makeUseCase(imageBatchProfiles)
+
+      await expect(
+        useCase.execute({
+          profile: "image-batch-test" as never,
+          ownerUserId: "user-1",
+          files: iterate(
+            typedFile("real.png", "image/png", [PNG_SIGNATURE]),
+            typedFile("swapped.jpg", "image/png", [JPEG_SIGNATURE]),
+          ),
+        }),
+      ).rejects.toBeInstanceOf(UnsupportedMediaTypeError)
+
+      expect(repo.insertMany).not.toHaveBeenCalled()
       expect(storage.putStream).toHaveBeenCalledTimes(1)
       expect(storage.delete).toHaveBeenCalledTimes(1)
     })

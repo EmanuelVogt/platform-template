@@ -139,6 +139,22 @@ describe("Attachment (e2e): upload em lote", () => {
     expect(res.body.type).toMatch(/\/unsupported-media-type$/)
   })
 
+  // REM-08 (mutant 2): imagem válida cujo tipo farejado difere do declarado
+  // também é 415 — não só o sniff nulo (html) do teste acima.
+  it("recusa PNG válido declarado como image/jpeg (415, nada persistido)", async () => {
+    const cookies = await loginNewUser("att-up-swapped@example.com")
+
+    const res = await request(app.getHttpServer())
+      .post("/v1/attachments/uploads")
+      .query({ profile: "image" })
+      .set("Origin", ORIGIN)
+      .set("Cookie", cookies)
+      .attach("file", PNG_1PX, { filename: "swapped.png", contentType: "image/jpeg" })
+      .expect(415)
+
+    expect(res.body.type).toMatch(/\/unsupported-media-type$/)
+  })
+
   it("recusa upload sem sessão (401/403 — rota exige actor)", async () => {
     await request(app.getHttpServer())
       .post("/v1/attachments/uploads")

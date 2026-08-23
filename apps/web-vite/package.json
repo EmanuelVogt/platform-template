@@ -1,0 +1,48 @@
+{
+  "name": "web",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/dev-port.mjs --free && concurrently -n vite,types -c blue,yellow \"vite\" \"tsc -p tsconfig.app.json --watch --preserveWatchOutput\"",
+    "build": "tsc -b && vite build",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "format": "prettier --write \"**/*.{ts,tsx}\"",
+    "typecheck": "tsc -b --force",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:cov": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.4.0",
+    "@platform/api-client": "workspace:*",
+    "@tanstack/react-query": "^5.100.14",
+    "@tanstack/react-router": "^1.170.9",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-hook-form": "^7.76.1",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6",
+    "@vitest/coverage-v8": "^4.1.9",
+    "@workspace/eslint-config": "workspace:*",
+    "@workspace/typescript-config": "workspace:*",
+    "eslint": "^10",
+    "jsdom": "^29.1.1",
+    "msw": "^2.14.6",
+    "typescript": "~6",
+    "vite": "^8",
+    "vitest": "^4.1.7"
+  }
+}

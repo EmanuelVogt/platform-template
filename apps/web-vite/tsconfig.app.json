@@ -1,0 +1,12 @@
+{
+  "extends": "@workspace/typescript-config/react-vite.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "moduleDetection": "force",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "customConditions": ["development"]
+  },
+  "include": ["src", "test"]
+}

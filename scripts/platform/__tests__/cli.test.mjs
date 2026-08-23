@@ -70,11 +70,33 @@ async function installAlpha(child) {
   return run(["module", "add", "alpha", "--catalog-ref", CATALOG_ROOT], { cwd: child, run: stubRun });
 }
 
+// generateForModule lê do journal o que o drizzle registrou (issue #11); para o lock
+// gravar o baseline, o stub precisa simular o journal andando a cada `generate`.
+function withDrizzleJournal(child, stubRun) {
+  return (command, args, options) => {
+    const result = stubRun(command, args, options);
+    if (args.includes("generate")) {
+      const migrationsDir = path.join(child, "apps/api/drizzle/migrations");
+      mkdirSync(path.join(migrationsDir, "meta"), { recursive: true });
+      const journalPath = path.join(migrationsDir, "meta/_journal.json");
+      const journal = existsSync(journalPath) ? JSON.parse(readFileSync(journalPath, "utf8")) : { entries: [] };
+      const tag = `${String(journal.entries.length).padStart(4, "0")}_${args[args.indexOf("--name") + 1]}`;
+      journal.entries.push({ idx: journal.entries.length, tag });
+      writeFileSync(journalPath, JSON.stringify(journal), "utf8");
+      writeFileSync(path.join(migrationsDir, `${tag}.sql`), "-- gerado\n", "utf8");
+    }
+    return result;
+  };
+}
+
 test("module add instala alpha com sucesso: copia arquivo, grava lock e registries", async () => {
   const child = makeChild();
   const { run: stubRun, calls } = makeStubRun();
 
-  const exitCode = await run(["module", "add", "alpha", "--catalog-ref", CATALOG_ROOT], { cwd: child, run: stubRun });
+  const exitCode = await run(["module", "add", "alpha", "--catalog-ref", CATALOG_ROOT], {
+    cwd: child,
+    run: withDrizzleJournal(child, stubRun),
+  });
 
   assert.equal(exitCode, EXIT_CODES.OK);
   assert.equal(readFileSync(alphaDestFile(child), "utf8"), "export class AlphaModule {}\n");

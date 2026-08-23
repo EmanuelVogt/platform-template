@@ -54,10 +54,3 @@ docker compose down       # stops the containers (keeps the data in the volumes)
 docker compose down -v    # stops and DELETES the data (volumes postgres_data/redis_data)
 docker compose restart    # restarts
 ```
-
-> **Legacy backfill is opt-in.** A clean `docker compose up -d --build` brings up the
-> `api` service migrated, but **without** backfill — it does not touch the legacy MySQL and
-> never depends on it. To run the import, enable `RUN_BACKFILL=true docker compose up -d --build`;
-> the boot then requires a reachable `MYSQL_LEGACY_DATABASE` (`pnpm --filter api db:backfill:legacy`).
-> That MySQL is **not** part of this compose — point `MYSQL_LEGACY_DATABASE` to a
-> database outside it (or add a `mysql` service) before enabling the backfill.

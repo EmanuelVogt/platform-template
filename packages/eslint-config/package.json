@@ -7,20 +7,23 @@
     "./base": "./base.js",
     "./react": "./react.js",
     "./nest": "./nest.js",
-    "./fsd": "./fsd.js"
+    "./fsd": "./fsd.js",
+    "./fsd-next": "./fsd-next.js"
   },
   "files": [
     "base.js",
     "react.js",
     "nest.js",
     "fsd.js",
+    "fsd-next.js",
     "rules"
   ],
   "scripts": {
-    "test": "node --test rules/*.test.js"
+    "test": "node --test rules/*.test.js *.test.js"
   },
   "dependencies": {
     "@eslint/js": "^10",
+    "@next/eslint-plugin-next": "^15.5.23",
     "eslint-config-prettier": "^10",
     "eslint-import-resolver-typescript": "^4",
     "eslint-plugin-boundaries": "^7.0.2",

@@ -4,7 +4,7 @@ Version truth = git tag + this entry (AD-006); `package.json` is not bumped on
 release. Each version lists the contract-breaking changes and the steps for the child
 to apply on `copier update`.
 
-## Unreleased
+## v2.0.0
 
 Vitest replaces jest as the api runner and takes over the whole root. Breaking for
 every child: the specs change runner and the five catalog entries move to `2.0.0`.

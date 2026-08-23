@@ -140,6 +140,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: catalog/identity/single-tenant/api/api/controllers/auth/upload-access-link-avatar.controller.ts:53-60 (catalog/identity)
 - last seen: 2026-08-23T15:33:00Z
 
+### L-022 — A test that re-creates a migration's effect in its own setup proves the mechanism, not the migration: emptying the migration stays green. Assert against the state the migration itself produced, or the assertion is about the trigger only.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `migrations` · harmful: 0
+- features: security-audit-remediation
+- evidence: mutant 7 — catalog/identity/single-tenant/migrations/custom/03_audit_redact_token_hashes.sql:19 survives pnpm catalog:check audit (migrations)
+- last seen: 2026-08-23T16:53:38Z
+
+### L-023 — When two catalog entries are siblings (install order not forced by dependsOn) and one attaches DDL that depends on the other, a combined multi-entry install can silently skip the attach — cover it with a coverage-enforcement test that simulates the documented manual re-apply, and document the manual step in both entries' advisories, not just the code comment.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `catalog` · harmful: 0
+- features: security-audit-remediation
+- evidence: REM-40 — audit-trigger.int-spec.ts:32-45 SPEC_DEVIATION concedes the attach never runs in a real catalog:check (catalog)
+- last seen: 2026-08-23T16:53:38Z
+
+### L-024 — A probe grep for a JSON script key must be anchored to the scripts block: a pattern like '"test[^"]*":' also matches devDependencies such as 'testcontainers', so the probe reports a failure the AC does not have.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: security-audit-remediation
+- evidence: REM-48 probe, spec.md:244 vs apps/api/package.json:88 (spec)
+- last seen: 2026-08-23T16:53:38Z
+
 ## Quarantined (failed when applied — ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

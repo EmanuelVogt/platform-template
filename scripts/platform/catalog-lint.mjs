@@ -1,11 +1,12 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
-import { isAdvisoryFilename } from "./lib/advisories.mjs";
+import { isAdvisoryFilename, parseAdvisory } from "./lib/advisories.mjs";
 import { ChangelogVersionMissingError, readLatestChangelogVersion } from "./lib/kernel-version.mjs";
 import {
   discoverEntries,
   extractContractHeadings,
   lintAdvisoryFrontmatter,
+  lintAdvisoryModule,
   lintChangelogVersion,
   lintKernelRange,
   lintManifest,
@@ -78,14 +79,20 @@ function lintEntry(entryDir, contractHeadings, kernelVersion) {
   return errors;
 }
 
-function lintAdvisories(dir) {
+function lintAdvisories(dir, entryNames) {
   if (!existsSync(dir)) return [];
   const errors = [];
   for (const name of readdirSync(dir)) {
     if (!isAdvisoryFilename(name)) continue;
     const filePath = path.join(dir, name);
+    const content = readFileSync(filePath, "utf8");
+    const frontmatterErrors = lintAdvisoryFrontmatter(content, filePath);
+    if (frontmatterErrors.length > 0) {
+      errors.push(...frontmatterErrors.map((error) => `${filePath}: ${error}`));
+      continue;
+    }
     errors.push(
-      ...lintAdvisoryFrontmatter(readFileSync(filePath, "utf8"), filePath).map((error) => `${filePath}: ${error}`),
+      ...lintAdvisoryModule(parseAdvisory(content, filePath), entryNames).map((error) => `${filePath}: ${error}`),
     );
   }
   return errors;
@@ -110,10 +117,12 @@ export function runLint({
   const contractHeadings = existsSync(contractPath) ? extractContractHeadings(readFileSync(contractPath, "utf8")) : [];
   const errors = [];
   const kernelVersion = readKernelVersion(changelogPath, errors);
-  for (const entryDir of discoverEntries(catalogRoot)) {
+  const entryDirs = discoverEntries(catalogRoot);
+  const entryNames = entryDirs.map((entryDir) => path.relative(catalogRoot, entryDir).split(path.sep).join("/"));
+  for (const entryDir of entryDirs) {
     errors.push(...lintEntry(entryDir, contractHeadings, kernelVersion));
   }
-  errors.push(...lintAdvisories(advisoriesDir));
+  errors.push(...lintAdvisories(advisoriesDir, entryNames));
   return errors;
 }
 

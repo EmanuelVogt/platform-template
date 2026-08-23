@@ -136,6 +136,11 @@ export function lintAdvisoryFrontmatter(content, filePath) {
   }
 }
 
+export function lintAdvisoryModule(advisory, entryNames) {
+  if (advisory.module === "kernel" || entryNames.includes(advisory.module)) return [];
+  return [`module "${advisory.module}" não é "kernel" nem uma entrada existente do catálogo (${advisory.id})`];
+}
+
 // Para em módulos com variant: catalog/<name>/<variant>/module.json não descende além do module.json encontrado.
 export function discoverEntries(root) {
   if (!existsSync(root)) return [];

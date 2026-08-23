@@ -8,6 +8,7 @@ import {
   discoverEntries,
   extractContractHeadings,
   lintAdvisoryFrontmatter,
+  lintAdvisoryModule,
   lintChangelogVersion,
   lintKernelRange,
   lintManifest,
@@ -291,6 +292,34 @@ test("lintAdvisoryFrontmatter falha e nomeia o campo obrigatório ausente", () =
   const errors = lintAdvisoryFrontmatter(md, "docs/advisories/ADV-20260901-01.md");
   assert.equal(errors.length, 1);
   assert.match(errors[0], /parity/);
+});
+
+test("lintAdvisoryModule aceita kernel e cada uma das 5 entradas reais do catálogo", () => {
+  const catalogRoot = path.join(ROOT, "catalog");
+  const entryNames = discoverEntries(catalogRoot).map((entryDir) =>
+    path.relative(catalogRoot, entryDir).split(path.sep).join("/"),
+  );
+  assert.deepEqual(entryNames.sort(), ["attachment", "audit", "identity/single-tenant", "notification", "tag"]);
+  assert.deepEqual(lintAdvisoryModule({ id: "ADV-x", module: "kernel" }, entryNames), []);
+  for (const name of entryNames) {
+    assert.deepEqual(lintAdvisoryModule({ id: "ADV-x", module: name }, entryNames), []);
+  }
+});
+
+test("lintAdvisoryModule falha para módulo desconhecido, nomeando o módulo", () => {
+  const errors = lintAdvisoryModule({ id: "ADV-20260901-01", module: "nonexistent" }, ["tag"]);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /nonexistent/);
+  assert.match(errors[0], /ADV-20260901-01/);
+});
+
+test("runLint reporta o arquivo e o módulo desconhecido de um advisory", () => {
+  const repo = writeCatalogRepo({ kernelRange: ">=2.0.0 <3.0.0", changelogVersion: "2.0.0" });
+  writeEntryFile(repo.options.advisoriesDir, "ADV-20260901-01.md", advisoryMd({ module: "nonexistent" }));
+  const errors = runLint(repo.options);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /ADV-20260901-01\.md/);
+  assert.match(errors[0], /nonexistent/);
 });
 
 function writeEntryFile(entryDir, relativePath, content) {

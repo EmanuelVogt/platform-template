@@ -36,6 +36,18 @@ describe("audit trigger (int)", () => {
     // documentado nela mesma). Simula o passo manual que um produto real
     // reaplicaria depois de instalar audit (idempotente).
     await reattachIdentityTables(pool)
+    // SPEC_DEVIATION: reanexa sessions/devices/verification_tokens com a lista de
+    // redação de 03_audit_redact_token_hashes.sql (REM-40).
+    // Reason: `reattachIdentityTables` espelha só 02_audit_attach.sql (redact list
+    // vazia para essas três tabelas); a migration 03 do identity sofre o mesmo guard
+    // de ordem (`catalog:check audit` roda identity antes de audit existir) e nunca
+    // redige os hashes num catalog:check real — este reanexo simula o mesmo passo
+    // manual pós-install que um produto real faria (audit.attach é idempotente).
+    await pool.query(`
+      SELECT audit.attach('identity', 'sessions', '{id}', '{token_hash}');
+      SELECT audit.attach('identity', 'devices', '{id}', '{cookie_token_hash}');
+      SELECT audit.attach('identity', 'verification_tokens', '{id}', '{token_hash}');
+    `)
   })
 
   beforeEach(async () => {
@@ -69,6 +81,15 @@ describe("audit trigger (int)", () => {
       `INSERT INTO identity.permission_templates (id, name, created_at, updated_at)
        VALUES ($1, $2, now(), now())`,
       [id, name]
+    )
+  }
+
+  // FK das tabelas de credencial (sessions/devices/verification_tokens) — dono
+  // precisa existir antes de exercitar a redação dos hashes (REM-40).
+  async function insertUser(id: string): Promise<void> {
+    await pool.query(
+      "INSERT INTO identity.users (id, name, email, password_hash) VALUES ($1, $2, $3, $4)",
+      [id, "Fulano", `${id}@test.local`, "hash-secreto-real"]
     )
   }
 
@@ -143,6 +164,57 @@ describe("audit trigger (int)", () => {
     const row = rows[0]
     expect((row!.row_new as { password_hash: string }).password_hash).toBe("[REDACTED]")
     expect((row!.row_new as { email: string }).email).toBe(`${id}@test.local`)
+  })
+
+  it("redaction: identity.sessions.token_hash vira [REDACTED] na trilha", async () => {
+    const userId = ulid()
+    await insertUser(userId)
+    const sessionId = ulid()
+    await pool.query(
+      `INSERT INTO identity.sessions (id, user_id, token_hash, expires_at)
+       VALUES ($1, $2, $3, now() + interval '1 day')`,
+      [sessionId, userId, "token-secreto-real"]
+    )
+
+    const rows = await auditRows("sessions")
+    expect(rows).toHaveLength(1)
+    const row = rows[0]
+    expect((row!.row_new as { token_hash: string }).token_hash).toBe("[REDACTED]")
+    expect((row!.row_new as { user_id: string }).user_id).toBe(userId)
+  })
+
+  it("redaction: identity.devices.cookie_token_hash vira [REDACTED] na trilha", async () => {
+    const userId = ulid()
+    await insertUser(userId)
+    const deviceId = ulid()
+    await pool.query(
+      `INSERT INTO identity.devices (id, user_id, cookie_token_hash)
+       VALUES ($1, $2, $3)`,
+      [deviceId, userId, "cookie-secreto-real"]
+    )
+
+    const rows = await auditRows("devices")
+    expect(rows).toHaveLength(1)
+    const row = rows[0]
+    expect((row!.row_new as { cookie_token_hash: string }).cookie_token_hash).toBe("[REDACTED]")
+    expect((row!.row_new as { user_id: string }).user_id).toBe(userId)
+  })
+
+  it("redaction: identity.verification_tokens.token_hash vira [REDACTED] na trilha", async () => {
+    const userId = ulid()
+    await insertUser(userId)
+    const tokenId = ulid()
+    await pool.query(
+      `INSERT INTO identity.verification_tokens (id, user_id, type, token_hash, expires_at)
+       VALUES ($1, $2, 'email_verify', $3, now() + interval '1 day')`,
+      [tokenId, userId, "token-secreto-real"]
+    )
+
+    const rows = await auditRows("verification_tokens")
+    expect(rows).toHaveLength(1)
+    const row = rows[0]
+    expect((row!.row_new as { token_hash: string }).token_hash).toBe("[REDACTED]")
+    expect((row!.row_new as { user_id: string }).user_id).toBe(userId)
   })
 
   it("PK composta: entity_id junta os valores das colunas de PK com ':'", async () => {

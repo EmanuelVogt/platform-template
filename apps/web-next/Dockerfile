@@ -21,7 +21,7 @@ FROM base AS builder
 # ARG vira ENV: garante que o Next build leia NEXT_PUBLIC_API_URL do process.env e
 # que o BuildKit invalide o cache da layer quando a URL mudar (ARG solto, sem
 # referência, pode dar cache-hit e cozinhar bundle sem a env).
-ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_API_URL=http://localhost:3000
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 COPY --from=pruner /app/out/json/ .
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \

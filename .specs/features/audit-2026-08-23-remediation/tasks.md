@@ -3014,3 +3014,35 @@ fold it into another wave.**
 
 **Next:** wave 5 (C11 = T43, exclusive — BRAND-04 harness taxonomy; it edits the rules this
 workflow runs under).
+
+### Wave 5 — GATED GREEN (2026-08-24)
+
+**C11 = T43 (exclusive, sonnet).** Landed as **`b7a065e`** — one commit, 10 files, all inside T43's
+`Touches`. Only `.agents/skills/**` paths were edited; the `.claude/skills/tlc-spec-driven` symlink
+target was left alone (§ 0.3).
+
+**Build gate 5/5 GREEN** at `b7a065e`: `check` (7/7 turbo tasks) · `test:scripts` **548/548**
+(**+3** vs wave 4's 545 — the three new `harness-taxonomy.test.mjs` tests) · `catalog:typecheck`
+(5 entries) · `catalog:lint` · `format:check`. The wave touches no `catalog/**` file, no module file
+and no facade, so `full-unit` was not required and no conformance spec applies.
+
+**What T43 did, against BRAND-04:**
+
+- The pre-edit taxonomy is quoted in the commit body, as the task required: *"opus — only when the
+  spec touches auth, payment, availability/booking rules, or data integrity (P0)."*
+- All 8 sites now read *"auth, payment(s), data integrity, or a rule the product's own domain doc
+  marks critical (P0)"* — the domain list is deferred to the product, not enumerated in the harness.
+- **Done-when 5 executed**: the `SPEC_DEVIATION` exclusion of `docs/agents/harness.md` at
+  `scripts/platform/__tests__/docs-no-owner-infra.test.mjs:10-14` is **removed**. Wave 1's
+  deviation 2 is closed — T16's guard now scans the literal `docs/agents/**` its AC names.
+
+#### Deviation recorded in wave 5 (input to the Verifier)
+
+1. **`docs/agents/harness.md:31-33` — the rtk install instructions were reworded.** Unexcluding the
+   file (Done-when 5) exposed a false positive: the instructions named the literal `~/.local/bin`,
+   which `OWNER_INFRA_TERMS` flags. Reworded to *"onto your PATH"*. It is a generic tool-install
+   path, unrelated to owner infrastructure, and the alternative — keeping the exclusion — is exactly
+   what Done-when 5 forbids. The guard now runs with no exclusion at all.
+
+**Next:** wave 6 (C12 = T44 → T45 → T46 → T47 — hooks truth + guard scan + the hygiene gate;
+gate `full-unit`).

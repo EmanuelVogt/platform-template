@@ -10,6 +10,7 @@ export const KERNEL_STAGE_PATHS = [
   "src/openapi",
   "src/shared",
   "src/app.module.ts",
+  "src/bootstrap.product.ts",
   "src/main.ts",
   "src/platform-modules.ts",
   "src/tracing.bootstrap.ts",

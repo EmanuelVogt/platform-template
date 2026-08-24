@@ -39,6 +39,9 @@ _exclude:
   # atualiza sozinho — detectar o atraso é automático (hook `template-behind`),
   # aplicar é ato do operador, pela skill `template-update`
   - .github/workflows/release.yml
+  # gate de formatação do próprio template — o filho herda um `.prettierrc` que
+  # carrega, não uma checagem que roda; ver docs/dev/template-changelog.md `v2.3.0`
+  - .github/workflows/format.yml
   - .claude/settings.local.json
   - apps/api/.env
   - apps/web/.env.local

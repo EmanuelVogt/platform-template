@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { spawn, spawnSync } from "node:child_process"
+import { existsSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { EXIT_CODES } from "./platform/lib/exit-codes.mjs"
@@ -70,6 +71,36 @@ function checkPlatformCli({ childDir, run, log }) {
       `template:smoke — "pnpm platform list" falhou no child (código ${listResult.status})`
     )
     return EXIT_CODES.TEST_FAILURE
+  }
+  return null
+}
+
+function collectPathLikeStrings(value, acc = []) {
+  if (typeof value === "string") {
+    if (value.includes("/")) acc.push(value)
+  } else if (Array.isArray(value)) {
+    for (const item of value) collectPathLikeStrings(item, acc)
+  } else if (value && typeof value === "object") {
+    for (const item of Object.values(value)) collectPathLikeStrings(item, acc)
+  }
+  return acc
+}
+
+// Metade offline do guard de scripts/platform/__tests__/prettier-config.test.mjs: aquele
+// teste garante que o caminho existe no template; este garante que ainda existe no child
+// renderizado, onde a árvore é mais rasa (catalog/ e outros diretórios do template-only
+// não são copiados) — um plugin ou caminho que só resolve no template chegaria quebrado.
+function checkPrettierConfigPaths({ childDir, log }) {
+  const configPath = path.join(childDir, ".prettierrc")
+  if (!existsSync(configPath)) return null
+  const config = JSON.parse(readFileSync(configPath, "utf8"))
+  for (const value of collectPathLikeStrings(config)) {
+    if (!existsSync(path.join(childDir, value))) {
+      log(
+        `template:smoke — .prettierrc do child nomeia um caminho que não existe: ${value}`
+      )
+      return EXIT_CODES.TEST_FAILURE
+    }
   }
   return null
 }
@@ -421,6 +452,12 @@ export async function runTemplateSmoke({
       )
       return EXIT_CODES.CATALOG_UNREACHABLE
     }
+
+    log(
+      "template:smoke — checagem extra: caminhos do .prettierrc do child existem"
+    )
+    const prettierConfigExit = checkPrettierConfigPaths({ childDir, log })
+    if (prettierConfigExit !== null) return prettierConfigExit
 
     log("template:smoke — checagem 1/4: pnpm check && pnpm test")
     const gate = runGates(run, { cwd: childDir })

@@ -28,6 +28,20 @@ test("release.yml is excluded — template-only, tags this repo, never ships to 
   )
 })
 
+test("format.yml is excluded — template-only format gate, never ships to the child", () => {
+  assert.ok(
+    excludes().includes(".github/workflows/format.yml"),
+    "copier.yml must exclude .github/workflows/format.yml next to release.yml — the child inherits a working .prettierrc, not a gate"
+  )
+})
+
+test("ci.yml ships to the child (not excluded)", () => {
+  assert.ok(
+    !excludes().includes(".github/workflows/ci.yml"),
+    "copier.yml must NOT exclude .github/workflows/ci.yml — it runs in every generated product"
+  )
+})
+
 // Absence, not exclusion: a _exclude entry for a file that does not exist proves nothing
 // and rots. The child never updates itself (owner decision, 2026-08-23).
 test("no self-updating bot ships to the child — the bot files do not exist", () => {

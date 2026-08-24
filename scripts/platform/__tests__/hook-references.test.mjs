@@ -7,6 +7,29 @@ import { fileURLToPath } from "node:url"
 const TESTS_DIR = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(TESTS_DIR, "..", "..", "..")
 const HOOKS_DIR = path.join(REPO_ROOT, ".claude", "hooks")
+const DOCS_DIR = path.join(REPO_ROOT, "docs")
+
+// TOOL-07 (spec.md AC7) says "hook or handbook"; `docs/advisories/ADV-*.md`
+// and `template-changelog.md` are historical ledgers (immutable once
+// written, per their own preambles), not current-state manuals, so a path
+// they name may have moved since — same reason ADRs are excluded.
+const HANDBOOK_EXCLUDED = [
+  /^docs\/advisories\/ADV-.*\.md$/,
+  /^docs\/dev\/template-changelog\.md$/,
+  /^docs\/adr\//,
+]
+
+// A handful of known, pre-existing gaps this cluster does not own the fix
+// for (out of `docs/agents/**`) or that are schema placeholders, not real
+// paths. Named, not silently swallowed — `scripts/lessons.py` should read
+// `.agents/skills/tlc-spec-driven/scripts/lessons.py`.
+const KNOWN_HANDBOOK_EXCEPTIONS = [
+  { file: "docs/test/testing.md", reference: "scripts/lessons.py" },
+  {
+    file: "docs/advisories/README.md",
+    reference: "path/to/the.parity.spec.ts",
+  },
+]
 
 // Matches a repo-relative-looking reference such as `docs/arch/front.md` or
 // `./lib/dev-servers.mjs`; excludes matches that continue a JS regex literal
@@ -56,6 +79,62 @@ function referencedPaths(content) {
   return found
 }
 
+function listHandbookFiles() {
+  const files = []
+  function walk(dir) {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name.startsWith(".") || entry.name === "node_modules") continue
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) walk(full)
+      else if (entry.name.endsWith(".md") || entry.name.endsWith(".md.jinja"))
+        files.push(full)
+    }
+  }
+  walk(DOCS_DIR)
+  for (const rel of ["CLAUDE.md", "AGENTS.md.jinja", "TEMPLATE.md"])
+    files.push(path.join(REPO_ROOT, rel))
+  return files.filter(
+    (file) =>
+      !HANDBOOK_EXCLUDED.some((re) => re.test(path.relative(REPO_ROOT, file)))
+  )
+}
+
+// Narrower than `resolves()`: a handbook names a conformance spec or a
+// helper (TOOL-07's own wording), never a bare mention relative to
+// `.claude/hooks/`. It does gain the `.jinja` candidate — the template repo
+// ships `docs/dev/deploy.md.jinja`, but a handbook describing what a
+// *rendered child* will contain correctly writes `docs/dev/deploy.md`.
+function resolvesForHandbook(reference, handbookFile) {
+  const bases = [
+    path.join(REPO_ROOT, reference),
+    path.join(REPO_ROOT, `${reference}.jinja`),
+  ]
+  if (!reference.startsWith("."))
+    bases.push(path.join(REPO_ROOT, `.${reference}`))
+  if (reference.startsWith("./") || reference.startsWith("../"))
+    bases.push(path.resolve(path.dirname(handbookFile), reference))
+  else bases.push(path.join(DOCS_DIR, reference))
+  return bases.some((candidate) => existsSync(candidate))
+}
+
+// TOOL-07 names "a file, helper or conformance spec" — restricting to test
+// files and script/hook helpers keeps this to that class, instead of every
+// illustrative FSD-layer path architecture docs use to show a pattern.
+function isSpecOrHelperReference(reference) {
+  return (
+    /\.(test|spec)\.(ts|tsx|js|mjs)$/.test(reference) ||
+    /\.(e2e-spec|int-spec)\.ts$/.test(reference) ||
+    reference.startsWith("scripts/") ||
+    reference.startsWith(".claude/hooks/")
+  )
+}
+
+function isKnownHandbookException(relFile, reference) {
+  return KNOWN_HANDBOOK_EXCEPTIONS.some(
+    (entry) => entry.file === relFile && entry.reference === reference
+  )
+}
+
 test("the harness ships exactly 20 hook files under .claude/hooks", () => {
   assert.equal(listHookFiles().length, 20)
 })
@@ -67,6 +146,21 @@ test("no hook references a file, helper or spec that does not exist", () => {
       assert.ok(
         resolves(reference, file),
         `${path.relative(REPO_ROOT, file)} references \`${reference}\`, which does not exist in the repo`
+      )
+    }
+  }
+})
+
+test("no handbook names a conformance spec or helper that does not exist (TOOL-07)", () => {
+  for (const file of listHandbookFiles()) {
+    const relFile = path.relative(REPO_ROOT, file)
+    const content = readFileSync(file, "utf8")
+    for (const reference of referencedPaths(content)) {
+      if (!isSpecOrHelperReference(reference)) continue
+      if (isKnownHandbookException(relFile, reference)) continue
+      assert.ok(
+        resolvesForHandbook(reference, file),
+        `${relFile} references \`${reference}\`, which does not exist in the repo`
       )
     }
   }

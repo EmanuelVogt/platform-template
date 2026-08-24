@@ -10,3 +10,4 @@ openapi.json
 packages/api-client/generated/
 *.jinja
 .specs/
+.claude/settings.local.json

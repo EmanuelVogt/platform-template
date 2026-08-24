@@ -3,6 +3,8 @@ name: CI
 on:
   push:
     branches: [main]
+    tags:
+      - "v*"
   pull_request:
 
 permissions:
@@ -16,9 +18,36 @@ env:
   TURBO_TELEMETRY_DISABLED: "1"
 
 jobs:
+  # This file ships to every product generated from the template (copier does not
+  # exclude it). A product that pushes a commit to main whose subject starts with
+  # "chore(release): " gets no CI run at all for that push — an owner-accepted
+  # risk (design.md § Risks & Concerns), not a bug. The github.ref clause below is
+  # load-bearing: without it, the v* tag pushed by release.yml — whose head commit
+  # IS the marker — would also skip, silently retiring AD-033's enforcement on
+  # every tag.
+  detect:
+    name: Detect
+    runs-on: ubuntu-latest
+    if: >-
+      !(github.event_name == 'push'
+        && github.ref == 'refs/heads/main'
+        && startsWith(github.event.head_commit.message, 'chore(release): '))
+    outputs:
+      template: ${{ steps.detect.outputs.template }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - id: detect
+        run: |
+          if [ -d catalog ]; then
+            echo "template=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "template=false" >> "$GITHUB_OUTPUT"
+          fi
+
   quality:
     name: Lint + typecheck + builds
     runs-on: ubuntu-latest
+    needs: detect
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
@@ -34,7 +63,7 @@ jobs:
   test-unit:
     name: Unit (api + web)
     runs-on: ubuntu-latest
-    needs: quality
+    needs: [detect, quality]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
@@ -48,7 +77,7 @@ jobs:
   test-coverage:
     name: Coverage gate (api int + e2e, testcontainers)
     runs-on: ubuntu-latest
-    needs: quality
+    needs: [detect, quality]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
@@ -61,3 +90,89 @@ jobs:
       # test:coverage roda unit+int+e2e num processo Vitest só, funde a cobertura
       # e aplica os thresholds por glob — falha o build se erodir.
       - run: pnpm test:coverage
+
+  gates:
+    name: Gates
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.template == 'true'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:scripts
+      - run: pnpm catalog:lint
+      - run: pnpm catalog:typecheck
+      - name: ADV-04 no catalog fix without advisory (cada commit do PR)
+        if: github.event_name == 'pull_request'
+        run: >-
+          node scripts/platform/advisory-required.mjs --range
+          "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+
+  catalog:
+    name: "catalog:check (${{ matrix.entry }})"
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.template == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        entry: [identity, attachment, audit, notification, tag]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: devuser
+          POSTGRES_PASSWORD: devpassword
+          POSTGRES_DB: devdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U devuser" --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgres://devuser:devpassword@localhost:5432/devdb
+      REDIS_URL: redis://localhost:6379
+      WEB_ORIGIN: http://localhost:3000
+      R2_ACCOUNT_ID: placeholder
+      R2_ACCESS_KEY_ID: placeholder
+      R2_SECRET_ACCESS_KEY: placeholder
+      R2_BUCKET: placeholder
+      R2_ENDPOINT: https://placeholder.r2.example.com
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pipx install copier
+      - run: pnpm catalog:check ${{ matrix.entry }}
+
+  smoke:
+    name: template:smoke
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.template == 'true'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pipx install copier
+      - run: pnpm template:smoke

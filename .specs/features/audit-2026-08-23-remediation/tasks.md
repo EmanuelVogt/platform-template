@@ -2437,7 +2437,56 @@ Premises this plan recorded that have changed. **None is visible to `wave-plan-c
 - **The `v2.3.0` gate was lifted on that feature only** — it now ships *inside* `v2.3.0`. **This does
   not transfer: T48 stays blocked** until `git tag -l v2.3.0` is non-empty (AD-034, latest-section
   rule). The tag that unblocks T48 is the one their release dispatches.
-- **Ordering is undecided and is the owner's call.** That feature's T7/T8 reformat the whole tree and
-  would rewrite any file a worker holds open. RUN-04 is `satisfied-by-sibling` here and this feature's
-  Verifier asserts `pnpm format:check` green at HEAD — which cannot hold until that feature lands, so
-  the dependency runs one way only. **Wave 2 is held pending the owner's ruling.**
+- **Ordering is SETTLED — `prettier-format-gate` goes first.** Superseded by the ruling below; the
+  reasoning that made it the cheaper order stands: that feature's T7/T8 reformat the whole tree and
+  would rewrite any file a worker holds open, RUN-04 is `satisfied-by-sibling` here, and this
+  feature's Verifier asserts `pnpm format:check` green at HEAD — which cannot hold until that feature
+  lands, so the dependency runs one way only.
+
+### Wave 2 — HELD (not started). Ordering ruled 2026-08-23
+
+**Ruling: `prettier-format-gate` executes first.** Relayed by that session (`platform-template-3e`)
+as its user's decision, and **verified on disk rather than taken on the peer's word** — the ordering
+is no longer a matter of good faith between sessions, because that feature is *live in this same
+checkout*:
+
+| Evidence | State at the time of this entry |
+| --- | --- |
+| `5c4e76d` | `spec(prettier-format-gate): amend the plan before wave 1` — lifts its `v2.3.0` gate, adds its T12 |
+| `266d2fd` | its T1 — `.prettierrc` loses the tailwind plugin |
+| `a3ebba0` | its T2 — `.vscode/settings.json` loses the tailwind block |
+| working tree | `catalog/notification/api/infrastructure/mailer/email-theme.ts` modified — its T3 in flight |
+
+Wave 2 (C4 `T17→T22` ∥ C5 `T23→T27` ∥ C6 `T28→T32`, sonnet, gate `full-unit`) is **dispatched only
+after that session reports the reformat has landed.** Dispatching into a live whole-tree reformat
+would put C5 (`apps/web/**`) and C6 (`apps/api/**`) workers inside the exact file set its T7 rewrites.
+That session will signal twice: after its waves 3/4 (T7 outside `catalog/**`, T8 the catalog, T12 the
+five manifests) — the moment this checkout's on-disk world changes — and again at its Verifier PASS.
+
+**On resume, re-measure the baseline before dispatching.** The post-wave-1 numbers in this log
+(`pnpm test` 585/89, `pnpm test:scripts` 376/42) are stale by construction: that session's T5 and T10
+add tests of their own (`376` was the figure this feature handed it). `pnpm test` should be untouched.
+Re-measuring is the first step of the wave-2 Build gate, not an assumption.
+
+#### Wave 3 now carries a shelf-life warning — `release-marker-commit` (`platform-template-28`)
+
+Still at Specify, **nothing written**, so this is not yet a conflict — but its scope grew to **delete
+`.github/workflows/catalog.yml`**, merge its jobs into `ci.yml`, and drop the `_exclude` entry at
+`copier.yml:35`. Two wave-3 tasks are written against exactly that:
+
+- **T35** puts `fetch-depth: 0` on the `gates` job at `.github/workflows/catalog.yml:14-31`. If that
+  feature lands first, the file is gone and the baseline fix belongs on the **merged `gates` job in
+  `ci.yml`** instead. The requirement (CAT-02) is unaffected — only its `Where` is.
+- **T41** owns `copier.yml` and would be editing a file whose catalog-workflow `_exclude` line that
+  feature removes.
+
+Whoever reaches wave 3 first must re-read `.github/workflows/` on disk before dispatching C7/C9
+rather than trusting these `Where` fields.
+
+#### Correction to this log's own record
+
+The dirty `.specs/STATE.md` in this checkout is **`platform-template-28`'s**, not the
+`prettier-format-gate` session's — 28 claimed the `release-marker-commit` Handoff entry and its
+follow-up bullet explicitly, and 3e states it has never written to `STATE.md` this session. It stays
+unstaged by this feature either way (AD-006: never `git add .specs/STATE.md` without reading the
+diff), and it needs to return to 28 to be committed.

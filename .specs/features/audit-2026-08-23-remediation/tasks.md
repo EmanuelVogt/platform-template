@@ -3046,3 +3046,36 @@ and no facade, so `full-unit` was not required and no conformance spec applies.
 
 **Next:** wave 6 (C12 = T44 → T45 → T46 → T47 — hooks truth + guard scan + the hygiene gate;
 gate `full-unit`).
+
+### Wave 6 — GATED GREEN (2026-08-24)
+
+**C12 = T44 → T47 (sonnet).** Four atomic commits: T44 `a27613b` (5 tests), T45 `bb7b618`
+(4 tests), T46 `98bd92f` (8 tests), T47 `f25f675` (docs, no test). Every path inside C12's
+ownership; the foreign staged renames under `.specs/features/done/**` were left untouched.
+
+**Build gate 6/6 GREEN** at `f25f675` (`full-unit`, the wave touches the test harness):
+`check` (7/7 turbo tasks) · `test` **620/620 / 90 files** (+4 vs wave 4's 616) · `test:scripts`
+**561/561** (+13 vs wave 5's 548) · `catalog:typecheck` (5 entries) · `catalog:lint` ·
+`format:check`. No count dropped — no silent deletion.
+
+#### Deviations recorded in wave 6 (input to the Verifier)
+
+1. **`apps/api/src/modules/module-boundaries.spec.ts:587-598` — `SPEC_DEVIATION`.** Widening
+   `KERNEL_SURFACE` to `apps/api/src/openapi` surfaced a pre-existing `identity` mention at
+   `openapi-config.ts:29`. That file belongs to **T49 (BRAND-01, wave 8, `v3.0.0`)**, so C12 could
+   not edit it; the worker allowlisted it through the same `TOKEN_ALLOWLIST` machinery already used
+   for `test-db.ts`. **T49 must clear the allowlist entry when it renames the cookie** — otherwise
+   `v3.0.0` ships a guard carrying a stale exemption.
+2. **`scripts/platform/__tests__/brand-hygiene.test.mjs:61-69` — `SPEC_DEVIATION`.**
+   `docs/dev/template-changelog.md:163`'s generic *"Cloudflare → Traefik"* example tripped the
+   infra-noun scan. The file is unowned by C12 (it is T48's, wave 7), so the worker added a scoped
+   `KNOWN_EXCEPTIONS` entry instead of editing it.
+3. **Domain-noun scanning is live only in the self-tests, not in the end-to-end check.** Enabling it
+   end to end tripped on `.claude/hooks/specs-in-english.mjs`, whose illustrative comment quotes
+   domain nouns in Portuguese — again unowned by C12. T46's own *What* and commit message scope the
+   active check to **brand + infra**, so the delivery matches the task; the Verifier must judge
+   whether the requirement's AC demands domain coverage end to end. **If it does, this is a fix
+   task, not a deviation.**
+
+**Next:** wave 7 (C13 = T48, owner-gated — `git tag -l v2.3.0` now returns `v2.3.0`, so the
+precondition is satisfied), then Verifier pass 1 over the `v2.4.0` scope.

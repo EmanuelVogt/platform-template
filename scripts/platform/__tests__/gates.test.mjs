@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { test } from "node:test"
 import { fileURLToPath } from "node:url"
@@ -25,6 +25,12 @@ function readJson(filePath) {
 
 function readYaml(filePath) {
   return parseYaml(readFileSync(filePath, "utf8"))
+}
+
+function allRunSteps(jobs) {
+  return Object.values(jobs).flatMap((job) =>
+    (job.steps ?? []).map((step) => step.run).filter(Boolean)
+  )
 }
 
 test("GAT-03: package.json raiz expõe os seis scripts de teste do AD-028 com o comando exato", () => {
@@ -94,7 +100,7 @@ test("GAT-05: lefthook-local.yml mantém catalog-typecheck no pre-push", () => {
   )
 })
 
-test("GAT-06: ci.yml test-unit roda install + pnpm test e test-coverage roda pnpm test:coverage, ambos após quality", () => {
+test("GAT-06: ci.yml test-unit e test-coverage rodam após detect e quality", () => {
   const { jobs } = readYaml(CI_WORKFLOW_PATH)
   const testUnitRuns = jobs["test-unit"].steps
     .map((step) => step.run)
@@ -102,19 +108,98 @@ test("GAT-06: ci.yml test-unit roda install + pnpm test e test-coverage roda pnp
   const testCoverageRuns = jobs["test-coverage"].steps
     .map((step) => step.run)
     .filter(Boolean)
-  assert.equal(jobs["test-unit"].needs, "quality")
+  assert.deepEqual(jobs["test-unit"].needs, ["detect", "quality"])
   assert.deepEqual(testUnitRuns, [
     "pnpm install --frozen-lockfile",
     "pnpm test",
   ])
-  assert.equal(jobs["test-coverage"].needs, "quality")
+  assert.deepEqual(jobs["test-coverage"].needs, ["detect", "quality"])
   assert.ok(testCoverageRuns.includes("pnpm test:coverage"))
 })
 
-test("GAT-06: catalog.yml gates mantém pnpm check, pnpm test e pnpm test:scripts", () => {
-  const { jobs } = readYaml(CATALOG_WORKFLOW_PATH)
-  const gateRuns = jobs.gates.steps.map((step) => step.run).filter(Boolean)
-  assert.ok(gateRuns.includes("pnpm check"))
-  assert.ok(gateRuns.includes("pnpm test"))
-  assert.ok(gateRuns.includes("pnpm test:scripts"))
+test("CI-01: .github/workflows/catalog.yml não existe mais", () => {
+  assert.equal(existsSync(CATALOG_WORKFLOW_PATH), false)
+})
+
+test("CI-02: turbo lint typecheck e pnpm test aparecem exatamente uma vez em todo ci.yml", () => {
+  const { jobs } = readYaml(CI_WORKFLOW_PATH)
+  const runs = allRunSteps(jobs)
+  assert.equal(
+    runs.filter((run) => run === "pnpm turbo lint typecheck").length,
+    1
+  )
+  assert.equal(runs.filter((run) => run === "pnpm test").length, 1)
+})
+
+test("CI-03: ci.yml pede todos os comandos que os dois workflows originais rodavam, e nenhum a mais", () => {
+  const { jobs } = readYaml(CI_WORKFLOW_PATH)
+  const runs = allRunSteps(jobs)
+  const expectedCommands = [
+    "pnpm turbo lint typecheck",
+    "pnpm --filter api build:emit",
+    "pnpm turbo build --filter=web",
+    "pnpm test",
+    "pnpm test:coverage",
+    "pnpm test:scripts",
+    "pnpm catalog:lint",
+    "pnpm catalog:typecheck",
+    "pnpm catalog:check",
+    "pnpm template:smoke",
+  ]
+  for (const command of expectedCommands) {
+    assert.ok(
+      runs.some((run) => run.includes(command)),
+      `esperava um step run: contendo "${command}"`
+    )
+  }
+  assert.ok(
+    !runs.some((run) => run.includes("pnpm check")),
+    "pnpm check não deve mais rodar — quality e test-unit já cobrem lint/typecheck e test"
+  )
+})
+
+test("CI-04: ci.yml on.push.tags contém v*", () => {
+  const { on } = readYaml(CI_WORKFLOW_PATH)
+  assert.ok(on.push.tags.includes("v*"))
+})
+
+test("CI-05: só o step ADV-04 carrega if de pull_request", () => {
+  const { jobs } = readYaml(CI_WORKFLOW_PATH)
+  const allSteps = Object.values(jobs).flatMap((job) => job.steps ?? [])
+  const stepsWithPrIf = allSteps.filter(
+    (step) =>
+      typeof step.if === "string" &&
+      step.if.includes("github.event_name == 'pull_request'")
+  )
+  assert.equal(stepsWithPrIf.length, 1)
+  assert.ok(stepsWithPrIf[0].run.includes("advisory-required.mjs"))
+})
+
+test("CI-06: todo job que roda catalog:*, test:scripts ou template:smoke depende de detect e checa needs.detect.outputs.template", () => {
+  const { jobs } = readYaml(CI_WORKFLOW_PATH)
+  const gatedCommandPattern = /catalog:|test:scripts|template:smoke/
+  for (const [jobName, job] of Object.entries(jobs)) {
+    const runs = (job.steps ?? []).map((step) => step.run).filter(Boolean)
+    if (!runs.some((run) => gatedCommandPattern.test(run))) continue
+    const needsList = Array.isArray(job.needs) ? job.needs : [job.needs]
+    assert.ok(needsList.includes("detect"), `${jobName} deveria depender de detect`)
+    assert.ok(
+      typeof job.if === "string" &&
+        job.if.includes("needs.detect.outputs.template"),
+      `${jobName} deveria checar needs.detect.outputs.template`
+    )
+  }
+})
+
+test("regressão AD-033: detect.if do ci.yml contém refs/heads/main", () => {
+  const { jobs } = readYaml(CI_WORKFLOW_PATH)
+  assert.ok(jobs.detect.if.includes("refs/heads/main"))
+})
+
+test("gates job mantém fetch-depth: 0 no checkout (lintEntryBump precisa da tag anterior)", () => {
+  const { jobs } = readYaml(CI_WORKFLOW_PATH)
+  const checkoutStep = jobs.gates.steps.find(
+    (step) => typeof step.uses === "string" && step.uses.startsWith("actions/checkout")
+  )
+  assert.equal(checkoutStep.with?.["fetch-depth"], 0)
 })

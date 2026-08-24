@@ -134,7 +134,7 @@ native `node --test`, **not** Vitest — tooling tasks therefore gate with `pnpm
 | --- | --- | --- |
 | Quick | Tasks with unit tests only | `pnpm vitest run --project api\|web <touched path>` — or `pnpm test:scripts` when the task touches `scripts/**` or `.claude/hooks/**` |
 | Full | Tasks with e2e/integration tests | Quick command **plus** `pnpm vitest run --config vitest.integration.mts --project api-int\|api-e2e <the spec files this task created or touched>` — never the whole suite |
-| Build | Once per wave, by the orchestrator through the runner, after every cluster reported | `pnpm check` (= `turbo lint typecheck`) + unit scoped to the union of the wave's `Touches`. `full-unit` variant = `pnpm check && pnpm test`. A docs/config/CI-only wave = `pnpm check` alone |
+| Build | Once per wave, by the orchestrator through the runner, after every cluster reported | `pnpm check` (= `turbo lint typecheck`) + unit scoped to the union of the wave's `Touches`, **plus `pnpm catalog:typecheck && pnpm catalog:lint` from wave 3 on** (see below). `full-unit` variant = `pnpm check && pnpm test`. A docs/config/CI-only wave = `pnpm check` alone, still with the two catalog commands |
 | Final | Once per feature, at the Verifier's build-level gate | `pnpm check && pnpm test && pnpm test:scripts && pnpm test:coverage && pnpm catalog:lint && pnpm catalog:typecheck && pnpm template:smoke` |
 
 **Suite-cost rule (hard).** The full unit suite and the complete integration/e2e suite each run
@@ -2574,3 +2574,39 @@ pre-existing ADV-02 assertions verbatim, and the static fixture now doubles as t
 - **Bench debris.** The lint-repair worker left an untracked `apps/web/src/shared/lib/__scratch_lint_test.ts`
   (7 lines, unreferenced), removed by the orchestrator. Untracked debris on kernel surface ships the moment
   anyone runs `git add -A`.
+
+#### Wave 2 addendum — a regression the Build gate could not see (`36f1f9f`)
+
+**Found after the wave was gated green, by a sibling feature's Verifier, not by this feature.**
+`pnpm catalog:typecheck` was failing on `main`, caused by T29 (`35c8a4f`). The sibling's Verifier ruled out
+its own repo-wide reformat before reporting — `git show 4088235 -- scripts/template-smoke.mjs` is purely
+mechanical on the relevant lines — which is why this cost one round instead of a negotiation.
+
+**Root cause, and it is a plan defect, not a worker error.** `catalog-stage.mjs` symlinks kernel files into
+`.catalog-stage` so each catalog entry can be typechecked against the kernel, and which files get staged is a
+hardcoded allowlist — `KERNEL_STAGE_PATHS`, defined in **`scripts/platform/lib/child-layout.mjs:7-17`**, not in
+`catalog-stage.mjs`. T29 created `apps/api/src/bootstrap.product.ts` and had `main.ts` import it, but that
+allowlist was never in T29's `Touches`, so the staged `main.ts` could not resolve `./bootstrap.product`
+(`TS2307`). **The task could not have been completed correctly as written** — the same family as the T16 /
+`copier.yml` gap in wave 1: a task tasked to create a file but never granted the file that registers it.
+
+The repair worker stopped at its scope boundary and asked, rather than widening on its own, and it rejected the
+`catalog-stage.mjs`-local workaround for the stronger reason: duplicating the canonical `KERNEL_STAGE_PATHS`
+would have created a second source of truth **and** forced weakening `catalog-stage.test.mjs:24-32`, the
+invariant asserting `links.length === KERNEL_STAGE_PATHS.length`. **A workaround that requires disabling the
+test guarding the thing it works around is never the cheaper option.** Fix was one line; that invariant then
+passed untouched, as predicted.
+
+**Consequence — the Build gate changes for waves 3-14** (recorded in § *Gate Check Commands*): every wave's
+Build gate now also runs **`pnpm catalog:typecheck` and `pnpm catalog:lint`**. Those two live only in the
+*Final* gate today, which is why a wave could be gated green over a broken tree. **The argument is structural,
+not economic:** `pnpm check` runs `tsconfig.json` and never `tsconfig.catalog.json`, so it *cannot* see
+`.catalog-stage` — the commands do not overlap. Measured cost ~1.8s + ~0.2s beside a gate that already runs
+`pnpm check` in full. Confirmed this failure would have been caught at wave 2: it is immediate and
+commit-local.
+
+**This is the third instance in one day of a single shape**, across three sessions and three surfaces, and it
+is the generalisation worth keeping over any of the individual findings: **the check exists, but not at the
+point where the work happens.** A per-task gate that ran the test command but not the lint command; a Build
+gate that ran four commands but not the catalog ones; and a sibling's pre-commit glob that was configured
+correctly and covered nothing. The third was findable only by mutating the config, never by reading it.

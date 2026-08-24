@@ -192,6 +192,35 @@ of scope — **stop and report instead**.
 Verified with the same sweep: none of the four files imports another catalog entry (RULE C holds);
 every import resolves to `shared/kernel/**` or within `catalog/identity/single-tenant/`.
 
+### 0.8 Every per-task gate aimed at `catalog/**` named a project that matches zero files (found mid-wave-3, 2026-08-24)
+
+T39a's worker ran its Done-when gate literally and it collected **0 test files**. The cause is not a
+typo in one task — it is the same wrong form in every catalog-facing gate line in this plan.
+
+| Plan said | On disk | Effect |
+| --- | --- | --- |
+| `pnpm vitest run --project api <catalog path>` | project `api`'s `include` is `src/**/*.spec.ts`, so it never covers `catalog/**`; the catalog tier is its own project under a **different config** (`vitest.catalog.mts`) | `--project api catalog/...` matches nothing and vitest exits **1** with `No test files found`. It does **not** silently pass — it blocks the worker, who must then improvise the real command. Both wave-3 workers hit it and both improvised correctly; a third might not, or might reach for `--passWithNoTests` and *then* get the silent green |
+| the gate is a single `vitest` invocation | `catalog:test` is `node scripts/platform/catalog-stage.mjs --keep && vitest run --config vitest.catalog.mts` | catalog specs only exist once **staged**. Invoking `vitest` alone tests whatever a previous `--keep` left behind, or nothing at all |
+
+**Corrected form for any catalog-scoped gate** (used by T39, T39a, T40):
+
+```
+pnpm catalog:test -- <catalog path>
+```
+
+**Two distinct failure modes, and this feature has now hit both — do not conflate them:**
+
+- **Loud** (this § 0.8): the command is wrong, collects nothing, and *fails*. Costly and confusing,
+  but self-announcing. A worker cannot mistake it for success.
+- **Silent** (§ 0.6, T39a): the command is right and *passes green while proving nothing*, because
+  the check does not reach where the work lives — `catalog:lint` cannot see type-aware rules in
+  `catalog/**` until an entry is installed into a child. This is the dangerous one, and it is the
+  one that has twice been caught only by `catalog:check`.
+
+The rule that covers both: *a gate is not evidence until you know how many files it collected and
+where they were.* Every Done-when asserting a gate passes should be read as also asserting **what
+that run actually looked at**.
+
 ---
 
 ## Test Coverage Matrix
@@ -227,7 +256,7 @@ native `node --test`, **not** Vitest — tooling tasks therefore gate with `pnpm
 
 | Gate Level | When to Use | Command |
 | --- | --- | --- |
-| Quick | Tasks with unit tests only | `pnpm vitest run --project api\|web <touched path>` — or `pnpm test:scripts` when the task touches `scripts/**` or `.claude/hooks/**` |
+| Quick | Tasks with unit tests only | `pnpm vitest run --project api\|web <touched path>` — or `pnpm test:scripts` when the task touches `scripts/**` or `.claude/hooks/**`, or **`pnpm catalog:test -- <path>`** when it touches `catalog/**` (**§ 0.8**: `--project api` cannot match `catalog/**` and exits 1, and catalog specs must be staged first) |
 | Full | Tasks with e2e/integration tests | Quick command **plus** `pnpm vitest run --config vitest.integration.mts --project api-int\|api-e2e <the spec files this task created or touched>` — never the whole suite |
 | Build | Once per wave, by the orchestrator through the runner, after every cluster reported | `pnpm check` (= `turbo lint typecheck`) + unit scoped to the union of the wave's `Touches`, **plus `pnpm catalog:typecheck && pnpm catalog:lint` from wave 3 on** (see below). `full-unit` variant = `pnpm check && pnpm test`. A docs/config/CI-only wave = `pnpm check` alone, still with the two catalog commands |
 | Final | Once per feature, at the Verifier's build-level gate | `pnpm check && pnpm test && pnpm test:scripts && pnpm test:coverage && pnpm catalog:lint && pnpm catalog:typecheck && pnpm template:smoke` |
@@ -1231,12 +1260,39 @@ steps** (AD-034). Anything that would force a child decision belongs to `v3.0.0`
 - [ ] `base-template-sources.ts:6,9` and `notification-catalog.ts:41,44` no longer pin `America/Sao_Paulo` — they take the kernel's timezone
 - [ ] `layout.hbs:2` `lang` follows the locale
 - [ ] **Every shipped string is byte-identical at the `pt-BR` default**
-- [ ] Gate passes: `pnpm vitest run --project api catalog`
+- [ ] Gate passes: `pnpm catalog:test -- catalog` (§ 0.8 — **not** `--project api`, which collects 0 files)
 - [ ] Test count: 8 new tests pass, at least one per entry, plus a no-change-at-default assertion
 
 **Tests**: unit · **Gate**: quick
 
 > Do **not** touch `catalog/notification/api/infrastructure/mailer/email-theme.ts` — sibling-owned (§ 0.4).
+
+---
+
+### T39a: The two lint errors T39 shipped into the notification entry
+
+**What**: `032dff5` (T39) landed a raw-env locale read and an env save/restore helper that only the **rendered child's** type-aware ESLint can see. Both fail `catalog:check` at exit 7, and they fail it at the child's `pnpm check` — one stage *before* `test:db`, so T39's actual env fix is still unproven.
+**Where**: `catalog/notification/api/application/catalog/notification-catalog.ts:56` (`prefer-nullish-coalescing`), `catalog/notification/api/application/catalog/notification-catalog.spec.ts:193` (`no-dynamic-delete`)
+**Touches**: `catalog/notification/api/application/catalog/notification-catalog.ts`, `catalog/notification/api/application/catalog/notification-catalog.spec.ts`
+**Depends on**: T39
+**Exclusive**: no
+**Reuses**: the fallback contract already stated in `notification-catalog.ts`'s own comment (“vazio conta como ausente, nunca lança”)
+**Requirement**: LOC-05 (F-catalog-entries-7) — aftermath of T39, not new scope
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+- [ ] `notification-catalog.ts:56` satisfies `@typescript-eslint/prefer-nullish-coalescing` **with no behaviour change**: `undefined` *and* `""` both fall back to `"pt-BR"`, exactly as today's `||` does and as the comment directly above it already promises
+- [ ] Plain `??` is **rejected** — it lets `DEFAULT_LOCALE=""` reach `Intl.DateTimeFormat`. Mirroring the kernel's strict `z.string().min(1)` (`env.ts:66`) is **also rejected** — throwing contradicts the very purpose of `032dff5`, which is to render without a validated environment. **Owner's call, 2026-08-24**; do not re-litigate
+- [ ] `notification-catalog.spec.ts:193` satisfies `@typescript-eslint/no-dynamic-delete` by restructuring the restore helper
+- [ ] **No `eslint-disable` in either file** — the rule class is the one thing that catches this defect family
+- [ ] T39's AC still holds: every shipped string byte-identical at the `pt-BR` default
+- [ ] Gate passes: `pnpm catalog:test -- catalog/notification` (§ 0.8)
+- [ ] Test count: 0 new, 0 deletions; the entry's existing tests still pass
+
+**Tests**: unit · **Gate**: quick
+
+> **Why the template's own gates cannot see this.** `catalog/**` is only submitted to type-aware ESLint once an entry is installed into a child and lands under `apps/api/src/**`, inside the tsconfig project. `pnpm check` and `catalog:lint` both pass in the template and are structurally incapable of catching it. This is the **second** instance in two days of “the check exists, but not where the work happens”, and `catalog:check` was again the only gate of the eight to catch it — the standing argument for keeping it in the Build gate despite its ~10 min cost.
 
 ---
 
@@ -1255,7 +1311,7 @@ steps** (AD-034). Anything that would force a child decision belongs to `v3.0.0`
 **Done when**:
 - [ ] "motor de agendamento" (2×, `user.repository.ts:138,142`) and the sibling comments are domain-neutral
 - [ ] No behaviour change — the contract's shape is untouched
-- [ ] Gate passes: `pnpm vitest run --project api catalog/identity`
+- [ ] Gate passes: `pnpm catalog:test -- catalog/identity` (§ 0.8)
 - [ ] Test count: existing entry tests pass; 0 deletions
 
 **Tests**: unit · **Gate**: quick
@@ -2732,3 +2788,91 @@ Its Final gate ran whole at exit 0: `check` 5/5 · `test` 614/614 · `test:scrip
   and tagging is the owner's act (AD-006/AD-034 — the agent never tags and never pushes). When it happens the
   five entries are at `2.0.1` and the sibling's item 7 sits inside the existing `v2.3.0` section, so
   `release-preflight` should accept it.
+
+---
+
+### Wave 3 — GATED GREEN (2026-08-24)
+
+**Dispatched:** T40 (C8, identity vocabulary) and **T39a** (new mid-wave — see below). Both landed; the
+eight-command Build gate closed **8/8 at exit 0**.
+
+| Task | Commit | Evidence |
+| --- | --- | --- |
+| T39a | `6fb41e1` `fix(notification): satisfy the child's type-aware lint rules` | 13 tests, exit 0 |
+| T40 | `10e25ba` `docs(identity): retire booking-owner vocabulary from prose` | 69 files / 609 tests, exit 0; 4 files, 15 insertions / 15 deletions, **every changed line a comment or JSDoc** |
+
+Both committed under the § 0.6 opt-out `Advisory: none — <reason>`, never `--no-verify`, and no advisory file
+was invented to satisfy the hook.
+
+**Build gate, eight commands, HEAD `10e25ba`.** `git status` identical before and after — the tree did not
+move during the run (it had to be checked: three sessions were committing to `main` this day).
+
+`format:check` 0 · `check` 0 (5/5) · `test` **614/614** · `test:scripts` **493/493** · `catalog:lint` 0 ·
+`catalog:typecheck` 0 (5 entries) · `catalog:test` **875 tests / 118 files** · `catalog:check` **0**.
+
+`test:scripts` at 493 is **above** the 489 baseline: `aa7e4cd`/`352a376` (a sibling's `release --push`) added
+tests. Drift, not regression. `catalog:test` matched its 875/118 baseline exactly.
+
+#### The `catalog:check` run finally reached `test:db` — and `032dff5` is only now verified
+
+Every previous `catalog:check` died in the **rendered child's** `pnpm check`, one stage before the database
+tier. This run got through: child `check` 5/5 · child `test` 224 files / 1591 tests · child **`test:db` 71
+files / 513 tests** · `OK: notification, identity/single-tenant, tag, audit, attachment`.
+
+**Until this run, T39's env fix (`032dff5`) had never been exercised.** The wave-2 log recorded it as fixed;
+it was in fact only *unblocked*. Do not read the earlier entry as proof — this is the run that proves it.
+
+#### T39a: the defect T39 itself shipped, found by a sibling's `catalog:check`
+
+`032dff5` introduced two ESLint errors invisible to this repo's own gates:
+`notification-catalog.ts:56` (`prefer-nullish-coalescing`) and `notification-catalog.spec.ts:193`
+(`no-dynamic-delete`). `catalog/**` only meets **type-aware** ESLint once installed into a child under
+`apps/api/src/**`; `pnpm check` and `catalog:lint` pass in the template and are *structurally incapable* of
+seeing it. **Fourth instance of "the check exists, but not where the work happens", and the second running
+where `catalog:check` was the only one of eight to catch it.**
+
+**Owner's ruling, 2026-08-24 — do not re-litigate.** The obvious `||` → `??` swap is **not** behaviour-preserving:
+`??` falls back only on `null`/`undefined`, so `DEFAULT_LOCALE=""` would reach `Intl.DateTimeFormat`. Mirroring
+the kernel's strict `z.string().min(1).default("pt-BR")` (`env.ts:66`) was also rejected — throwing contradicts
+the whole purpose of `032dff5`, which exists so the entry renders *without* a validated environment. Shipped
+shape is an explicit guard (`undefined` **or** `""` → `"pt-BR"`), byte-identical to the old `||`, matching the
+promise the file's own comment already made. No `eslint-disable`.
+
+#### The blocked chain nobody had connected
+
+`catalog:check` is in the `needs` of the `tag` job in `release.yml`. While those two lint errors stood,
+**`v2.3.0` was untaggable** — a `release --push` would have pushed a marker commit through a red matrix,
+produced no tag, and burnt the marker. So: `T39a → catalog:check green → v2.3.0 taggable → T48 unblocked`.
+T48 had been waiting on a tag that could not have been cut. **T48 remains blocked until `git tag -l v2.3.0`
+returns something; the agent never tags and never pushes (AD-006/AD-034).**
+
+#### Scope caveat — this gate measured a tree that is about to stop existing
+
+This run is **pre-merge, T39a+T40 scope only.** A sibling is fast-forwarding `main` to the integrated tree
+(`62330b6`), which brings `web-stack-next` in and renames `apps/web` → `apps/web-vite` + `apps/web-next`
+(L-025: never hardcode `apps/web`). **The integrated tree is what gets tagged `v2.3.0`, so it is the one that
+must be gated.** The wave-3 Build gate re-runs there; *that* run is the one of record. This entry is not proof
+of the tagged tree.
+
+**Docker contention rule, agreed with the integrating session.** Both `catalog:check` runs raise Postgres via
+testcontainers for the child's `test:db`. If **only one** of two concurrent runs fails at `test:db` and the
+other passes, the leading hypothesis is **contention, not defect**, and the tiebreak is to re-run **one at a
+time** on the integrated tree. No `test:db` red is accepted as truth without that. Symmetrically, this run's
+`test:db` green is **not** strong evidence for the integrated tree — it ran in parallel and measured the wrong
+tree besides.
+
+#### § 0.8 — every catalog-facing gate line in this plan was wrong
+
+Both workers independently hit it: `pnpm vitest run --project api <catalog path>` cannot match `catalog/**`
+(project `api`'s include is `src/**/*.spec.ts`, and catalog specs must be **staged** first). Corrected to
+`pnpm catalog:test -- <path>` in T39, T39a, T40 and the canonical Quick row. It fails **loudly** (exit 1,
+`No test files found`), so it blocked rather than faked a pass — the distinction matters, and § 0.8 now
+separates that *loud* failure mode from the *silent* one, which is the dangerous one.
+
+#### Sibling-reported defect this feature must not lose
+
+`scripts/template-smoke.mjs:71-73` still swallows `stderr` and logs only the status code. `d06a1a3` fixed the
+cause of one case, **not the mechanism that hid it** — the next check that fails will fail mutely. Same family
+as § 0.8, and worse: a gate that knows what went wrong and does not say.
+
+**Next:** re-gate on the integrated tree, then wave 4 (T42, exclusive).

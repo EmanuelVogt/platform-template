@@ -161,6 +161,16 @@ test("MARK-08: decideRelease falha quando o marcador do head altera arquivos, no
   assert.match(result.reason, /2 arquivo/)
 })
 
+test("MARK-08 boundary: decideRelease falha quando o marcador do head altera exatamente um arquivo, nomeando a contagem", () => {
+  const result = decideRelease({
+    headSubject: "chore(release): v2.4.0",
+    subjects: ["chore(release): v2.4.0"],
+    changedFiles: ["a.txt"],
+  })
+  assert.equal(result.action, "fail")
+  assert.match(result.reason, /1 arquivo/)
+})
+
 test("decideFromGit: action release quando o head é um marcador válido e vazio", () => {
   const exec = gitRouter({
     headSubject: "chore(release): v2.4.0",

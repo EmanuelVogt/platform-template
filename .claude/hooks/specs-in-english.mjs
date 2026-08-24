@@ -132,9 +132,10 @@ const diacriticHits = (prose.match(DIACRITICS) ?? []).length
 const stopwordRatio = stopwordHits / words.length
 const diacriticRatio = diacriticHits / words.length
 
-// Diacritics alone never block: English prose about "recepção", "hóspede",
-// "serviço" is dense in them. They only lower the bar when pt-BR function words
-// are already present.
+// Diacritics alone never block: English prose that quotes a pt-BR product
+// string — a button label ("Salvar"), a field name ("descrição") — is dense
+// in them. They only lower the bar when pt-BR function words are already
+// present.
 const isPortuguese =
   stopwordRatio >= STOPWORD_RATIO ||
   (stopwordRatio >= BOOSTED_STOPWORD_RATIO &&

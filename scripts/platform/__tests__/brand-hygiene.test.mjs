@@ -6,6 +6,7 @@ import {
   readdirSync,
   rmSync,
   statSync,
+  writeFileSync,
 } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
@@ -58,14 +59,21 @@ const BRAND_TOKENS = [/rit_/, /rit-/, /__Host-rit/]
 // renomear os literais em código (design.md § BRAND-07 ↔ IDENT-01).
 const SCAN_ROOTS = ["docs", ".claude", ".github/workflows"]
 
-// SPEC_DEVIATION: docs/dev/template-changelog.md:228 cita "Cloudflare → Traefik"
-// como exemplo genérico e não-proprietário de cadeia de proxy pra explicar
-// TRUST_PROXY_HOPS — não é a infra do dono. T46 não tem esse arquivo em
-// `Touches` (é dono de outra tarefa); reescrever a linha exigiria editar um
-// arquivo fora do escopo desta task. Reason: sem a exceção o teste vermelho
-// bloquearia T46 por um arquivo que T46 não pode tocar.
+// SPEC_DEVIATION: docs/dev/template-changelog.md tem duas ocorrências que
+// este teste não pode corrigir editando o arquivo — está fora de `Touches`
+// tanto de T46 quanto de FT1 (CF1 possui apenas scripts/platform/__tests__/**
+// e .claude/hooks/specs-in-english.mjs).
+//   - "Cloudflare"/"Traefik" (:228) — exemplo genérico de cadeia de proxy pra
+//     explicar TRUST_PROXY_HOPS, não a infra do dono (exceção pré-existente
+//     de T46).
+//   - "booking" (:67) — o changelog descreve, em prosa própria, que a prosa
+//     da entrada identity foi *retirada* de vocabulário de booking; não é o
+//     vocabulário sobrevivendo no child.
+// Reason: reescrever qualquer uma das linhas exige editar um arquivo fora do
+// escopo desta task; sem a exceção o teste vermelho bloquearia por um
+// arquivo que nem T46 nem FT1 podem tocar.
 const KNOWN_EXCEPTIONS = {
-  "docs/dev/template-changelog.md": ["Cloudflare", "Traefik"],
+  "docs/dev/template-changelog.md": ["Cloudflare", "Traefik", "booking"],
 }
 
 function withoutKnownExceptions(hits, rel) {
@@ -124,6 +132,32 @@ function scannedFiles(childDir) {
   })
 }
 
+// Compartilhado pelo teste fim a fim e pelo teste de mutante abaixo: os dois
+// precisam passar pelo mesmo caminho de código, senão o segundo não prova
+// nada sobre o primeiro (o mutante da Verifier — brandHits/infraHits sem
+// domainHits no loop — teria que sobreviver aos dois).
+function violationsIn(childDir, files) {
+  const violations = []
+  for (const file of files) {
+    const text = readFileSync(file, "utf8")
+    const rel = path.relative(childDir, file)
+    const brand = brandHits(text)
+    if (brand.length > 0)
+      violations.push(`${rel} carrega um token de brand: ${brand.join(", ")}`)
+    const infra = withoutKnownExceptions(infraHits(text), rel)
+    if (infra.length > 0)
+      violations.push(
+        `${rel} carrega um substantivo de infra do dono: ${infra.join(", ")}`
+      )
+    const domain = withoutKnownExceptions(domainHits(text), rel)
+    if (domain.length > 0)
+      violations.push(
+        `${rel} carrega vocabulário de domínio do piloto: ${domain.join(", ")}`
+      )
+  }
+  return violations
+}
+
 let childDir
 
 test.before(() => {
@@ -180,20 +214,32 @@ test("self-test: o guard não é vazio — vocabulário real de infra ainda disp
   )
 })
 
-test("fim a fim: docs, harness e workflows do child renderizado não carregam brand ou infra do dono", () => {
+test("fim a fim: docs, harness e workflows do child renderizado não carregam brand, domínio ou infra do dono", () => {
   const files = scannedFiles(childDir)
   assert.ok(
     files.length > 0,
     "esperava arquivos varríveis em docs/.claude/.github/workflows do child renderizado"
   )
-  for (const file of files) {
-    const text = readFileSync(file, "utf8")
-    const rel = path.relative(childDir, file)
-    assert.deepEqual(brandHits(text), [], `${rel} carrega um token de brand`)
-    assert.deepEqual(
-      withoutKnownExceptions(infraHits(text), rel),
-      [],
-      `${rel} carrega um substantivo de infra do dono`
-    )
+  assert.deepEqual(violationsIn(childDir, files), [])
+})
+
+test("mutante: cada substantivo de domínio do piloto semeado no child renderizado derruba o gate", () => {
+  const seedRel = path.join("docs", "_seed-domain-hygiene.md")
+  const seedAbs = path.join(childDir, seedRel)
+  const seeds = ["Hospedes", "Reservas", "agendamento", "quartos", "guests"]
+  try {
+    for (const noun of seeds) {
+      writeFileSync(
+        seedAbs,
+        `Texto de teste que menciona ${noun} no meio da frase.\n`
+      )
+      const violations = violationsIn(childDir, [seedAbs])
+      assert.ok(
+        violations.some((v) => v.includes(noun)),
+        `esperava que "${noun}" derrubasse o gate de higiene de domínio; violações: ${violations.join(" | ")}`
+      )
+    }
+  } finally {
+    rmSync(seedAbs, { force: true })
   }
 })

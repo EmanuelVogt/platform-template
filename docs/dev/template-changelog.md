@@ -7,7 +7,8 @@ to apply on `copier update`.
 ## v2.4.0
 
 A release can no longer be cut by accident: the `release` subcommand rejects the flags
-it does not know instead of ignoring them.
+it does not know instead of ignoring them. A Next product also stops reading as a Vite
+one in its own README and AGENTS.
 
 ### Changes
 
@@ -18,6 +19,70 @@ it does not know instead of ignoring them.
    the command touches git: `--help` prints the usage and exits `0`, any other unknown
    flag exits `2` (`USAGE_ERROR`). Only `release` is guarded — it is the one subcommand
    where an unknown flag has a destructive default.
+2. **A Next child no longer calls itself a Vite one** (`AGENTS.md.jinja` + `README.md.jinja`):
+   the header, the `apps/web` tree row and the "does not typecheck" tripwire stated the
+   stack unconditionally, so `web_stack=next` rendered "React/Vite" and told the agent to
+   watch `Vite dev`. All three now branch on `web_stack` (`React/Next.js`, `route access`,
+   `` `next dev` ``). The Vite render is byte-identical — each `else` reproduces the
+   previous text.
+3. **Platform tooling stops exiting `0` having done nothing** (`scripts/platform/lib/entries.mjs`,
+   `lib/template-version.mjs`, `scripts/template-smoke.mjs`): the broken-path guard is fixed at
+   every site that resolves an entry path (8 of them); `readTemplateVersion` parses through the
+   shared version parser; `template:smoke` now executes the platform CLI inside a **rendered
+   child**, not the template tree, so it fails loudly instead of passing on the wrong tree.
+4. **First-run truth** (`apps/api/src/shared/config/env.ts`, `docker-compose.yml`,
+   `README.md.jinja`, `docs/dev/local-environment.md`): one canonical API port (`3000`); the
+   shipped `REDIS_URL` authenticates against the shipped Redis; every documented first-run
+   command exists (`db:seed` removed, not left dangling); supported dev platforms declared;
+   the legacy `SyncLegacyModule` backfill story (`RUN_BACKFILL`) is gone.
+5. **Product-facing docs stop naming owner infrastructure** (`docs/agents/infra.md.jinja`,
+   `docs/dev/deploy.md.jinja`, `docs/agents/workflow.md`, `AGENTS.md.jinja`): rewritten to
+   platform-level facts; the GitHub issue area-label list becomes a `gh label list` discovery
+   placeholder instead of a hardcoded vocabulary.
+6. **Module lifecycle commands tell the truth about what they did**
+   (`scripts/platform/lib/apply.mjs`, `lib/commands/advisory.mjs`, `lib/exit-codes.mjs`,
+   `.claude/hooks/pending-advisories.mjs`): `.platform-modules.lock` paths are child-relative;
+   `--rollback` preserves the registry, exits non-zero, and unwinds a failed `--with-deps` or
+   refuses outright; `advisory detect` has one exit-code convention (no longer coalesced with
+   "not affected"); `pending-advisories` is silent when there is nothing to adopt.
+7. **Web app config seam** (`apps/web/src/app/router/shell.tsx`, `shared/config/routes.ts`,
+   `apps/web/index.html`): app name, locale and favicon come from configuration, not a
+   hardcoded brand; installing identity edits no platform file; protected routes join without
+   editing `routes.ts`; route slugs are configuration, not Portuguese literals.
+8. **API kernel locale and boot/tenant seams** (`apps/api/src/shared/kernel/i18n/`,
+   `src/main.ts`, `src/bootstrap.product.ts`, `shared/kernel/context/request-context.ts`):
+   messages come from a `DEFAULT_LOCALE`-selected pack; a product gets its own bootstrap seam
+   plus `rawBody`; tenant context gets a one-shot `setTenant` writer; the pool's 503 spec no
+   longer depends on host latency.
+9. **Catalog release gate closes its own gaps** (`scripts/platform/lib/lint.mjs`,
+   `catalog-lint.mjs`, `release-preflight.mjs`, `.github/workflows/ci.yml`): the entry-bump
+   rule moves into `catalog:lint` itself; `lintAdvisoryPathScope` rejects a `detect` path
+   prefixed with `catalog/`; CI gives the bump gate a real baseline; `contract:check` becomes
+   a CI step that survives `module add` (the old drift detector was a spec `module add` deletes).
+10. **One canonical home for the language rule, one message table per catalog entry**
+    (`docs/code-quality.md`, `catalog/*/api/**/errors.ts`,
+    `catalog/notification/api/application/catalog/notification-catalog.ts`): `product_locale`
+    threads the language convention through every doc restating it; each catalog entry owns
+    its own message table instead of sharing one; the identity entry's prose is retired of
+    booking-specific vocabulary.
+11. **`copier.yml` gets a single owner** (`copier.yml`): the requirements editing it
+    independently now go through one task, closing the gap that made each acceptance
+    criterion unprovable in isolation.
+12. **The five catalog entries' advisories and versions are corrected**
+    (`catalog/*/module.json`, `catalog/*/CHANGELOG.md`,
+    `docs/advisories/ADV-20260822-0{1,2,3,5}.md`): each `affects` range tightens to
+    `>=1.0.0 <2.0.1`; each `CHANGELOG.md` gains the real reason; all five bump `2.0.1` →
+    `2.0.2`.
+13. **The harness's P0 taxonomy is domain-neutral** (`.agents/skills/tlc-spec-driven/**`,
+    `docs/agents/harness.md`): `opus` is reserved for "auth, payment(s), data integrity, or a
+    rule the product's own domain doc marks critical" — a deferred list, not a hardcoded
+    enumeration.
+14. **A brand-hygiene gate scans the rendered child**
+    (`scripts/platform/__tests__/brand-hygiene.test.mjs`,
+    `apps/api/src/modules/module-boundaries.spec.ts`): `docs/`, `.claude/` and
+    `.github/workflows/` in a freshly rendered child are scanned for the owner's brand tokens
+    and infra nouns; hooks/handbooks now name only files that ship; the module-boundary
+    guard's scan widens to catch a stray owner term the earlier scope missed.
 
 ### Child migration steps
 

@@ -58,7 +58,7 @@ const BRAND_TOKENS = [/rit_/, /rit-/, /__Host-rit/]
 // renomear os literais em código (design.md § BRAND-07 ↔ IDENT-01).
 const SCAN_ROOTS = ["docs", ".claude", ".github/workflows"]
 
-// SPEC_DEVIATION: docs/dev/template-changelog.md:163 cita "Cloudflare → Traefik"
+// SPEC_DEVIATION: docs/dev/template-changelog.md:228 cita "Cloudflare → Traefik"
 // como exemplo genérico e não-proprietário de cadeia de proxy pra explicar
 // TRUST_PROXY_HOPS — não é a infra do dono. T46 não tem esse arquivo em
 // `Touches` (é dono de outra tarefa); reescrever a linha exigiria editar um

@@ -1,6 +1,7 @@
 /**
- * Valores literais derivados de packages/ui/src/styles/globals.css. E-mail não
- * lê CSS var — sincronizar manualmente ao mudar os tokens do design system.
+ * Valores literais próprios deste módulo — não há stylesheet de design system
+ * no template para sincronizar. E-mail não lê CSS var, então isolar aqui é
+ * proposital: ajustar manualmente se o produto trouxer sua própria paleta.
  */
 export const emailTheme = {
   primary: "#719149",

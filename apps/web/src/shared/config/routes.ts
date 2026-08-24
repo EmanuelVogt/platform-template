@@ -6,13 +6,21 @@
  * O produto acrescenta as próprias rotas em `product-routes.tsx` e os destinos
  * protegidos correspondentes com `registerProtectedRoute` (abaixo).
  */
+// `import.meta.env` só tipa as chaves conhecidas do Vite; qualquer outra (como
+// `VITE_ROUTE_LOGIN`/`VITE_ROUTE_INICIO`, abaixo) cai no índice `any` da
+// própria lib — este acessor estreita para `string | undefined` no limite da
+// leitura, em vez de deixar o `any` vazar para `ROUTES` e `RoutePath`.
+function readEnvString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined
+}
+
 export const ROUTES = {
   HOME: "/",
   // Slugs vêm de `VITE_ROUTE_LOGIN`/`VITE_ROUTE_INICIO` (mesmo seam de
   // `VITE_APP_NAME`/`VITE_LOCALE` em `app/router/shell.tsx`) — sem default, o
   // produto enxerga exatamente os paths de hoje.
-  LOGIN: import.meta.env.VITE_ROUTE_LOGIN || "/entrar",
-  INICIO: import.meta.env.VITE_ROUTE_INICIO || "/inicio",
+  LOGIN: readEnvString(import.meta.env.VITE_ROUTE_LOGIN) ?? "/entrar",
+  INICIO: readEnvString(import.meta.env.VITE_ROUTE_INICIO) ?? "/inicio",
 } as const
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES]
@@ -65,14 +73,14 @@ export function resolveProtectedRouteTemplate(
   if (!path) return null
   const pathname = path.split(/[?#]/)[0] ?? ""
   if (!pathname) return null
-  if (PROTECTED_ROUTES.has(pathname)) return pathname as RoutePath
+  if (PROTECTED_ROUTES.has(pathname)) return pathname
 
   let best: RoutePath | null = null
   let bestLen = -1
   for (const template of PROTECTED_ROUTES) {
     if (!template.includes("$")) continue
     if (matchesRouteTemplate(pathname, template) && template.length > bestLen) {
-      best = template as RoutePath
+      best = template
       bestLen = template.length
     }
   }
@@ -87,6 +95,5 @@ export function toSafeProtectedRoute(
   if (!path) return null
   const pathname = path.split(/[?#]/)[0] ?? ""
   if (!resolveProtectedRouteTemplate(pathname)) return null
-  // cast: `RoutePath` tipa o template; runtime precisa do id preenchido.
-  return pathname as RoutePath
+  return pathname
 }

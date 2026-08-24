@@ -18,14 +18,22 @@ import type { QueryClient } from "@tanstack/react-query"
 
 type RouterContext = { queryClient: QueryClient }
 
+// `import.meta.env` só tipa as chaves conhecidas do Vite; qualquer outra
+// (como `VITE_APP_NAME`/`VITE_LOCALE`, abaixo) cai no índice `any` da própria
+// lib — este acessor estreita para `string | undefined` no limite da leitura,
+// em vez de deixar o `any` vazar para quem chama.
+function readEnvString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined
+}
+
 // Nome e idioma vêm de `VITE_APP_NAME` / `VITE_LOCALE` — sem default, o produto
 // enxerga exatamente o comportamento de hoje (pt-BR, "Platform").
 function resolveAppName(): string {
-  return import.meta.env.VITE_APP_NAME || "Platform"
+  return readEnvString(import.meta.env.VITE_APP_NAME) ?? "Platform"
 }
 
 export function resolveLocale(): string {
-  return import.meta.env.VITE_LOCALE || "pt-BR"
+  return readEnvString(import.meta.env.VITE_LOCALE) ?? "pt-BR"
 }
 
 export function pageTitle(label?: string): string {

@@ -21,7 +21,7 @@ pre-commit:
       # trabalhando neste mesmo checkout, um hook que falha apareceria pra elas como
       # erro sem contexto. {staged_files} limita o `git add` aos arquivos que este
       # próprio hook formatou — nunca varre edição alheia em andamento
-      glob: "**/*.{ts,tsx,mts,mjs,cjs,js,jsx,json,yml,yaml,css}"
+      glob: "{*,**/*}.{ts,tsx,mts,mjs,cjs,js,jsx,json,yml,yaml,css}"
       run: pnpm exec prettier --write {staged_files} && git add {staged_files}
 
 commit-msg:

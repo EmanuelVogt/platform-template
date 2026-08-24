@@ -109,6 +109,7 @@ function runRollback({
     envExamplePath,
     envPath,
     registry: { entries, platformModulesPath, platformSchemaPath },
+    childRoot: cwd,
   })
   process.stdout.write(`${name} revertido\n`)
   return EXIT_CODES.OK
@@ -280,6 +281,7 @@ export async function addCommand({
         lock,
         name: plan.moduleName,
         entry: { ...plan.entryBase, migrations: [] },
+        childRoot: cwd,
       })
     }
 
@@ -309,6 +311,7 @@ export async function addCommand({
         lock,
         name: plan.moduleName,
         entry: { ...plan.entryBase, migrations },
+        childRoot: cwd,
       })
     }
   } catch (err) {

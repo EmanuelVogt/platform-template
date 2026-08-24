@@ -176,9 +176,11 @@ export function writeRegistry({
   writeFileSync(platformSchemaPath, renderPlatformSchema(entries), "utf8")
 }
 
-export function writeLock({ lockPath, lock, name, entry }) {
+// `entry.files` chega absoluto (o hash precisa ler o arquivo); sem `childRoot` o caminho
+// persistido continua absoluto, para não quebrar um chamador que ainda não o informa.
+export function writeLock({ lockPath, lock, name, entry, childRoot = "" }) {
   const filesWithSha = entry.files.map((filePath) => ({
-    path: filePath,
+    path: childRoot ? path.relative(childRoot, filePath) : filePath,
     sha256: sha256File(filePath),
   }))
   const nextLock = {
@@ -189,19 +191,29 @@ export function writeLock({ lockPath, lock, name, entry }) {
   return nextLock
 }
 
+// Um `file.path` já absoluto (lock gravado antes desta correção, ou por um chamador que ainda
+// não informa `childRoot`) continua resolvendo direto — só o caminho relativo é reancorado.
+function resolveLockFilePath(childRoot, storedPath) {
+  return path.isAbsolute(storedPath)
+    ? storedPath
+    : path.join(childRoot, storedPath)
+}
+
 export function rollback({
   lockPath,
   name,
   envExamplePath,
   envPath,
   registry,
+  childRoot = "",
 }) {
   const lock = readLock(lockPath)
   const entry = lock.modules?.[name]
   if (!entry) return lock
 
   for (const file of entry.files ?? []) {
-    if (existsSync(file.path)) rmSync(file.path)
+    const filePath = resolveLockFilePath(childRoot, file.path)
+    if (existsSync(filePath)) rmSync(filePath)
   }
 
   removeEnvBlock(envExamplePath, name)

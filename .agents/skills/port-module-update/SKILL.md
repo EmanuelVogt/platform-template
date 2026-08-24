@@ -15,7 +15,7 @@ description: Port a newer catalog version of an already-installed module into a 
 
 ## Steps
 
-1. **Read the child's lock.** `.platform-modules.lock` at the child repo's root, key `modules.<module>`. Pull `version`, `catalogRef`, `files: [{ path, sha256 }]`, `migrations: []`. (This is the shape `scripts/platform/lib/apply.mjs`'s `writeLock` actually produces — per-module `catalogRef`, no repo-wide `catalog.source/ref` block exists in the lock today.)
+1. **Read the child's lock.** `.platform-modules.lock` at the child repo's root, key `modules.<module>`. Pull `version`, `catalogRef`, `files: [{ path, sha256 }]` (`path` is relative to the child root), `migrations: []`. (This is the shape `scripts/platform/lib/apply.mjs`'s `writeLock` actually produces — per-module `catalogRef`, no repo-wide `catalog.source/ref` block exists in the lock today.)
 2. **Resolve the catalog ref.** The git tag `catalog/<name>[-<variant>]@<version>` on the catalog source (`gh:EmanuelVogt/platform-template` per AD-016), where `<version>` is the lock's recorded `version`. No such tag → stop, report `no-catalog-tag`.
 3. **Diff the entry.** `git diff <resolved-ref>..HEAD -- catalog/<name>/{api,web,migrations/custom,parity}` (restrict to the directories that actually get installed; `module.json`/`README.md` changes alone don't need porting).
 4. **Read the CHANGELOG range.** `catalog/<name>/CHANGELOG.md`, every version heading strictly between the lock's `version` and the catalog's current `module.json.version`. A version with committed code but no heading → stop, report `changelog-gap`.

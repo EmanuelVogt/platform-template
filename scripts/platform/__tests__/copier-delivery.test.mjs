@@ -40,6 +40,39 @@ test("ci.yml ships to the child (not excluded)", () => {
     !excludes().includes(".github/workflows/ci.yml"),
     "copier.yml must NOT exclude .github/workflows/ci.yml — it runs in every generated product"
   )
+  const tracked = execFileSync(
+    "git",
+    ["ls-files", "-z", ".github/workflows/ci.yml"],
+    { cwd: ROOT, encoding: "utf8" }
+  )
+    .split("\0")
+    .filter(Boolean)
+  assert.deepEqual(
+    tracked,
+    [".github/workflows/ci.yml"],
+    "ci.yml must keep shipping to the child — it must stay tracked"
+  )
+})
+
+// Absence, not exclusion (AD-034): an _exclude entry for a nonexistent file proves nothing.
+// catalog.yml was merged into ci.yml in wave 1 — its exclusion entry must be gone with it.
+test("catalog.yml is gone — not tracked and not excluded", () => {
+  const tracked = execFileSync(
+    "git",
+    ["ls-files", "-z", ".github/workflows/catalog.yml"],
+    { cwd: ROOT, encoding: "utf8" }
+  )
+    .split("\0")
+    .filter(Boolean)
+  assert.deepEqual(
+    tracked,
+    [],
+    ".github/workflows/catalog.yml must not be tracked — it was merged into ci.yml"
+  )
+  assert.ok(
+    !excludes().includes(".github/workflows/catalog.yml"),
+    "copier.yml must NOT exclude .github/workflows/catalog.yml — the file no longer exists to exclude"
+  )
 })
 
 // Absence, not exclusion: a _exclude entry for a file that does not exist proves nothing

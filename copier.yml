@@ -32,7 +32,6 @@ _exclude:
   # sem a barra inicial casaria qualquer diretório com esse nome em qualquer
   # profundidade; sem a final o diretório-raiz escapa e nasce vazio no filho
   - /docs/platform_template
-  - .github/workflows/catalog.yml
   # gate de tag do próprio template — assume `_copier_conf.answers_file` ausente
   # e o `.copier-answers.yml.jinja` da raiz; no filho seria inerte, mas não deve
   # nem chegar lá. O filho não ganha workflow de atualização nenhum: ele nunca se

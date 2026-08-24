@@ -692,7 +692,7 @@ steps** (AD-034). Anything that would force a child decision belongs to `v3.0.0`
 
 **What**: Stop printing the adopt line in the template repo and in a fresh child whose lock is legitimately empty.
 **Where**: `.claude/hooks/pending-advisories.mjs:36-38`
-**Touches**: `.claude/hooks/pending-advisories.mjs`, `scripts/platform/lib/advisories.mjs`, `scripts/platform/__tests__/pending-advisories-hook.test.mjs`
+**Touches**: `.claude/hooks/pending-advisories.mjs`, `scripts/platform/lib/advisories.mjs`, `scripts/platform/__tests__/pending-advisories-hook.test.mjs`, `scripts/platform/__tests__/pending-advisories.test.mjs`, `scripts/platform/__tests__/fixtures/pending-advisories/no-lock/`
 **Depends on**: T20
 **Exclusive**: no
 **Reuses**: `computePending`'s `noLock` at `lib/advisories.mjs:50`; `copier.yml:62` puts the lock under `_skip_if_exists`
@@ -700,9 +700,29 @@ steps** (AD-034). Anything that would force a child decision belongs to `v3.0.0`
 
 **Tools**: MCP: NONE · Skill: NONE
 
+> **Amended by the orchestrator, wave 2** — the first dispatch stopped here rather than edit a file it
+> did not own, which was the correct call. Two pre-existing assertions in
+> `scripts/platform/__tests__/pending-advisories.test.mjs` (`:112-121`, `:139-148`) demand the exact
+> `no .platform-modules.lock — run platform module adopt` line this task removes, and cite a **closed
+> feature's requirement ADV-02**. That reads as a requirement conflict and is not one.
+>
+> **The discriminator is `.copier-answers.yml`, and it was verified on disk, not assumed:** this
+> repository has none (`ls .copier-answers.yml` → No such file) because the template is the *source*
+> and never carries one; every copier-generated child does. The `no-lock` fixture holds only `docs/` —
+> no lock **and** no `.copier-answers.yml` — so it is indistinguishable from the template repo. It was
+> written before that distinction mattered and silently encodes "template" while asserting "child".
+>
+> **Therefore ADV-02 is preserved, not retired.** A real child — one with `.copier-answers.yml` and no
+> lock — must still get the adopt line; ADV-02's intent is intact and this task must not weaken it.
+> Silence is keyed on the **absence of `.copier-answers.yml`** (template repo), never on the absence of
+> the lock alone. Do not delete the two assertions: give the `no-lock` fixture a `.copier-answers.yml`
+> so it asserts the child case ADV-02 actually meant, and add template-repo coverage alongside it.
+
 **Done when**:
 - [ ] `noLock` distinguishes *missing* from *present-but-empty*
+- [ ] Silence is keyed on the absence of `.copier-answers.yml`, **not** on the absence of the lock
 - [ ] The hook is silent in the template repo and in a fresh child; it still speaks when a real module is installed and unadopted
+- [ ] **ADV-02 still holds**: a child with `.copier-answers.yml` and no lock still emits the adopt line — the `no-lock` fixture gains a `.copier-answers.yml` and its two assertions survive, amended rather than deleted
 - [ ] Gate passes: `pnpm test:scripts`
 - [ ] Test count: 4 new tests pass
 

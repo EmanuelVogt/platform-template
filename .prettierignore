@@ -4,6 +4,7 @@ node_modules/
 coverage/
 pnpm-lock.yaml
 .pnpm-store/
+{% if*
 docs/platform_template/
 .worktrees/
 openapi.json

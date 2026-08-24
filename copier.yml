@@ -44,6 +44,8 @@ _exclude:
   - .claude/settings.local.json
   - apps/api/.env
   - apps/web/.env.local
+  - apps/web-vite
+  - apps/web-next
   - .claude/skills
   # ferramental que só existe com `catalog/` presente — como o catálogo não é
   # copiado, nada disso roda no filho. Os hooks correspondentes moram em
@@ -77,6 +79,8 @@ _tasks:
     when: "{{ not _copier_conf.pretend }}"
   - command: git init -q
     when: "{{ _copier_operation == 'copy' and not _copier_conf.pretend }}"
+  - command: 'node -e "const f=''apps/web/package.json'';const fs=require(''fs'');fs.writeFileSync(f,fs.readFileSync(f,''utf8'').replace(''\"name\": \"web-next\"'',''\"name\": \"web\"''))"'
+    when: "{{ web_stack == 'next' and _copier_operation == 'copy' and not _copier_conf.pretend }}"
   - command: ln -sfn AGENTS.md CLAUDE.md
     when: "{{ not _copier_conf.pretend }}"
   - command: pnpm install
@@ -125,3 +129,9 @@ app_domain:
   type: str
   help: Subdomínio base da aplicação (front em <app_domain>, api em api.<app_domain>)
   default: "app.{{ root_domain }}"
+
+web_stack:
+  type: str
+  help: Stack do front headless (vite = React/Vite + TanStack Router; next = Next.js App Router)
+  default: vite
+  choices: [vite, next]

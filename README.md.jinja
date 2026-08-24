@@ -42,7 +42,7 @@ pnpm --filter api db:migrate:run
 pnpm dev
 ```
 
-Front at `http://localhost:5173`, API at `http://localhost:3000` (Scalar at `/docs`).
+Front at `http://localhost:{% if web_stack == 'next' %}3001{% else %}5173{% endif %}`, API at `http://localhost:3000` (Scalar at `/docs`).
 
 ```
 apps/api/      NestJS — kernel in src/shared, modules in src/modules

@@ -276,7 +276,7 @@ test("runCatalogCheck happy path renders, installs, adds every entry in order (w
     )
     assert.equal(
       commands[0],
-      "copier copy --trust --defaults --vcs-ref HEAD --data project_name=Demo --data github_org=acme --data root_domain=demo.test /repo /scratch/child"
+      "copier copy --trust --defaults --vcs-ref HEAD --data project_name=Demo --data github_org=acme --data root_domain=demo.test --data web_stack=vite /repo /scratch/child"
     )
     assert.equal(commands[1], "pnpm install")
     assert.deepEqual(commands.slice(-3), [
@@ -837,4 +837,110 @@ test("runCatalogCheck keeps the scratch dir it created when keep:true is passed"
     rmSync(repoRoot, { recursive: true, force: true })
     if (childDir) rmSync(childDir, { recursive: true, force: true })
   }
+})
+
+test("runCatalogCheck passes --web-stack through to renderChild's --data args", async () => {
+  const catalogRoot = withTmpCatalog(buildRealGraphCatalog)
+  const run = stubRun()
+  try {
+    const code = await runCatalogCheck({
+      entries: ["notification"],
+      repoRoot: "/repo",
+      catalogRoot,
+      scratchDir: "/scratch/child",
+      webStack: "next",
+      run,
+      runCli: stubRunCli(),
+      log: () => {},
+    })
+    assert.equal(code, EXIT_CODES.OK)
+    const copierCall = run.calls.find((call) => call.command === "copier")
+    assert.ok(copierCall.args.includes("web_stack=next"))
+  } finally {
+    cleanup(catalogRoot)
+  }
+})
+
+test("runCatalogCheck fails fast when the rendered apps/web does not match --web-stack, before touching any entry", async () => {
+  const catalogRoot = withTmpCatalog(buildRealGraphCatalog)
+  const scratchDir = mkdtempSync(path.join(tmpdir(), "catalog-check-webshell-"))
+  mkdirSync(path.join(scratchDir, "apps", "web"), { recursive: true })
+  writeFileSync(
+    path.join(scratchDir, "apps", "web", "package.json"),
+    JSON.stringify({ name: "web" })
+  )
+  writeFileSync(
+    path.join(scratchDir, "apps", "web", "vite.config.ts"),
+    "export default {}\n"
+  )
+  const run = stubRun()
+  const runCli = stubRunCli()
+  const logs = []
+  try {
+    const code = await runCatalogCheck({
+      entries: ["notification"],
+      catalogRoot,
+      scratchDir,
+      webStack: "next",
+      run,
+      runCli,
+      log: (line) => logs.push(line),
+    })
+    assert.equal(code, EXIT_CODES.TEST_FAILURE)
+    assert.equal(
+      runCli.calls.length,
+      0,
+      "não deve chamar module add quando o shape do web shell está errado"
+    )
+    assert.ok(
+      logs.some((line) => line.includes("apps/web não tem o formato esperado"))
+    )
+  } finally {
+    cleanup(catalogRoot)
+    rmSync(scratchDir, { recursive: true, force: true })
+  }
+})
+
+// ACC-11 nasceu contra catalog.yml; AD-036 fundiu esse workflow em ci.yml, então
+// a matriz web_stack é verificada onde ela passou a viver.
+test("ci.yml carries web_stack: [vite, next] in both the catalog and smoke job matrices and passes it to the command (ACC-11)", () => {
+  const repoRoot = path.resolve(
+    path.dirname(new URL(import.meta.url).pathname),
+    "..",
+    "..",
+    ".."
+  )
+  const workflow = parseYaml(
+    readFileSync(path.join(repoRoot, ".github", "workflows", "ci.yml"), "utf8")
+  )
+
+  const catalogJob = workflow.jobs.catalog
+  assert.deepEqual(catalogJob.strategy.matrix.web_stack, ["vite", "next"])
+  assert.ok(
+    catalogJob.steps.some(
+      (step) =>
+        typeof step.run === "string" &&
+        step.run.includes("--web-stack ${{ matrix.web_stack }}")
+    ),
+    "o step de catalog:check precisa repassar --web-stack"
+  )
+
+  const smokeJob = workflow.jobs.smoke
+  assert.deepEqual(smokeJob.strategy.matrix.web_stack, ["vite", "next"])
+  assert.ok(
+    smokeJob.steps.some(
+      (step) =>
+        typeof step.run === "string" &&
+        step.run.includes("--web-stack ${{ matrix.web_stack }}")
+    ),
+    "o step de template:smoke precisa repassar --web-stack"
+  )
+  assert.ok(
+    smokeJob.steps.some(
+      (step) =>
+        typeof step.run === "string" &&
+        step.run.includes("--filter web-next exec vitest run --coverage")
+    ),
+    "o job smoke precisa rodar a cobertura do web-next (ACC-07 em CI)"
+  )
 })

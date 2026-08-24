@@ -24,6 +24,11 @@ import {
   readLatestChangelogVersion,
   writeSimulatedKernelVersion,
 } from "./lib/kernel-version.mjs"
+import {
+  assertWebShell,
+  InvalidWebStackError,
+  parseWebStack,
+} from "./lib/web-shell.mjs"
 
 // Gate final do child: check -> test -> test:db (runGates, lib/child.mjs). Sem
 // Docker, "test:db" falha rápido com a mensagem de ensureDockerRuntimeEnv
@@ -116,6 +121,13 @@ function stripKernelVersionFlag(argv) {
     : [...argv.slice(0, index), ...argv.slice(index + 2)]
 }
 
+function stripWebStackFlag(argv) {
+  const index = argv.indexOf("--web-stack")
+  return index === -1
+    ? argv
+    : [...argv.slice(0, index), ...argv.slice(index + 2)]
+}
+
 function entryLabel(entry) {
   return entry.manifest.variant
     ? `${entry.name}/${entry.manifest.variant}`
@@ -134,8 +146,10 @@ export async function runCatalogCheck({
   catalogRoot = path.join(repoRoot, "catalog"),
   scratchDir,
   kernelVersion,
+  webStack = "vite",
   run = defaultRun,
   runCli = runCliCommand,
+  assertWebShellFn = assertWebShell,
   log = (line) => process.stdout.write(`${line}\n`),
   keep = false,
   stepTimeoutMs = DEFAULT_STEP_TIMEOUT_MS,
@@ -181,6 +195,7 @@ export async function runCatalogCheck({
       repoRoot,
       targetDir: childDir,
       run: timedRun,
+      webStack,
     })
     if (renderResult.timedOut)
       return timeoutFailure(log, "render (copier)", stepTimeoutMs)
@@ -234,6 +249,16 @@ export async function runCatalogCheck({
       log(
         `catalog:check — "pnpm catalog:lint" falhou (código ${lintResult.status})`
       )
+      return EXIT_CODES.TEST_FAILURE
+    }
+
+    log(
+      `catalog:check — verificando o shape do web shell (--web-stack ${webStack})`
+    )
+    try {
+      assertWebShellFn(childDir, webStack)
+    } catch (err) {
+      log(`catalog:check — ${err.message}`)
       return EXIT_CODES.TEST_FAILURE
     }
 
@@ -292,7 +317,22 @@ if (isMain(import.meta.url, process.argv[1])) {
   const argv = process.argv.slice(2)
   const kernelVersion = parseKernelVersion(argv)
   const keep = parseKeep(argv)
-  const entries = parseEntries(stripKernelVersionFlag(argv))
-  const exitCode = await runCatalogCheck({ entries, kernelVersion, keep })
+  let webStack
+  try {
+    webStack = parseWebStack(argv)
+  } catch (err) {
+    if (err instanceof InvalidWebStackError) {
+      process.stderr.write(`catalog:check — ${err.message}\n`)
+      process.exit(EXIT_CODES.USAGE_ERROR)
+    }
+    throw err
+  }
+  const entries = parseEntries(stripWebStackFlag(stripKernelVersionFlag(argv)))
+  const exitCode = await runCatalogCheck({
+    entries,
+    kernelVersion,
+    keep,
+    webStack,
+  })
   process.exit(exitCode ?? EXIT_CODES.OK)
 }

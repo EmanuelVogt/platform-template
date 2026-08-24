@@ -26,6 +26,18 @@ Two images, built from the repository.
 the runner. Exposes port **3000**, enters through `tini` → `docker-entrypoint.sh` and runs
 `node dist/main`.
 
+{% if web_stack == 'next' %}
+**`apps/web/Dockerfile`** — multi-stage on `node:22-alpine`: `turbo prune web --docker`
+isolates the front subgraph, installs, compiles with `next build` (`output: "standalone"`)
+and copies `.next/standalone`, `.next/static` and `public` into the runner, which runs as
+the non-root `nextjs` user. Exposes port **3000**, with no nginx — the standalone's own
+`server.js` serves assets and routes: `CMD ["node", "apps/web/server.js"]`.
+
+> **`NEXT_PUBLIC_API_URL` is a build arg, not a runtime variable.** The value is baked into
+> the bundle during the Next build (`ARG` → `ENV` so Next can see it and so BuildKit
+> invalidates the cache when the URL changes). Changing the API URL requires a **front
+> rebuild** — changing the variable and restarting the container has no effect whatsoever.
+{% else %}
 **`apps/web/Dockerfile`** — compiles with Vite and serves the static output on
 `nginx-unprivileged`, port **8080**, with a healthcheck at `/healthz`.
 
@@ -33,6 +45,7 @@ the runner. Exposes port **3000**, enters through `tini` → `docker-entrypoint.
 > bundle during the build (`ARG` → `ENV` so Vite can see it and so BuildKit invalidates
 > the cache when the URL changes). Changing the API URL requires a **front rebuild** —
 > changing the variable and restarting the container has no effect whatsoever.
+{% endif %}
 
 ## What runs at API boot
 

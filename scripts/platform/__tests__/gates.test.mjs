@@ -9,7 +9,12 @@ const TESTS_DIR = path.dirname(fileURLToPath(import.meta.url))
 const ROOT_DIR = path.join(TESTS_DIR, "../../..")
 const ROOT_PACKAGE_JSON_PATH = path.join(ROOT_DIR, "package.json")
 const TURBO_JSON_PATH = path.join(ROOT_DIR, "turbo.json")
-const WEB_PACKAGE_JSON_PATH = path.join(ROOT_DIR, "apps/web/package.json")
+// O shell web renderizado mora em `apps/web`; neste repositório do template os
+// dois shells convivem como `apps/web-vite`/`apps/web-next` (L-016: derivar do
+// que existe, nunca do nome de diretório do template).
+const WEB_PACKAGE_JSON_PATHS = ["apps/web", "apps/web-vite", "apps/web-next"]
+  .map((dir) => path.join(ROOT_DIR, dir, "package.json"))
+  .filter((file) => existsSync(file))
 const API_PACKAGE_JSON_PATH = path.join(ROOT_DIR, "apps/api/package.json")
 const LEFTHOOK_PATH = path.join(ROOT_DIR, "lefthook.yml")
 const LEFTHOOK_LOCAL_PATH = path.join(ROOT_DIR, "lefthook-local.yml")
@@ -58,12 +63,22 @@ test("GAT-07: turbo.json não tem mais nenhuma task test*", () => {
   assert.deepEqual(testTasks, [])
 })
 
-test("GAT-07: apps/web/package.json não tem mais nenhum script test*", () => {
-  const { scripts } = readJson(WEB_PACKAGE_JSON_PATH)
-  const testScripts = Object.keys(scripts).filter((name) =>
-    name.startsWith("test")
+test("GAT-07: nenhum package.json de shell web tem script test*", () => {
+  assert.ok(
+    WEB_PACKAGE_JSON_PATHS.length > 0,
+    "esperava ao menos um shell web em apps/"
   )
-  assert.deepEqual(testScripts, [])
+  for (const manifestPath of WEB_PACKAGE_JSON_PATHS) {
+    const { scripts } = readJson(manifestPath)
+    const testScripts = Object.keys(scripts).filter((name) =>
+      name.startsWith("test")
+    )
+    assert.deepEqual(
+      testScripts,
+      [],
+      `${path.relative(ROOT_DIR, manifestPath)} ainda expõe script test*`
+    )
+  }
 })
 
 test("GAT-07: apps/api/package.json não tem mais nenhum script test* nem o bloco jest", () => {

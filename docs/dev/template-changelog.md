@@ -7,13 +7,19 @@ to apply on `copier update`.
 ## v2.3.0
 
 The update contract: a tag only ships green, the kernel carries advisories like any
-catalog entry, and the product reads them before updating instead of after.
+catalog entry, and the product reads them before updating instead of after. A new copier
+question also picks the product's headless front shell — additive, with no migration.
 
 ### Changes
 
-1. **Release gate** (`release.yml` + `release-preflight.mjs`, template-only): full gate,
-   version/tag/ref checks, unbumped-entry check, manual-step check on a non-major
-   changelog — then tag + push.
+1. **Release gate, cut from a marker commit** (`release.yml` + `release-preflight.mjs` +
+   `lib/release-marker.mjs`, template-only): the full gate — version/tag/ref checks,
+   unbumped-entry check, manual-step check on a non-major changelog — still guards the
+   tag, but `workflow_dispatch` is gone. `release.yml` now triggers on `push` to `main`
+   and does nothing unless the head commit is an **empty** `chore(release): vX.Y.Z`;
+   `pnpm platform release [version]` runs preflight locally and writes that marker,
+   never tagging and never pushing. `.github/workflows/catalog.yml` is merged into
+   `ci.yml`, which skips itself on a marker push to `main` (AD-036).
 2. **Kernel advisories** (`module: kernel` in `lib/advisories.mjs`): matched to the
    installed template version regardless of the module lock; `ADV-20260823-01`/`-02`
    cover issue #9 and the fixture leak.
@@ -35,6 +41,11 @@ catalog entry, and the product reads them before updating instead of after.
    formatting only, no behaviour change. A child gains a `.prettierrc` that loads — not
    the gate; opt in by copying the `format` job into a local lefthook file and
    `format.yml` into `.github/workflows/`.
+8. **New copier question `web_stack`** (`vite` | `next`, default `vite`): picks the
+   product's headless front — see [`template.md`](template.md#module-catalog). Additive:
+   `copier update --defaults` (or `--skip-answered`) writes `web_stack: vite` into the
+   answers file of an existing child, preserving its current Vite front with no action
+   required. New decision in `.specs/STATE.md`: AD-037.
 
 ### Child migration steps
 

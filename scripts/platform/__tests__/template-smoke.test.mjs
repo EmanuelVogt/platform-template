@@ -1,6 +1,10 @@
 import test from "node:test"
 import assert from "node:assert/strict"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
 import { EXIT_CODES } from "../lib/exit-codes.mjs"
+import { InvalidWebStackError } from "../lib/web-shell.mjs"
 import {
   helpText,
   parseArgs,
@@ -33,28 +37,54 @@ function immediateSleep() {
   return Promise.resolve()
 }
 
-test("parseArgs recognizes --help, --dry-run/--plan and --keep independently", () => {
-  assert.deepEqual(parseArgs([]), { help: false, dryRun: false, keep: false })
+test("parseArgs recognizes --help, --dry-run/--plan and --keep independently, defaulting --web-stack to vite", () => {
+  assert.deepEqual(parseArgs([]), {
+    help: false,
+    dryRun: false,
+    keep: false,
+    webStack: "vite",
+  })
   assert.deepEqual(parseArgs(["--help"]), {
     help: true,
     dryRun: false,
     keep: false,
+    webStack: "vite",
   })
   assert.deepEqual(parseArgs(["-h"]), {
     help: true,
     dryRun: false,
     keep: false,
+    webStack: "vite",
   })
   assert.deepEqual(parseArgs(["--dry-run"]), {
     help: false,
     dryRun: true,
     keep: false,
+    webStack: "vite",
   })
   assert.deepEqual(parseArgs(["--plan", "--keep"]), {
     help: false,
     dryRun: true,
     keep: true,
+    webStack: "vite",
   })
+})
+
+test("parseArgs accepts an explicit --web-stack next", () => {
+  assert.deepEqual(parseArgs(["--web-stack", "next"]), {
+    help: false,
+    dryRun: false,
+    keep: false,
+    webStack: "next",
+  })
+})
+
+test("parseArgs rejects a --web-stack value other than vite/next with a pt-BR message", () => {
+  assert.throws(
+    () => parseArgs(["--web-stack", "bogus"]),
+    (err) =>
+      err instanceof InvalidWebStackError && /vite|next/.test(err.message)
+  )
 })
 
 test("planSteps names the four design checks in order", () => {
@@ -427,4 +457,57 @@ test("runTemplateSmoke returns OK when all four checks are green", async () => {
     log: noopLog,
   })
   assert.equal(code, EXIT_CODES.OK)
+})
+
+test("runTemplateSmoke passes webStack through to renderChildFn", async () => {
+  let receivedWebStack
+  const run = stubRun()
+  await runTemplateSmoke({
+    scratchDir: "/tmp/template-smoke-test-webstack-thread",
+    webStack: "next",
+    run,
+    renderChildFn: (opts) => {
+      receivedWebStack = opts.webStack
+      return { status: 0, stdout: "", stderr: "" }
+    },
+    installChildFn: () => ({ status: 0, stdout: "", stderr: "" }),
+    spawnProcess: () => ({ kill: () => {} }),
+    fetchImpl: async () => ({ status: 200 }),
+    sleep: immediateSleep,
+    log: noopLog,
+  })
+  assert.equal(receivedWebStack, "next")
+})
+
+test("runTemplateSmoke fails fast when the rendered apps/web does not match --web-stack, before any docker check", async () => {
+  const scratchDir = mkdtempSync(
+    path.join(tmpdir(), "template-smoke-webshell-")
+  )
+  mkdirSync(path.join(scratchDir, "apps", "web"), { recursive: true })
+  writeFileSync(
+    path.join(scratchDir, "apps", "web", "package.json"),
+    JSON.stringify({ name: "web" })
+  )
+  writeFileSync(
+    path.join(scratchDir, "apps", "web", "vite.config.ts"),
+    "export default {}\n"
+  )
+  const run = stubRun()
+  try {
+    const code = await runTemplateSmoke({
+      scratchDir,
+      webStack: "next",
+      run,
+      renderChildFn: () => ({ status: 0, stdout: "", stderr: "" }),
+      installChildFn: () => ({ status: 0, stdout: "", stderr: "" }),
+      log: noopLog,
+    })
+    assert.equal(code, EXIT_CODES.TEST_FAILURE)
+    assert.ok(
+      run.calls.every((call) => call.command !== "docker"),
+      "não deve chegar nas checagens de fumaça"
+    )
+  } finally {
+    rmSync(scratchDir, { recursive: true, force: true })
+  }
 })

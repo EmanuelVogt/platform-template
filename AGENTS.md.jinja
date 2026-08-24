@@ -36,7 +36,7 @@ ADRs.
 ## Commands (from the repo root)
 
 ```
-pnpm dev                    turbo dev — brings everything up
+pnpm dev                    turbo dev — brings everything up{% if web_stack == 'next' %} (front on :3001){% endif %}
 pnpm check                  lint + typecheck — run before asking for review
 pnpm build | typecheck | lint:fix | format | clean
 pnpm test | test:coverage | test:int | test:e2e | test:db

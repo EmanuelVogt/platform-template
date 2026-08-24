@@ -116,7 +116,7 @@ jobs:
           "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
 
   catalog:
-    name: "catalog:check (${{ matrix.entry }})"
+    name: "catalog:check (${{ matrix.entry }} / ${{ matrix.web_stack }})"
     runs-on: ubuntu-latest
     needs: detect
     if: needs.detect.outputs.template == 'true'
@@ -124,6 +124,7 @@ jobs:
       fail-fast: false
       matrix:
         entry: [identity, attachment, audit, notification, tag]
+        web_stack: [vite, next]
     services:
       postgres:
         image: postgres:16-alpine
@@ -159,13 +160,17 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pipx install copier
-      - run: pnpm catalog:check ${{ matrix.entry }}
+      - run: pnpm catalog:check ${{ matrix.entry }} --web-stack ${{ matrix.web_stack }}
 
   smoke:
-    name: template:smoke
+    name: "template:smoke (${{ matrix.web_stack }})"
     runs-on: ubuntu-latest
     needs: detect
     if: needs.detect.outputs.template == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        web_stack: [vite, next]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
@@ -175,4 +180,6 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pipx install copier
-      - run: pnpm template:smoke
+      - if: matrix.web_stack == 'next'
+        run: pnpm --filter web-next exec vitest run --coverage
+      - run: pnpm template:smoke --web-stack ${{ matrix.web_stack }}

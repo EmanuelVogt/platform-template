@@ -37,12 +37,12 @@ export function renderChild({
   repoRoot,
   targetDir,
   answers = DEFAULT_ANSWERS,
+  webStack = "vite",
   run,
 }) {
-  const dataArgs = Object.entries(answers).flatMap(([key, value]) => [
-    "--data",
-    `${key}=${value}`,
-  ])
+  const dataArgs = Object.entries({ ...answers, web_stack: webStack }).flatMap(
+    ([key, value]) => ["--data", `${key}=${value}`]
+  )
   return run("copier", [
     "copy",
     "--trust",

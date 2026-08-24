@@ -8,6 +8,7 @@
     "./react": "./react.js",
     "./nest": "./nest.js",
     "./fsd": "./fsd.js",
+    "./fsd-next": "./fsd-next.js",
     "./vitest": "./vitest.js"
   },
   "files": [
@@ -15,14 +16,16 @@
     "react.js",
     "nest.js",
     "fsd.js",
+    "fsd-next.js",
     "vitest.js",
     "rules"
   ],
   "scripts": {
-    "test": "node --test rules/*.test.js vitest.test.js"
+    "test": "node --test rules/*.test.js *.test.js"
   },
   "dependencies": {
     "@eslint/js": "^10",
+    "@next/eslint-plugin-next": "^15.5.23",
     "@vitest/eslint-plugin": "^1.6",
     "eslint-config-prettier": "^10",
     "eslint-import-resolver-typescript": "^4",

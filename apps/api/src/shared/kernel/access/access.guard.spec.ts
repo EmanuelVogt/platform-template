@@ -57,7 +57,7 @@ class Routes {
 
 function contextFor(route: keyof Routes): ExecutionContext {
   return {
-    getHandler: () => Routes.prototype[route],
+    getHandler: () => Reflect.get(Routes.prototype, route),
     getClass: () => Routes,
   } as unknown as ExecutionContext
 }

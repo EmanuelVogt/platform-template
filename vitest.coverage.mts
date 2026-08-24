@@ -1,4 +1,13 @@
+import { existsSync } from "node:fs"
+
 import { defineConfig } from "vitest/config"
+
+// Mesmo resolvedor de `vitest.config.mts`: `apps/web` no filho renderizado,
+// `apps/web-vite` neste repositório do template.
+const WEB_DIR =
+  ["apps/web", "apps/web-vite"].find((dir) =>
+    existsSync(`${dir}/vitest.config.ts`)
+  ) ?? "apps/web"
 
 /**
  * `pnpm test:coverage`: os quatro projetos num processo só, cobertura v8
@@ -8,7 +17,7 @@ import { defineConfig } from "vitest/config"
 export default defineConfig({
   test: {
     projects: [
-      "apps/web/vitest.config.ts",
+      `${WEB_DIR}/vitest.config.ts`,
       "apps/api/vitest.config.mts",
       "apps/api/vitest.int.config.mts",
       "apps/api/vitest.e2e.config.mts",
@@ -20,7 +29,7 @@ export default defineConfig({
       reportsDirectory: "coverage",
       // `include` explícito é o que faz arquivo sem teste entrar na conta: o
       // `coverage.all` do Vitest 3 não existe mais.
-      include: ["apps/api/src/**/*.ts", "apps/web/src/**/*.{ts,tsx}"],
+      include: ["apps/api/src/**/*.ts", `${WEB_DIR}/src/**/*.{ts,tsx}`],
       exclude: [
         "**/*.spec.ts",
         "**/*.int-spec.ts",
@@ -38,7 +47,7 @@ export default defineConfig({
         // que coverage-metric.contract.spec.ts dispara; if-else.sample.ts
         // precisa ficar descoberto no run externo (COV-06).
         "apps/api/src/shared/config/coverage-metric/*.sample.ts",
-        "apps/web/src/main.tsx",
+        `${WEB_DIR}/src/main.tsx`,
         "**/shared/test/**",
         "apps/api/test/**",
       ],
@@ -59,7 +68,7 @@ export default defineConfig({
           functions: 90,
           lines: 90,
         },
-        "apps/web/src/**": {
+        [`${WEB_DIR}/src/**`]: {
           statements: 90,
           branches: 90,
           functions: 90,

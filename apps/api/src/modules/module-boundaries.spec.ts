@@ -7,7 +7,6 @@ const MODULES_DIR = __dirname
 const SRC_DIR = resolve(MODULES_DIR, "..")
 const SHARED_DIR = resolve(SRC_DIR, "shared")
 const KERNEL_PREFIX = resolve(SRC_DIR, "shared", "kernel") + sep
-const WEB_SRC_DIR = resolve(SRC_DIR, "..", "..", "web", "src")
 
 const ROOT_CONNECTION = resolve(
   SRC_DIR,
@@ -549,12 +548,36 @@ const FORBIDDEN_TOKENS: readonly { label: string; pattern: RegExp }[] = [
   { label: "tag. (prefixo de schema)", pattern: /"?\btag"?\.[a-z_]/ },
 ]
 
+// Casca web ativa: numa cópia renderizada só `apps/web` existe; no template
+// só `apps/web-vite` (e, a partir do T7, também `apps/web-next`) — a varredura
+// soma tudo que encontrar, nunca assume uma única casca fixa (RULE C, CAT-03).
+const WEB_SHELL_NAMES = ["web", "web-vite", "web-next"] as const
+
+function webShellRoots(): string[] {
+  return WEB_SHELL_NAMES.map((name) =>
+    resolve(SRC_DIR, "..", "..", name)
+  ).filter((dir) => existsSync(dir))
+}
+
+// `app/` é a camada FSD na Vite shell; no Next `app/` é reservado pelo
+// framework e a camada vira `_app/` com um re-export em `app/` — a varredura
+// soma as duas, e `kernelSurfaceFiles()` já ignora a que não existir.
+function webShellSurfaceRoots(): string[] {
+  return webShellRoots().flatMap((shellRoot) => {
+    const srcDir = resolve(shellRoot, "src")
+    return [
+      resolve(srcDir, "app"),
+      resolve(srcDir, "_app"),
+      resolve(srcDir, "shared"),
+    ]
+  })
+}
+
 const KERNEL_SURFACE: readonly string[] = [
   SHARED_DIR,
   resolve(SRC_DIR, "app.module.ts"),
   resolve(SRC_DIR, "db", "schema.ts"),
-  resolve(WEB_SRC_DIR, "app"),
-  resolve(WEB_SRC_DIR, "shared"),
+  ...webShellSurfaceRoots(),
 ]
 
 // Fixture de teste é o único lugar onde um nome de módulo pode aparecer: ela
@@ -604,12 +627,32 @@ describe("module-boundaries — RULE C: o vocabulário do kernel não conhece m�
   it("a varredura enxerga a casca do template, api e web (sanidade)", () => {
     const files = kernelSurfaceFiles().map(toPosix)
     expect(files.length).toBeGreaterThan(50)
-    expect(files.some((file) => file.includes("/apps/web/src/app/"))).toBe(true)
+    expect(
+      files.some((file) => /\/apps\/web(-vite|-next)?\/src\/_?app\//.test(file))
+    ).toBe(true)
     expect(files.some((file) => file.includes("/apps/api/src/shared/"))).toBe(
       true
     )
     expect(files).toContain(toPosix(resolve(SRC_DIR, "app.module.ts")))
     expect(files).toContain(toPosix(resolve(SRC_DIR, "db", "schema.ts")))
+  })
+
+  it("webShellRoots() resolve só as cascas web existentes — template ou produto (CAT-03)", () => {
+    const roots = webShellRoots().map(toPosix)
+    const appsDir = resolve(SRC_DIR, "..", "..")
+    const existing = ["web", "web-vite", "web-next"]
+      .map((name) => resolve(appsDir, name))
+      .filter((dir) => existsSync(dir))
+      .map(toPosix)
+    expect(existing.length).toBeGreaterThan(0)
+    expect(roots).toEqual(existing)
+  })
+
+  it("KERNEL_SURFACE inclui src/app/** e src/_app/** de cada casca web", () => {
+    for (const root of webShellRoots()) {
+      expect(KERNEL_SURFACE).toContain(resolve(root, "src", "app"))
+      expect(KERNEL_SURFACE).toContain(resolve(root, "src", "_app"))
+    }
   })
 
   it("nenhum token de módulo sobrevive na casca do template", () => {

@@ -374,21 +374,21 @@ trataria toda checagem de sessão como logout; `AppProviders` (`@/app/providers/
 aceita um `ProductProviders` opcional para providers de contexto do produto. Nenhum dos três
 exige editar `shell.tsx`, `main.tsx` ou `app-providers.tsx`.
 
-### Receita: Next.js (`middleware.ts` + layout)
+### Receita: Next.js (`middleware.ts` + `src/_app/layout/access-slot.tsx`)
 
 O `middleware` roda no edge, sem o cache do React Query: ele só decide o que dá para decidir
-pelo cookie de sessão — presença do cookie contra `IDENTITY_ROUTE_ACCESS[pathname]`. A checagem
-de permissão fica no layout do segmento, que já tem a sessão:
+pelo cookie de sessão — presença do cookie contra `ROUTE_ACCESS[pathname]`. A checagem
+de permissão fica no `AccessGuard` de `src/_app/layout/access-slot.tsx`, que já tem a sessão:
 
 ```ts
 import { NextResponse } from "next/server"
 
-import { IDENTITY_ROUTE_ACCESS } from "@/entities/identity/core/route-access"
+import { ROUTE_ACCESS } from "@/shared/config/route-access"
 
 import type { NextRequest } from "next/server"
 
 export function middleware(request: NextRequest) {
-  const access = IDENTITY_ROUTE_ACCESS[request.nextUrl.pathname] ?? {
+  const access = ROUTE_ACCESS[request.nextUrl.pathname] ?? {
     kind: "authenticated",
   }
   const hasSession = request.cookies.has(
@@ -401,8 +401,8 @@ export function middleware(request: NextRequest) {
 }
 ```
 
-No layout autenticado, busque `GET /v1/auth/session` no servidor e aplique
-`resolveAccess(user, access)` — `forbidden` vira `notFound()` ou um redirect; `anon` vira
+No `AccessGuard` de `src/_app/layout/access-slot.tsx`, busque `GET /v1/auth/session` no servidor
+e aplique `resolveAccess(user, access)` — `forbidden` vira `notFound()` ou um redirect; `anon` vira
 redirect para o login. Nunca confie só no middleware: cookie presente não é sessão válida.
 
 ### Receita: formulário de login

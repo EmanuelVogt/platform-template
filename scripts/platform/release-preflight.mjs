@@ -24,7 +24,10 @@ function changelogPathFor(repoRoot) {
 // Tag anterior à que está sendo liberada: a mais recente que já existe no
 // repositório (a tag de `version` ainda não existe — é checado antes desta
 // chamada). Sem tag alguma, não há linha de base para o guard de entradas.
-function previousStableTag({ repoRoot, exec }) {
+// Exportada: lib/lint.mjs (catalog:lint) reusa `entryChangedWithoutBump`
+// daqui — não o contrário, pois este arquivo chega ao filho e lib/lint.mjs
+// está em `_exclude` (copier.yml).
+export function previousStableTag({ repoRoot, exec }) {
   const result = exec(
     "git",
     ["ls-remote", "--tags", "--refs", repoRoot, "v*"],
@@ -51,7 +54,12 @@ function moduleVersionAt({ repoRoot, exec, ref, entryDir }) {
 // `module.json.version` permanece igual é a classe de bug do issue #9
 // (colisão em 2.0.0). Entradas novas (sem baseline na tag anterior) ficam
 // de fora — não há "sem bump" possível pra algo que ainda não existia.
-function entryChangedWithoutBump({ repoRoot, exec, previousTag, entryDir }) {
+export function entryChangedWithoutBump({
+  repoRoot,
+  exec,
+  previousTag,
+  entryDir,
+}) {
   const relDir = path.relative(repoRoot, entryDir)
   const diffResult = exec(
     "git",

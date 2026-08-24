@@ -3,6 +3,11 @@ import path from "node:path"
 import semver from "semver"
 import { AdvisoryParseError, parseAdvisory } from "./frontmatter.mjs"
 import { ManifestValidationError, validateManifest } from "./manifest.mjs"
+import { stableTagsFromLsRemote } from "./template-version.mjs"
+// `entryChangedWithoutBump` mora em release-preflight.mjs, não aqui: este
+// arquivo está em `_exclude` (copier.yml) e release-preflight.mjs não —
+// a direção inversa quebraria o import no filho (excluded-imports.test.mjs).
+import { entryChangedWithoutBump } from "../release-preflight.mjs"
 
 export { discoverEntries } from "./entries.mjs"
 
@@ -165,4 +170,51 @@ export function lintAdvisoryModule(advisory, entryNames) {
   return [
     `module "${advisory.module}" não é "kernel" nem uma entrada existente do catálogo (${advisory.id})`,
   ]
+}
+
+// CAT-02: catalog:lint precisa de uma falha alta e distinta quando não há
+// linha de base — ao contrário do preflight, que pula o guard em silêncio
+// (a release ainda não tem tags para comparar). Um clone raso sem
+// `fetch-depth: 0` (T35) é o caso real que isso precisa nomear, nunca deixar
+// passar quieto.
+export function resolveBaseline({ repoRoot, exec }) {
+  const result = exec(
+    "git",
+    ["ls-remote", "--tags", "--refs", repoRoot, "v*"],
+    { cwd: repoRoot }
+  )
+  if (result.status !== 0) {
+    return {
+      unavailable: `"git ls-remote" falhou em ${repoRoot} (status ${result.status}) — path fora de um repositório git?`,
+    }
+  }
+  const tag = stableTagsFromLsRemote(result.stdout ?? "").at(-1)
+  if (!tag) {
+    return {
+      unavailable: `nenhuma tag estável "v*" alcançável a partir de ${repoRoot} — clone raso sem fetch-depth: 0 (T35) ou repositório sem tags?`,
+    }
+  }
+  return { tag }
+}
+
+export function lintEntryBump({ repoRoot, exec, entries }) {
+  const baseline = resolveBaseline({ repoRoot, exec })
+  if (baseline.unavailable) return [`lintEntryBump: ${baseline.unavailable}`]
+  const errors = []
+  for (const entryDir of entries) {
+    if (
+      entryChangedWithoutBump({
+        repoRoot,
+        exec,
+        previousTag: baseline.tag,
+        entryDir,
+      })
+    ) {
+      const relDir = path.relative(repoRoot, entryDir)
+      errors.push(
+        `${relDir}: mudou desde ${baseline.tag} sem bump de versão em module.json`
+      )
+    }
+  }
+  return errors
 }

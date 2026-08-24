@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process"
 import { existsSync, readFileSync, readdirSync } from "node:fs"
 import path from "node:path"
 import { isAdvisoryFilename, parseAdvisory } from "./lib/advisories.mjs"
@@ -12,12 +13,18 @@ import {
   lintAdvisoryFrontmatter,
   lintAdvisoryModule,
   lintChangelogVersion,
+  lintEntryBump,
   lintKernelRange,
   lintManifest,
   lintProductionTestingImports,
   lintReadmeHeadings,
   lintWebImports,
 } from "./lib/lint.mjs"
+
+function defaultExec(command, args, options = {}) {
+  const result = spawnSync(command, args, { encoding: "utf8", ...options })
+  return { status: result.status ?? 1, stdout: result.stdout ?? "" }
+}
 
 function walkSourceFiles(dir) {
   if (!existsSync(dir)) return []
@@ -134,6 +141,11 @@ export function runLint({
   contractPath = "docs/catalog/README-contract.md",
   advisoriesDir = "docs/advisories",
   changelogPath = "docs/dev/template-changelog.md",
+  // Sem `repoRoot`, lintEntryBump não roda: precisa de um repositório git de
+  // verdade (ver entry-bump-lint.test.mjs) — quem chama sem ele (fixtures de
+  // outros lints) não paga o custo nem o risco de um `git` fora do repo.
+  repoRoot,
+  exec = defaultExec,
 } = {}) {
   const contractHeadings = existsSync(contractPath)
     ? extractContractHeadings(readFileSync(contractPath, "utf8"))
@@ -148,11 +160,14 @@ export function runLint({
     errors.push(...lintEntry(entryDir, contractHeadings, kernelVersion))
   }
   errors.push(...lintAdvisories(advisoriesDir, entryNames))
+  if (repoRoot) {
+    errors.push(...lintEntryBump({ repoRoot, exec, entries: entryDirs }))
+  }
   return errors
 }
 
 if (isMain(import.meta.url, process.argv[1])) {
-  const errors = runLint()
+  const errors = runLint({ repoRoot: process.cwd() })
   if (errors.length > 0) {
     for (const error of errors) process.stderr.write(`${error}\n`)
     process.exit(1)

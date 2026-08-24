@@ -206,7 +206,8 @@ Whoever evolves the template (rather than a product) reads [`TEMPLATE.md`](/TEMP
 ```bash
 pnpm template:smoke                 # renders a kernel-only product and runs check + tests
 pnpm catalog:check [entry…]         # catalog pre-tag gate: installs each entry and tests it
-git tag vX.Y.Z && git push --tags   # publishes the version products will receive
+pnpm platform release               # compose the marker commit
+git push origin main                # cut the tag from the marker
 ```
 
 House rules: nothing product-specific enters the template (no brand, domain or business outside the Jinja

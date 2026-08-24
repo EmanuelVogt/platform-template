@@ -121,9 +121,11 @@ projects), and fails on the first failing step — it blocks before the Docker b
 Self-installs on `pnpm install` (`prepare` script). Emergency escape: `git push --no-verify`
 (the prod build still typechecks).
 
-**CI.** `.github/workflows/ci.yml` — `quality` (lint + typecheck + builds) / `test-unit`
-(api + web) / `test-coverage` (api integration + e2e, testcontainers), on PR and on push to
-`main`. The full `build` lives in `quality`.
+**CI.** `.github/workflows/ci.yml` — a single workflow that runs: `quality` (lint + typecheck +
+builds) / `test-unit` (api + web) / `test-coverage` (api integration + e2e, testcontainers) for
+every push and PR, plus `detect` (checks if `catalog/` exists) and the three template-only catalog
+jobs (`catalog:lint`, `catalog:typecheck`, `catalog:check` matrix) which are inert in a generated
+product. The full `build` lives in `quality`.
 
 A **local commit triggers neither gate.** Run `pnpm check` before asking for review.
 
@@ -132,5 +134,6 @@ push = deploy ([`../dev/deploy.md`](../dev/deploy.md#deploy-flow), operational a
 [`infra.md`](infra.md)). An agent never pushes `main` on its own and never moves a deploy
 branch — those are the user's acts; the agent stops at the local commit and says so.
 
-**Tags.** A `v*` tag is cut only by the user dispatching the `release` workflow — never
-by a push, never by an agent. The agent still never tags or pushes on its own.
+**Tags.** The user runs `pnpm platform release`, reviews the empty marker commit
+`chore(release): vX.Y.Z`, and pushes it; the push cuts the tag. The agent still never tags or
+pushes on its own — `pnpm platform release` commits locally and stops.

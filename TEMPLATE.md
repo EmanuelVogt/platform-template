@@ -26,8 +26,9 @@ copier copy --trust gh:EmanuelVogt/platform-template ./my-product
 
 ## Publishing a version
 
-Every change products should receive becomes a semver tag: `git tag v1.2.0 && git push --tags`.
-The product updates with `copier update` (see `docs/dev/template.md`).
+Every change products should receive becomes a semver tag. Run `pnpm platform release`, review
+the empty marker commit `chore(release): vX.Y.Z`, and push it; the push cuts the tag. The product
+updates with `copier update` (see `docs/dev/template.md`).
 
 ## Testing the template
 

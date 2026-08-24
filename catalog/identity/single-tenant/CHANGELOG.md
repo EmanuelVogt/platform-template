@@ -4,6 +4,13 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 [semver](https://semver.org/lang/pt-BR/). Toda versão que leva código lista os advisories
 (`docs/advisories/ADV-*.md`) que carrega.
 
+## [2.0.1]
+
+### Changed
+
+- Reformatação mecânica pelo `prettier` (config reparada em `prettier-format-gate`). Sem
+  mudança de comportamento, versão de dependência ou conteúdo do manifesto. Sem advisory.
+
 ## [2.0.0]
 
 ### Breaking

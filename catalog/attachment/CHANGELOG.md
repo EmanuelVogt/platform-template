@@ -2,6 +2,13 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [2.0.1]
+
+### Changed
+
+- Reformatação mecânica pelo `prettier` (config reparada em `prettier-format-gate`). Sem
+  mudança de comportamento, versão de dependência ou conteúdo do manifesto.
+
 ## [2.0.0]
 
 ### Breaking

@@ -74,13 +74,13 @@ parallel**, one worker each; tasks inside a cluster run in the listed order.
 | 1 | C4 | T10 → T11 | `docs/agents/workflow.md`, `TEMPLATE.md`, `docs/catalog/catalog.md`, `docs/dev/template.md`, `docs/dev/deploy.md.jinja`, `.github/README.md` | docs · gate: scoped · **haiku** (prose edits, no logic) |
 | 2 (exclusive) | C5 | T3 | `copier.yml`, `scripts/platform/__tests__/copier-delivery.test.mjs` | root manifest — alone · gate: scoped · **sonnet** · ⚠ cross-session single-editor collision |
 | 3 (exclusive) | C6 | T12 | `.specs/STATE.md` | **orchestrator writes this, never a worker** · gate: none |
-| 4 (exclusive) | C7 | T13 | `docs/dev/template-changelog.md` | ⛔ **BLOCKED on the `v2.3.0` tag** — owner's act · gate: scoped · **sonnet** |
+| 4 (exclusive) | C7 | T13 | `docs/dev/template-changelog.md` | ✅ **CLOSED as obsolete** — content already shipped in the v2.3.0 section (`e3ac20d`) |
 
 ```
 Wave 1:  [C1: T1 → T2] ∥ [C2: T4 → T5 → T6 → T7] ∥ [C3: T8 → T9] ∥ [C4: T10 → T11]
 Wave 2:  [C5: T3]    (exclusive)
 Wave 3:  [C6: T12]   (exclusive, orchestrator)
-Wave 4:  [C7: T13]   (exclusive, BLOCKED)
+Wave 4:  [C7: T13]   (exclusive, CLOSED as obsolete — never ran)
 ```
 
 ---
@@ -456,7 +456,7 @@ writer of `.specs/` during Execute (skill rule).
 
 ---
 
-### T13: The `v2.4.0` changelog section ⛔ BLOCKED
+### T13: The `v2.4.0` changelog section ✅ CLOSED — obsolete, not executed
 
 **What**: This feature's entry in the shared `v2.4.0` section.
 **Where**: `docs/dev/template-changelog.md`
@@ -467,17 +467,31 @@ writer of `.specs/` during Execute (skill rule).
 ("Changelog section — shares `v2.4.0` with `audit-2026-08-23-remediation`") and it is what makes
 the work releasable.
 
-**⛔ Two blockers, both outside this feature:**
+**✅ CLOSED 2026-08-24 — obsolete, deliberately not executed, on the owner's ruling.**
 
-1. **The `v2.3.0` tag does not exist.** `docs/dev/template-changelog.md:6` is still
-   `## v2.3.0`, untagged. `release-preflight.mjs` keys on the *latest* section (AD-034), so
-   appending a `## v2.4.0` above it makes `v2.3.0` permanently untaggable. Tagging is the
-   owner's act and no agent performs it.
-2. **The section is shared.** `audit-2026-08-23-remediation` area H owns the same `v2.4.0`
-   section and is queued behind the same tag. Whoever writes first creates the section; the
-   second appends. This must be coordinated, not raced.
+Both blockers are gone, and the task went with them. Blocker 1 was cleared by the tag itself:
+marker `6c44937`, annotated tag `73ea22c`, Release published and Latest. Blocker 2 never had
+to be arbitrated, because the entry this task was to write **already exists** — in the
+**v2.3.0** section, `docs/dev/template-changelog.md:9-19`, item 1 *"Release gate, cut from a
+marker commit"*. It records both halves this task owed: the marker release **and**
+`catalog.yml` merged into `ci.yml` with AD-036 — which is exactly the `Commit:` subject below,
+in the wrong section with the right content. Provenance, do not re-derive: the text entered at
+the merge `e3ac20d` and is absent from `8ee1323`, `60a011a` and `0ec749a`, so the session that
+reconciled `main` folded it into v2.3.0 instead of v2.4.0.
 
-**Done when** (once unblocked):
+Consequence: **there is no v2.4.0 content left to write.** Every commit on `main` is an
+ancestor of the marker and therefore shipped as v2.3.0. Writing an empty `## v2.4.0` would
+also be actively harmful — `release-preflight` keys on the *latest* section (AD-034), so it
+would silently become the default target of the next `pnpm platform release`.
+
+The `## v2.4.0` section does exist now (`56ad498`), but **not** for this task's content: it
+describes the `release` flag guard (`e2709f3`), a kernel fix made later in the same session
+and one that genuinely ships to the child. `audit-2026-08-23-remediation`'s area H appends to
+that section rather than creating it — the protocol this task specified for the shared slot.
+
+`docs/dev/template-changelog.md` carries no entry for this task, by decision.
+
+**Done when** (superseded — none of these were executed):
 
 - [ ] A `## v2.4.0` section exists with this feature's entry
 - [ ] Its `### Child migration steps` is the literal `None — copier update is enough.` — a

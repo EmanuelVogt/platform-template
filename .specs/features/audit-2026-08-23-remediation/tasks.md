@@ -3117,3 +3117,100 @@ until that tag exists (release boundary, § *Wave Plan*).
 adding it here would have moved the `v2.4.0` boundary. It stays recorded in wave 4's Finding 2 and
 in `.specs/STATE.md`, and it wants its own task beside T33's tests in
 `scripts/platform/__tests__/entry-bump-lint.test.mjs`.
+
+---
+
+## Fix Round 1 (`v2.4.0` scope) — authored 2026-08-24 after Verifier pass 1 FAIL
+
+Source: `validation.md` § *Fix Plans*. Two clusters, dispatched in parallel, then one Build gate,
+then the **same Verifier resumed** with the fix range (round 2 of a 3-round bound).
+
+**Fix 5 is deliberately NOT in this round.** The Verifier itself marked it *"Major, cross-feature —
+ownership sits on the boundary between the two features; route it deliberately."* `apps/web-next`
+belongs to the sibling feature `web-stack-next`, and that session holds uncommitted edits in this
+same checkout. It gates no blocker: the default `web_stack=vite` path is unaffected. It needs an
+owner ruling, not a worker. **Fix 6 is informational** — recorded so the `v3.0.0` pass does not
+re-litigate TOOL-12 as new; no task.
+
+### Cluster CF1 — the platform guard surface (sonnet)
+
+Owns `scripts/platform/__tests__/**` **except** `hook-references.test.mjs` (CF2's), plus
+`.claude/hooks/specs-in-english.mjs`.
+
+#### FT1: The hygiene gate scans pilot-domain vocabulary end to end — **Blocker**
+
+**What**: `brand-hygiene.test.mjs` defines `OWNER_DOMAIN_TERMS` (`:27-35`) and `domainHits`
+(`:75-86`) but never calls them from the end-to-end loop (`:183-198`), which runs `brandHits` and
+`infraHits` only. A rendered child carrying `Hospedes`, `Reservas`, `agendamento`, `quartos`,
+`guests` passes the gate — that is Verifier mutant 6, the one that survived.
+**Where**: `scripts/platform/__tests__/brand-hygiene.test.mjs:183-198`
+**Touches**: `scripts/platform/__tests__/brand-hygiene.test.mjs`, `.claude/hooks/specs-in-english.mjs`
+**Done when**:
+- [ ] The end-to-end loop calls `withoutKnownExceptions(domainHits(text), rel)` alongside the brand
+      and infra scans
+- [ ] The known blocker is resolved: `.claude/hooks/specs-in-english.mjs`'s illustrative comment
+      quotes domain nouns in Portuguese. **Reword it if the hook still reads as its own
+      documentation without them; add a scoped `KNOWN_EXCEPTIONS` entry only if it does not** — that
+      hook's purpose is to demonstrate non-English prose, so an exception may be the honest answer.
+      Whichever is chosen, justify it in the commit body.
+- [ ] A new test seeds each of the five nouns above into a rendered child and asserts the gate fails
+      on every one — the mutant must die
+- [ ] Gate passes: `pnpm test:scripts`
+**Gate**: quick · **Commit**: `fix(hygiene): scan pilot-domain vocabulary end to end`
+
+#### FT2 – FT8: one guard assertion per proof-downgraded requirement — **Major**
+
+**What**: the spec's traceability declares `test` for RUN-02, LOC-02, LOC-06, SEAM-07, TOOL-09,
+TOOL-10 and (partly) BRAND-06, but T7, T9, T10, T14, T15, T24, T32 and T38 shipped
+`Tests: none · Gate: build`. Every outcome is correct on disk today — the Verifier confirmed each by
+inspection — but nothing fails if it regresses. One atomic commit per requirement.
+
+| Task | Requirement | The assertion to write |
+| --- | --- | --- |
+| FT2 | BRAND-06 | the compose / `docker-entrypoint.dev.sh` half of the backfill scan |
+| FT3 | RUN-02 | the Redis credential match |
+| FT4 | LOC-02 | the single-language-home reference set |
+| FT5 | LOC-06 | the favicon route |
+| FT6 | SEAM-07 | the `main.ts` ownership row |
+| FT7 | TOOL-09 | the workflow / deploy doc-vs-pipeline cross-check |
+| FT8 | TOOL-10 | the four-source platform matrix |
+
+**Touches**: files under `scripts/platform/__tests__/` — co-locate with the existing guard of the
+same requirement where one exists, otherwise name a new file. **Never `hook-references.test.mjs`.**
+**Done when** (each): the assertion fails when the shipped outcome is reverted by hand — prove it,
+do not assume it · `pnpm test:scripts` green · one commit per task.
+**Gate**: quick · **Commit**: `test(<area>): guard <REQ-ID>`
+
+### Cluster CF2 — LOC-01 and the half-guarded ACs (sonnet)
+
+Owns `docs/agents/issue-tracker.md.jinja`, `scripts/platform/__tests__/hook-references.test.mjs`,
+and any new test file it names under `scripts/platform/__tests__/` that CF1's table does not claim.
+
+#### FT9: LOC-01 — `issue-tracker.md.jinja` stops hardcoding the locale — **Blocker**
+
+**What**: `:21` reads *"Issue titles and bodies are in **pt-BR**"*. LOC-01 names this file as one of
+the four the locale must thread through, and it is a `.jinja` file, so it can interpolate. A
+`product_locale=en` child is told to file issues in pt-BR.
+**Where**: `docs/agents/issue-tracker.md.jinja:21`
+**Done when**:
+- [ ] The literal is replaced by `{{ product_locale }}`, or the sentence points at the canonical
+      statement the way `code-quality.md:12,47` and `communication.md:9` already do — match whichever
+      shape those two files established; do not invent a third
+- [ ] The assertion LOC-01 lacks is added, and it covers **all four** files the requirement names
+- [ ] **Verify the absence of change at `product_locale=pt-BR`** — a child without the key must see
+      no shipped string move (Verifier notes, the locale-default rule)
+- [ ] Gate passes: `pnpm test:scripts`
+**Gate**: quick · **Commit**: `fix(docs): thread product_locale through issue-tracker`
+
+#### FT10 – FT12: the three half-guarded ACs — **Minor**
+
+| Task | AC | What is missing |
+| --- | --- | --- |
+| FT10 | BRAND-03 | the `gh label list` discovery placeholder satisfies the shipped shape (wave-1 deviation 1, adjudicated) but nothing asserts the placeholder mechanism or the closed-list rule |
+| FT11 | SEAM-03 | `registerAppGuard` is tested; the "no edit to `shell.tsx` / `main.tsx` / `app-providers.tsx`" claim lives only in `catalog/identity/single-tenant/README.md:315,375` |
+| FT12 | TOOL-07 | `hook-references.test.mjs` walks hooks only; the AC also says "or handbook" |
+
+**Done when** (each): one commit · `pnpm test:scripts` green · **if an assertion cannot be written
+without editing `apps/web*/**` or a catalog entry's source, STOP and report instead of expanding** —
+that is a plan decision, not a worker's.
+**Gate**: quick · **Commit**: `test(<area>): guard <AC-ID>`

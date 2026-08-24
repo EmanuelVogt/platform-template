@@ -221,6 +221,71 @@ The rule that covers both: *a gate is not evidence until you know how many files
 where they were.* Every Done-when asserting a gate passes should be read as also asserting **what
 that run actually looked at**.
 
+### 0.9 T42 and T48 corrections, verified on disk at HEAD `8be20f5` (before the wave-4 dispatch)
+
+Two tasks still ahead inherited coordinates the tree has since moved past. Both were verified by
+reading the tree, not by re-deriving the plan.
+
+**Header drift, harmless but noted:** `tasks.md:19` still records `Base: v2.2.1` and calls `v2.3.0`
+*"authored but untagged"*. `v2.3.0` was tagged and Released 2026-08-24 (marker `6c44937`). No task
+body depends on that line.
+
+#### T42 — half of it already landed, and the landed half carries the wrong reason
+
+| Plan said | On disk | Effect |
+| --- | --- | --- |
+| Done-when 1: all five `version` fields leave `2.0.0` | **already true** — `c9803f8` bumped all five `2.0.0` → `2.0.1`, and it did so for the prettier pass (`06f35fb`), not for CAT-01 | the bullet is satisfied by a prior commit. **Do not re-bump reflexively**; decide deliberately (below) |
+| Done-when 2: each `CHANGELOG.md` records the bump and why | **the `## [2.0.1]` sections exist** — `attachment:5`, `audit:5`, `identity/single-tenant:7`, `notification:5`, `tag:5` — but every one of them says *"mechanical prettier reformatting"* | formally satisfied, substantively not: the recorded *why* is the format pass, never the address collision CAT-01 names |
+| Done-when 3: the five `affects` stop being `>=1.0.0 <2.0.0` | **untouched** — all five still carry `affects: ">=1.0.0 <2.0.0"` at `ADV-20260822-0{1..5}.md:5` | **this is T42's real remaining work.** It is the whole substantive half |
+| Done-when 4/5: `pnpm catalog:lint` green, including T33's rule | green, and it stays green either way — see the rule's semantics below | the lint proves nothing about whether T42 ran |
+
+**The bump rule cannot referee this decision, and that matters.** `entryChangedWithoutBump`
+(`release-preflight.mjs:57-84`) runs `git diff --quiet <previousTag> HEAD -- <relDir>` at `:66` and
+returns `false` immediately when the directory did not change (`:69`); it flags only *changed **and**
+unbumped*. `lintEntryBump` (`lib/lint.mjs:225-245`) reuses it. So **a version bump with no tree
+change is invisible to the rule** — it can neither demand nor forbid one. And
+`git diff --name-only v2.3.0..HEAD -- catalog/` is **empty**: nothing under `catalog/` has moved
+since the tag, so the rule is satisfied at HEAD and will remain satisfied whatever T42 does. This is
+§ 0.8's *silent* mode again — a green gate that does not reach the question being asked.
+
+**The collision CAT-01 names is now historical, and the worker must reason from that.** The defect
+was that entry version `2.0.0` designated two different codebases, one under template tag `v2.0.0`
+and one under `v2.1.0`. `2.0.1` designates exactly one codebase, cut at `c9803f8`, and no new content
+can ever enter `2.0.0`. So the *address* is already unambiguous; what is still broken is that the
+five advisories point at a range which **excludes** the population that carries the defect.
+
+**Recommended range, to be confirmed against the tree rather than inherited:** `>=1.0.0 <2.0.1` —
+it includes both `2.0.0` codebases and every `1.x`, and excludes `2.0.1`, the first version whose
+address is unambiguous. If T42 does re-bump the entries, the upper bound follows the new version.
+`docs/advisories/README.md` documents **no** convention for naming an ambiguous population
+(`:16` shows only the plain semver-range template), so the range is a choice this task makes and
+justifies in the advisory body — it is not inherited from anywhere.
+
+**Scope this leaves T42:** correct the five `affects`; record the address disambiguation in each
+entry's `CHANGELOG.md` (the `## [2.0.1]` section exists — say why the version is the one advisories
+now key on); re-bump only if the worker can state on the tree why `2.0.1` is insufficient, and
+**stop and report instead of guessing** if it can. `ADV-20260822-04` was edited by T20 and `-02` by
+T34 — both earlier waves, so no race, but re-read them before writing.
+
+#### T48 (area H) — unblocked, and it appends to a section that already exists
+
+| Plan said | On disk | Effect |
+| --- | --- | --- |
+| `BLOCKED` until `git tag -l v2.3.0` is non-empty | returns `v2.3.0` — tagged and Released 2026-08-24 | **the block is lifted.** The Done-when bullet asserting it was checked before the first edit is satisfiable |
+| *"Author `## v2.4.0`"* | `docs/dev/template-changelog.md:7` **already holds `## v2.4.0`**, created by `56ad498` for the `release` flag guard (`e2709f3`), with `### Changes` item 1 at `:14-20` and `### Child migration steps` = the literal `None — copier update is enough.` at `:22-24` | T48 **APPENDS** — new numbered items after item 1, under the existing `### Changes`. It never recreates the heading and never re-authors the section |
+
+**Why the section exists despite the ruling that closed T13.** T13 concluded there was no `v2.4.0`
+content left to write, and that was correct at the time: every commit then on `main` had shipped
+inside `v2.3.0`. The flag-guard fix (`e2709f3`) landed **after** that conclusion and is kernel code
+that reaches the child, so it is genuine `v2.4.0` content. The section therefore describes the flag
+guard, and area H extends it — which is the protocol T13 itself specified for this shared slot.
+
+**Three invariants for T48, all still binding:** the `## v2.3.0` section (`:26` onward) is
+**untouched**; `## v2.4.0` stays the **latest** section so `release-preflight` keys on it (AD-034);
+and its `### Child migration steps` stays the literal `None — copier update is enough.` — AD-034
+forbids a manual step on a non-major, and waves 1–7 were authored to honour that. The agent does not
+tag and does not push (AD-006/AD-034).
+
 ---
 
 ## Test Coverage Matrix

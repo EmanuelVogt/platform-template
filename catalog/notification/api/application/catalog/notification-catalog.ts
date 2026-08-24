@@ -49,11 +49,12 @@ const NOTIFICATION_TIMEZONE = "America/Sao_Paulo"
 // DEFAULT_LOCALE via env() (env.ts:66), mas env() é loadEnv() memoizada,
 // validação fail-fast de todo o ambiente (env.ts:104-119): chamá-la aqui
 // exigiria um DATABASE_URL válido só para formatar uma data. Lê a variável
-// bruta com o mesmo default do kernel (vazio conta como ausente, nunca
-// lança); vira config quando o kernel expuser um acessor de locale que não
-// force a validação completa.
+// bruta com o mesmo default do kernel (não definida OU vazia contam como
+// ausente, nunca lança); vira config quando o kernel expuser um acessor de
+// locale que não force a validação completa.
 function notificationLocale(): string {
-  return process.env.DEFAULT_LOCALE || "pt-BR"
+  const locale = process.env.DEFAULT_LOCALE
+  return locale !== undefined && locale !== "" ? locale : "pt-BR"
 }
 
 function formatDateTime(iso: string): string {

@@ -41,7 +41,7 @@ export const permissionSetSchema = z
   .max(PERMISSION_KEYS.length)
   .refine(noDuplicates, NO_DUPLICATES)
 
-// Áreas/serviços de atuação e áreas de agendamento. Schemas PLANOS de
+// Áreas/serviços de atuação e as áreas restritas por perfil. Schemas PLANOS de
 // propósito (sem superRefine): ZodEffects quebraria a introspecção
 // OpenAPI→Kubb — o `.refine` de duplicata é um check simples do Zod 4, que
 // preserva o shape de array na introspecção. A regra cross-field (quem atende exige ≥1 área de atuação;
@@ -139,7 +139,7 @@ export const userListItemSchema = z.object({
   // Áreas/serviços de atuação (quem atende cliente). Vazios para os demais.
   areaIds: z.array(z.string()),
   serviceIds: z.array(z.string()),
-  // Áreas de agendamento (perfil Agendamentos). Vazias para os demais.
+  // Áreas restritas a determinados perfis. Vazias para os demais.
   schedulingAreaIds: z.array(z.string()),
   avatarAttachmentId: z.string().nullable(),
   createdAt: z.string(),
@@ -185,7 +185,7 @@ export const createUserSchema = z.object({
   // Quem atende cliente. Omitidos/[] para os demais (o server os ignora).
   areaIds: areaIdsSchema.default([]),
   serviceIds: serviceIdsSchema.default([]),
-  // Perfil Agendamentos. Omitido/[] nos demais perfis (o server o ignora).
+  // Restrito a determinados perfis. Omitido/[] nos demais perfis (o server o ignora).
   schedulingAreaIds: areaIdsSchema.default([]),
 })
 export class CreateUserDto extends createZodDto(createUserSchema) {}
@@ -202,7 +202,7 @@ export const updateUserSchema = z.object({
   // Quem atende cliente. Omitidos/[] para os demais (o server os ignora).
   areaIds: areaIdsSchema.default([]),
   serviceIds: serviceIdsSchema.default([]),
-  // Perfil Agendamentos. Omitido/[] nos demais perfis (o server o ignora).
+  // Restrito a determinados perfis. Omitido/[] nos demais perfis (o server o ignora).
   schedulingAreaIds: areaIdsSchema.default([]),
 })
 export const updateUserParamsSchema = idParamSchema

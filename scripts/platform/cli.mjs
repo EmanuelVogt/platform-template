@@ -69,9 +69,17 @@ registerCommand("status", async ({ options, deps }) =>
   statusCommand({ options, ...deps })
 )
 
-registerCommand("release", async ({ positionals, deps }) =>
-  releaseCommand({ version: positionals[0], ...deps })
-)
+registerCommand("release", async ({ positionals, options, deps }) => {
+  // `parseArgs` consome o token seguinte como valor da flag, então em
+  // `release --push 2.3.0` a versão chega em `options.push`, não nos posicionais.
+  const flagVersion =
+    typeof options.push === "string" ? options.push : undefined
+  return releaseCommand({
+    version: positionals[0] ?? flagVersion,
+    push: options.push !== undefined,
+    ...deps,
+  })
+})
 
 registerCommand("feedback", async ({ positionals, options, deps }) =>
   feedbackCommand({ draftPath: positionals[0], options, ...deps })

@@ -208,6 +208,7 @@ pnpm template:smoke                 # renders a kernel-only product and runs che
 pnpm catalog:check [entry…]         # catalog pre-tag gate: installs each entry and tests it
 pnpm platform release               # compose the marker commit
 git push origin main                # cut the tag from the marker
+pnpm platform release --push        # both at once; the tag is still the CI's act
 ```
 
 House rules: nothing product-specific enters the template (no brand, domain or business outside the Jinja

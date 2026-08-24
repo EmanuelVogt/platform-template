@@ -189,10 +189,12 @@ describe("notificationCatalog", () => {
         "10/06/2026, 15:30"
       )
     } finally {
-      for (const [key, value] of Object.entries(saved)) {
-        if (value === undefined) delete process.env[key]
-        else process.env[key] = value
-      }
+      if (saved.DATABASE_URL === undefined) delete process.env.DATABASE_URL
+      else process.env.DATABASE_URL = saved.DATABASE_URL
+      if (saved.REDIS_URL === undefined) delete process.env.REDIS_URL
+      else process.env.REDIS_URL = saved.REDIS_URL
+      if (saved.WEB_ORIGIN === undefined) delete process.env.WEB_ORIGIN
+      else process.env.WEB_ORIGIN = saved.WEB_ORIGIN
       vi.resetModules()
     }
   })

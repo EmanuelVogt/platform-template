@@ -96,7 +96,7 @@ export async function resolveUserAccess(
   assertProfileFloor(input.accessProfile, input.permissions)
 
   // Duas perguntas independentes (ADR 0082): atuação segue a marcação de
-  // atendimento; agendamento segue o perfil. Uma nunca zera a outra.
+  // atendimento; a segunda segue o perfil. Uma nunca zera a outra.
   const attendance = await resolveAttendanceScope(input, scope)
   const schedulingAreaIds = await resolveSchedulingAreas(input, scope)
 
@@ -131,7 +131,7 @@ async function resolveSchedulingAreas(
 ): Promise<string[]> {
   if (input.schedulingAreaIds.length === 0) return []
   // Reusa a validação estrutural do port (existência/atividade da área);
-  // o erro sai traduzido com o type da relação de agendamento, não o do
+  // o erro sai traduzido com o type da relação restrita por perfil, não o do
   // escopo de atuação — são vínculos independentes.
   try {
     await scope.assertValid(input.schedulingAreaIds, [])

@@ -56,8 +56,8 @@ precise spec. Opus is narrow: only when the cluster edits domain entities/transi
 transaction/outbox/ALS code, a migration, contract regeneration, or a rule an ADR governs.
 "Ordering-sensitive config" is not, by itself, a reason for opus — a precise `Touches` payload is
 the mitigation for a wide-blast-radius file, not a stronger model. The Verifier follows the same
-default: sonnet unless the spec touches auth, payments, availability/booking rules, or data
-integrity (P0) — tooling, CI, docs and build/resolution features stay sonnet even sitting in a
+default: sonnet unless the spec touches auth, payments, data integrity, or a rule the
+product's own domain doc marks critical (P0) — tooling, CI, docs and build/resolution features stay sonnet even sitting in a
 pre-push gate or the prod build path. Haiku stays for pure mechanics, but its payload must say
 "surgical edits, no formatter runs" — a haiku docs worker reformatted two files with prettier on
 2026-08-17 with no such instruction.
@@ -70,7 +70,7 @@ spec-workers plus one opus verifier; the 51 haiku scouts/runners in the same fea
 | --- | --- | --- | --- |
 | **low** (haiku) | is pure mechanics: fixtures, renames, config, copy, a spec file mirroring an existing one — payload must forbid reformatting | never | runner for the Build/Final gate; scout for one known symbol |
 | **mid** (sonnet) — default for every cluster | is anything not listed under high: CRUD, UI from the design system, tests from a precise spec, root config, tooling, CI, docs, wiring with an existing pattern to copy | default for every feature: spec has precise outcomes and nothing below applies | scout default; runner only to slice a red log |
-| **high** (opus) — narrow | edits domain entities/transitions, transactions/outbox/ALS, a migration, contract regeneration, or a rule an ADR governs | touches auth, payments, availability/booking rules, or data integrity (P0) — a weak verifier passing bad work is worse than none | scout for a whole-module map when the answer drives design |
+| **high** (opus) — narrow | edits domain entities/transitions, transactions/outbox/ALS, a migration, contract regeneration, or a rule an ADR governs | touches auth, payments, data integrity, or a rule the product's own domain doc marks critical (P0) — a weak verifier passing bad work is worse than none | scout for a whole-module map when the answer drives design |
 
 **Escalate before you repeat:** a cluster STOPPED `gate-failed` twice at one tier is re-dispatched
 one tier up, not a third time at the same tier; a Verifier FAIL whose gaps are architectural rather

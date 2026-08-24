@@ -7,19 +7,11 @@ import { fileURLToPath } from "node:url"
 const TESTS_DIR = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(TESTS_DIR, "..", "..", "..")
 
-// SPEC_DEVIATION: scope narrowed from the literal "docs/agents/**" to exclude harness.md.
-// Reason: harness.md still names the hospitality-era P0 taxonomy ("booking rules") — that is
-// BRAND-04, a different task in a later wave (tasks.md § 0.1), and this task must not touch
-// harness/skill files. Scanning it here would fail this feature's own wave-1 gate for a
-// defect this task cannot fix.
-const EXCLUDED_FILES = new Set(["docs/agents/harness.md"])
-
 function scannedFiles() {
   const agentsDir = path.join(REPO_ROOT, "docs", "agents")
   const files = readdirSync(agentsDir)
     .filter((name) => !name.startsWith("."))
     .map((name) => path.posix.join("docs", "agents", name))
-    .filter((rel) => !EXCLUDED_FILES.has(rel))
   files.push("docs/dev/deploy.md.jinja")
   return files.sort()
 }
@@ -78,10 +70,11 @@ function infraHits(text) {
   return hits
 }
 
-test("scope: docs/agents/** (minus the pending-BRAND-04 harness.md) plus deploy.md.jinja", () => {
+test("scope: the literal docs/agents/** plus deploy.md.jinja", () => {
   assert.deepEqual(scannedFiles(), [
     "docs/agents/README.md",
     "docs/agents/communication.md",
+    "docs/agents/harness.md",
     "docs/agents/infra.md.jinja",
     "docs/agents/issue-tracker.md.jinja",
     "docs/agents/workflow.md",

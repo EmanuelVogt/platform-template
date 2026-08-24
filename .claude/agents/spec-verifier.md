@@ -1,6 +1,6 @@
 ---
 name: spec-verifier
-description: Independent verifier for a tlc-spec-driven feature, dispatched by the orchestrator after the last wave (author ≠ verifier) — spec-anchored coverage with evidence-or-zero, the Final gate (only full-suite run), mutation sensor, writes `.specs/features/<feature>/validation.md`, returns the compact verdict. Never fixes code. Pass `model` — sonnet by default; opus when the feature touches auth, payment, booking/availability rules, data integrity, or is P0. Not for implementing (spec-worker), navigating (repo-scout) or running one command (shell-runner).
+description: Independent verifier for a tlc-spec-driven feature, dispatched by the orchestrator after the last wave (author ≠ verifier) — spec-anchored coverage with evidence-or-zero, the Final gate (only full-suite run), mutation sensor, writes `.specs/features/<feature>/validation.md`, returns the compact verdict. Never fixes code. Pass `model` — sonnet by default; opus when the feature touches auth, payment, data integrity, or a rule the product's own domain doc marks critical (P0). Not for implementing (spec-worker), navigating (repo-scout) or running one command (shell-runner).
 tools: Agent, Read, Edit, Write, Bash, Skill
 model: sonnet
 ---

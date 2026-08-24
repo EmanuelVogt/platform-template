@@ -29,9 +29,9 @@ it unfiltered for comparison.
 **The hook is not guaranteed — rtk once vanished from the machine** and the agent kept
 blaming compression nobody was applying. Confirm `which rtk` before investigating a
 rewrite. If missing: drop the binary from the [`rtk-ai/rtk`](https://github.com/rtk-ai/rtk)
-release into `~/.local/bin`, then `rtk init -g --auto-patch` (Claude Code) and
-`rtk init -g --agent cursor --auto-patch` (Cursor) — both only append the hook block to
-existing config.
+release onto your `PATH` (e.g. a local `bin` directory), then `rtk init -g --auto-patch`
+(Claude Code) and `rtk init -g --agent cursor --auto-patch` (Cursor) — both only append
+the hook block to existing config.
 
 Config on macOS is `~/Library/Application Support/rtk/config.toml` (**not** the Linux
 `~/.config/rtk/`). Reinstalling wipes `exclude_commands` — restore
@@ -126,10 +126,11 @@ The 1M window is why: nothing ever forced a break.
   hard-coded**: every `Agent` call to one of the four repo agents (`repo-scout`,
   `shell-runner`, `spec-worker`, `spec-verifier`) carries an explicit `model`, chosen by
   what that dispatch touches (mechanics → haiku, CRUD/UI → sonnet, domain/contract/
-  migration/ADR-governed → opus; Verifier → opus for auth, payments, booking rules, data
-  integrity; scout → haiku for a pointed question, sonnet for a module map; runner →
-  haiku). `subagent-model-required.mjs` blocks the call without it and prints that
-  agent's tier guide; the `model:` in the agent's frontmatter is only the fallback for
+  migration/ADR-governed → opus; Verifier → opus for auth, payments, data integrity, or a
+  rule the product's own domain doc marks critical; scout → haiku for a pointed question,
+  sonnet for a module map; runner → haiku). `subagent-model-required.mjs` blocks the call
+  without it and prints that agent's tier guide; the `model:` in the agent's frontmatter
+  is only the fallback for
   when the hook is off. Waves and clusters are authored in the Tasks phase from `Depends on` /
   `Touches` / `Exclusive`. Parallel workers share the checkout, so they commit
   pathspec-limited (`git commit -m … -- <files>`) and never `stash`/`add -A`. Model and

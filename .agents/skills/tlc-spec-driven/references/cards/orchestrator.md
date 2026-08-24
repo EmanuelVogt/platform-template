@@ -87,7 +87,7 @@ worker *and* the plan. Siblings are not cancelled by one failure: they finish, t
 
 ## 4. After the last wave — the Verifier, always, never prompted
 
-Sonnet by default; opus only for auth, payments, availability/booking rules, data integrity (P0).
+Sonnet by default; opus only for auth, payments, data integrity, or a rule the product's own domain doc marks critical (P0).
 Execute is done when it reports PASS and `validation.md` exists; then the Handoff.
 
 ```

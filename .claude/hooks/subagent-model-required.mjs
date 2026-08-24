@@ -39,7 +39,7 @@ const GUIDE = {
   ],
   "spec-verifier": [
     "sonnet — default for every feature, including tooling/CI/docs/build-path features.",
-    "opus   — only when the spec touches auth, payment, availability/booking rules, or data integrity (P0).",
+    "opus   — only when the spec touches auth, payment, data integrity, or a rule the product's own domain doc marks critical (P0).",
   ],
 }
 

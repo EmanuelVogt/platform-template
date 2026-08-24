@@ -111,7 +111,7 @@ The sensor provides the empirical guarantee that the tests can actually detect r
 | ------- | ------------ |
 | Light Execute (≤3-task plan) | **1–2** mutants on the riskiest AC |
 | Default (every other feature — Medium and Large, tooling/CI/docs included) | **3** targeted behavior-level mutants on the highest-risk new code — not more; a tooling feature once got 5 mutants + 2 re-runs |
-| P0 / critical paths (payment, auth, availability/booking rules, data integrity) | **≥5** covering all branches; language-appropriate mutation tooling if available (Stryker, mutmut, cargo-mutants, pitest) |
+| P0 / critical paths (payment, auth, data integrity, or a rule the product's own domain doc marks critical) | **≥5** covering all branches; language-appropriate mutation tooling if available (Stryker, mutmut, cargo-mutants, pitest) |
 
 **Stack-agnostic:** The sensor targets behavior-level semantics (what the code does), not a specific tool. Any language, any framework.
 

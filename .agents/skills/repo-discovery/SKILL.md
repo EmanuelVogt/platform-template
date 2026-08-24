@@ -33,9 +33,9 @@ decorado envelhece, e este arquivo não é inventário.
 
 **Nunca abra inteiro** um arquivo grande: `openapi.json` (~255k tokens),
 `pnpm-lock.yaml` (~184k), `packages/api-client/generated/index.ts` (~74k),
-`apps/api/drizzle/migrations/meta/*_snapshot.json` (~72k cada) e as fixtures do
-motor de agenda (~57k cada). Uma leitura dessas custa mais que o pico de uma
-sessão inteira. Faixa (`offset`/`limit`), `grep -n` ou `head` continuam valendo —
+`apps/api/drizzle/migrations/meta/*_snapshot.json` (~72k cada) e as fixtures de
+integração de um módulo grande (~57k cada). Uma leitura dessas custa mais que o
+pico de uma sessão inteira. Faixa (`offset`/`limit`), `grep -n` ou `head` continuam valendo —
 o que não vale é o arquivo todo. No Claude Code um hook barra isso por tamanho
 (`no-huge-reads.mjs`) e outro barra a navegação direta no agente principal a partir
 da terceira chamada do turno, mandando para o subagente `repo-scout`

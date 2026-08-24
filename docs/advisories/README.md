@@ -29,8 +29,12 @@ instead of a `.platform-modules.lock` entry; it is reported even when the child
 has no lock yet. `pnpm catalog:lint` accepts `kernel` or any entry name discovered
 under `catalog/` (`<name>` or `<name>/<variant>`) as `module` — nothing else.
 
-- `pnpm platform advisory detect <id>` runs the advisory's `detect` (exit 1 =
-  child affected).
+- `pnpm platform advisory detect <id>` runs the advisory's `detect` and maps its
+  exit status to three distinct outcomes: **1 = child affected**, **0 = not
+  affected**, **anything else (missing binary, status ≥ 2) = detection
+  failed** — never silently reported as "not affected". A `detect` containing
+  `;` runs through a shell, so quoting and chained probes (multiple commands
+  in one `detect`) work as written.
 - At session start, `.claude/hooks/pending-advisories.mjs` computes which
   advisories affect the installed modules (`.platform-modules.lock`) and the
   installed template version, that are not yet listed in `APPLIED.md`, and shows

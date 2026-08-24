@@ -46,7 +46,7 @@ Front at `http://localhost:{% if web_stack == 'next' %}3001{% else %}5173{% endi
 
 ```
 apps/api/      NestJS — kernel in src/shared, modules in src/modules
-apps/web/      headless React/Vite — transport, router, access guard, unstyled layout
+apps/web/      headless {% if web_stack == 'next' %}React/Next.js — transport, route access, access guard, unstyled layout{% else %}React/Vite — transport, router, access guard, unstyled layout{% endif %}
 packages/      api-client (generated from openapi.json), eslint and tsconfig presets
 docs/          handbooks, ADRs, advisories
 .claude/ .agents/   agent harness (hooks, skills, agents); AGENTS.md is also CLAUDE.md

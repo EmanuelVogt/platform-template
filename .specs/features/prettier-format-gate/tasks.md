@@ -476,4 +476,12 @@ Filled by the orchestrator during Execute — one row per task, plus the Build g
 
 | Wave | Task | Commit | Gate | Notes |
 | --- | --- | --- | --- | --- |
-| — | — | — | — | not started |
+| — | plan amendment | `5c4e76d` | — | T12 added; tag gate lifted; T1/T4/T9/T11 corrected |
+| 1 | T1 | `266d2fd` | quick exit 0 (376) | plugins/tailwindStylesheet/tailwindFunctions removed |
+| 1 | T2 | `a3ebba0` | quick exit 0 (376) | whole `tailwindCSS.*` block gone |
+| 1 | T3 | `abd2caf` | quick exit 0 (376) | advisory trailer accepted by the commit-msg hook |
+| 1 | T4 | `fa5cf45` | quick exit 0 (376) | **`pnpm format:check` now runs to completion — 547 diffs, no ENOENT.** FMT-01 proven |
+| 1 | T5 | `5ac5fdf` | quick exit 0 (378) | +2 tests; confirmed failing against the pre-T1 `.prettierrc`, then restored |
+| 1 | **Build gate** | — | **PASS** | `pnpm check` exit 0 · `pnpm test:scripts` 378/378 · worker: 1× sonnet · no deviations |
+| 2 | T6 | `16a9e92` | quick exit 0 (378) | `prettier-plugin-tailwindcss` gone; `pnpm install --frozen-lockfile` exit 0 |
+| 2 | **Build gate** | — | **PASS** | `pnpm check` exit 0 · `pnpm test:scripts` 378/378 · worker: 1× sonnet · no deviations. `format:check` reports 548 diffs, no crash — T7/T8 own that |

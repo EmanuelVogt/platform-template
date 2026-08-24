@@ -37,7 +37,7 @@ export function removeTemplateOnlyFiles(cwd) {
   return removed
 }
 
-function sha256File(filePath) {
+export function sha256File(filePath) {
   return createHash("sha256").update(readFileSync(filePath)).digest("hex")
 }
 
@@ -193,7 +193,7 @@ export function writeLock({ lockPath, lock, name, entry, childRoot = "" }) {
 
 // Um `file.path` já absoluto (lock gravado antes desta correção, ou por um chamador que ainda
 // não informa `childRoot`) continua resolvendo direto — só o caminho relativo é reancorado.
-function resolveLockFilePath(childRoot, storedPath) {
+export function resolveLockFilePath(childRoot, storedPath) {
   return path.isAbsolute(storedPath)
     ? storedPath
     : path.join(childRoot, storedPath)

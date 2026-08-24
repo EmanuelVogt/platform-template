@@ -5,12 +5,18 @@ import { parse as parseYaml } from "yaml"
 import {
   copyFiles,
   removeTemplateOnlyFiles,
+  resolveLockFilePath,
   rollback as applyRollback,
+  sha256File,
   writeEnv,
   writeLock as persistEntry,
   writeRegistry,
 } from "../apply.mjs"
-import { entryRootFor, findEntry } from "../catalog-graph.mjs"
+import {
+  entryRootFor,
+  findEntry,
+  resolveInstallOrder,
+} from "../catalog-graph.mjs"
 import { resolveCatalog } from "../catalog-source.mjs"
 import { childLayout, webRootFor } from "../child-layout.mjs"
 import { EXIT_CODES } from "../exit-codes.mjs"
@@ -54,10 +60,15 @@ function registryEntry(manifest) {
   }
 }
 
-function buildRegistryEntries(catalogRoot, lockModules, known, excludeName) {
+function buildRegistryEntries(
+  catalogRoot,
+  lockModules,
+  known,
+  excludeNames = new Set()
+) {
   const entries = []
   for (const [moduleName, lockEntry] of Object.entries(lockModules ?? {})) {
-    if (moduleName === excludeName) continue
+    if (excludeNames.has(moduleName)) continue
     const manifest =
       known.get(moduleName) ??
       readManifest(
@@ -69,6 +80,25 @@ function buildRegistryEntries(catalogRoot, lockModules, known, excludeName) {
     entries.push(registryEntry(manifest))
   }
   return entries
+}
+
+// A cadeia que `--with-deps` teria instalado junto com `name`, restrita ao que
+// ainda está no lock — é o conjunto que um `--rollback --with-deps` desfaz.
+function rollbackChain(catalogRoot, lock, name) {
+  return resolveInstallOrder({ catalogRoot, requested: [name] })
+    .map((entry) => entry.name)
+    .filter((moduleName) => lock.modules?.[moduleName])
+}
+
+// Um arquivo cujo hash atual diverge do gravado no lock foi editado depois da instalação —
+// desfazer por cima perderia essa edição sem aviso, então o revert recusa em vez de arriscar.
+function editedSinceInstall(cwd, lockEntry) {
+  return (lockEntry.files ?? [])
+    .filter((file) => {
+      const filePath = resolveLockFilePath(cwd, file.path)
+      return existsSync(filePath) && sha256File(filePath) !== file.sha256
+    })
+    .map((file) => file.path)
 }
 
 function runRollback({
@@ -88,12 +118,11 @@ function runRollback({
     return EXIT_CODES.OK
   }
 
-  let entries
+  let catalog
   try {
-    const catalog = resolveCatalog(options["catalog-ref"], {
+    catalog = resolveCatalog(options["catalog-ref"], {
       copierAnswersPath: childLayout(cwd).copierAnswersPath,
     })
-    entries = buildRegistryEntries(catalog.root, lock.modules, new Map(), name)
   } catch (err) {
     process.stderr.write(
       `catálogo inacessível — revert abortado, registro preservado: ${err.message}\n`
@@ -101,20 +130,47 @@ function runRollback({
     return EXIT_CODES.CATALOG_UNREACHABLE
   }
 
-  for (const fileName of entry.migrations ?? []) {
-    const migrationPath = path.join(childLayout(cwd).migrationsDir, fileName)
-    if (existsSync(migrationPath)) rmSync(migrationPath)
+  const targets = options["with-deps"]
+    ? rollbackChain(catalog.root, lock, name)
+    : [name]
+
+  if (options["with-deps"]) {
+    const edited = targets.flatMap((moduleName) =>
+      editedSinceInstall(cwd, lock.modules[moduleName]).map(
+        (relPath) => `${moduleName}: ${relPath}`
+      )
+    )
+    if (edited.length > 0) {
+      process.stderr.write(
+        `revert recusado — edição local desde a instalação em ${edited.join(", ")}; ` +
+          "descarte com `git checkout -- <arquivo>` e tente de novo\n"
+      )
+      return EXIT_CODES.DESTINATION_EXISTS
+    }
   }
 
-  applyRollback({
-    lockPath,
-    name,
-    envExamplePath,
-    envPath,
-    registry: { entries, platformModulesPath, platformSchemaPath },
-    childRoot: cwd,
-  })
-  process.stdout.write(`${name} revertido\n`)
+  const entries = buildRegistryEntries(
+    catalog.root,
+    lock.modules,
+    new Map(),
+    new Set(targets)
+  )
+
+  for (const moduleName of targets) {
+    for (const fileName of lock.modules[moduleName].migrations ?? []) {
+      const migrationPath = path.join(childLayout(cwd).migrationsDir, fileName)
+      if (existsSync(migrationPath)) rmSync(migrationPath)
+    }
+    applyRollback({
+      lockPath,
+      name: moduleName,
+      envExamplePath,
+      envPath,
+      registry: { entries, platformModulesPath, platformSchemaPath },
+      childRoot: cwd,
+    })
+  }
+  process.stdout.write(`${targets.join(", ")} revertido(s)\n`)
   return EXIT_CODES.OK
 }
 

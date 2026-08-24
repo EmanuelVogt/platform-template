@@ -172,6 +172,31 @@ export function lintAdvisoryModule(advisory, entryNames) {
   ]
 }
 
+const CATALOG_PATH_TOKEN_RE = /(^|\s)(catalog\/\S+)/g
+
+function catalogPathsIn(text) {
+  const found = []
+  const re = new RegExp(CATALOG_PATH_TOKEN_RE)
+  let match
+  while ((match = re.exec(text))) found.push(match[2])
+  return found
+}
+
+// CAT-04: `detect`/`parity` rodam contra a árvore do filho, onde `copier.yml`
+// exclui `catalog/` inteiro (:30) — um caminho começando por essa árvore
+// nunca casa lá, mesmo quando casa em dev dentro do template.
+export function lintAdvisoryPathScope(advisory) {
+  const errors = []
+  for (const field of ["detect", "parity"]) {
+    for (const badPath of catalogPathsIn(advisory[field] ?? "")) {
+      errors.push(
+        `${field} referencia "${badPath}", que começa com "catalog/" — copier.yml exclui essa árvore do filho; use o caminho de layout do filho (apps/api/src/modules/<entrada>, ou .../__parity__/<arquivo> para parity) (${advisory.id})`
+      )
+    }
+  }
+  return errors
+}
+
 // CAT-02: catalog:lint precisa de uma falha alta e distinta quando não há
 // linha de base — ao contrário do preflight, que pula o guard em silêncio
 // (a release ainda não tem tags para comparar). Um clone raso sem

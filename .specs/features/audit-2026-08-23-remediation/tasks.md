@@ -3079,3 +3079,41 @@ ownership; the foreign staged renames under `.specs/features/done/**` were left 
 
 **Next:** wave 7 (C13 = T48, owner-gated — `git tag -l v2.3.0` now returns `v2.3.0`, so the
 precondition is satisfied), then Verifier pass 1 over the `v2.4.0` scope.
+
+### Wave 7 — GATED GREEN (2026-08-24). `v2.4.0` scope complete
+
+**C13 = T48 (exclusive, owner-gated, sonnet).** Landed as **`5ea3e31`**. The precondition was
+re-checked before the first edit: `git tag -l v2.3.0` returns `v2.3.0`. No tag, no push (AD-006).
+
+**Build gate 5/5 GREEN** at `5ea3e31`: `check` (7/7 turbo tasks) · `test:scripts` **561/561**
+(unchanged vs wave 6) · `catalog:typecheck` (5 entries) · `catalog:lint` · `format:check`.
+
+**The three invariants held**, verified on the diff: `## v2.3.0` is byte-identical, `## v2.4.0`
+remains the latest section (`release-preflight`, AD-034), and `### Child migration steps` is still
+the literal `None — copier update is enough.` The task appended items 3–14 after the existing
+item 1; it did not re-author the section.
+
+#### Deviations recorded in wave 7 (input to the Verifier)
+
+1. **`5ea3e31` carries one hunk that is not this feature's.** A concurrent session working in the
+   same checkout had an uncommitted item 2 (the `AGENTS.md.jinja` / `README.md.jinja` Next-vs-Vite
+   entry) sitting in `docs/dev/template-changelog.md`'s working tree. A pathspec-limited commit
+   limits by **file**, not by hunk, so it landed inside T48's commit. The text was preserved
+   verbatim and nothing was overwritten. **That session must be told its changelog line is already
+   on `main` in `5ea3e31`**, or it will re-add a duplicate.
+2. **T48's drafted item 4 named `MySQL` and `brand-hygiene.test.mjs` rejected it — correctly**, that
+   is genuine owner infrastructure per T10. Reworded to `SyncLegacyModule` / `RUN_BACKFILL`. The
+   guard shipped in wave 6 caught a real leak on its first live use.
+3. **`KNOWN_EXCEPTIONS` anchor repaired**, `docs/dev/template-changelog.md:163` → `:228`: the append
+   shifted the Cloudflare/Traefik row. Nothing else in that test file changed.
+
+**Wave 7 closes the `v2.4.0` scope (T1–T48).** Next: Verifier pass 1 over the `v2.4.0` requirements,
+then owner hand-off point 2 — the owner dispatches the release. Waves 8–14 (`v3.0.0`) do not start
+until that tag exists (release boundary, § *Wave Plan*).
+
+#### Open follow-up, deliberately NOT turned into a task in this feature
+
+**The REL-04 pre-commit blindness (wave 4, Finding 2) is still live.** It is no AC of this spec, so
+adding it here would have moved the `v2.4.0` boundary. It stays recorded in wave 4's Finding 2 and
+in `.specs/STATE.md`, and it wants its own task beside T33's tests in
+`scripts/platform/__tests__/entry-bump-lint.test.mjs`.

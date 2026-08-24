@@ -159,7 +159,11 @@ gets `apps/web` = Next shell with `"name": "web"`, and a later `copier update` p
 - **DOC-02** `docs/dev/template.md` ownership table: Next rows (shell files, product slot,
   `app/<route>/page.tsx`).
 - **DOC-03** `README.md.jinja` and `AGENTS.md.jinja`: `{% if web_stack == 'next' %}`
-  lines for the dev URL (`:3001`) and command table; Vite render unchanged.
+  lines for the dev URL (`:3001`), for the stack name wherever the two files state it
+  (`AGENTS` header, `README` tree row) and for the dev-server typecheck tripwire
+  (`Vite dev` vs `next dev`). The root command table itself is stack-neutral — every
+  command is the same on both shells — so it carries a single conditional, the `(front on
+  :3001)` annotation on `pnpm dev`, and no extra rows. Vite render unchanged.
 - **DOC-04** `docs/dev/deploy.md.jinja`: Next variant of "O que é buildado" under
   `{% if web_stack == 'next' %}`.
 - **DOC-05** `docs/dev/template-changelog.md` `## Unreleased`: the question, default,
@@ -174,7 +178,7 @@ gets `apps/web` = Next shell with `"name": "web"`, and a later `copier update` p
 
 | ID | WHEN / THEN / SHALL | Proof |
 | --- | --- | --- |
-| ACC-01 | WHEN `copier copy --defaults --data web_stack=vite` renders a child from this feature's HEAD and from `main@8c2cc0c` THEN `diff -r` excluding `.copier-answers.yml`, `docs/`, `AGENTS.md`, `CLAUDE.md`, `scripts/`, `apps/api/src/modules/module-boundaries.spec.ts`, `apps/api/src/shared/config/load-dotenv.spec.ts`, `.prettierignore`, `README.md` SHALL be empty, and `apps/web/**` SHALL be byte-identical | probe (Verifier) |
+| ACC-01 | WHEN `copier copy --defaults --data web_stack=vite` renders a child from this feature's HEAD and from `main@8c2cc0c` THEN `diff -r` excluding the **intended child-visible change set** — `.copier-answers.yml`, `docs/`, `AGENTS.md`, `CLAUDE.md`, `scripts/`, `apps/api/src/modules/module-boundaries.spec.ts`, `apps/api/src/shared/config/load-dotenv.spec.ts`, `apps/api/src/shared/kernel/access/access.guard.spec.ts`, `packages/eslint-config/**`, `packages/typescript-config/**`, `pnpm-lock.yaml`, `.prettierignore`, `README.md` — SHALL be empty, and `apps/web/**` SHALL be byte-identical | probe (Verifier) |
 | ACC-02 | WHEN an old Vite child (rendered from `8c2cc0c`, committed) runs `copier update --defaults --vcs-ref <feature HEAD>` THEN `git status --short` SHALL list only `.copier-answers.yml` plus the paths excluded in ACC-01, and the answers file SHALL contain `web_stack: vite` | probe |
 | ACC-03 | WHEN `copier copy --defaults --data web_stack=next` renders a child THEN `apps/web/next.config.ts` SHALL exist, `apps/web/vite.config.ts` SHALL NOT, `apps/web/package.json` name SHALL be `web`, and `pnpm install && pnpm check && pnpm test && pnpm --filter web build` SHALL exit 0 | gate (`pnpm template:smoke --web-stack next`) |
 | ACC-04 | WHEN `docker build -f apps/web/Dockerfile .` runs in the Next child THEN it SHALL exit 0 and the image SHALL run as a non-root user | probe |
@@ -214,3 +218,30 @@ gets `apps/web` = Next shell with `"name": "web"`, and a later `copier update` p
 
 UI kit, Tailwind, shadcn, SSR data patterns, converting a product, catalog entry code,
 i18n, middleware-based guard (README recipe only).
+
+## Amendments (2026-08-24, post-closeout)
+
+The two ⚠️ rows the Verifier accepted as spec-precision debt (`validation.md` § Round 2)
+were settled here, after the feature had already merged and shipped in `## v2.3.0`:
+
+1. **ACC-01/ACC-02 exclusion list** — three paths the feature necessarily changed were
+   missing from it: `packages/eslint-config/**` and `packages/typescript-config/**` (the
+   `fsd-next` / `next.json` presets, LINT-01/02), `pnpm-lock.yaml` (the `next@16` install)
+   and `apps/api/src/shared/kernel/access/access.guard.spec.ts`. Both criteria are now
+   written against the intended child-visible change set instead of a list that omitted
+   the feature's own legitimate output. No code moved: the half that decides the P1 story
+   — `apps/web/**` byte-identical, `diff` exit 0 — was already ✅ in round 1.
+   Caveat kept on the record: the lockfile and `access.guard.spec.ts` halves were
+   **reverted at the merge with `origin/main`** (pins back to `typescript-eslint` 8.60 /
+   `eslint` 10.4, both specs on origin's Vitest version), so on `main` today only the two
+   `packages/**` presets remain from that group.
+2. **DOC-03** — reworded to the contract that was actually delivered, and the gap it named
+   was closed in the same pass: `AGENTS.md.jinja` and `README.md.jinja` no longer state
+   "React/Vite" unconditionally in a Next child (header and tree row), and the
+   "Vite dev does not typecheck" tripwire renders as `` `next dev` `` there. The root
+   command table stays stack-neutral by construction — every command is identical on both
+   shells — so `(front on :3001)` on `pnpm dev` is the whole of it, which is what the
+   original wording read as a shortfall.
+
+Vite render is unchanged by both: every edit is a `{% if web_stack == 'next' %}` branch
+whose `else` is the byte-identical previous text.

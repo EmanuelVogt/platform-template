@@ -217,3 +217,32 @@ All three restored with `git checkout --`; `git status --short` on the worktree 
 ### Round 2 summary
 
 **Overall**: ✅ Ready on the spec — 10/12 ACs met, 2 accepted as spec-precision debt, sensor 3/3, gate 8/8 exit 0 — with **one open non-AC gap**: Fix 4 (`.next` still tracked).
+
+---
+
+## Closeout (2026-08-24) — the three items left open are closed
+
+| Item | Status |
+| --- | --- |
+| **Fix 4** — `apps/web-next/.next` tracked (237 files) | ✅ closed before this pass. `git ls-files apps/web-next/.next` → **0**; `.gitignore:13` carries `.next`. Untracked in `9e979e1` and finished off by the GH013 history rewrite (`git filter-branch --index-filter 'git rm -r --cached --ignore-unmatch apps/web-next/.next'`) — the same rewrite that removed the PAT the turbopack cache had captured. A freshly rendered Next child no longer ships `apps/web/.next/`. |
+| **Fix 5** — ACC-01/ACC-02 exclusion list (⚠️ ACC-01, ACC-02) | ✅ closed. `spec.md` § Amendments item 1: both criteria now name the intended child-visible change set, including `packages/{eslint,typescript}-config/**`, `pnpm-lock.yaml` and `access.guard.spec.ts`. Doc-only, as the fix plan prescribed — the `apps/web/**` half was already ✅ in round 1. |
+| **Fix 6** — DOC-03 spec-precision (⚠️) | ✅ closed, and not only on paper: the two files stated the stack unconditionally, which is wrong in a Next child. `AGENTS.md.jinja:4` (header) and `README.md.jinja:49` (tree row) now branch `React/Next.js` vs `React/Vite`, and `AGENTS.md.jinja:70` renders `` `next dev` `` instead of `Vite dev` in the typecheck tripwire. DOC-03's wording was tightened to match: the root command table is stack-neutral, so `(front on :3001)` on `pnpm dev` is its whole next-specific surface. |
+
+### Closeout probe — both stacks rendered from the edited template
+
+Copier 9.17.2, rendered from a non-VCS copy of the working tree (copier renders a git ref, so an uncommitted edit is only visible this way), answers `project_name=Demo github_org=acme root_domain=demo.test`:
+
+| Assertion | vite child | next child |
+| --- | --- | --- |
+| `AGENTS.md` header | `headless React/Vite web` ✅ | `headless React/Next.js web` ✅ |
+| `AGENTS.md` typecheck tripwire | `Vite dev does not typecheck.` ✅ | `` `next dev` does not typecheck. `` ✅ |
+| `AGENTS.md` `pnpm dev` row | — | `(front on :3001)` ✅ |
+| `README.md` tree row | `headless React/Vite — transport, router, …` ✅ | `headless React/Next.js — transport, route access, …` ✅ |
+| `README.md` dev URL | `http://localhost:5173` ✅ | `http://localhost:3001` ✅ |
+| `React/Vite` token in the next child | — | 0 hits ✅ |
+| unrendered `{%` in either file | 0 ✅ | 0 ✅ |
+| shell identity | `apps/web/vite.config.ts` ✅ | `apps/web/next.config.ts` ✅ |
+
+**Vite render unchanged (ACC-01)**: a second render, identical except that `AGENTS.md.jinja` and `README.md.jinja` come from `HEAD`, produces `AGENTS.md`, `README.md` and `CLAUDE.md` **byte-identical** to the working-tree render (`diff` silent on all three); the full-tree `diff -r` differs only inside `node_modules/` (two separate installs). Every edit is a `{% if web_stack == 'next' %}` branch whose `else` reproduces the previous bytes.
+
+**Final state**: 12/12 ACs met, 0 ⚠️, 0 ❌, no open gap. Feature archived to `.specs/features/done/web-stack-next/`.

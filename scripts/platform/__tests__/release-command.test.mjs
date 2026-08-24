@@ -4,7 +4,12 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { EXIT_CODES } from "../lib/exit-codes.mjs"
-import { planRelease, releaseCommand } from "../lib/commands/release.mjs"
+import { run } from "../cli.mjs"
+import {
+  planRelease,
+  releaseCommand,
+  unknownReleaseFlags,
+} from "../lib/commands/release.mjs"
 
 // Major version: sem "### Child migration steps" — o preflight real só exige
 // essa seção para versões não-major.
@@ -420,4 +425,92 @@ test("releaseCommand delega para planRelease, repassando version/exec/runPreflig
   } finally {
     cleanup(dir)
   }
+})
+
+async function captureStream(streamName, fn) {
+  const stream = process[streamName]
+  const original = stream.write.bind(stream)
+  let output = ""
+  stream.write = (chunk) => {
+    output += chunk
+    return true
+  }
+  try {
+    return { result: await fn(), output }
+  } finally {
+    stream.write = original
+  }
+}
+
+test("`release --help` imprime o uso e não chega a tocar no git", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec()
+    const preflight = stubPreflight(EXIT_CODES.OK)
+    const { result, output } = await captureStream("stdout", () =>
+      run(["release", "--help"], {
+        cwd: dir,
+        exec,
+        runPreflight: preflight,
+        log: () => {},
+      })
+    )
+    assert.equal(result, EXIT_CODES.OK)
+    assert.match(output, /uso: pnpm platform release/)
+    assert.equal(preflight.calls.length, 0)
+    assert.equal(exec.calls.length, 0)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("uma flag desconhecida sai em USAGE_ERROR sem criar marcador", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec()
+    const preflight = stubPreflight(EXIT_CODES.OK)
+    const { result, output } = await captureStream("stderr", () =>
+      run(["release", "--halp"], {
+        cwd: dir,
+        exec,
+        runPreflight: preflight,
+        log: () => {},
+      })
+    )
+    assert.equal(result, EXIT_CODES.USAGE_ERROR)
+    assert.match(output, /flag desconhecida: release --halp/)
+    assert.equal(preflight.calls.length, 0)
+    assert.equal(exec.calls.length, 0)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("a guarda não estreita `--push`: a versão colada na flag continua valendo", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec()
+    const preflight = stubPreflight(EXIT_CODES.OK)
+    const exitCode = await run(["release", "--push", "4.1.0"], {
+      cwd: dir,
+      exec,
+      runPreflight: preflight,
+      log: () => {},
+    })
+    assert.equal(exitCode, EXIT_CODES.OK)
+    assert.equal(preflight.calls[0].version, "4.1.0")
+    assert.equal(
+      exec.calls.some((c) => c.args[0] === "push"),
+      true
+    )
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("unknownReleaseFlags reconhece apenas push e help", () => {
+  assert.deepEqual(unknownReleaseFlags({}), [])
+  assert.deepEqual(unknownReleaseFlags({ push: true }), [])
+  assert.deepEqual(unknownReleaseFlags({ help: true }), [])
+  assert.deepEqual(unknownReleaseFlags({ push: true, dry: true }), ["dry"])
 })

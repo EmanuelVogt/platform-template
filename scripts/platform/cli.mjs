@@ -5,7 +5,11 @@ import { adoptCommand } from "./lib/commands/adopt.mjs"
 import { detectCommand } from "./lib/commands/advisory.mjs"
 import { feedbackCommand } from "./lib/commands/feedback.mjs"
 import { listCommand } from "./lib/commands/list.mjs"
-import { releaseCommand } from "./lib/commands/release.mjs"
+import {
+  RELEASE_USAGE,
+  releaseCommand,
+  unknownReleaseFlags,
+} from "./lib/commands/release.mjs"
 import { statusCommand } from "./lib/commands/status.mjs"
 import { templateMigrateCommand } from "./lib/commands/template-migrate.mjs"
 
@@ -70,6 +74,17 @@ registerCommand("status", async ({ options, deps }) =>
 )
 
 registerCommand("release", async ({ positionals, options, deps }) => {
+  const unknown = unknownReleaseFlags(options)
+  if (unknown.length > 0) {
+    process.stderr.write(
+      `flag desconhecida: release --${unknown[0]}\n${RELEASE_USAGE}\n`
+    )
+    return EXIT_CODES.USAGE_ERROR
+  }
+  if ("help" in options) {
+    process.stdout.write(`${RELEASE_USAGE}\n`)
+    return EXIT_CODES.OK
+  }
   // `parseArgs` consome o token seguinte como valor da flag, então em
   // `release --push 2.3.0` a versão chega em `options.push`, não nos posicionais.
   const flagVersion =

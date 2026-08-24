@@ -5,6 +5,25 @@ import { runPreflight as runReleasePreflight } from "../../release-preflight.mjs
 import { EXIT_CODES } from "../exit-codes.mjs"
 import { readLatestChangelogVersion } from "../kernel-version.mjs"
 
+// `parseArgs` aceita qualquer `--x` em silêncio, então sem esta lista uma flag
+// desconhecida cai no caminho default e corta uma release: foi assim que o
+// marcador da v2.3.0 nasceu, de um `release --help`.
+export const RELEASE_FLAGS = Object.freeze(["push", "help"])
+
+export const RELEASE_USAGE = [
+  "uso: pnpm platform release [versão] [--push]",
+  "",
+  "  versão   x.y.z; sem argumento, usa a última seção do changelog",
+  "  --push   empurra o marcador para main (o push é o gatilho do release.yml)",
+  "",
+  "Cria um commit vazio `chore(release): vX.Y.Z` e nunca cria tags: a tag é",
+  "sempre ato do release.yml.",
+].join("\n")
+
+export function unknownReleaseFlags(options = {}) {
+  return Object.keys(options).filter((flag) => !RELEASE_FLAGS.includes(flag))
+}
+
 function defaultExec(command, args, options = {}) {
   const result = spawnSync(command, args, { encoding: "utf8", ...options })
   return { status: result.status ?? 1, stdout: result.stdout ?? "" }

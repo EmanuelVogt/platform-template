@@ -27,10 +27,11 @@ export type RequestContextStore = {
   readonly causationId: string | null
   readonly traceId: string | null
   readonly spanId: string | null
-  readonly tenantId: string | null
+  // Única superfície de escrita pós-criação, junto com `actor` (abaixo):
+  // `setTenant`/`setActor` one-shot e `setExtension` por símbolo do módulo
+  // dono. Os demais campos são readonly.
+  tenantId: string | null
   readonly origin: RequestOrigin
-  // Única superfície de escrita pós-criação: `setActor` one-shot e
-  // `setExtension` por símbolo do módulo dono. Os demais campos são readonly.
   actor: Actor | null
   extensions: Map<symbol, unknown>
   readonly locale: string
@@ -67,6 +68,19 @@ export function getActor(): Actor | null {
 }
 
 /**
+ * Escrita one-shot simétrica a `setActor`: null→valor uma vez por escopo;
+ * segunda chamada lança. Quem grava é a middleware de tenancy do módulo que
+ * resolve o tenant (ex.: identity) — o kernel só guarda.
+ */
+export function setTenant(tenantId: string): void {
+  const store = requireStore()
+  if (store.tenantId !== null) {
+    throw new Error("tenantId já definido no escopo")
+  }
+  store.tenantId = tenantId
+}
+
+/**
  * Sacola de extensões do store, endereçada por símbolo do módulo dono: o
  * kernel guarda e devolve sem nunca ler o conteúdo.
  */
@@ -98,6 +112,10 @@ export class RequestContext {
 
   getActor(): Actor | null {
     return getActor()
+  }
+
+  setTenant(tenantId: string): void {
+    setTenant(tenantId)
   }
 
   setExtension<T>(key: ExtensionKey<T>, value: T): void {

@@ -4,6 +4,7 @@ import {
   getActor,
   RequestContext,
   setActor,
+  setTenant,
   type RequestContextStore,
 } from "./request-context"
 
@@ -89,6 +90,47 @@ describe("RequestContext", () => {
       return ctx.getActor()?.tenantId
     })
     expect(tenantId).toBe("t-9")
+  })
+
+  it("tenantId permanece null enquanto ninguém chamou setTenant", () => {
+    const ctx = new RequestContext()
+    expect(ctx.run(makeStore(), () => ctx.get().tenantId)).toBeNull()
+  })
+
+  it("setTenant grava o tenantId no store do escopo corrente", () => {
+    const ctx = new RequestContext()
+    const store = makeStore()
+    ctx.run(store, () => {
+      ctx.setTenant("t-1")
+    })
+    expect(store.tenantId).toBe("t-1")
+  })
+
+  it("o tenantId gravado por setTenant é lido de volta por get() no mesmo escopo", () => {
+    const ctx = new RequestContext()
+    const tenantId = ctx.run(makeStore(), () => {
+      setTenant("t-2")
+      return ctx.get().tenantId
+    })
+    expect(tenantId).toBe("t-2")
+  })
+
+  it("setTenant é one-shot: a segunda chamada lança e preserva o 1º tenantId", () => {
+    const ctx = new RequestContext()
+    const store = makeStore()
+    ctx.run(store, () => {
+      ctx.setTenant("t-1")
+      expect(() => {
+        ctx.setTenant("t-2")
+      }).toThrow(/tenantId já definido/)
+    })
+    expect(store.tenantId).toBe("t-1")
+  })
+
+  it("setTenant fora de escopo lança", () => {
+    expect(() => {
+      new RequestContext().setTenant("t-1")
+    }).toThrow(/fora de um escopo/)
   })
 
   it("getExtension devolve undefined para símbolo nunca gravado", () => {

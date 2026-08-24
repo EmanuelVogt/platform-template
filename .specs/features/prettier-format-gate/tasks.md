@@ -72,14 +72,14 @@ Waves run in order (barrier + Build gate between them). Clusters inside a wave r
 | 2 (exclusive) | C2 | T6 | `package.json`, `pnpm-lock.yaml` | lockfile · gate: scoped |
 | 3 (exclusive) | C3 | T7 | everything the checked set matches **outside** `catalog/**` | mechanical reformat · gate: scoped + `format:check` |
 | 4 (exclusive) | C4 | T8 → T12 | `catalog/**`, incl. the 5 `module.json` + their 5 `CHANGELOG.md` | mechanical reformat, then the version bumps it forces · advisory trailer on both commits · gate: scoped + `format:check` + `catalog:lint` |
-| 5 | C5 | T9 → T10 → T11 | `lefthook-local.yml`, `.github/workflows/format.yml`, `copier.yml`, `scripts/platform/__tests__/copier-delivery.test.mjs`, `scripts/template-smoke.mjs`, `docs/dev/template-changelog.md`, `docs/agents/harness.md` | arm the gate, last · gate: scoped + `format:check` |
+| 5 | C5 | T13 → T9 → T10 → T11 | `lefthook-local.yml`, `.github/workflows/format.yml`, `copier.yml`, `scripts/platform/__tests__/copier-delivery.test.mjs`, `scripts/template-smoke.mjs`, `docs/dev/template-changelog.md`, `docs/agents/harness.md` | arm the gate, last · gate: scoped + `format:check` |
 
 ```
 Wave 1:  [C1: T1 → T2 → T3 → T4 → T5]
 Wave 2:  [C2: T6]   (exclusive)
 Wave 3:  [C3: T7]   (exclusive)
 Wave 4:  [C4: T8 → T12]   (exclusive)
-Wave 5:  [C5: T9 → T10 → T11]
+Wave 5:  [C5: T13 → T9 → T10 → T11]
 ```
 
 **On the absence of parallelism (deliberate, not an authoring miss).** Three of the five waves are exclusive by nature — a lockfile write and two whole-tree reformats admit no sibling. The remaining two waves are single clusters because their tasks share the same three files (`package.json`, `.prettierrc`, `.prettierignore`) and because the gate can only be armed after the tree is clean; splitting either into parallel clusters would manufacture a file race, not speed. Per [tasks.md](../../../.claude/skills/tlc-spec-driven/references/tasks.md) § 4 this is the "single non-exclusive cluster" shape, and it is justified here rather than restructured.
@@ -321,6 +321,33 @@ manifest lives in the variant subdir), plus the `CHANGELOG.md` beside each of th
 
 ---
 
+### T13: Keep machine-local files out of the checked set
+
+**What**: `.prettierignore` gains `.claude/settings.local.json`. Found during wave 4 — see the
+Execution Record finding. Must run **before** T9/T10 arm the gate: arming a gate that is red on day
+one is exactly the failure this feature was written to prevent.
+**Where**: `.prettierignore`
+**Touches**: `.prettierignore`
+**Depends on**: T8
+**Exclusive**: no
+**Reuses**: the `.specs/` entry T4 added for the same reason (`lessons.json`, machine-owned JSON)
+**Requirement**: FMT-05
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+
+- [ ] The entry is the **file**, `.claude/settings.local.json` — **not** `.claude/`. That directory holds
+      20 tracked `.mjs` hooks the glob matches and T7 formatted; a blanket entry would drop authored
+      source out of the checked set
+- [ ] `pnpm format:check` exits **0** repo-wide on a machine that has a local `.claude/settings.local.json`
+- [ ] No tracked file leaves the checked set — compare the file count `format:check` reports before and after
+
+**Tests**: none · **Gate**: quick
+**Commit**: `fix(format): ignore machine-local claude settings`
+
+---
+
 ### T9: Arm the pre-commit gate (template-only)
 
 **What**: A `pre-commit` job in `lefthook-local.yml` that checks the staged files of covered extensions. `lefthook-local.yml` is already in `copier.yml` `_exclude`, so no child inherits it — which is exactly the confirmed constraint.
@@ -421,6 +448,7 @@ manifest lives in the variant subdir), plus the `CHANGELOG.md` beside each of th
 | T10 | 1 workflow + its delivery assertion | ⚠️ OK — cohesive |
 | T11 | 2 docs, one entry | ⚠️ OK — cohesive |
 | T12 | 5 manifests + 5 changelogs, one mechanical concept | ⚠️ OK — cohesive |
+| T13 | 1 file, 1 line | ✅ Granular |
 
 ## Diagram-Definition Cross-Check
 
@@ -438,6 +466,7 @@ manifest lives in the variant subdir), plus the `CHANGELOG.md` beside each of th
 | T10 | T9 | wave 5, after T9 in C5 | ✅ Match |
 | T11 | T10 | wave 5, after T10 in C5 | ✅ Match |
 | T12 | T8 | wave 4, after T8 in C4 | ✅ Match |
+| T13 | T8 | wave 5, first in C5 | ✅ Match |
 
 ## Wave/Cluster Cross-Check
 
@@ -447,7 +476,7 @@ manifest lives in the variant subdir), plus the `CHANGELOG.md` beside each of th
 | 2 | C2 | T6 | `package.json`, `pnpm-lock.yaml` | none — T1/T4 in wave 1 | none — sole cluster | yes | ✅ |
 | 3 | C3 | T7 | tree minus `catalog/**` | none — T6 in wave 2 | none — sole cluster | yes | ✅ |
 | 4 | C4 | T8 → T12 | `catalog/**` incl. the 5 manifests + changelogs | none — T7 in wave 3 | none — sole cluster | yes | ✅ |
-| 5 | C5 | T9 → T10 → T11 | `lefthook-local.yml`, `.github/workflows/format.yml`, `copier.yml`, `scripts/platform/__tests__/copier-delivery.test.mjs`, `scripts/template-smoke.mjs`, `docs/dev/template-changelog.md`, `docs/agents/harness.md` | none — T8 in wave 4 | none — sole cluster | n/a | ✅ |
+| 5 | C5 | T13 → T9 → T10 → T11 | `lefthook-local.yml`, `.github/workflows/format.yml`, `copier.yml`, `scripts/platform/__tests__/copier-delivery.test.mjs`, `scripts/template-smoke.mjs`, `docs/dev/template-changelog.md`, `docs/agents/harness.md` | none — T8 in wave 4 | none — sole cluster | n/a | ✅ |
 
 `package.json` is owned by C1 in wave 1 and by C2 in wave 2 — sequential waves, never concurrent, so it is not a race. T7's union contains the files of C1 and C5 by construction; all three sit in different waves.
 
@@ -467,6 +496,7 @@ manifest lives in the variant subdir), plus the `CHANGELOG.md` beside each of th
 | T10 | Copier delivery surface | unit | unit | ✅ OK |
 | T11 | Docs/changelog | none | none | ✅ OK |
 | T12 | Catalog manifests | none | none | ✅ OK |
+| T13 | Repo configuration | none | none | ✅ OK |
 
 ---
 
@@ -500,3 +530,25 @@ same order, so it still fails on any real change to the call — no weakening. I
 **Also noted:** `apps/api/src/shared/kernel/transactional/transaction-manager.int-spec.ts` needed two
 `prettier --write` passes (non-idempotency on a generic-typed chained call); the gate re-ran the check
 twice and confirmed it settles at 0.
+
+| 4 | T8 | `06f35fb` | build | 341 catalog files reformatted |
+| 4 | T12 | `c9803f8` | build | 5 manifests `2.0.0`→`2.0.1` + 5 `## [2.0.1]` headings |
+| 4 | **Build gate** | — | **PASS** | `check` 0 · `test:scripts` 378/378 · `catalog:lint` 0 · `catalog:typecheck` 0 · `format:check` red on `.claude/settings.local.json` only — known, owned by T13 · worker: 1× sonnet |
+
+**Finding, wave 4 (from the peer session running `audit-2026-08-23-remediation`, accepted).**
+`pnpm format:check` is red on `.claude/settings.local.json`. The file is untracked and ignored by the
+*user's global* gitignore (`~/.config/git/ignore`), not by this repo's. Prettier reads neither — only
+`.prettierignore` — so the shipped script flags a file the developer did not write and cannot commit.
+CI never has the file, so `format.yml` stays green: **red locally, green in CI**, which is the shape
+that gets a new gate disabled. Fixed by T13, added to wave 5 ahead of the tasks that arm the gate.
+The peer's first proposal — ignore `.claude/` wholesale — was rejected and verified as wrong: that
+directory holds 20 tracked `.mjs` hooks the glob matches, ten of which T7 formatted in `4088235`, and
+one (`pending-advisories.mjs`) was being edited by that peer's own worker at the time. A blanket entry
+would have dropped authored source out of the checked set — the very defect class this feature exists
+to close.
+
+**Lesson (candidate for the Verifier to distil).** T7's worker saw the same file and called it
+"correctly excluded" because it had built its file list from `git ls-files`; the shipped
+`format:check` uses a *glob*. The two agents did not disagree about the file — they disagreed about
+what the gate *is*. **A gate's behaviour is confirmed by running the shipped command, never by
+reconstructing its input set.**

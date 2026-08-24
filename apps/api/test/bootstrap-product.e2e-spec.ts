@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { createApp } from "../src/main"
 
+import type * as DocsModule from "../src/docs/docs"
 import type {
   CallHandler,
   ExecutionContext,
@@ -41,7 +42,7 @@ vi.mock("../src/bootstrap.product", () => ({
 // Substitui o mount real (pacote ESM do Scalar) por um registro de ordem — o
 // que este spec mede é a posição no boot, não a UI de docs em si.
 vi.mock("../src/docs/docs", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../src/docs/docs")>()
+  const actual = await importOriginal<typeof DocsModule>()
   return {
     ...actual,
     mountDocs: async () => {

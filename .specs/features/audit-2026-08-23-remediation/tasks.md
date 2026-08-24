@@ -2510,3 +2510,67 @@ The dirty `.specs/STATE.md` in this checkout is **`platform-template-28`'s**, no
 follow-up bullet explicitly, and 3e states it has never written to `STATE.md` this session. It stays
 unstaged by this feature either way (AD-006: never `git add .specs/STATE.md` without reading the
 diff), and it needs to return to 28 to be committed.
+
+### Wave 2 — GATED GREEN (2026-08-23/24)
+
+16 tasks, 16 atomic commits, plus **3 repair commits the Build gate forced**. C4 `91ba30b`, `66c6cc5`,
+`cafbe97`, `9e6bca0`, `bc75d78`, `9753b61` · C5 `799a2d4`, `1827dc9`, `68bdca5`, `377c2f0`, `fd1b48a` ·
+C6 `2d30885`, `35c8a4f`, `bd215f6`, `d3741dd`, `8550f2b` · repairs `a00c493`, `2a1acc2`, `ae69b83`.
+
+**Build gate (full-unit + format):** `pnpm check` 0 · `pnpm test` 614/614 in 90 files · `pnpm test:scripts`
+453/453 · `pnpm format:check` 0, clean repo-wide. Counts are recorded as evidence, **never as thresholds** —
+two sibling sessions commit to this checkout and the totals drift under everyone; every gate this wave was
+read as *exit code 0 + zero failures*.
+
+#### Two orchestrator defects — mine, not the workers'
+
+1. **The per-task gates ran vitest and never eslint.** C5's scoped gate was
+   `pnpm vitest run --project web <path>`; `pnpm check` is `turbo lint typecheck`. **No task in this wave ran
+   lint**, so 19 eslint errors accumulated across five files and the Build gate was the first thing to see
+   them — a sibling session's gate found them before mine did. Root cause of the errors themselves:
+   `import.meta.env` types unknown `VITE_*` keys as `any`, which collapsed `RoutePath` and leaked into two
+   files that never read env at all, so 14 of the 19 were cascade. **Rule for waves 3-14: a cluster whose
+   `Touches` include a linted workspace gets `pnpm --filter <ws> lint` in its per-task gate, not just the
+   vitest projection.**
+2. **A `Touches` list retyped from memory instead of copied from this file.** The C6 repair payload omitted
+   `apps/api/test/bootstrap-product.e2e-spec.ts`, so the worker correctly reported its lint error as "outside
+   my ownership, likely another session's" — when T29 had created it in this very wave. **This failure mode is
+   silent**: a narrow list does not error, it produces a polite "not mine" that reads like diligence. No hook
+   sees it — `wave-plan-check.mjs` validates the plan, not the payload an orchestrator types out of it.
+   **Payload `Touches` are copied verbatim from this file from now on.**
+
+#### The T21 blocker, and the correction a worker made to the orchestrator's fix
+
+C4 stopped at T21 rather than edit a file outside its ownership — the right call, and it was repeated on
+request. The resolution is in T21's own block. **One part of that amendment was wrong and the worker caught
+it:** it said to give the `no-lock` fixture a `.copier-answers.yml`, which would have tripped
+`scripts/platform/__tests__/copier-answers-leak.test.mjs` — a guard that fails the build on **any** git-tracked
+file of that name (the same fixture leak that broke earlier products). The worker wrote the file into a temp
+dir at runtime via a `makeChildDir()` helper mirroring the existing `makeKernelProjectDir` pattern, kept both
+pre-existing ADV-02 assertions verbatim, and the static fixture now doubles as the template-repo case.
+**ADV-02 was preserved, not retired** — which was the whole point of the amendment.
+
+#### Findings carried into wave 3
+
+- **T35 may already be satisfied.** `release-marker-commit` deleted `.github/workflows/catalog.yml` (`6b99461`)
+  and merged it into `ci.yml`, whose `gates` job already carries `fetch-depth: 0` (`ci.yml:94,98,102`, gated on
+  `detect.outputs.template == 'true'`). T35's `Where` points at a file that no longer exists. **Verify at
+  dispatch; it likely becomes a verification, not an edit.**
+- **T36 now writes into the merged `ci.yml`.** Its assertion that `format:check` is absent from `ci.yml` was
+  checked against the merged file and **still holds** — no format job was merged in, so no child inherits a red
+  pipeline. That was the one way these two features could have contradicted each other without either Verifier
+  noticing.
+- **T41's file is settled.** That feature's T3 (`7e5a43e`) removed the single `_exclude` line for
+  `catalog.yml`; nothing else in `copier.yml` moved. Owner-ruled there, and the reason is worth keeping: handing
+  the deletion to T41 would have made their CI-01 unprovable inside their own commit range.
+- **`apps/web/Dockerfile` is in no task's `Touches`** and bakes only `VITE_API_URL`. `%VITE_LOCALE%`,
+  `%VITE_APP_NAME%` and the route placeholders stay **literal in the built HTML** — Vite leaves unmatched
+  placeholders as-is. The JS layer corrects at runtime so no `Done when` was missed, but LOC-01/LOC-02 are
+  half-delivered on the deploy path. **Needs a task; none exists.**
+- **This file's `Commit` field is only present on the last task of a chain.** Workers authored their own
+  messages for the rest. Affects every remaining wave.
+- **`RoutePath` widened from a literal union to `string`** in the lint repair — honest, since those paths are
+  runtime-configurable, but a loss of type precision, and it made three `as RoutePath` casts redundant.
+- **Bench debris.** The lint-repair worker left an untracked `apps/web/src/shared/lib/__scratch_lint_test.ts`
+  (7 lines, unreferenced), removed by the orchestrator. Untracked debris on kernel surface ships the moment
+  anyone runs `git add -A`.

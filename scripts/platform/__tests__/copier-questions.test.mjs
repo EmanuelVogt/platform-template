@@ -64,7 +64,9 @@ test("product_locale is overridable — no choices lock it to pt-BR", () => {
 // e new_copy. `_copier_operation` fica "update" nas três (contextvar setada uma vez só), então
 // só `_copier_operation == 'copy'` filtra as descartáveis; `pretend` sozinho não bastava.
 test("pnpm install still refuses to run under --pretend", () => {
-  const task = copierYml()._tasks.find((t) => t.command === "pnpm install")
+  const task = copierYml()._tasks.find((t) =>
+    t.command?.startsWith("pnpm install")
+  )
   assert.ok(task, "copier.yml precisa da task `pnpm install`")
   assert.match(
     task.when,
@@ -75,7 +77,7 @@ test("pnpm install still refuses to run under --pretend", () => {
 
 test("pnpm install and pnpm skills:sync are copy-only, like git init", () => {
   const tasks = copierYml()._tasks
-  const install = tasks.find((t) => t.command === "pnpm install")
+  const install = tasks.find((t) => t.command?.startsWith("pnpm install"))
   const sync = tasks.find((t) => t.command === "pnpm skills:sync")
   const gitInit = tasks.find((t) => t.command === "git init -q")
   assert.ok(install && sync && gitInit)

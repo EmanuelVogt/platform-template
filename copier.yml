@@ -92,7 +92,16 @@ _tasks:
   # guarda, install/sync rodavam duas vezes num diretório descartável (minutos +
   # rede) e uma terceira vez contra o manifesto pré-diff — a skill
   # template-update já roda `pnpm install` depois do merge de verdade
-  - command: pnpm install
+  #
+  # `--no-frozen-lockfile` não é folga: o workspace do filho difere do template
+  # POR CONSTRUÇÃO — o template tem `apps/web-vite` e `apps/web-next`, o filho
+  # tem só `apps/web` —, então os importers do lockfile copiado nunca casam com
+  # a árvore renderizada. Este install é quem os reescreve; o pnpm mantém as
+  # versões já resolvidas das specs inalteradas, então os pins do template
+  # sobrevivem e só as chaves de importer se movem. Sem o flag, todo ambiente
+  # com `CI` definido (onde o pnpm implica `--frozen-lockfile`) morre em
+  # ERR_PNPM_OUTDATED_LOCKFILE e leva junto todo gate que renderiza um filho.
+  - command: pnpm install --no-frozen-lockfile
     when: "{{ _copier_operation == 'copy' and not _copier_conf.pretend }}"
   - command: pnpm skills:sync
     when: "{{ _copier_operation == 'copy' and not _copier_conf.pretend }}"

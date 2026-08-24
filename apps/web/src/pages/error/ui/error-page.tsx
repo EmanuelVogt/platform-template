@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from "@tanstack/react-router"
 import { useEffect } from "react"
 
-import { ROUTES } from "@/shared/config/routes"
+import { ROUTES, WEB_COPY } from "@/shared/config/routes"
 import { forgetLastLocation } from "@/shared/lib/last-location"
 
 type Props = {
@@ -21,13 +21,10 @@ export function ErrorPage({ reset }: Props) {
 
   return (
     <section>
-      <h1>Algo deu errado</h1>
-      <p>
-        Não foi possível carregar esta página. Tente novamente; se o problema
-        continuar, volte ao início.
-      </p>
+      <h1>{WEB_COPY.errorTitle}</h1>
+      <p>{WEB_COPY.errorBody}</p>
       <button type="button" onClick={reset}>
-        Tentar novamente
+        {WEB_COPY.retry}
       </button>
       <button
         type="button"
@@ -35,7 +32,7 @@ export function ErrorPage({ reset }: Props) {
           void navigate({ to: ROUTES.HOME })
         }}
       >
-        Voltar ao início
+        {WEB_COPY.backToHome}
       </button>
     </section>
   )

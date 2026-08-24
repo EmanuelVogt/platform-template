@@ -8,11 +8,29 @@
  */
 export const ROUTES = {
   HOME: "/",
-  LOGIN: "/entrar",
-  INICIO: "/inicio",
+  // Slugs vêm de `VITE_ROUTE_LOGIN`/`VITE_ROUTE_INICIO` (mesmo seam de
+  // `VITE_APP_NAME`/`VITE_LOCALE` em `app/router/shell.tsx`) — sem default, o
+  // produto enxerga exatamente os paths de hoje.
+  LOGIN: import.meta.env.VITE_ROUTE_LOGIN || "/entrar",
+  INICIO: import.meta.env.VITE_ROUTE_INICIO || "/inicio",
 } as const
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES]
+
+/** Copy compartilhada entre `RoutePending`, `NotFoundPage` e `ErrorPage` — uma
+ *  única fonte em vez de cada página repetir o próprio texto (ex.: "Voltar ao
+ *  início" existia duas vezes antes desta constante). */
+export const WEB_COPY = {
+  loading: "Carregando…",
+  notFoundTitle: "Página não encontrada",
+  notFoundBody:
+    "O endereço que você acessou não existe ou foi movido. Confira o link e tente novamente.",
+  errorTitle: "Algo deu errado",
+  errorBody:
+    "Não foi possível carregar esta página. Tente novamente; se o problema continuar, volte ao início.",
+  retry: "Tentar novamente",
+  backToHome: "Voltar ao início",
+} as const
 
 /** Rotas protegidas (área logada) — destinos válidos para restaurar ou
  *  redirecionar um usuário autenticado. O produto acrescenta as próprias com

@@ -1,11 +1,16 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
   registerProtectedRoute,
   ROUTES,
   resolveProtectedRouteTemplate,
   toSafeProtectedRoute,
+  WEB_COPY,
 } from "./routes"
+
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
 
 describe("toSafeProtectedRoute", () => {
   it("aceita rota protegida da allowlist", () => {
@@ -60,5 +65,39 @@ describe("registerProtectedRoute", () => {
 
   it("path nunca registrado continua fora da allowlist", () => {
     expect(toSafeProtectedRoute("/rota-nunca-registrada")).toBeNull()
+  })
+})
+
+describe("slugs de rota via VITE_ROUTE_LOGIN / VITE_ROUTE_INICIO", () => {
+  it("sem as variáveis definidas, os slugs são os de hoje byte-a-byte", () => {
+    expect(ROUTES.LOGIN).toBe("/entrar")
+    expect(ROUTES.INICIO).toBe("/inicio")
+    expect(WEB_COPY.backToHome).toBe("Voltar ao início")
+  })
+
+  it("VITE_ROUTE_LOGIN definido sobrescreve o slug de login", async () => {
+    vi.stubEnv("VITE_ROUTE_LOGIN", "/login")
+    vi.resetModules()
+    const { ROUTES: freshRoutes } = await import("./routes")
+    expect(freshRoutes.LOGIN).toBe("/login")
+  })
+
+  it("VITE_ROUTE_INICIO definido sobrescreve o slug de início", async () => {
+    vi.stubEnv("VITE_ROUTE_INICIO", "/home")
+    vi.resetModules()
+    const { ROUTES: freshRoutes } = await import("./routes")
+    expect(freshRoutes.INICIO).toBe("/home")
+  })
+})
+
+describe("WEB_COPY", () => {
+  it("é a única fonte de copy para RoutePending, NotFoundPage e ErrorPage", () => {
+    expect(WEB_COPY).toMatchObject({
+      loading: "Carregando…",
+      notFoundTitle: "Página não encontrada",
+      errorTitle: "Algo deu errado",
+      retry: "Tentar novamente",
+      backToHome: "Voltar ao início",
+    })
   })
 })

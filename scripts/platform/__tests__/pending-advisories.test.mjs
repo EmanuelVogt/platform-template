@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { randomUUID } from "node:crypto"
 import { spawnSync } from "node:child_process"
 import {
+  cpSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -109,11 +110,65 @@ function makeKernelProjectDir({ commit, withLock = false }) {
   return dir
 }
 
-test("sem .platform-modules.lock: emite a linha de no-lock alinhada ao spec.md ADV-02 (sem prefixo pnpm)", () => {
-  const result = runHook({ projectDir: path.join(FIXTURES_DIR, "no-lock") })
+// Copia um fixture estático para um diretório temporário e grava `.copier-answers.yml` ali —
+// nunca commitado, pela mesma razão do comentário acima de `makeKernelProjectDir`:
+// `copier-answers-leak.test.mjs` reprova qualquer `.copier-answers.yml` rastreado no git.
+function makeChildDir(fixtureName, { commit = "v2.0.0" } = {}) {
+  const dir = mkdtempSync(
+    path.join(tmpdir(), `pending-advisories-${fixtureName}-child-`)
+  )
+  cpSync(path.join(FIXTURES_DIR, fixtureName), dir, { recursive: true })
+  writeFileSync(
+    path.join(dir, ".copier-answers.yml"),
+    `_src_path: gh:example/platform-template\n_commit: ${commit}\n`
+  )
+  return dir
+}
+
+test("child real (com .copier-answers.yml) sem .platform-modules.lock: emite a linha de no-lock alinhada ao spec.md ADV-02 (sem prefixo pnpm)", () => {
+  const result = runHook({ projectDir: makeChildDir("no-lock") })
   assert.equal(result.status, 0)
   const payload = JSON.parse(result.stdout)
   assert.equal(payload.hookSpecificOutput.hookEventName, "SessionStart")
+  assert.equal(
+    payload.hookSpecificOutput.additionalContext,
+    "no .platform-modules.lock — run platform module adopt"
+  )
+})
+
+test("repositório template (sem .copier-answers.yml) sem .platform-modules.lock: fica silencioso — a linha de adopt é só para um filho real", () => {
+  const result = runHook({ projectDir: path.join(FIXTURES_DIR, "no-lock") })
+  assert.equal(result.status, 0)
+  assert.equal(result.stdout, "")
+})
+
+test("child real com .platform-modules.lock presente porém vazio: fica silencioso — noLock distingue ausente de presente-e-vazio", () => {
+  const dir = makeChildDir("no-lock")
+  writeFileSync(
+    path.join(dir, ".platform-modules.lock"),
+    JSON.stringify({ modules: {} })
+  )
+  const result = runHook({ projectDir: dir })
+  assert.equal(result.status, 0)
+  assert.equal(result.stdout, "")
+})
+
+test("child real com lock ausente e nenhum advisory em disco: ainda assim emite a linha de adopt — o nudge do ADV-02 não depende de haver algo pendente", () => {
+  const dir = mkdtempSync(
+    path.join(tmpdir(), "pending-advisories-empty-advisories-child-")
+  )
+  writeFileSync(
+    path.join(dir, ".copier-answers.yml"),
+    "_src_path: gh:example/platform-template\n_commit: v2.0.0\n"
+  )
+  mkdirSync(path.join(dir, "docs", "advisories"), { recursive: true })
+  writeFileSync(
+    path.join(dir, "docs", "advisories", "APPLIED.md"),
+    "# Advisories aplicados\n"
+  )
+  const result = runHook({ projectDir: dir })
+  assert.equal(result.status, 0)
+  const payload = JSON.parse(result.stdout)
   assert.equal(
     payload.hookSpecificOutput.additionalContext,
     "no .platform-modules.lock — run platform module adopt"
@@ -155,6 +210,21 @@ test("kernel com lock: linhas de kernel vêm antes das linhas de entrada", () =>
   assert.equal(
     payload.hookSpecificOutput.additionalContext,
     "ADV-20260823-01 bug high kernel\nADV-20260901-01 security high identity/single-tenant"
+  )
+})
+
+test("kernel com lock presente porém vazio: a linha de kernel aparece, a linha de adopt não — o lock presente-e-vazio só silencia a parte de entries", () => {
+  const projectDir = makeKernelProjectDir({ commit: "v2.0.0", withLock: false })
+  writeFileSync(
+    path.join(projectDir, ".platform-modules.lock"),
+    JSON.stringify({ modules: {} })
+  )
+  const result = runHook({ projectDir })
+  assert.equal(result.status, 0)
+  const payload = JSON.parse(result.stdout)
+  assert.equal(
+    payload.hookSpecificOutput.additionalContext,
+    "ADV-20260823-01 bug high kernel"
   )
 })
 

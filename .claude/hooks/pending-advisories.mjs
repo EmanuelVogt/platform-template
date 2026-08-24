@@ -30,12 +30,22 @@ try {
   }
 
   const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd()
-  const lock = readLock(join(projectDir, ".platform-modules.lock"))
+  const copierAnswersPath = join(projectDir, ".copier-answers.yml")
+  // Only a copier-generated child carries `.copier-answers.yml` — the template repo (the
+  // source) never does. ADV-02's "run platform module adopt" nudge is only meaningful for a
+  // child; without this file the project cannot be the child ADV-02 talks about.
+  const isChild = existsSync(copierAnswersPath)
+  const lockPath = join(projectDir, ".platform-modules.lock")
+  // `readLock` normalizes a missing file to the same `{ modules: {} }` shape as a lock that
+  // is present but genuinely empty — the two are indistinguishable once parsed, so the
+  // distinction has to be made here, against the filesystem, before that normalization.
+  const lockFileMissing = !existsSync(lockPath)
+  const lock = readLock(lockPath)
   const advisories = loadAdvisories(join(projectDir, "docs", "advisories"))
   const ledger = readLedger(
     join(projectDir, "docs", "advisories", "APPLIED.md")
   )
-  const origin = readTemplateOrigin(join(projectDir, ".copier-answers.yml"))
+  const origin = readTemplateOrigin(copierAnswersPath)
   const templateVersion = origin
     ? parseInstalledVersion(origin.commit)?.version
     : undefined
@@ -49,11 +59,12 @@ try {
   const kernelLines = pending
     .filter((advisory) => advisory.module === "kernel")
     .map(formatAdvisory)
-  const entryLines = noLock
-    ? ["no .platform-modules.lock — run platform module adopt"]
-    : pending
-        .filter((advisory) => advisory.module !== "kernel")
-        .map(formatAdvisory)
+  const entryLines =
+    isChild && noLock && lockFileMissing
+      ? ["no .platform-modules.lock — run platform module adopt"]
+      : pending
+          .filter((advisory) => advisory.module !== "kernel")
+          .map(formatAdvisory)
   const lines = [...kernelLines, ...entryLines]
 
   if (lines.length === 0) process.exit(0)

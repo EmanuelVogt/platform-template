@@ -176,6 +176,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: DOC-03 / docs/advisories/README.md (docs)
 - last seen: 2026-08-23T20:38:43Z
 
+### L-028 — A control that is real but does not sit where the work actually passes through does not fail loudly — it fails as a plausible-looking success: a per-task gate that runs the test command but not the lint command lets a whole wave pass green and hands the failure to the next gate downstream; a Touches list retyped into a worker payload instead of copied verbatim from tasks.md comes back as a polite 'not mine' indistinguishable from good judgement, with no hook comparing plan to payload; a formatting standard specified before its pre-commit enforcement lands ships unformatted files with nothing to catch them. Place the control where the change actually happens, or verify it did.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `execute-process` · harmful: 0
+- features: release-marker-commit
+- evidence: .specs/features/release-marker-commit/tasks.md § Execution Log (execute-process)
+- last seen: 2026-08-24T03:20:40Z
+
+### L-029 — A spec's 'at least one file/item' threshold (changedFiles.length > 0) gets tests at 0 and N>1 but never at exactly 1 — an off-by-one mutant (> 0 to > 1) survives untouched. When a spec says 'at least one', assert the boundary value itself (exactly 1), not just the empty and comfortably-over cases.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `release-marker` · harmful: 0
+- features: release-marker-commit
+- evidence: scripts/platform/lib/release-marker.mjs:60 (release-marker)
+- last seen: 2026-08-24T03:20:44Z
+
 ## Quarantined (failed when applied — ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

@@ -596,3 +596,29 @@ Reported across, repaired there at `36f1f9f`. Root cause worth keeping: `catalog
 sibling task's `Touches` — the task was not completable as written. Same family as the gaps that
 forced T12 and T13 into this plan: a `Touches` list that omits the file the change structurally
 requires.
+
+
+## Verdict
+
+**Verifier round 2 — PASS (2026-08-24).** 9/9 ACs matched, 0 precision gaps. Final gate whole, exit 0:
+`check` 5/5 · `test` 614/614 · `test:scripts` 462/462 · `catalog:lint` 0 · `catalog:typecheck` 0 ·
+`format:check` 0 diffs. Sensor 4/4 killed (round 1 was 2/3). Report: `validation.md`.
+
+Round 2 earned the verdict instead of accepting round 1's fixes on report:
+- it **re-ran the glob mutant itself** (`lefthook-local.yml:24` -> `**/*.{ext}`), got `not ok 1`,
+  matching the worker's claim rather than trusting it;
+- it **checked the load-bearing premise of FMT-03** — that `installChild` is a real `pnpm install`
+  (`child.mjs:58-60`) running before `checkFormatCheck` — which is the only thing separating the
+  literal AC from the weaker fallback wearing its clothes; then ran `pnpm template:smoke` live;
+- it **authored a fresh mutant of its own** for FMT-05 (dropped `.specs/` from `.prettierignore`),
+  killed by the new class-level test.
+
+Lessons L-028/029/030 kept as historical record — grounded findings, later fixed, not retracted.
+
+**Remaining, and the owner's act alone (AD-006/AD-034): the agent never tags and never pushes.**
+`v2.3.0` is still untagged and this feature ships *inside* it. `release-preflight` should accept it —
+the five entries carry T12's `2.0.1` bump, so `entryChangedWithoutBump` is satisfied, and item 7 sits
+inside the existing `## v2.3.0` section, which remains the changelog's latest.
+**Blocker discovered at closeout:** `main` and `origin/main` have **diverged** — 106 local commits vs
+40 remote ones neither side shares. A plain `git push origin main` will be refused. That must be
+reconciled by the owner before the release workflow can see any of this work.

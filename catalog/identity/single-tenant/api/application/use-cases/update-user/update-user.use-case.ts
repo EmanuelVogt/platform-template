@@ -116,13 +116,13 @@ export class UpdateUserUseCase implements UseCaseContract<
 
   /**
    * O próprio escopo também não se auto-edita: marcar-se como atendente ou
-   * ampliar áreas/serviços/áreas de agendamento é decisão de outro ator com
+   * ampliar áreas/serviços/áreas restritas por perfil é decisão de outro ator com
    * permissão, nunca do dono da conta. Master não passa por aqui — editar o
    * usuário master já é recusado acima.
    *
    * SPEC_DEVIATION: para `schedulingAreaIds` a regra é "auto-edição não carrega
-   * área de agendamento", não "não pode mudar".
-   * Reason: o port não tem leitura das áreas de agendamento de UM usuário
+   * essa área", não "não pode mudar".
+   * Reason: o port não tem leitura das áreas restritas por perfil de UM usuário
    * (só a listagem devolve o campo) e criar essa leitura sai do escopo desta
    * tarefa; fail-closed é o lado seguro.
    */

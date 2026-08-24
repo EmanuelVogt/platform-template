@@ -15,7 +15,7 @@ export interface UserListRow {
   /** Áreas/serviços de atuação (perfil Profissional). Vazios para os demais perfis. */
   areaIds: readonly string[]
   serviceIds: readonly string[]
-  /** Áreas de agendamento (perfil Agendamentos). Vazias para os demais perfis. */
+  /** Áreas restritas a determinados perfis. Vazias para os demais perfis. */
   schedulingAreaIds: readonly string[]
 }
 
@@ -112,7 +112,7 @@ export interface UserRepository {
     userId: string,
     serviceIds: readonly string[]
   ): Promise<void>
-  /** Substitui as áreas de agendamento do perfil Agendamentos (delete + insert na mesma tx). */
+  /** Substitui as áreas restritas por perfil (delete + insert na mesma tx). */
   replaceSchedulingAreas(
     userId: string,
     areaIds: readonly string[]
@@ -147,25 +147,25 @@ export interface UserRepository {
   findProfessionalsByIds(
     ids: string[]
   ): Promise<Map<string, AssignableProfessionalRow>>
-  /** Todos que atendem cliente, vivos e ativos, ordenados por nome (mapa de agenda). */
+  /** Todos que atendem cliente, vivos e ativos, ordenados por nome (consumido por outro módulo). */
   listActiveProfessionals(): Promise<AssignableProfessionalRow[]>
   /**
    * Quem atende cliente, vivo e ativo, com a área em "Áreas de atuação",
-   * ordenado por nome (filtro do mapa de agenda por área).
+   * ordenado por nome (filtro por área, consumido por outro módulo).
    */
   listActiveProfessionalsByArea(
     areaId: string
   ): Promise<AssignableProfessionalRow[]>
   /**
    * Ids de quem atende cliente, vivo e ativo, com o serviço em "Serviços de
-   * atuação", agrupados por serviceId (leitura cross-module do motor de agendamento).
+   * atuação", agrupados por serviceId (leitura cross-module por outro módulo).
    */
   findActiveProfessionalIdsByServices(
     serviceIds: string[]
   ): Promise<Map<string, string[]>>
   /**
    * Como `findActiveProfessionalIdsByServices`, acrescido da flag de padrão do
-   * vínculo — o motor de agendamento aloca só os padrões.
+   * vínculo — outro módulo aloca só os padrões.
    */
   findActiveProfessionalLinksByServices(
     serviceIds: string[]

@@ -436,5 +436,6 @@ Três pontos que costumam ser esquecidos ao reescrever a tela:
 
 ## Follow-ups absorvidos
 
-Nenhum. `module.json.absorbs` está vazio — nenhum dos follow-ups do sweep v0.2 (#2–#8) foi
-corrigido na extração desta entrada; seguem abertos nos próprios issues.
+Nenhum. `module.json.absorbs` está vazio — nenhum dos follow-ups do sweep v0.2 foi corrigido na
+extração desta entrada. Os issues que os rastreavam (#2–#8) foram excluídos; o débito não tem
+dono nem registro vivo — quem reabrir a frente decide caso a caso.

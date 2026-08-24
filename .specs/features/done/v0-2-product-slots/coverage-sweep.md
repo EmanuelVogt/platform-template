@@ -6,8 +6,8 @@ Sweep #2 (T21, final, worktree HEAD `f02cb03`, Verifier PASS). Verdict per row:
 (closed by a v0.2 task) and/or `issue <url>` (follow-up, AD-011). Hits inside the five
 points' files (identity `059b6c7..706cee9`, notification `ac515d5..43b8298`, audit
 `60a77bc..e1840fa`, attachment `5073397..253ea0d`, docs `4cfd918..13125bc`) are fixed
-in v0.2; every other `remove`/`open slot` row is linked to a follow-up issue
-(#2–#8, filed 2026-08-18).
+in v0.2; every other `remove`/`open slot` row was linked to a follow-up issue
+(#2–#8, filed 2026-08-18, since deleted — the debt below is untracked, not resolved).
 
 **Test-count baseline (worktree, before wave 1):** unit 974 tests / 143 suites · int 337 / 34 · e2e 115 / 28 · web 65 / 19 files.
 **Test-count final (worktree HEAD `f02cb03`, 2026-08-18):** unit 1000 / int 342 / e2e 123 / web 65 files. No silent deletion against the baseline.
@@ -56,28 +56,28 @@ Every remaining `remove`/`open slot` row is one of:
 
 - **Identity `professional` slice** (~59 files + `db/schema.ts`) — mechanism built by
   T2/T3/T6 (`done 059b6c7..706cee9`); the concrete field names (`attendsGuests` etc.)
-  are a contract-breaking rename deferred to v0.3 per AD-002 →
-  [issue #2](https://github.com/EmanuelVogt/platform-template/issues/2).
+  are a contract-breaking rename deferred to v0.3 per AD-002 — tracked as issue #2,
+  since deleted (410); the debt is untracked.
 - **Attachment upload profiles** (11 files) — closed by T14/T15/T16
   (`done 5073397..253ea0d`), no follow-up needed.
 - **Audit registry** (3 files) — closed by T11/T12/T13 (`done 60a77bc..e1840fa`), no
   follow-up needed.
 - **`docs/back/back-arch.md`** — first cut done by T18 (`done 4cfd918..13125bc`); full
-  example genericization deferred →
-  [issue #3](https://github.com/EmanuelVogt/platform-template/issues/3).
-- **`docs/front/front-arch.md`** →
-  [issue #4](https://github.com/EmanuelVogt/platform-template/issues/4).
+  example genericization deferred — tracked as issue #3, since deleted (410); the
+  debt is untracked.
+- **`docs/front/front-arch.md`** — tracked as issue #4, since deleted (410); the debt
+  is untracked.
 - **Issue-tracker Area taxonomy** (`docs/agents/issue-tracker.md.jinja` +
-  `.agents/skills/creating-issues/SKILL.md.jinja`) →
-  [issue #5](https://github.com/EmanuelVogt/platform-template/issues/5).
-- **Test fixtures leaking Rituaali data** (5 int-specs/boundary spec) →
-  [issue #6](https://github.com/EmanuelVogt/platform-template/issues/6).
+  `.agents/skills/creating-issues/SKILL.md.jinja`) — tracked as issue #5, since
+  deleted (410); the debt is untracked.
+- **Test fixtures leaking Rituaali data** (5 int-specs/boundary spec) — tracked as
+  issue #6, since deleted (410); the debt is untracked.
 - **Cosmetic leftovers** (11 files — comments, example slugs, constant names, fixture
-  URLs) → [issue #7](https://github.com/EmanuelVogt/platform-template/issues/7).
+  URLs) — tracked as issue #7, since deleted (410); the debt is untracked.
 - **Verifier's non-blocking observation** on
   `get-attachment-for-download.use-case.ts:74-77` (access trail logs `allowed` and
-  opens the storage stream before the controller's unknown-profile 404) →
-  [issue #8](https://github.com/EmanuelVogt/platform-template/issues/8).
+  opens the storage stream before the controller's unknown-profile 404) — tracked as
+  issue #8, since deleted (410); the debt is untracked.
 
 Final table posted as a comment on
 [issue #1](https://github.com/EmanuelVogt/platform-template/issues/1).

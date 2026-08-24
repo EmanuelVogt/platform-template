@@ -16,43 +16,85 @@ function readWorkflow() {
   return parseYaml(readFileSync(RELEASE_WORKFLOW_PATH, "utf8"))
 }
 
-test("REL-01: verify não tem mais if de job (que pularia o job em vez de falhar)", () => {
-  const { jobs } = readWorkflow()
-  assert.equal(jobs.verify.if, undefined)
+test("MARK-05: workflow_dispatch e seu input version não existem mais", () => {
+  const doc = readWorkflow()
+  assert.equal(doc.on.workflow_dispatch, undefined)
+  assert.equal(doc.on.push?.branches?.[0], "main")
 })
 
-test("REL-01: o primeiro passo de verify é um guard incondicional que falha quando o ref não é refs/heads/main", () => {
+test("MARK-05: nenhum step carrega o guard de ref não-main que foi deletado", () => {
   const { jobs } = readWorkflow()
-  const [firstStep] = jobs.verify.steps
-  assert.equal(
-    firstStep.uses,
-    undefined,
-    "o primeiro passo deve ser run:, não uses:"
+  for (const job of Object.values(jobs)) {
+    for (const step of job.steps) {
+      if (!step.run) continue
+      const carriesGuard =
+        /github\.ref/.test(step.run) &&
+        /refs\/heads\/main/.test(step.run) &&
+        /exit 1/.test(step.run)
+      assert.equal(
+        carriesGuard,
+        false,
+        `step "${step.name ?? step.run}" ainda carrega o guard deletado`
+      )
+    }
+  }
+})
+
+test("MARK-04: jobs.marker.if existe e referencia head_commit.message — um push comum não sobe runner", () => {
+  const { jobs } = readWorkflow()
+  assert.ok(jobs.marker, "job marker não existe")
+  assert.match(jobs.marker.if, /head_commit\.message/)
+})
+
+test("guarda de regressão: marker.if permanece frouxo — sem padrão de versão \\d/[0-9]", () => {
+  const { jobs } = readWorkflow()
+  assert.doesNotMatch(
+    jobs.marker.if,
+    /\\d|\[0-9\]/,
+    "marker.if não pode validar a gramática da versão — isso reintroduziria o skip silencioso que MARK-06 existe para evitar"
   )
-  assert.equal(
-    firstStep.if,
-    undefined,
-    "o passo de guarda não pode ter if próprio, senão também pularia"
-  )
-  assert.match(firstStep.run, /github\.ref/)
-  assert.match(firstStep.run, /refs\/heads\/main/)
-  assert.match(firstStep.run, /exit 1/)
 })
 
-test("REL-02: o job tag depende de verify e catalog", () => {
+test("MARK-01: verify só roda quando needs.marker.outputs.release é true", () => {
   const { jobs } = readWorkflow()
-  assert.deepEqual(jobs.tag.needs, ["verify", "catalog"])
+  assert.equal(jobs.verify.needs, "marker")
+  assert.equal(jobs.verify.if, "needs.marker.outputs.release == 'true'")
 })
 
-test("REL-02: verify roda o release-preflight antes de qualquer passo de gate", () => {
+test("MARK-01: catalog só roda quando needs.marker.outputs.release é true", () => {
+  const { jobs } = readWorkflow()
+  assert.equal(jobs.catalog.if, "needs.marker.outputs.release == 'true'")
+})
+
+// MARK-03: a AC pede `needs: [verify, catalog]`; `marker` entra porque um job
+// só lê outputs de quem está em `needs` diretamente. O conjunto é um
+// superconjunto estrito — a garantia da AC (nenhuma tag sem gates verdes)
+// continua de pé. Não trocar por igualdade.
+test("MARK-03: tag.needs é um superconjunto de [verify, catalog]", () => {
+  const { jobs } = readWorkflow()
+  assert.ok(jobs.tag.needs.includes("verify"))
+  assert.ok(jobs.tag.needs.includes("catalog"))
+})
+
+test("tag é o único job com permissions.contents write", () => {
+  const { jobs } = readWorkflow()
+  const jobsWithWrite = Object.entries(jobs)
+    .filter(([, job]) => job.permissions?.contents === "write")
+    .map(([name]) => name)
+  assert.deepEqual(jobsWithWrite, ["tag"])
+})
+
+test("verify roda o release-preflight (com a versão do marker) antes de qualquer passo de gate", () => {
   const { jobs } = readWorkflow()
   const runs = jobs.verify.steps.map((step) => step.run).filter(Boolean)
   const preflightIndex = runs.findIndex((run) =>
-    /release-preflight\.mjs "\$\{\{ inputs\.version \}\}"/.test(run)
+    /release-preflight\.mjs "\$\{\{ needs\.marker\.outputs\.version \}\}"/.test(
+      run
+    )
   )
   assert.ok(
     preflightIndex >= 0,
-    "release-preflight.mjs não encontrado nos passos de verify"
+    "release-preflight.mjs não encontrado nos passos de verify, ou não usa needs.marker.outputs.version"
   )
   const gatePatterns = [
     /^pnpm check$/,
@@ -69,12 +111,4 @@ test("REL-02: verify roda o release-preflight antes de qualquer passo de gate", 
       `preflight deve rodar antes de ${pattern}`
     )
   }
-})
-
-test("REL-02: tag é o único job com permissions.contents write", () => {
-  const { jobs } = readWorkflow()
-  const jobsWithWrite = Object.entries(jobs)
-    .filter(([, job]) => job.permissions?.contents === "write")
-    .map(([name]) => name)
-  assert.deepEqual(jobsWithWrite, ["tag"])
 })

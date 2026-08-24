@@ -1,11 +1,22 @@
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { test } from "node:test"
 import { fileURLToPath } from "node:url"
 
 const TESTS_DIR = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(TESTS_DIR, "..", "..", "..")
+
+// Um child renderizado tem um único `apps/web`; aqui no template os dois shells
+// convivem como `apps/web-vite`/`apps/web-next`, cada um com o seu prefixo de env
+// (L-025: derivar do que existe, nunca do nome de diretório do template).
+const WEB_ENV_SITES = [
+  ["apps/web", /VITE_API_URL=http:\/\/localhost:(\d+)/],
+  ["apps/web-vite", /VITE_API_URL=http:\/\/localhost:(\d+)/],
+  ["apps/web-next", /NEXT_PUBLIC_API_URL=http:\/\/localhost:(\d+)/],
+]
+  .map(([dir, pattern]) => [path.join(dir, ".env.example"), pattern])
+  .filter(([rel]) => existsSync(path.join(REPO_ROOT, rel)))
 
 const read = (rel) => readFileSync(path.join(REPO_ROOT, rel), "utf8")
 
@@ -22,7 +33,7 @@ test("exactly one API port literal appears across every site a child reads", () 
       /PORT: z\.coerce\.number\(\)\.int\(\)\.positive\(\)\.default\((\d+)\)/,
     ],
     ["apps/api/.env.example", /^PORT=(\d+)$/m],
-    ["apps/web/.env.example", /VITE_API_URL=http:\/\/localhost:(\d+)/],
+    ...WEB_ENV_SITES,
     ["apps/api/Dockerfile", /EXPOSE (\d+)/],
     ["apps/api/Dockerfile", /process\.env\.PORT\|\|(\d+)/],
     ["apps/api/Dockerfile.dev", /EXPOSE (\d+)/],

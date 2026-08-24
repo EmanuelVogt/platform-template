@@ -38,12 +38,12 @@ export class UploadAttachmentsBatchUseCase {
     @Inject(OBJECT_STORAGE) private readonly storage: ObjectStoragePort,
     @Inject(ATTACHMENT_REPOSITORY) private readonly repo: AttachmentRepository,
     @Inject(UPLOAD_PROFILES) private readonly profiles: UploadProfileCatalog,
-    private readonly txManager: TransactionManager,
+    private readonly txManager: TransactionManager
   ) {}
 
   @Traced({ name: "attachment.uploadBatch" })
   async execute(
-    input: UploadAttachmentsBatchInput,
+    input: UploadAttachmentsBatchInput
   ): Promise<UploadAttachmentsBatchOutput> {
     const profile = this.profiles[input.profile]
     const uploaded: Attachment[] = []
@@ -54,7 +54,7 @@ export class UploadAttachmentsBatchUseCase {
       for await (const file of input.files) {
         if (uploaded.length >= profile.maxFiles) {
           throw new UploadQuotaExceededError(
-            `Máximo de ${String(profile.maxFiles)} arquivos por envio.`,
+            `Máximo de ${String(profile.maxFiles)} arquivos por envio.`
           )
         }
 
@@ -79,7 +79,10 @@ export class UploadAttachmentsBatchUseCase {
           ownerUserId: input.ownerUserId,
         })
 
-        const allowance = Math.min(profile.maxBytes, profile.maxTotalBytes - batchBytes)
+        const allowance = Math.min(
+          profile.maxBytes,
+          profile.maxTotalBytes - batchBytes
+        )
         const counter = new CountingLimit(allowance)
         let sourceFailure: Error | null = null
         // Leitura por função: quem escreve é o callback do stream.
@@ -98,14 +101,14 @@ export class UploadAttachmentsBatchUseCase {
           await this.storage.putStream(
             pending.props.storageKey,
             counter,
-            pending.props.contentType,
+            pending.props.contentType
           )
         } catch (error) {
           // O erro do stream chega embrulhado pelo SDK; a cota é o motivo real
           // sempre que o contador acusa estouro.
           if (counter.exceeded) {
             throw new UploadQuotaExceededError(
-              `O total não pode passar de ${formatMegabytes(profile.maxTotalBytes)}.`,
+              `O total não pode passar de ${formatMegabytes(profile.maxTotalBytes)}.`
             )
           }
           // Falha vinda do corpo da requisição é problema do envio, não do
@@ -113,7 +116,9 @@ export class UploadAttachmentsBatchUseCase {
           // storage segue como está e vira erro de servidor.
           const fromBody = takeSourceFailure()
           if (fromBody !== null) {
-            throw fromBody instanceof DomainError ? fromBody : new UploadInterruptedError()
+            throw fromBody instanceof DomainError
+              ? fromBody
+              : new UploadInterruptedError()
           }
           throw error
         }

@@ -30,9 +30,10 @@ import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/us
  * O PUT no R2 roda FORA de qualquer tx (IO de rede não segura conexão).
  */
 @UseCase()
-export class UploadAvatarUseCase
-  implements UseCaseContract<UploadAvatarInput, UploadAvatarOutput>
-{
+export class UploadAvatarUseCase implements UseCaseContract<
+  UploadAvatarInput,
+  UploadAvatarOutput
+> {
   private readonly log: AppLogger
 
   constructor(
@@ -42,7 +43,7 @@ export class UploadAvatarUseCase
     @Optional()
     @Inject(PROFILE_IMAGE_STORE)
     private readonly profileImages: ProfileImageStore | null = null,
-    loggerFactory: LoggerFactory,
+    loggerFactory: LoggerFactory
   ) {
     this.log = loggerFactory.forModule("UploadAvatar")
   }
@@ -83,7 +84,10 @@ export class UploadAvatarUseCase
   }
 
   @Transactional()
-  private async persistAvatar(userId: string, attachmentId: string): Promise<void> {
+  private async persistAvatar(
+    userId: string,
+    attachmentId: string
+  ): Promise<void> {
     const now = this.clock.now()
     const user = await this.users.findById(userId)
     if (!user) {

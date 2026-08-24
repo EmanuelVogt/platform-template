@@ -8,7 +8,9 @@ import { ArchiveNotificationUseCase } from "./archive-notification.use-case"
 import type { RequestContext } from "../../../../../shared/kernel/context/request-context"
 import type { NotificationRepositoryPort } from "../../../domain/ports/notification.repository.port"
 
-const ctx = { getActor: () => ({ id: "u1", kind: "user" }) } as unknown as RequestContext
+const ctx = {
+  getActor: () => ({ id: "u1", kind: "user" }),
+} as unknown as RequestContext
 const clock = { now: () => new Date("2026-06-10T03:00:00Z") }
 
 describe("ArchiveNotificationUseCase", () => {
@@ -33,7 +35,9 @@ describe("ArchiveNotificationUseCase", () => {
       update,
     } as unknown as Mocked<NotificationRepositoryPort>
 
-    await new ArchiveNotificationUseCase(repo, ctx, clock).execute({ id: n.props.id })
+    await new ArchiveNotificationUseCase(repo, ctx, clock).execute({
+      id: n.props.id,
+    })
 
     expect(findByIdForRecipient).toHaveBeenCalledWith(n.props.id, "u1")
     expect(saved?.props.archivedAt).toEqual(new Date("2026-06-10T03:00:00Z"))
@@ -46,7 +50,9 @@ describe("ArchiveNotificationUseCase", () => {
       findByIdForRecipient: vi.fn().mockResolvedValue(null),
       update,
     } as unknown as Mocked<NotificationRepositoryPort>
-    await new ArchiveNotificationUseCase(repo, ctx, clock).execute({ id: "alheio" })
+    await new ArchiveNotificationUseCase(repo, ctx, clock).execute({
+      id: "alheio",
+    })
     expect(update).not.toHaveBeenCalled()
   })
 
@@ -60,7 +66,9 @@ describe("ArchiveNotificationUseCase", () => {
     } as unknown as Mocked<NotificationRepositoryPort>
 
     await expect(
-      new ArchiveNotificationUseCase(repo, anonCtx, clock).execute({ id: "any" })
+      new ArchiveNotificationUseCase(repo, anonCtx, clock).execute({
+        id: "any",
+      })
     ).rejects.toThrow(ForbiddenError)
 
     expect(findByIdForRecipient).not.toHaveBeenCalled()

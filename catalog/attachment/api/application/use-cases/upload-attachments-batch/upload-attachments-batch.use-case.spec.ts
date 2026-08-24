@@ -2,7 +2,6 @@ import { Readable } from "node:stream"
 
 import { type Mock, describe, expect, it, vi } from "vitest"
 
-
 import { parseAttachmentConfig } from "../../../attachment.config"
 import {
   EmptyUploadBatchError,
@@ -39,14 +38,18 @@ const imageBatchProfiles = buildUploadProfiles(baseConfig, [
   },
 ])
 
-const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+const PNG_SIGNATURE = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+])
 const JPEG_SIGNATURE = Buffer.from([0xff, 0xd8, 0xff])
 
 function makeUseCase(catalog = profiles) {
   const inserted: Attachment[] = []
   const stored = new Map<string, Buffer>()
   const repo = {
-    insertMany: vi.fn(async (rows: Attachment[]) => void inserted.push(...rows)),
+    insertMany: vi.fn(
+      async (rows: Attachment[]) => void inserted.push(...rows)
+    ),
   }
   const storage = {
     putStream: vi.fn(async (key: string, body: Readable) => {
@@ -61,7 +64,7 @@ function makeUseCase(catalog = profiles) {
     storage as never,
     repo as never,
     catalog,
-    tx as never,
+    tx as never
   )
   return { useCase, repo, storage, inserted, stored }
 }
@@ -79,7 +82,7 @@ function file(name: string, sizeBytes: number): IncomingFile {
 function typedFile(
   name: string,
   declaredContentType: string,
-  chunks: Buffer[],
+  chunks: Buffer[]
 ): IncomingFile {
   return {
     filename: name,
@@ -101,7 +104,9 @@ function brokenFile(name: string, failure: Error): IncomingFile {
   }
 }
 
-async function* iterate(...files: IncomingFile[]): AsyncGenerator<IncomingFile> {
+async function* iterate(
+  ...files: IncomingFile[]
+): AsyncGenerator<IncomingFile> {
   for (const item of files) yield item
 }
 
@@ -121,9 +126,12 @@ describe("UploadAttachmentsBatchUseCase", () => {
 
     expect(out.uploads).toHaveLength(2)
     expect(storage.putStream).toHaveBeenCalledTimes(2)
-    expect(inserted.map((row) => row.props.originalFilename)).toEqual(["a.pdf", "b.pdf"])
+    expect(inserted.map((row) => row.props.originalFilename)).toEqual([
+      "a.pdf",
+      "b.pdf",
+    ])
     expect(inserted.map((row) => row.props.id)).toEqual(
-      out.uploads.map((upload) => upload.attachmentId),
+      out.uploads.map((upload) => upload.attachmentId)
     )
   })
 
@@ -147,7 +155,7 @@ describe("UploadAttachmentsBatchUseCase", () => {
         profile: "multi",
         ownerUserId: "user-1",
         files: iterate(file("a.pdf", 60), file("b.pdf", 60)),
-      }),
+      })
     ).rejects.toBeInstanceOf(UploadQuotaExceededError)
   })
 
@@ -159,14 +167,14 @@ describe("UploadAttachmentsBatchUseCase", () => {
         profile: "multi",
         ownerUserId: "user-1",
         files: iterate(file("a.pdf", 60), file("b.pdf", 60)),
-      }),
+      })
     ).rejects.toThrow(/^O total não pode passar de \d+ MB\.$/)
   })
 
   it("recusa o lote que passa do teto de quantidade", async () => {
     const { useCase } = makeUseCase()
     const many = Array.from({ length: 101 }, (_, index) =>
-      file(`f${String(index)}.pdf`, 0),
+      file(`f${String(index)}.pdf`, 0)
     )
 
     await expect(
@@ -174,7 +182,7 @@ describe("UploadAttachmentsBatchUseCase", () => {
         profile: "multi",
         ownerUserId: "user-1",
         files: iterate(...many),
-      }),
+      })
     ).rejects.toBeInstanceOf(UploadQuotaExceededError)
   })
 
@@ -186,7 +194,7 @@ describe("UploadAttachmentsBatchUseCase", () => {
         profile: "multi",
         ownerUserId: "user-1",
         files: iterate(file("a.pdf", 10), file("b.pdf", 200)),
-      }),
+      })
     ).rejects.toBeInstanceOf(UploadQuotaExceededError)
     expect(repo.insertMany).not.toHaveBeenCalled()
   })
@@ -199,7 +207,7 @@ describe("UploadAttachmentsBatchUseCase", () => {
         profile: "multi",
         ownerUserId: "user-1",
         files: iterate(file("a.pdf", 10), file("b.pdf", 200)),
-      }),
+      })
     ).rejects.toBeInstanceOf(UploadQuotaExceededError)
 
     expect(keysOf(storage.delete)).toEqual(keysOf(storage.putStream))
@@ -216,7 +224,7 @@ describe("UploadAttachmentsBatchUseCase", () => {
         profile: "multi",
         ownerUserId: "user-1",
         files: iterate(file("a.pdf", 10)),
-      }),
+      })
     ).rejects.toBe(dbFailure)
 
     expect(keysOf(storage.delete)).toEqual(keysOf(storage.putStream))
@@ -231,7 +239,7 @@ describe("UploadAttachmentsBatchUseCase", () => {
         profile: "multi",
         ownerUserId: "user-1",
         files: iterate(file("a.pdf", 10), file("b.pdf", 200)),
-      }),
+      })
     ).rejects.toBeInstanceOf(UploadQuotaExceededError)
   })
 
@@ -242,8 +250,10 @@ describe("UploadAttachmentsBatchUseCase", () => {
       useCase.execute({
         profile: "multi",
         ownerUserId: "user-1",
-        files: iterate(brokenFile("a.pdf", new Error("Unexpected end of form"))),
-      }),
+        files: iterate(
+          brokenFile("a.pdf", new Error("Unexpected end of form"))
+        ),
+      })
     ).rejects.toBeInstanceOf(UploadInterruptedError)
 
     expect(keysOf(storage.delete)).toEqual(keysOf(storage.putStream))
@@ -258,7 +268,7 @@ describe("UploadAttachmentsBatchUseCase", () => {
         profile: "multi",
         ownerUserId: "user-1",
         files: iterate(brokenFile("a.pdf", interrupted)),
-      }),
+      })
     ).rejects.toBe(interrupted)
   })
 
@@ -270,7 +280,7 @@ describe("UploadAttachmentsBatchUseCase", () => {
         profile: "multi",
         ownerUserId: "user-1",
         files: iterate(),
-      }),
+      })
     ).rejects.toBeInstanceOf(EmptyUploadBatchError)
 
     expect(storage.putStream).not.toHaveBeenCalled()
@@ -284,7 +294,11 @@ describe("UploadAttachmentsBatchUseCase", () => {
       const full = Buffer.concat([PNG_SIGNATURE, rest])
       // Dois chunks pequenos: primeiro corta no meio da assinatura, obrigando
       // o sniff a acumular mais de uma leitura antes de decidir.
-      const chunks = [PNG_SIGNATURE.subarray(0, 4), PNG_SIGNATURE.subarray(4), rest]
+      const chunks = [
+        PNG_SIGNATURE.subarray(0, 4),
+        PNG_SIGNATURE.subarray(4),
+        rest,
+      ]
 
       await useCase.execute({
         profile: "image-batch-test" as never,
@@ -307,7 +321,7 @@ describe("UploadAttachmentsBatchUseCase", () => {
           profile: "image-batch-test" as never,
           ownerUserId: "user-1",
           files: iterate(typedFile("fake.png", "image/png", [htmlBytes])),
-        }),
+        })
       ).rejects.toBeInstanceOf(UnsupportedMediaTypeError)
     })
 
@@ -321,9 +335,9 @@ describe("UploadAttachmentsBatchUseCase", () => {
           ownerUserId: "user-1",
           files: iterate(
             typedFile("real.png", "image/png", [PNG_SIGNATURE]),
-            typedFile("fake.png", "image/png", [htmlBytes]),
+            typedFile("fake.png", "image/png", [htmlBytes])
           ),
-        }),
+        })
       ).rejects.toBeInstanceOf(UnsupportedMediaTypeError)
 
       expect(repo.insertMany).not.toHaveBeenCalled()
@@ -340,8 +354,10 @@ describe("UploadAttachmentsBatchUseCase", () => {
         useCase.execute({
           profile: "image-batch-test" as never,
           ownerUserId: "user-1",
-          files: iterate(typedFile("swapped.png", "image/jpeg", [PNG_SIGNATURE])),
-        }),
+          files: iterate(
+            typedFile("swapped.png", "image/jpeg", [PNG_SIGNATURE])
+          ),
+        })
       ).rejects.toBeInstanceOf(UnsupportedMediaTypeError)
 
       expect(repo.insertMany).not.toHaveBeenCalled()
@@ -356,9 +372,9 @@ describe("UploadAttachmentsBatchUseCase", () => {
           ownerUserId: "user-1",
           files: iterate(
             typedFile("real.png", "image/png", [PNG_SIGNATURE]),
-            typedFile("swapped.jpg", "image/png", [JPEG_SIGNATURE]),
+            typedFile("swapped.jpg", "image/png", [JPEG_SIGNATURE])
           ),
-        }),
+        })
       ).rejects.toBeInstanceOf(UnsupportedMediaTypeError)
 
       expect(repo.insertMany).not.toHaveBeenCalled()

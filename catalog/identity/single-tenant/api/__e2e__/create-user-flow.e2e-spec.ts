@@ -38,7 +38,7 @@ function linkFromHtml(html: string): string {
 
 async function waitFor(
   predicate: () => boolean,
-  timeoutMs = 4000,
+  timeoutMs = 4000
 ): Promise<void> {
   const start = Date.now()
   while (!predicate()) {
@@ -65,7 +65,7 @@ describe("Fluxo de criação de usuário (e2e)", () => {
     await truncateIdentity(pool)
     await truncateKernel(pool)
     await pool.query(
-      "truncate table notification.notifications, notification.notification_deliveries",
+      "truncate table notification.notifications, notification.notification_deliveries"
     )
     await pool.end()
 
@@ -99,7 +99,7 @@ describe("Fluxo de criação de usuário (e2e)", () => {
     })
     await pool.query(
       "UPDATE identity.users SET access_profile = 'master' WHERE id = $1",
-      [masterId],
+      [masterId]
     )
     await pool.end()
     expect(masterId).toBeTruthy()
@@ -109,7 +109,10 @@ describe("Fluxo de criação de usuário (e2e)", () => {
     const res = await request(app.getHttpServer())
       .post("/v1/auth/login")
       .set("Origin", ORIGIN)
-      .send({ email: "master@example.com", password: "Senha-Master-Muito-Forte-2026!" })
+      .send({
+        email: "master@example.com",
+        password: "Senha-Master-Muito-Forte-2026!",
+      })
       .expect(200)
     masterCookie = setCookies(res)
     expect(masterCookie).toBeDefined()
@@ -121,7 +124,12 @@ describe("Fluxo de criação de usuário (e2e)", () => {
       .set("Origin", ORIGIN)
       .set("Cookie", masterCookie)
       .set("Idempotency-Key", "create-user-ana")
-      .send({ name: "Ana", email: "ana@example.com", accessProfile: "admin", permissions: ["admin.users.read"] })
+      .send({
+        name: "Ana",
+        email: "ana@example.com",
+        accessProfile: "admin",
+        permissions: ["admin.users.read"],
+      })
       .expect(201)
   })
 
@@ -134,7 +142,9 @@ describe("Fluxo de criação de usuário (e2e)", () => {
       mailer.sent.find((message) => message.to === "ana@example.com")
     await waitFor(() => sentToAna() !== undefined)
 
-    const token = new URL(linkFromHtml(sentToAna()!.html)).searchParams.get("token")
+    const token = new URL(linkFromHtml(sentToAna()!.html)).searchParams.get(
+      "token"
+    )
     expect(token).toBeTruthy()
     // Persiste o token para os its seguintes.
     accessToken = token!
@@ -145,7 +155,11 @@ describe("Fluxo de criação de usuário (e2e)", () => {
       .get("/v1/auth/access-link")
       .query({ token: accessToken })
       .expect(200)
-    expect(res.body).toEqual({ name: "Ana", email: "ana@example.com", avatarAttachmentId: null })
+    expect(res.body).toEqual({
+      name: "Ana",
+      email: "ana@example.com",
+      avatarAttachmentId: null,
+    })
   })
 
   it("POST /v1/auth/set-password ativa conta, retorna usuário atualizado e cookie de auto-login", async () => {
@@ -159,7 +173,10 @@ describe("Fluxo de criação de usuário (e2e)", () => {
         password: "Senha-Ana-Muito-Forte-2026!",
       })
       .expect(200)
-    expect(res.body.user).toMatchObject({ name: "Ana Maria", email: "ana@example.com" })
+    expect(res.body.user).toMatchObject({
+      name: "Ana Maria",
+      email: "ana@example.com",
+    })
     anaCookie = setCookies(res)
     expect(anaCookie).toBeDefined()
   })
@@ -213,7 +230,7 @@ describe("Fluxo de criação de usuário (e2e)", () => {
       .expect(200)
 
     const pedro = list.body.data.find(
-      (u: { email: string }) => u.email === "pedro@example.com",
+      (u: { email: string }) => u.email === "pedro@example.com"
     )
     expect(pedro).toBeDefined()
     expect(pedro.accessProfile).toBe("professional")
@@ -251,7 +268,7 @@ describe("Fluxo de criação de usuário (e2e)", () => {
       .expect(200)
 
     const proadmin = list.body.data.find(
-      (u: { email: string }) => u.email === "pro.admin@example.com",
+      (u: { email: string }) => u.email === "pro.admin@example.com"
     )
     expect(proadmin).toBeDefined()
     expect(proadmin.accessProfile).toBe("professional")
@@ -283,7 +300,7 @@ describe("Fluxo de criação de usuário (e2e)", () => {
       .expect(200)
 
     const sofia = list.body.data.find(
-      (u: { email: string }) => u.email === "sofia@example.com",
+      (u: { email: string }) => u.email === "sofia@example.com"
     )
     expect(sofia).toBeDefined()
     expect(sofia.accessProfile).toBe("admin")

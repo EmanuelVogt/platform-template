@@ -38,9 +38,7 @@
             }
           }
         },
-        "tags": [
-          "Tag"
-        ]
+        "tags": ["Tag"]
       },
       "get": {
         "operationId": "listTags",
@@ -82,10 +80,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
+              "enum": ["asc", "desc"]
             }
           },
           {
@@ -94,10 +89,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "name",
-                "createdAt"
-              ]
+              "enum": ["name", "createdAt"]
             }
           },
           {
@@ -106,10 +98,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
+              "enum": ["true", "false"]
             }
           },
           {
@@ -118,10 +107,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
+              "enum": ["true", "false"]
             }
           }
         ],
@@ -137,9 +123,7 @@
             }
           }
         },
-        "tags": [
-          "Tag"
-        ]
+        "tags": ["Tag"]
       }
     },
     "/v1/admin/tags/{id}": {
@@ -168,9 +152,7 @@
             }
           }
         },
-        "tags": [
-          "Tag"
-        ]
+        "tags": ["Tag"]
       },
       "put": {
         "operationId": "updateTag",
@@ -217,9 +199,7 @@
             }
           }
         },
-        "tags": [
-          "Tag"
-        ]
+        "tags": ["Tag"]
       },
       "delete": {
         "operationId": "deleteTag",
@@ -239,9 +219,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Tag"
-        ]
+        "tags": ["Tag"]
       }
     },
     "/v1/admin/tags/linkable": {
@@ -260,9 +238,7 @@
             }
           }
         },
-        "tags": [
-          "Tag"
-        ]
+        "tags": ["Tag"]
       }
     },
     "/v1/admin/tags/purge": {
@@ -291,9 +267,7 @@
             }
           }
         },
-        "tags": [
-          "Tag"
-        ]
+        "tags": ["Tag"]
       }
     },
     "/v1/admin/tags/restore": {
@@ -322,9 +296,7 @@
             }
           }
         },
-        "tags": [
-          "Tag"
-        ]
+        "tags": ["Tag"]
       }
     }
   },
@@ -348,9 +320,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "name"
-        ]
+        "required": ["name"]
       },
       "LinkableTagsResponseDto": {
         "type": "array",
@@ -368,11 +338,7 @@
               "nullable": true
             }
           },
-          "required": [
-            "id",
-            "name",
-            "color"
-          ]
+          "required": ["id", "name", "color"]
         }
       },
       "ListTagsResponseDto": {
@@ -405,9 +371,7 @@
                       "maximum": 9007199254740991
                     }
                   },
-                  "required": [
-                    "total"
-                  ]
+                  "required": ["total"]
                 },
                 "createdAt": {
                   "type": "string"
@@ -452,18 +416,10 @@
                 "maximum": 9007199254740991
               }
             },
-            "required": [
-              "total",
-              "page",
-              "pageSize",
-              "totalPages"
-            ]
+            "required": ["total", "page", "pageSize", "totalPages"]
           }
         },
-        "required": [
-          "data",
-          "page"
-        ]
+        "required": ["data", "page"]
       },
       "PurgeTagsResponseDto": {
         "type": "object",
@@ -474,9 +430,7 @@
             "maximum": 9007199254740991
           }
         },
-        "required": [
-          "purged"
-        ]
+        "required": ["purged"]
       },
       "RestoreTagsResponseDto": {
         "type": "object",
@@ -487,9 +441,7 @@
             "maximum": 9007199254740991
           }
         },
-        "required": [
-          "restored"
-        ]
+        "required": ["restored"]
       },
       "TagIdsDto": {
         "type": "object",
@@ -504,9 +456,7 @@
             }
           }
         },
-        "required": [
-          "tagIds"
-        ]
+        "required": ["tagIds"]
       },
       "TagViewDto": {
         "type": "object",
@@ -563,9 +513,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "name"
-        ]
+        "required": ["name"]
       }
     }
   }

@@ -8,7 +8,10 @@ import {
   truncateIdentity,
 } from "../../../../../test/setup/test-db"
 import { makeTestLogger } from "../../../../../test/setup/test-logger"
-import { RequestContext, type RequestContextStore } from "../../../../shared/kernel/context/request-context"
+import {
+  RequestContext,
+  type RequestContextStore,
+} from "../../../../shared/kernel/context/request-context"
 import { TransactionManager } from "../../../../shared/kernel/transactional/transaction-manager"
 import {
   detachIdentityTables,
@@ -130,7 +133,10 @@ describe("audit trigger (int)", () => {
   it("DELETE grava op=delete, row_old completo e row_new null", async () => {
     const id = ulid()
     await insertTemplate(id, "Some")
-    await pool.query("DELETE FROM identity.permission_templates WHERE id = $1", [id])
+    await pool.query(
+      "DELETE FROM identity.permission_templates WHERE id = $1",
+      [id]
+    )
 
     const rows = await auditRows("permission_templates")
     const del = rows.find((r) => r.op === "delete")!
@@ -149,7 +155,9 @@ describe("audit trigger (int)", () => {
     const rows = await auditRows("users")
     expect(rows).toHaveLength(1)
     const row = rows[0]
-    expect((row!.row_new as { password_hash: string }).password_hash).toBe("[REDACTED]")
+    expect((row!.row_new as { password_hash: string }).password_hash).toBe(
+      "[REDACTED]"
+    )
     expect((row!.row_new as { email: string }).email).toBe(`${id}@test.local`)
   })
 
@@ -166,7 +174,9 @@ describe("audit trigger (int)", () => {
     const rows = await auditRows("sessions")
     expect(rows).toHaveLength(1)
     const row = rows[0]
-    expect((row!.row_new as { token_hash: string }).token_hash).toBe("[REDACTED]")
+    expect((row!.row_new as { token_hash: string }).token_hash).toBe(
+      "[REDACTED]"
+    )
     expect((row!.row_new as { user_id: string }).user_id).toBe(userId)
   })
 
@@ -183,7 +193,9 @@ describe("audit trigger (int)", () => {
     const rows = await auditRows("devices")
     expect(rows).toHaveLength(1)
     const row = rows[0]
-    expect((row!.row_new as { cookie_token_hash: string }).cookie_token_hash).toBe("[REDACTED]")
+    expect(
+      (row!.row_new as { cookie_token_hash: string }).cookie_token_hash
+    ).toBe("[REDACTED]")
     expect((row!.row_new as { user_id: string }).user_id).toBe(userId)
   })
 
@@ -200,7 +212,9 @@ describe("audit trigger (int)", () => {
     const rows = await auditRows("verification_tokens")
     expect(rows).toHaveLength(1)
     const row = rows[0]
-    expect((row!.row_new as { token_hash: string }).token_hash).toBe("[REDACTED]")
+    expect((row!.row_new as { token_hash: string }).token_hash).toBe(
+      "[REDACTED]"
+    )
     expect((row!.row_new as { user_id: string }).user_id).toBe(userId)
   })
 
@@ -232,7 +246,9 @@ describe("audit trigger (int)", () => {
     const client = await pool.connect()
     try {
       await client.query("BEGIN")
-      await client.query("SELECT set_config('app.audit_maintenance', 'on', true)")
+      await client.query(
+        "SELECT set_config('app.audit_maintenance', 'on', true)"
+      )
       await client.query("DELETE FROM audit.entries WHERE seq = $1", [seq])
       await client.query("COMMIT")
     } finally {
@@ -249,9 +265,14 @@ describe("audit trigger (int)", () => {
     const client = await pool.connect()
     try {
       await client.query("BEGIN")
-      await client.query("SELECT set_config('app.audit_maintenance', 'on', true)")
+      await client.query(
+        "SELECT set_config('app.audit_maintenance', 'on', true)"
+      )
       await expect(
-        client.query("UPDATE audit.entries SET origin = 'hacked' WHERE seq = $1", [seq])
+        client.query(
+          "UPDATE audit.entries SET origin = 'hacked' WHERE seq = $1",
+          [seq]
+        )
       ).rejects.toThrow()
       await client.query("ROLLBACK")
     } finally {

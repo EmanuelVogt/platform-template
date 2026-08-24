@@ -32,7 +32,11 @@ describe("notification.contract", () => {
     const ok = notificationItemSchema.safeParse({
       ...baseItem,
       type: "device_new_login",
-      metadata: { deviceLabel: "Chrome", ip: null, at: "2026-06-10T00:00:00.000Z" },
+      metadata: {
+        deviceLabel: "Chrome",
+        ip: null,
+        at: "2026-06-10T00:00:00.000Z",
+      },
     })
     expect(ok.success).toBe(true)
     const wrongMeta = notificationItemSchema.safeParse({

@@ -3,7 +3,6 @@ import { pipeline } from "node:stream/promises"
 
 import { describe, expect, it } from "vitest"
 
-
 import { CountingLimit } from "./counting-limit"
 
 function drain(): Writable {
@@ -18,7 +17,11 @@ describe("CountingLimit", () => {
   it("conta os bytes que passam", async () => {
     const limit = new CountingLimit(100)
 
-    await pipeline(Readable.from([Buffer.alloc(30), Buffer.alloc(12)]), limit, drain())
+    await pipeline(
+      Readable.from([Buffer.alloc(30), Buffer.alloc(12)]),
+      limit,
+      drain()
+    )
 
     expect(limit.bytes).toBe(42)
     expect(limit.exceeded).toBe(false)
@@ -28,7 +31,11 @@ describe("CountingLimit", () => {
     const limit = new CountingLimit(50)
 
     await expect(
-      pipeline(Readable.from([Buffer.alloc(30), Buffer.alloc(30)]), limit, drain()),
+      pipeline(
+        Readable.from([Buffer.alloc(30), Buffer.alloc(30)]),
+        limit,
+        drain()
+      )
     ).rejects.toThrow()
 
     expect(limit.exceeded).toBe(true)

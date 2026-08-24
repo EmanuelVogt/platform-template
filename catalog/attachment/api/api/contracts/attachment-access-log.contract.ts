@@ -15,12 +15,12 @@ export const attachmentAccessEntrySchema = z.object({
   occurredAt: z.string(),
 })
 export class AttachmentAccessEntryDto extends createZodDto(
-  attachmentAccessEntrySchema,
+  attachmentAccessEntrySchema
 ) {}
 
 export const attachmentAccessLogResponseSchema = z.object({
   data: z.array(attachmentAccessEntrySchema),
 })
 export class AttachmentAccessLogResponseDto extends createZodDto(
-  attachmentAccessLogResponseSchema,
+  attachmentAccessLogResponseSchema
 ) {}

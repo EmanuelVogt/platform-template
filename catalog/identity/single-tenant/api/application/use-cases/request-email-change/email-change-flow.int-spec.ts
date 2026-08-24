@@ -1,5 +1,13 @@
 import { ulid } from "ulid"
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 
 import {
   createTestDb,
@@ -35,7 +43,10 @@ import { ConfirmEmailChangeUseCase } from "../confirm-email-change/confirm-email
 import { RequestEmailChangeUseCase } from "./request-email-change.use-case"
 
 import type { DrizzleDb } from "../../../../../shared/infra/database/drizzle.provider"
-import type { RequestContext, RequestContextStore  } from "../../../../../shared/kernel/context/request-context"
+import type {
+  RequestContext,
+  RequestContextStore,
+} from "../../../../../shared/kernel/context/request-context"
 import type { Pool } from "pg"
 
 const PEPPER = "p".repeat(32)
@@ -77,7 +88,7 @@ function authedStore(userId: string): RequestContextStore {
 async function seedActiveUser(
   usersRepo: DrizzleUserRepository,
   hasher: Argon2PasswordHasher,
-  email = "user@example.com",
+  email = "user@example.com"
 ): Promise<User> {
   const hash = await hasher.hash(PASSWORD)
   const user = User.fromProps({
@@ -155,7 +166,7 @@ describe("Fluxo de troca de e-mail (int)", () => {
       devicesRepo,
       tokenGen,
       config,
-      ctx,
+      ctx
     )
 
     requestEmailChange = new RequestEmailChangeUseCase(
@@ -168,7 +179,7 @@ describe("Fluxo de troca de e-mail (int)", () => {
       authEventsRepo,
       { now: () => new Date() },
       ctx,
-      config,
+      config
     )
 
     confirmEmailChange = new ConfirmEmailChangeUseCase(
@@ -178,10 +189,14 @@ describe("Fluxo de troca de e-mail (int)", () => {
       authEventsRepo,
       { now: () => new Date() },
       ctx,
-      createSession,
+      createSession
     )
 
-    revertJob = new RevertExpiredEmailChangesJob(usersRepo, { now: () => new Date() }, loggerFactory)
+    revertJob = new RevertExpiredEmailChangesJob(
+      usersRepo,
+      { now: () => new Date() },
+      loggerFactory
+    )
   })
 
   beforeEach(async () => {
@@ -200,19 +215,19 @@ describe("Fluxo de troca de e-mail (int)", () => {
     const devId = ulid()
     await pool.query(
       `INSERT INTO identity.devices (id, user_id, cookie_token_hash, created_at) VALUES ($1, $2, 'devhash', now())`,
-      [devId, user.props.id],
+      [devId, user.props.id]
     )
     await pool.query(
       `INSERT INTO identity.sessions (id, user_id, token_hash, created_at, last_seen_at, expires_at, remember_me, device_id)
        VALUES ($1, $2, 'fakehash', now(), now(), now() + interval '1 day', false, $3)`,
-      [ulid(), user.props.id, devId],
+      [ulid(), user.props.id, devId]
     )
 
     await ctx.run(authedStore(user.props.id), () =>
       requestEmailChange.execute({
         currentPassword: PASSWORD,
         newEmail: "NOVO@EXAMPLE.COM",
-      }),
+      })
     )
 
     const updated = await usersRepo.findById(user.props.id)
@@ -223,26 +238,31 @@ describe("Fluxo de troca de e-mail (int)", () => {
 
     const { rows: tokenRows } = await pool.query<{ type: string }>(
       `SELECT type FROM identity.verification_tokens WHERE user_id = $1 AND type = 'email_change' AND consumed_at IS NULL`,
-      [user.props.id],
+      [user.props.id]
     )
     expect(tokenRows).toHaveLength(1)
 
     const { rows: sessRows } = await pool.query<{ count: string }>(
       `SELECT count(*) FROM identity.sessions WHERE user_id = $1`,
-      [user.props.id],
+      [user.props.id]
     )
     expect(Number(sessRows[0]!.count)).toBe(0)
 
     // outbox: 2 eventos (payload é o envelope; recipientId fica em payload.payload)
-    const { rows: outboxRows } = await pool.query<{ event_name: string; notif_type: string }>(
+    const { rows: outboxRows } = await pool.query<{
+      event_name: string
+      notif_type: string
+    }>(
       `SELECT event_name, payload->'payload'->>'type' AS notif_type
        FROM _kernel.outbox
        WHERE payload->'payload'->>'recipientId' = $1
        ORDER BY occurred_at`,
-      [user.props.id],
+      [user.props.id]
     )
     expect(outboxRows).toHaveLength(2)
-    expect(outboxRows.every((r) => r.event_name === "notification.requested")).toBe(true)
+    expect(
+      outboxRows.every((r) => r.event_name === "notification.requested")
+    ).toBe(true)
     const notifTypes = outboxRows.map((r) => r.notif_type)
     expect(notifTypes).toContain("email_change_requested")
     expect(notifTypes).toContain("email_change_notice")
@@ -256,8 +276,8 @@ describe("Fluxo de troca de e-mail (int)", () => {
         requestEmailChange.execute({
           currentPassword: "senha-errada",
           newEmail: "novo@example.com",
-        }),
-      ),
+        })
+      )
     ).rejects.toBeInstanceOf(InvalidCredentialsError)
 
     const unchanged = await usersRepo.findById(user.props.id)
@@ -273,8 +293,8 @@ describe("Fluxo de troca de e-mail (int)", () => {
         requestEmailChange.execute({
           currentPassword: PASSWORD,
           newEmail: "user@example.com",
-        }),
-      ),
+        })
+      )
     ).rejects.toBeInstanceOf(EmailUnchangedError)
   })
 
@@ -287,8 +307,8 @@ describe("Fluxo de troca de e-mail (int)", () => {
         requestEmailChange.execute({
           currentPassword: PASSWORD,
           newEmail: "outro@example.com",
-        }),
-      ),
+        })
+      )
     ).rejects.toBeInstanceOf(EmailAlreadyInUseError)
   })
 
@@ -301,8 +321,8 @@ describe("Fluxo de troca de e-mail (int)", () => {
         requestEmailChange.execute({
           currentPassword: PASSWORD,
           newEmail: "outro@example.com",
-        }),
-      ),
+        })
+      )
     ).rejects.toBeInstanceOf(EmailAlreadyInUseError)
 
     // o carimbo ficou no banco, sem iniciar troca nenhuma
@@ -317,8 +337,8 @@ describe("Fluxo de troca de e-mail (int)", () => {
         requestEmailChange.execute({
           currentPassword: PASSWORD,
           newEmail: "terceiro@example.com",
-        }),
-      ),
+        })
+      )
     ).rejects.toBeInstanceOf(RateLimitedError)
   })
 
@@ -337,7 +357,7 @@ describe("Fluxo de troca de e-mail (int)", () => {
       requestEmailChange.execute({
         currentPassword: PASSWORD,
         newEmail: "confirmado@example.com",
-      }),
+      })
     )
 
     expect(capturedRaw).not.toBeNull()
@@ -345,7 +365,7 @@ describe("Fluxo de troca de e-mail (int)", () => {
     // Confirma com o token (ctx anônimo — correlationId obrigatório para auth_event)
     const result = await ctx.run(
       { ...authedStore(user.props.id), actor: null, extensions: new Map() },
-      () => confirmEmailChange.execute({ token: capturedRaw! }),
+      () => confirmEmailChange.execute({ token: capturedRaw! })
     )
 
     expect(result.user.email).toBe("confirmado@example.com")
@@ -359,16 +379,18 @@ describe("Fluxo de troca de e-mail (int)", () => {
 
     const { rows } = await pool.query(
       `SELECT consumed_at FROM identity.verification_tokens WHERE user_id = $1 AND type = 'email_change'`,
-      [user.props.id],
+      [user.props.id]
     )
-    expect(rows.every((r: { consumed_at: unknown }) => r.consumed_at !== null)).toBe(true)
+    expect(
+      rows.every((r: { consumed_at: unknown }) => r.consumed_at !== null)
+    ).toBe(true)
   })
 
   it("caso 6: token inválido/expirado → InvalidEmailChangeTokenError", async () => {
     await expect(
       ctx.run(authedStore("anon"), () =>
-        confirmEmailChange.execute({ token: "token-invalido-xyz" }),
-      ),
+        confirmEmailChange.execute({ token: "token-invalido-xyz" })
+      )
     ).rejects.toBeInstanceOf(InvalidEmailChangeTokenError)
   })
 
@@ -387,11 +409,14 @@ describe("Fluxo de troca de e-mail (int)", () => {
         expiresAt: new Date(now.getTime() - 1000), // já expirou
         consumedAt: null,
         createdAt: now,
-      }),
+      })
     )
 
     const user2 = await seedActiveUser(usersRepo, hasher, "active@example.com")
-    const updatedUser2 = user2.requestEmailChange("novo-active@example.com", now)
+    const updatedUser2 = user2.requestEmailChange(
+      "novo-active@example.com",
+      now
+    )
     await usersRepo.update(updatedUser2)
     await verificationTokensRepo.create(
       VerificationToken.fromProps({
@@ -402,7 +427,7 @@ describe("Fluxo de troca de e-mail (int)", () => {
         expiresAt: new Date(now.getTime() + 3_600_000), // 1h no futuro
         consumedAt: null,
         createdAt: now,
-      }),
+      })
     )
 
     await revertJob.revertExpired()

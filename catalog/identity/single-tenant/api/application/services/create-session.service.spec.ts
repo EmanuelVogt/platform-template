@@ -52,13 +52,13 @@ function makeDeps(over: { sessionCount?: number } = {}) {
     hashOf: vi.fn().mockReturnValue("cookie-hash"),
   }
   const ctx = fakeRequestContext(() => ({
-      ip: "1.2.3.4",
-      userAgent: "jest",
-      correlationId: "c1",
-      locale: "pt-BR",
-      userId: null,
-      sessionId: null,
-    }))
+    ip: "1.2.3.4",
+    userAgent: "jest",
+    correlationId: "c1",
+    locale: "pt-BR",
+    userId: null,
+    sessionId: null,
+  }))
   const config = makeIdentityConfig({ SESSION_MAX_PER_USER: MAX_SESSIONS })
   const service = new CreateSessionService(
     sessions as never,

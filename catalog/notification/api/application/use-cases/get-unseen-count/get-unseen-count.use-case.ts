@@ -14,9 +14,10 @@ import type { GetUnseenCountOutput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class GetUnseenCountUseCase
-  implements UseCaseContract<void, GetUnseenCountOutput>
-{
+export class GetUnseenCountUseCase implements UseCaseContract<
+  void,
+  GetUnseenCountOutput
+> {
   constructor(
     @Inject(NOTIFICATION_REPOSITORY)
     private readonly notifications: NotificationRepositoryPort,

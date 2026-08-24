@@ -124,11 +124,14 @@ describe("ChangePasswordUseCase — breach fora da tx (R17)", () => {
         COOKIE_SECURE: "false",
         COOKIE_NAME: "rit_session",
         DEVICE_COOKIE_NAME: "rit_device",
-      }),
+      })
     )
 
     await ctx.run(authedStore(), () =>
-      uc.execute({ currentPassword: "atual", newPassword: "nova-senha-forte-1" })
+      uc.execute({
+        currentPassword: "atual",
+        newPassword: "nova-senha-forte-1",
+      })
     )
 
     expect(inTxDuringBreach).toBe(false)
@@ -146,7 +149,7 @@ describe("ChangePasswordUseCase — breach fora da tx (R17)", () => {
             at: "2026-06-10T12:00:00.000Z",
           }),
         }),
-      }),
+      })
     )
   })
 
@@ -190,11 +193,14 @@ describe("ChangePasswordUseCase — breach fora da tx (R17)", () => {
         COOKIE_SECURE: "false",
         COOKIE_NAME: "rit_session",
         DEVICE_COOKIE_NAME: "rit_device",
-      }),
+      })
     )
 
     await ctx.run(authedStore(), () =>
-      uc.execute({ currentPassword: "atual", newPassword: "nova-senha-forte-1" })
+      uc.execute({
+        currentPassword: "atual",
+        newPassword: "nova-senha-forte-1",
+      })
     )
 
     expect(users.update).toHaveBeenCalledTimes(1)
@@ -208,7 +214,7 @@ describe("ChangePasswordUseCase — breach fora da tx (R17)", () => {
           eventType: "breach_check_skipped",
           metadata: { mode: "fail_open" },
         }),
-      }),
+      })
     )
   })
 })

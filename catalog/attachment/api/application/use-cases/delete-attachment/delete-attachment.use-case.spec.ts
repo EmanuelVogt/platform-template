@@ -30,16 +30,33 @@ function makeDeps(found: Attachment | null) {
     listByAttachment: vi.fn(),
     deleteBatchOlderThan: vi.fn(),
   }
-  const tx = { onCommit: (cb: () => Promise<void> | void) => onCommitCbs.push(cb) }
+  const tx = {
+    onCommit: (cb: () => Promise<void> | void) => onCommitCbs.push(cb),
+  }
   const ctx = {
     get: () => ({ ip: null, userAgent: null, correlationId: "c" }),
     getActor: () => ({ id: "u-1", kind: "user" }),
   }
-  const uc = new DeleteAttachmentUseCase(storage, repo, log, tx as never, ctx as never)
+  const uc = new DeleteAttachmentUseCase(
+    storage,
+    repo,
+    log,
+    tx as never,
+    ctx as never
+  )
   return { uc, storage, repo, log, onCommitCbs }
 }
 
-const a = Attachment.create({ storageKey: "attachments/k", contentType: "image/png", sizeBytes: 1, checksum: "z", originalFilename: null, profile: "avatar", visibility: "authenticated", ownerUserId: "u-1" })
+const a = Attachment.create({
+  storageKey: "attachments/k",
+  contentType: "image/png",
+  sizeBytes: 1,
+  checksum: "z",
+  originalFilename: null,
+  profile: "avatar",
+  visibility: "authenticated",
+  ownerUserId: "u-1",
+})
 
 describe("DeleteAttachmentUseCase", () => {
   it("soft-delete + agenda delete no R2 via onCommit", async () => {
@@ -79,7 +96,7 @@ describe("DeleteAttachmentUseCase", () => {
         action: "delete",
         outcome: "allowed",
         correlationId: "c",
-      }),
+      })
     )
   })
 })

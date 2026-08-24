@@ -18,31 +18,29 @@ import {
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class ListAttachmentAccessLogUseCase
-  implements
-    UseCaseContract<ListAttachmentAccessLogInput, ListAttachmentAccessLogResult>
-{
+export class ListAttachmentAccessLogUseCase implements UseCaseContract<
+  ListAttachmentAccessLogInput,
+  ListAttachmentAccessLogResult
+> {
   constructor(
     @Inject(ATTACHMENT_ACCESS_LOG_REPOSITORY)
     private readonly accessLog: AttachmentAccessLogRepository,
-    private readonly users: UserDirectoryFacade,
+    private readonly users: UserDirectoryFacade
   ) {}
 
   @ReadOnly()
   @Traced({ name: "attachment.listAccessLog" })
   async execute(
-    input: ListAttachmentAccessLogInput,
+    input: ListAttachmentAccessLogInput
   ): Promise<ListAttachmentAccessLogResult> {
     const rows = await this.accessLog.listByAttachment(
       input.attachmentId,
-      ATTACHMENT_ACCESS_LOG_LIMIT,
+      ATTACHMENT_ACCESS_LOG_LIMIT
     )
 
     const actorIds = [
       ...new Set(
-        rows
-          .map((row) => row.userId)
-          .filter((id): id is string => id !== null),
+        rows.map((row) => row.userId).filter((id): id is string => id !== null)
       ),
     ]
     const names =

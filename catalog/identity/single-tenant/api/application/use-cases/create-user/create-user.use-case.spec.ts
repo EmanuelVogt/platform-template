@@ -39,10 +39,16 @@ function makeDeps(over: Record<string, any> = {}) {
   const tokens = over.tokens ?? {
     generate: vi.fn().mockReturnValue({ raw: "raw-tok", hash: "hash-tok" }),
   }
-  const outbox = over.outbox ?? { publish: vi.fn().mockResolvedValue(undefined) }
-  const authEvents = over.authEvents ?? { recordInTx: vi.fn().mockResolvedValue(undefined) }
+  const outbox = over.outbox ?? {
+    publish: vi.fn().mockResolvedValue(undefined),
+  }
+  const authEvents = over.authEvents ?? {
+    recordInTx: vi.fn().mockResolvedValue(undefined),
+  }
   const clock = over.clock ?? { now: () => NOW }
-  const ctx = over.ctx ?? fakeRequestContext(() => ({
+  const ctx =
+    over.ctx ??
+    fakeRequestContext(() => ({
       ip: null,
       userAgent: null,
       correlationId: "c1",
@@ -54,7 +60,17 @@ function makeDeps(over: Record<string, any> = {}) {
       access: { permissions: new Set<string>(), isMaster: true },
     }))
   const config = over.config ?? makeIdentityConfig()
-  const uc = new CreateUserUseCase(users, verificationTokens, tokens, outbox, authEvents, clock, ctx, config, scope)
+  const uc = new CreateUserUseCase(
+    users,
+    verificationTokens,
+    tokens,
+    outbox,
+    authEvents,
+    clock,
+    ctx,
+    config,
+    scope
+  )
   return { uc, users, verificationTokens, tokens, outbox, authEvents, scope }
 }
 
@@ -62,11 +78,15 @@ describe("CreateUserUseCase", () => {
   it("e-mail já existente lança EmailAlreadyInUseError e não cria nada", async () => {
     const t = makeDeps({
       users: {
-        findByEmail: vi.fn().mockResolvedValue({ isDeleted: () => false, props: { id: "u-x" } }),
+        findByEmail: vi
+          .fn()
+          .mockResolvedValue({ isDeleted: () => false, props: { id: "u-x" } }),
         insert: vi.fn(),
       },
     })
-    await expect(t.uc.execute({ name: "Ana", email: "ana@x.test", ...BASE_ACCESS })).rejects.toBeInstanceOf(EmailAlreadyInUseError)
+    await expect(
+      t.uc.execute({ name: "Ana", email: "ana@x.test", ...BASE_ACCESS })
+    ).rejects.toBeInstanceOf(EmailAlreadyInUseError)
     expect(t.users.insert).not.toHaveBeenCalled()
     expect(t.outbox.publish).not.toHaveBeenCalled()
   })
@@ -74,13 +94,15 @@ describe("CreateUserUseCase", () => {
   it("e-mail de usuário soft-deleted → EmailAlreadyInUseError (409 único)", async () => {
     const t = makeDeps({
       users: {
-        findByEmail: vi.fn().mockResolvedValue({ isDeleted: () => true, props: { id: "u-x" } }),
+        findByEmail: vi
+          .fn()
+          .mockResolvedValue({ isDeleted: () => true, props: { id: "u-x" } }),
         insert: vi.fn(),
       },
     })
-    await expect(t.uc.execute({ name: "Novo", email: "morta@example.com", ...BASE_ACCESS })).rejects.toBeInstanceOf(
-      EmailAlreadyInUseError,
-    )
+    await expect(
+      t.uc.execute({ name: "Novo", email: "morta@example.com", ...BASE_ACCESS })
+    ).rejects.toBeInstanceOf(EmailAlreadyInUseError)
     expect(t.users.insert).not.toHaveBeenCalled()
     expect(t.outbox.publish).not.toHaveBeenCalled()
   })
@@ -91,7 +113,7 @@ describe("CreateUserUseCase", () => {
     expect(t.users.insert).toHaveBeenCalledTimes(1)
     expect(t.users.replacePermissions).toHaveBeenCalledWith(
       expect.any(String),
-      ["admin.users.read"],
+      ["admin.users.read"]
     )
     expect(t.verificationTokens.create).toHaveBeenCalledTimes(1)
     expect(t.outbox.publish).toHaveBeenCalledWith(
@@ -105,10 +127,12 @@ describe("CreateUserUseCase", () => {
             link: expect.stringContaining("/configurar-senha?token=raw-tok"),
           }),
         }),
-      }),
+      })
     )
     expect(t.authEvents.recordInTx).toHaveBeenCalledWith(
-      expect.objectContaining({ props: expect.objectContaining({ eventType: "access_link_sent" }) }),
+      expect.objectContaining({
+        props: expect.objectContaining({ eventType: "access_link_sent" }),
+      })
     )
   })
 
@@ -124,7 +148,7 @@ describe("CreateUserUseCase", () => {
         areaIds: [],
         serviceIds: [],
         schedulingAreaIds: [],
-      }),
+      })
     ).rejects.toBeInstanceOf(InvalidPermissionSetError)
     expect(t.users.insert).not.toHaveBeenCalled()
   })
@@ -141,7 +165,7 @@ describe("CreateUserUseCase", () => {
         areaIds: [],
         serviceIds: [],
         schedulingAreaIds: [],
-      }),
+      })
     ).rejects.toBeInstanceOf(InvalidPermissionSetError)
     expect(t.users.insert).not.toHaveBeenCalled()
   })
@@ -158,7 +182,7 @@ describe("CreateUserUseCase", () => {
         areaIds: [],
         serviceIds: [],
         schedulingAreaIds: [],
-      }),
+      })
     ).rejects.toBeInstanceOf(InvalidProfessionalScopeError)
     expect(t.users.insert).not.toHaveBeenCalled()
   })
@@ -178,11 +202,11 @@ describe("CreateUserUseCase", () => {
     })
     expect(t.users.replacePermissions).toHaveBeenCalledWith(
       expect.any(String),
-      ["admin.users.read"],
+      ["admin.users.read"]
     )
     expect(t.users.replaceProfessionalAreas).toHaveBeenCalledWith(
       expect.any(String),
-      ["area-1"],
+      ["area-1"]
     )
   })
 
@@ -200,11 +224,11 @@ describe("CreateUserUseCase", () => {
     })
     expect(t.users.replaceSchedulingAreas).toHaveBeenCalledWith(
       expect.any(String),
-      ["area-1", "area-2"],
+      ["area-1", "area-2"]
     )
     expect(t.users.replaceProfessionalAreas).toHaveBeenCalledWith(
       expect.any(String),
-      [],
+      []
     )
   })
 
@@ -221,6 +245,9 @@ describe("CreateUserUseCase", () => {
       serviceIds: [],
       schedulingAreaIds: [],
     })
-    expect(t.users.replacePermissions).toHaveBeenCalledWith(expect.any(String), [])
+    expect(t.users.replacePermissions).toHaveBeenCalledWith(
+      expect.any(String),
+      []
+    )
   })
 })

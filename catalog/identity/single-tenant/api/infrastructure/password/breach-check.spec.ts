@@ -2,7 +2,6 @@ import { createHash } from "node:crypto"
 
 import { describe, expect, it } from "vitest"
 
-
 import { BreachCheckUnavailableError } from "../../domain/errors"
 
 import { HibpBreachCheck } from "./hibp-breach-check"
@@ -97,7 +96,7 @@ describe("HibpBreachCheck — matching k-anonymity", () => {
   it("res.ok=false sob fail_closed lança, não vira veredito", async () => {
     const check = new HibpBreachCheck("fail_closed", fakeFetch("", false))
     await expect(check.check(PASSWORD)).rejects.toBeInstanceOf(
-      BreachCheckUnavailableError,
+      BreachCheckUnavailableError
     )
   })
 })
@@ -118,7 +117,7 @@ describe("HibpBreachCheck — timeout de 2 s", () => {
   it("sob fail_closed o estouro do timeout vira 503, nunca 'breached'", async () => {
     const check = new HibpBreachCheck("fail_closed", fetchThatOnlyAborts)
     await expect(check.check("senha-123")).rejects.toBeInstanceOf(
-      BreachCheckUnavailableError,
+      BreachCheckUnavailableError
     )
   }, 10_000)
 })

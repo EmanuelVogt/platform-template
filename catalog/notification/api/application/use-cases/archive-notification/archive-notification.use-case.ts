@@ -15,9 +15,10 @@ import type { ArchiveNotificationInput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class ArchiveNotificationUseCase
-  implements UseCaseContract<ArchiveNotificationInput, void>
-{
+export class ArchiveNotificationUseCase implements UseCaseContract<
+  ArchiveNotificationInput,
+  void
+> {
   constructor(
     @Inject(NOTIFICATION_REPOSITORY)
     private readonly notifications: NotificationRepositoryPort,

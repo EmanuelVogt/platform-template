@@ -33,7 +33,9 @@ function buildConfig(actorIds: string[]): ListingConfig {
         sql`(coalesce(${auditEntries.rowOld}::text, '') || coalesce(${auditEntries.rowNew}::text, '')) ILIKE ${`%${escapeLike(term)}%`}`,
       // Ignora term de propósito: os ids já vieram resolvidos via UserDirectoryFacade.
       () =>
-        actorIds.length > 0 ? inArray(auditEntries.actorUserId, actorIds) : undefined,
+        actorIds.length > 0
+          ? inArray(auditEntries.actorUserId, actorIds)
+          : undefined,
     ],
     defaultSort: { key: "occurredAt", order: "desc" },
     tiebreaker: auditEntries.seq,

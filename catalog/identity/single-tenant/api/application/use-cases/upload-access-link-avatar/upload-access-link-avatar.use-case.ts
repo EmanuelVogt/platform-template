@@ -10,8 +10,14 @@ import { NonTransactional } from "../../../../../shared/kernel/transactional/tra
 import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
 import { InvalidAccessLinkError } from "../../../domain/errors"
 import { requireProfileImageStore } from "../../../domain/ports/profile-image-store"
-import { TOKEN_GENERATOR, type TokenGenerator } from "../../../domain/ports/token-generator"
-import { USER_REPOSITORY, type UserRepository } from "../../../domain/ports/user.repository"
+import {
+  TOKEN_GENERATOR,
+  type TokenGenerator,
+} from "../../../domain/ports/token-generator"
+import {
+  USER_REPOSITORY,
+  type UserRepository,
+} from "../../../domain/ports/user.repository"
 import {
   VERIFICATION_TOKEN_REPOSITORY,
   type VerificationTokenRepository,
@@ -21,9 +27,10 @@ import type { UploadAccessLinkAvatarInput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class UploadAccessLinkAvatarUseCase
-  implements UseCaseContract<UploadAccessLinkAvatarInput, { attachmentId: string }>
-{
+export class UploadAccessLinkAvatarUseCase implements UseCaseContract<
+  UploadAccessLinkAvatarInput,
+  { attachmentId: string }
+> {
   constructor(
     @Inject(VERIFICATION_TOKEN_REPOSITORY)
     private readonly verificationTokens: VerificationTokenRepository,
@@ -32,7 +39,7 @@ export class UploadAccessLinkAvatarUseCase
     @Inject(CLOCK) private readonly clock: Clock,
     @Optional()
     @Inject(PROFILE_IMAGE_STORE)
-    private readonly profileImages: ProfileImageStore | null = null,
+    private readonly profileImages: ProfileImageStore | null = null
   ) {}
 
   // Upload pré-auth token-scoped: resolve o user pending dono do token (SEM
@@ -41,13 +48,13 @@ export class UploadAccessLinkAvatarUseCase
   @NonTransactional("io externo: upload de imagem no provider de perfil")
   @Traced({ name: "identity.uploadAccessLinkAvatar" })
   async execute(
-    input: UploadAccessLinkAvatarInput,
+    input: UploadAccessLinkAvatarInput
   ): Promise<{ attachmentId: string }> {
     const now = this.clock.now()
     const active = await this.verificationTokens.findActiveByHash(
       this.tokens.hashOf(input.token),
       "access_link",
-      now,
+      now
     )
     if (!active) {
       throw new InvalidAccessLinkError()

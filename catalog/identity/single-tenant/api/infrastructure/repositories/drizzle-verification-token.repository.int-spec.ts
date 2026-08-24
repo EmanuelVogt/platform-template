@@ -62,7 +62,11 @@ describe("DrizzleVerificationTokenRepository (int)", () => {
   it("consumeByHash devolve userId e marca consumido", async () => {
     const hash = "hash-1"
     const userId = await seedUserWithToken(hash)
-    const result = await tokens.consumeByHash(hash, "password_reset", new Date())
+    const result = await tokens.consumeByHash(
+      hash,
+      "password_reset",
+      new Date()
+    )
     expect(result).toEqual({ userId })
     const again = await tokens.consumeByHash(hash, "password_reset", new Date())
     expect(again).toBeNull()
@@ -136,7 +140,7 @@ describe("DrizzleVerificationTokenRepository (int)", () => {
         expiresAt: new Date(now.getTime() + 60_000),
         consumedAt: null,
         createdAt: new Date(),
-      }),
+      })
     )
     const found = await tokens.findActiveByHash("h-valid", "access_link", now)
     expect(found?.userId).toBe(uid)
@@ -150,9 +154,11 @@ describe("DrizzleVerificationTokenRepository (int)", () => {
         expiresAt: new Date(now.getTime() - 1000),
         consumedAt: null,
         createdAt: new Date(),
-      }),
+      })
     )
-    expect(await tokens.findActiveByHash("h-expired", "access_link", now)).toBeNull()
+    expect(
+      await tokens.findActiveByHash("h-expired", "access_link", now)
+    ).toBeNull()
   })
 
   it("findLatestForUser retorna o token mais recente por createdAt", async () => {
@@ -175,7 +181,7 @@ describe("DrizzleVerificationTokenRepository (int)", () => {
         expiresAt: new Date(now.getTime() + 1000),
         consumedAt: null,
         createdAt: new Date("2026-06-08T00:00:00.000Z"),
-      }),
+      })
     )
     await tokens.create(
       VerificationToken.fromProps({
@@ -186,7 +192,7 @@ describe("DrizzleVerificationTokenRepository (int)", () => {
         expiresAt: new Date(now.getTime() + 2000),
         consumedAt: null,
         createdAt: new Date("2026-06-08T00:01:00.000Z"),
-      }),
+      })
     )
     const latest = await tokens.findLatestForUser(uid, "access_link")
     expect(latest).not.toBeNull()

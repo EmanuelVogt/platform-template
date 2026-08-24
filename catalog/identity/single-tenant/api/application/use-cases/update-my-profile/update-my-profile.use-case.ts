@@ -17,13 +17,14 @@ import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/us
 
 /** Edição self-service do próprio nome e data de nascimento. */
 @UseCase()
-export class UpdateMyProfileUseCase
-  implements UseCaseContract<UpdateMyProfileInput, void>
-{
+export class UpdateMyProfileUseCase implements UseCaseContract<
+  UpdateMyProfileInput,
+  void
+> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(CLOCK) private readonly clock: Clock,
-    private readonly ctx: RequestContext,
+    private readonly ctx: RequestContext
   ) {}
 
   @Transactional()
@@ -36,7 +37,10 @@ export class UpdateMyProfileUseCase
       throw new ForbiddenError()
     }
     await this.users.update(
-      user.updateOwnProfile({ name: input.name, birthDate: input.birthDate }, now),
+      user.updateOwnProfile(
+        { name: input.name, birthDate: input.birthDate },
+        now
+      )
     )
   }
 }

@@ -37,7 +37,7 @@ export class PurgePendingAttachmentsJob {
   constructor(
     @Inject(OBJECT_STORAGE) private readonly storage: ObjectStoragePort,
     @Inject(ATTACHMENT_REPOSITORY) private readonly repo: AttachmentRepository,
-    loggerFactory: LoggerFactory,
+    loggerFactory: LoggerFactory
   ) {
     this.log = loggerFactory.forModule("PurgePendingAttachments")
   }

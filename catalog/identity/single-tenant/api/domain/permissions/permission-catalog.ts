@@ -36,5 +36,5 @@ export const FULL_AUDIT_PERMISSION = "admin.audit.read" satisfies PermissionKey
  *  fora para preservar a bijeção com `AUDIT_TABLE_OWNERS`. */
 export const AUDIT_PERMISSION_KEYS: readonly PermissionKey[] =
   PERMISSION_KEYS.filter(
-    (key) => key.endsWith(".audit.read") && key !== FULL_AUDIT_PERMISSION,
+    (key) => key.endsWith(".audit.read") && key !== FULL_AUDIT_PERMISSION
   )

@@ -4,7 +4,10 @@
 // notification é a direção do DAG e não fecha ciclo. Os e2e cruzados
 // identity ↔ notification moram aqui pela mesma razão — o e2e cruzado fica na
 // entrada a jusante, nunca na dependência.
-import type { EmailMessage, Mailer } from "../../notification/domain/ports/mailer"
+import type {
+  EmailMessage,
+  Mailer,
+} from "../../notification/domain/ports/mailer"
 
 export function fakeMailer(): Mailer & { sent: EmailMessage[] } {
   const sent: EmailMessage[] = []

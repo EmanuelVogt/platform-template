@@ -20,14 +20,23 @@ import { SelfService } from "../../../../shared/kernel/access/decorators"
 import { RequestContext } from "../../../../shared/kernel/context/request-context"
 import { RateLimit } from "../../../../shared/kernel/rate-limit/rate-limit.decorator"
 import { UploadAttachmentsBatchUseCase } from "../../application/use-cases/upload-attachments-batch/upload-attachments-batch.use-case"
-import { ATTACHMENT_CONFIG, type AttachmentConfig } from "../../attachment.config"
-import { PendingQuotaExceededError, UploadsSaturatedError } from "../../domain/errors"
+import {
+  ATTACHMENT_CONFIG,
+  type AttachmentConfig,
+} from "../../attachment.config"
+import {
+  PendingQuotaExceededError,
+  UploadsSaturatedError,
+} from "../../domain/errors"
 import { formatMegabytes } from "../../domain/format-megabytes"
 import {
   ATTACHMENT_REPOSITORY,
   type AttachmentRepository,
 } from "../../domain/ports/attachment.repository"
-import { UPLOAD_PROFILES, type UploadProfileCatalog } from "../../domain/upload-profiles"
+import {
+  UPLOAD_PROFILES,
+  type UploadProfileCatalog,
+} from "../../domain/upload-profiles"
 import {
   UploadAttachmentsQueryDto,
   UploadAttachmentsResponseDto,
@@ -46,7 +55,7 @@ export class UploadAttachmentsController {
     @Inject(UPLOAD_PROFILES) private readonly profiles: UploadProfileCatalog,
     @Inject(ATTACHMENT_REPOSITORY) private readonly repo: AttachmentRepository,
     @Inject(ATTACHMENT_CONFIG) private readonly config: AttachmentConfig,
-    private readonly uploadGate: UploadGate,
+    private readonly uploadGate: UploadGate
   ) {}
 
   @ApiOperation({
@@ -77,7 +86,7 @@ export class UploadAttachmentsController {
     @Req() req: Request,
     // passthrough: o Nest continua serializando o retorno; a resposta só é
     // necessária para encerrar a conexão quando o corpo é cortado no meio.
-    @Res({ passthrough: true }) res: Response,
+    @Res({ passthrough: true }) res: Response
   ): Promise<UploadAttachmentsResponseDto> {
     // Vaga ocupada até o fim do envio (sucesso ou falha) — é o tempo de vida
     // real da conexão de upload, não só o handshake inicial.
@@ -90,9 +99,12 @@ export class UploadAttachmentsController {
       if (ownerUserId !== null) {
         const pending = await this.repo.sumPendingBytesByOwner(ownerUserId)
         const contentLength = Number(req.headers["content-length"] ?? 0)
-        if (pending + contentLength > this.config.ATTACHMENT_PENDING_QUOTA_BYTES) {
+        if (
+          pending + contentLength >
+          this.config.ATTACHMENT_PENDING_QUOTA_BYTES
+        ) {
           throw new PendingQuotaExceededError(
-            `O total de envios pendentes não pode passar de ${formatMegabytes(this.config.ATTACHMENT_PENDING_QUOTA_BYTES)}.`,
+            `O total de envios pendentes não pode passar de ${formatMegabytes(this.config.ATTACHMENT_PENDING_QUOTA_BYTES)}.`
           )
         }
       }

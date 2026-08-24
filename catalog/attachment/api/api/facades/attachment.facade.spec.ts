@@ -28,7 +28,7 @@ describe("AttachmentFacade.listAccessLog", () => {
       {} as never,
       {} as never,
       {} as never,
-      listAccessLogUseCase,
+      listAccessLogUseCase
     )
 
     await expect(facade.listAccessLog("att-1")).resolves.toEqual(result)

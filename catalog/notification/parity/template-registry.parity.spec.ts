@@ -26,7 +26,9 @@ describe("notification — fonte de template registrada (AD-007)", () => {
     for (const source of BASE_TEMPLATE_SOURCES) {
       const keys = Object.keys(source).sort()
       expect(keys).toEqual(expect.arrayContaining(["catalog", "type"]))
-      expect(keys.every((key) => ["catalog", "email", "type"].includes(key))).toBe(true)
+      expect(
+        keys.every((key) => ["catalog", "email", "type"].includes(key))
+      ).toBe(true)
       // SPEC_DEVIATION: `if` vira early `continue` para tirar o `expect` de dentro do condicional.
       // Reason: `@vitest/eslint-plugin` (LNT-01) passa a barrar `no-conditional-expect`.
       if (!source.email) continue
@@ -36,13 +38,17 @@ describe("notification — fonte de template registrada (AD-007)", () => {
   })
 
   it("templateDir ausente no base-set — usa a pasta de templates do próprio módulo", () => {
-    const source = BASE_TEMPLATE_SOURCES.find((s) => s.type === "email_verification")
+    const source = BASE_TEMPLATE_SOURCES.find(
+      (s) => s.type === "email_verification"
+    )
     expect(source?.email?.templateDir).toBeUndefined()
   })
 
   it("recipient ausente cai para data.email", async () => {
     const templateSources: NotificationTemplateSources = {
-      require: () => ({ email: { template: "verify", subject: () => "assunto" } }),
+      require: () => ({
+        email: { template: "verify", subject: () => "assunto" },
+      }),
       findByTemplate: () => undefined,
     }
     const renderer: TemplateRenderer = { render: () => "<html></html>" }
@@ -72,7 +78,9 @@ describe("notification — fonte de template registrada (AD-007)", () => {
 
   it("view ausente cai para identidade — o payload inteiro vai pro renderer", async () => {
     const templateSources: NotificationTemplateSources = {
-      require: () => ({ email: { template: "verify", subject: () => "assunto" } }),
+      require: () => ({
+        email: { template: "verify", subject: () => "assunto" },
+      }),
       findByTemplate: () => undefined,
     }
     const seen: Record<string, unknown>[] = []
@@ -86,7 +94,11 @@ describe("notification — fonte de template registrada (AD-007)", () => {
     const channel = new EmailChannel(templateSources, renderer, mailer)
     const payload = { email: "destinatario@example.com", extra: "valor" }
 
-    await channel.send({ id: "delivery-2", type: "email_verification", payload })
+    await channel.send({
+      id: "delivery-2",
+      type: "email_verification",
+      payload,
+    })
 
     expect(seen).toEqual([payload])
   })

@@ -42,7 +42,9 @@ function makeDeps(over: Record<string, any> = {}) {
     update: vi.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => NOW }
-  const ctx = over.ctx ?? fakeRequestContext(() => ({
+  const ctx =
+    over.ctx ??
+    fakeRequestContext(() => ({
       userId: "u-1",
       sessionId: "s-1",
       ip: "1.2.3.4",
@@ -76,7 +78,9 @@ describe("UpdateMyProfileUseCase", () => {
   it("sem birthDate no input: mantém o birthDate existente", async () => {
     const t = makeDeps({
       users: {
-        findById: vi.fn().mockResolvedValue(makeUser({ birthDate: "1985-03-10" })),
+        findById: vi
+          .fn()
+          .mockResolvedValue(makeUser({ birthDate: "1985-03-10" })),
         update: vi.fn().mockResolvedValue(undefined),
       },
     })
@@ -88,15 +92,17 @@ describe("UpdateMyProfileUseCase", () => {
   it("ctx sem userId lança ForbiddenError e NÃO chama users.findById nem users.update", async () => {
     const t = makeDeps({
       ctx: fakeRequestContext(() => ({
-          userId: null,
-          sessionId: null,
-          ip: null,
-          userAgent: null,
-          correlationId: "c1",
-          locale: "pt-BR",
-        })),
+        userId: null,
+        sessionId: null,
+        ip: null,
+        userAgent: null,
+        correlationId: "c1",
+        locale: "pt-BR",
+      })),
     })
-    await expect(t.uc.execute({ name: "Ana" })).rejects.toBeInstanceOf(ForbiddenError)
+    await expect(t.uc.execute({ name: "Ana" })).rejects.toBeInstanceOf(
+      ForbiddenError
+    )
     expect(t.users.findById).not.toHaveBeenCalled()
     expect(t.users.update).not.toHaveBeenCalled()
   })
@@ -104,15 +110,17 @@ describe("UpdateMyProfileUseCase", () => {
   it("ctx sem sessionId lança ForbiddenError e NÃO chama users.findById nem users.update", async () => {
     const t = makeDeps({
       ctx: fakeRequestContext(() => ({
-          userId: "u-1",
-          sessionId: null,
-          ip: null,
-          userAgent: null,
-          correlationId: "c1",
-          locale: "pt-BR",
-        })),
+        userId: "u-1",
+        sessionId: null,
+        ip: null,
+        userAgent: null,
+        correlationId: "c1",
+        locale: "pt-BR",
+      })),
     })
-    await expect(t.uc.execute({ name: "Ana" })).rejects.toBeInstanceOf(ForbiddenError)
+    await expect(t.uc.execute({ name: "Ana" })).rejects.toBeInstanceOf(
+      ForbiddenError
+    )
     expect(t.users.findById).not.toHaveBeenCalled()
     expect(t.users.update).not.toHaveBeenCalled()
   })
@@ -124,14 +132,16 @@ describe("UpdateMyProfileUseCase", () => {
         update: vi.fn(),
       },
     })
-    await expect(t.uc.execute({ name: "Ana" })).rejects.toBeInstanceOf(ForbiddenError)
+    await expect(t.uc.execute({ name: "Ana" })).rejects.toBeInstanceOf(
+      ForbiddenError
+    )
     expect(t.users.update).not.toHaveBeenCalled()
   })
 
   it("birthDate futura lança InvalidBirthDateError e NÃO chama users.update", async () => {
     const t = makeDeps()
     await expect(
-      t.uc.execute({ name: "Ana", birthDate: "2099-01-01" }),
+      t.uc.execute({ name: "Ana", birthDate: "2099-01-01" })
     ).rejects.toBeInstanceOf(InvalidBirthDateError)
     expect(t.users.update).not.toHaveBeenCalled()
   })
@@ -139,7 +149,7 @@ describe("UpdateMyProfileUseCase", () => {
   it("birthDate com idade > 120 anos lança InvalidBirthDateError e NÃO chama users.update", async () => {
     const t = makeDeps()
     await expect(
-      t.uc.execute({ name: "Ana", birthDate: "1800-01-01" }),
+      t.uc.execute({ name: "Ana", birthDate: "1800-01-01" })
     ).rejects.toBeInstanceOf(InvalidBirthDateError)
     expect(t.users.update).not.toHaveBeenCalled()
   })
@@ -165,9 +175,13 @@ describe("UpdateMyProfileUseCase", () => {
   })
 
   it("ctx.get() lança → erro propaga antes de findById ou update serem chamados", async () => {
-    const ctxErr = new Error("RequestContext acessado fora de um escopo de request")
+    const ctxErr = new Error(
+      "RequestContext acessado fora de um escopo de request"
+    )
     const t = makeDeps({
-      ctx: fakeRequestContext(() => { throw ctxErr }),
+      ctx: fakeRequestContext(() => {
+        throw ctxErr
+      }),
     })
     await expect(t.uc.execute({ name: "Ana" })).rejects.toThrow(ctxErr)
     expect(t.users.findById).not.toHaveBeenCalled()
@@ -193,7 +207,9 @@ describe("UpdateMyProfileUseCase", () => {
   it("birthDate undefined explícito no input: mantém birthDate existente (branch birthDate !== undefined falso)", async () => {
     const t = makeDeps({
       users: {
-        findById: vi.fn().mockResolvedValue(makeUser({ birthDate: "1990-01-15" })),
+        findById: vi
+          .fn()
+          .mockResolvedValue(makeUser({ birthDate: "1990-01-15" })),
         update: vi.fn().mockResolvedValue(undefined),
       },
     })

@@ -209,7 +209,10 @@ describe("DrizzleAttachmentAccessLogRepository — sem 2ª conexão do pool (POO
     await pool.end()
   })
 
-  async function seedRow(input: { attachmentId: string; createdAt: Date }): Promise<string> {
+  async function seedRow(input: {
+    attachmentId: string
+    createdAt: Date
+  }): Promise<string> {
     const id = ulid()
     await db.insert(attachmentAccessLogs).values({
       id,

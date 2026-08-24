@@ -19,7 +19,10 @@ import {
 import { Public } from "../../../../../shared/kernel/access/decorators"
 import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 import { UploadAccessLinkAvatarUseCase } from "../../../application/use-cases/upload-access-link-avatar/upload-access-link-avatar.use-case"
-import { AvatarFileRequiredError, InvalidAccessLinkError } from "../../../domain/errors"
+import {
+  AvatarFileRequiredError,
+  InvalidAccessLinkError,
+} from "../../../domain/errors"
 import { AccessLinkAvatarUploadResponseDto } from "../../contracts/identity.contract"
 
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024
@@ -58,11 +61,11 @@ export class UploadAccessLinkAvatarController {
   @UseInterceptors(
     FileInterceptor("file", {
       limits: { fileSize: MAX_UPLOAD_BYTES, fields: 1 },
-    }),
+    })
   )
   async handle(
     @UploadedFile() file: Express.Multer.File | undefined,
-    @Body("token") token: string | undefined,
+    @Body("token") token: string | undefined
   ): Promise<{ attachmentId: string }> {
     if (file === undefined) {
       throw new AvatarFileRequiredError()

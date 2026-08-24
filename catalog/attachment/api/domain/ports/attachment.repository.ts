@@ -16,4 +16,6 @@ export interface AttachmentRepository {
   sumPendingBytesByOwner(ownerId: string): Promise<number>
 }
 
-export const ATTACHMENT_REPOSITORY: unique symbol = Symbol("AttachmentRepository")
+export const ATTACHMENT_REPOSITORY: unique symbol = Symbol(
+  "AttachmentRepository"
+)

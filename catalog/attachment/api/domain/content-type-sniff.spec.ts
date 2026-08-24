@@ -2,7 +2,6 @@ import { Readable } from "node:stream"
 
 import { describe, expect, it } from "vitest"
 
-
 import { sniffImageContentType, sniffImageStream } from "./content-type-sniff"
 
 /** `Readable.from` é object mode por padrão — um stream de upload real não é;
@@ -47,7 +46,9 @@ describe("sniffImageContentType", () => {
 
   it("retorna null para buffer menor que 8 bytes que não é jpeg (png guard falha)", () => {
     // tem bytes suficientes pro jpeg check falhar, mas não pra png (< 8)
-    expect(sniffImageContentType(Buffer.from([0x00, 0x01, 0x02, 0x03]))).toBeNull()
+    expect(
+      sniffImageContentType(Buffer.from([0x00, 0x01, 0x02, 0x03]))
+    ).toBeNull()
   })
 
   it("retorna null para buffer menor que 12 bytes que não é jpeg nem png (webp guard falha)", () => {
@@ -85,10 +86,14 @@ describe("sniffImageStream", () => {
   })
 
   it("preserva o conteúdo mesmo quando os bytes chegam em vários chunks pequenos", async () => {
-    const body = Buffer.concat([png, Buffer.from("segunda parte, em outro chunk")])
+    const body = Buffer.concat([
+      png,
+      Buffer.from("segunda parte, em outro chunk"),
+    ])
     // 3-byte chunks força múltiplos eventos "readable" antes de acumular 16 bytes.
     const chunks: Buffer[] = []
-    for (let i = 0; i < body.length; i += 3) chunks.push(body.subarray(i, i + 3))
+    for (let i = 0; i < body.length; i += 3)
+      chunks.push(body.subarray(i, i + 3))
     const stream = byteStream(chunks)
 
     const sniffed = await sniffImageStream(stream)

@@ -4,7 +4,11 @@ import request from "supertest"
 import { ulid } from "ulid"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
+import {
+  createTestPool,
+  truncateIdentity,
+  truncateKernel,
+} from "../../../../test/setup/test-db"
 import { AppModule } from "../../../app.module"
 import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
@@ -12,10 +16,7 @@ import { createRequestContextMiddleware } from "../../../shared/kernel/context/r
 import { InMemoryRateLimiter } from "../../../shared/kernel/rate-limit/in-memory-rate-limiter"
 import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
 import { PASSWORD_HASHER } from "../domain/ports/password-hasher"
-import {
-  IDENTITY_CONFIG,
-  parseIdentityConfig,
-} from "../identity.config"
+import { IDENTITY_CONFIG, parseIdentityConfig } from "../identity.config"
 import { allowAllRateLimiter } from "../testing/allow-all-rate-limiter"
 
 import type { Pool } from "pg"
@@ -31,7 +32,7 @@ const fakeHasher = {
 
 function cookieValue(
   setCookie: string[] | undefined,
-  name: string,
+  name: string
 ): string | undefined {
   for (const c of setCookie ?? []) {
     const m = new RegExp(`^${name}=([^;]+)`).exec(c)
@@ -47,7 +48,7 @@ async function seedUser(pool: Pool): Promise<void> {
     `INSERT INTO identity.users
        (id, name, email, email_verified, password_hash, pepper_version, failed_login_attempts)
      VALUES ($1, $2, $3, true, $4, 1, 0)`,
-    [ulid(), "CSRF User", EMAIL, "argon2-dummy"],
+    [ulid(), "CSRF User", EMAIL, "argon2-dummy"]
   )
 }
 
@@ -160,7 +161,7 @@ describe("Origin forjada não gasta bucket (e2e)", () => {
       consume: (
         key: string,
         limit: number,
-        windowSeconds: number,
+        windowSeconds: number
       ): ReturnType<InMemoryRateLimiter["consume"]> => {
         consumed.push(key)
         return inner.consume(key, limit, windowSeconds)

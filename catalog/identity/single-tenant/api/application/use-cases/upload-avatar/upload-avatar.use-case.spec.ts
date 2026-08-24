@@ -36,17 +36,19 @@ function makeUser(over: Partial<UserProps> = {}): User {
   })
 }
 
-function makeCtx(over: { userId?: string | null; sessionId?: string | null } = {}) {
+function makeCtx(
+  over: { userId?: string | null; sessionId?: string | null } = {}
+) {
   const userId = "userId" in over ? over.userId : "u-1"
   const sessionId = "sessionId" in over ? over.sessionId : "sess-1"
   return fakeRequestContext(() => ({
-      ip: "1.2.3.4",
-      userAgent: "jest",
-      correlationId: "c1",
-      locale: "pt-BR",
-      userId,
-      sessionId,
-    }))
+    ip: "1.2.3.4",
+    userAgent: "jest",
+    correlationId: "c1",
+    locale: "pt-BR",
+    userId,
+    sessionId,
+  }))
 }
 
 function makeDeps(over: Record<string, any> = {}) {
@@ -67,7 +69,13 @@ function makeDeps(over: Record<string, any> = {}) {
   const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn() }
   const loggerFactory = { forModule: () => logger }
 
-  const uc = new UploadAvatarUseCase(users, clock, ctx, attachments, loggerFactory as never)
+  const uc = new UploadAvatarUseCase(
+    users,
+    clock,
+    ctx,
+    attachments,
+    loggerFactory as never
+  )
   return { uc, users, clock, ctx, attachments, logger }
 }
 
@@ -90,7 +98,7 @@ describe("UploadAvatarUseCase", () => {
         originalFilename: "foto.jpg",
         profile: "avatar",
         ownerUserId: "u-1",
-      }),
+      })
     )
     expect(t.users.update).toHaveBeenCalledTimes(1)
   })
@@ -153,7 +161,9 @@ describe("UploadAvatarUseCase", () => {
 
   it("contexto sem userId lança ForbiddenError SEM chamar o repo nem upload", async () => {
     const t = makeDeps({ ctx: makeCtx({ userId: null }) })
-    await expect(t.uc.execute(DUMMY_INPUT)).rejects.toBeInstanceOf(ForbiddenError)
+    await expect(t.uc.execute(DUMMY_INPUT)).rejects.toBeInstanceOf(
+      ForbiddenError
+    )
     expect(t.users.findById).not.toHaveBeenCalled()
     expect(t.attachments.upload).not.toHaveBeenCalled()
     expect(t.users.update).not.toHaveBeenCalled()
@@ -161,7 +171,9 @@ describe("UploadAvatarUseCase", () => {
 
   it("contexto sem sessionId lança ForbiddenError SEM chamar o repo nem upload", async () => {
     const t = makeDeps({ ctx: makeCtx({ sessionId: null }) })
-    await expect(t.uc.execute(DUMMY_INPUT)).rejects.toBeInstanceOf(ForbiddenError)
+    await expect(t.uc.execute(DUMMY_INPUT)).rejects.toBeInstanceOf(
+      ForbiddenError
+    )
     expect(t.users.findById).not.toHaveBeenCalled()
     expect(t.attachments.upload).not.toHaveBeenCalled()
     expect(t.users.update).not.toHaveBeenCalled()
@@ -169,7 +181,9 @@ describe("UploadAvatarUseCase", () => {
 
   it("user não encontrado na primeira busca lança ForbiddenError SEM chamar upload", async () => {
     const t = makeDeps({ user: null })
-    await expect(t.uc.execute(DUMMY_INPUT)).rejects.toBeInstanceOf(ForbiddenError)
+    await expect(t.uc.execute(DUMMY_INPUT)).rejects.toBeInstanceOf(
+      ForbiddenError
+    )
     expect(t.attachments.upload).not.toHaveBeenCalled()
     expect(t.users.update).not.toHaveBeenCalled()
   })
@@ -177,11 +191,16 @@ describe("UploadAvatarUseCase", () => {
   it("user desaparece antes do persistAvatar lança ForbiddenError SEM chamar update", async () => {
     // Primeira findById retorna o user; segunda (dentro de persistAvatar) retorna null
     const users = {
-      findById: vi.fn().mockResolvedValueOnce(makeUser()).mockResolvedValueOnce(null),
+      findById: vi
+        .fn()
+        .mockResolvedValueOnce(makeUser())
+        .mockResolvedValueOnce(null),
       update: vi.fn(),
     }
     const t = makeDeps({ users })
-    await expect(t.uc.execute(DUMMY_INPUT)).rejects.toBeInstanceOf(ForbiddenError)
+    await expect(t.uc.execute(DUMMY_INPUT)).rejects.toBeInstanceOf(
+      ForbiddenError
+    )
     expect(t.users.update).not.toHaveBeenCalled()
   })
 
@@ -201,7 +220,9 @@ describe("UploadAvatarUseCase", () => {
   it("falha no users.update propaga erro e NÃO executa limpeza do avatar antigo", async () => {
     const updateError = new Error("db constraint")
     const users = {
-      findById: vi.fn().mockResolvedValue(makeUser({ avatarAttachmentId: "att-old" })),
+      findById: vi
+        .fn()
+        .mockResolvedValue(makeUser({ avatarAttachmentId: "att-old" })),
       update: vi.fn().mockRejectedValue(updateError),
     }
     const t = makeDeps({ users })
@@ -224,7 +245,7 @@ describe("UploadAvatarUseCase", () => {
       expect.objectContaining({
         previousAvatarId: "att-old",
         error: "network timeout",
-      }),
+      })
     )
   })
 
@@ -242,7 +263,7 @@ describe("UploadAvatarUseCase", () => {
       expect.objectContaining({
         previousAvatarId: "att-old",
         error: "timeout string",
-      }),
+      })
     )
   })
 })

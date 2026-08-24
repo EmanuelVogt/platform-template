@@ -38,7 +38,7 @@ export interface AttachmentAccessLogRepository {
    */
   listByAttachment(
     attachmentId: string,
-    limit: number,
+    limit: number
   ): Promise<AttachmentAccessLogListItem[]>
 
   /**

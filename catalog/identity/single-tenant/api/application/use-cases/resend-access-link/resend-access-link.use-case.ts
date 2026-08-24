@@ -13,8 +13,14 @@ import {
   AUTH_EVENT_REPOSITORY,
   type AuthEventRepository,
 } from "../../../domain/ports/auth-event.repository"
-import { TOKEN_GENERATOR, type TokenGenerator } from "../../../domain/ports/token-generator"
-import { USER_REPOSITORY, type UserRepository } from "../../../domain/ports/user.repository"
+import {
+  TOKEN_GENERATOR,
+  type TokenGenerator,
+} from "../../../domain/ports/token-generator"
+import {
+  USER_REPOSITORY,
+  type UserRepository,
+} from "../../../domain/ports/user.repository"
 import {
   VERIFICATION_TOKEN_REPOSITORY,
   type VerificationTokenRepository,
@@ -26,17 +32,21 @@ import type { ResendAccessLinkInput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class ResendAccessLinkUseCase implements UseCaseContract<ResendAccessLinkInput, void> {
+export class ResendAccessLinkUseCase implements UseCaseContract<
+  ResendAccessLinkInput,
+  void
+> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(VERIFICATION_TOKEN_REPOSITORY)
     private readonly verificationTokens: VerificationTokenRepository,
     @Inject(TOKEN_GENERATOR) private readonly tokens: TokenGenerator,
     private readonly outbox: OutboxPublisher,
-    @Inject(AUTH_EVENT_REPOSITORY) private readonly authEvents: AuthEventRepository,
+    @Inject(AUTH_EVENT_REPOSITORY)
+    private readonly authEvents: AuthEventRepository,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly ctx: RequestContext,
-    @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig,
+    @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig
   ) {}
 
   @Transactional()
@@ -50,17 +60,25 @@ export class ResendAccessLinkUseCase implements UseCaseContract<ResendAccessLink
       throw new AccessLinkNotResendableError("Usuário não está pendente.")
     }
 
-    const latest = await this.verificationTokens.findLatestForUser(input.userId, "access_link")
+    const latest = await this.verificationTokens.findLatestForUser(
+      input.userId,
+      "access_link"
+    )
     const stillValid =
-      latest !== null && latest.consumedAt === null && latest.expiresAt.getTime() > now.getTime()
+      latest !== null &&
+      latest.consumedAt === null &&
+      latest.expiresAt.getTime() > now.getTime()
     if (stillValid) {
       throw new AccessLinkNotResendableError("Link de acesso ainda válido.")
     }
 
-    await this.verificationTokens.invalidateAllForUser(input.userId, "access_link")
+    await this.verificationTokens.invalidateAllForUser(
+      input.userId,
+      "access_link"
+    )
     const { raw, hash } = this.tokens.generate()
     const expiresAt = new Date(
-      now.getTime() + this.config.ACCESS_LINK_TOKEN_TTL_SECONDS * 1000,
+      now.getTime() + this.config.ACCESS_LINK_TOKEN_TTL_SECONDS * 1000
     )
     await this.verificationTokens.create(
       VerificationToken.create({
@@ -68,7 +86,7 @@ export class ResendAccessLinkUseCase implements UseCaseContract<ResendAccessLink
         tokenHash: hash,
         type: "access_link",
         expiresAt,
-      }),
+      })
     )
 
     const link = `${this.config.WEB_ORIGIN}/configurar-senha?token=${raw}`
@@ -83,14 +101,14 @@ export class ResendAccessLinkUseCase implements UseCaseContract<ResendAccessLink
           link,
           tokenExpiresAt: expiresAt.toISOString(),
         },
-      }),
+      })
     )
     await this.authEvents.recordInTx(
       authEventOf(store, {
         userId: input.userId,
         actorUserId: this.ctx.getActor()?.id ?? null,
         eventType: "access_link_resent",
-      }),
+      })
     )
   }
 }

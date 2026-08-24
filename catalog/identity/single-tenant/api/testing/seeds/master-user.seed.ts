@@ -15,7 +15,10 @@ const MASTER_NAME = "Platform Admin"
 // PASSWORD_PEPPER incrementa este número.
 const PEPPER_VERSION = 1
 
-export function resolveMasterPassword(): { password: string; generated: boolean } {
+export function resolveMasterPassword(): {
+  password: string
+  generated: boolean
+} {
   const fromEnv = process.env.SEED_MASTER_PASSWORD
   if (fromEnv !== undefined && fromEnv.trim() !== "") {
     return { password: fromEnv, generated: false }
@@ -30,7 +33,7 @@ export const masterUserSeed: Seed = {
     const { password, generated } = resolveMasterPassword()
     if (generated) {
       process.stdout.write(
-        `[seed:master-user] senha gerada: ${password} — não é armazenada, anote agora\n`,
+        `[seed:master-user] senha gerada: ${password} — não é armazenada, anote agora\n`
       )
     }
     const passwordHash = await hasher.hash(password)
@@ -59,7 +62,9 @@ export const masterUserSeed: Seed = {
       .returning({ id: users.id })
 
     if (inserted.length === 0) {
-      process.stdout.write(`[seed:master-user] ${MASTER_EMAIL} já existe — nada a fazer\n`)
+      process.stdout.write(
+        `[seed:master-user] ${MASTER_EMAIL} já existe — nada a fazer\n`
+      )
       return
     }
     process.stdout.write(

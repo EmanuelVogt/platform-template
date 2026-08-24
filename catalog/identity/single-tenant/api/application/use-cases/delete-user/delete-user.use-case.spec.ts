@@ -45,8 +45,12 @@ function makeDeps(over: Record<string, any> = {}) {
   const authEvents = over.authEvents ?? {
     recordInTx: vi.fn().mockResolvedValue(undefined),
   }
-  const clock = over.clock ?? { now: () => new Date("2026-06-10T12:00:00.000Z") }
-  const ctx = over.ctx ?? fakeRequestContext(() => ({
+  const clock = over.clock ?? {
+    now: () => new Date("2026-06-10T12:00:00.000Z"),
+  }
+  const ctx =
+    over.ctx ??
+    fakeRequestContext(() => ({
       correlationId: "c1",
       locale: "pt-BR",
       userId: "u-admin",
@@ -67,7 +71,7 @@ describe("DeleteUserUseCase", () => {
     expect(updated.isDeleted()).toBe(true)
     expect(sessions.deleteAllForUser).toHaveBeenCalledWith("u-target")
     expect(authEvents.recordInTx.mock.calls[0]?.[0].props.eventType).toBe(
-      "user_deleted",
+      "user_deleted"
     )
   })
 
@@ -82,35 +86,45 @@ describe("DeleteUserUseCase", () => {
   it("404 quando já está soft-deleted (idempotente)", async () => {
     const { uc } = makeDeps({
       users: {
-        findById: vi.fn().mockResolvedValue(makeUser({ deletedAt: new Date() })),
+        findById: vi
+          .fn()
+          .mockResolvedValue(makeUser({ deletedAt: new Date() })),
         update: vi.fn(),
       },
     })
-    await expect(uc.execute({ userId: "u-target" })).rejects.toThrow(UserNotFoundError)
+    await expect(uc.execute({ userId: "u-target" })).rejects.toThrow(
+      UserNotFoundError
+    )
   })
 
   it("recusa excluir o usuário master", async () => {
     const { uc, users } = makeDeps({
       users: {
-        findById: vi.fn().mockResolvedValue(makeUser({ accessProfile: "master" })),
+        findById: vi
+          .fn()
+          .mockResolvedValue(makeUser({ accessProfile: "master" })),
         update: vi.fn(),
       },
     })
-    await expect(uc.execute({ userId: "u-target" })).rejects.toThrow(ForbiddenError)
+    await expect(uc.execute({ userId: "u-target" })).rejects.toThrow(
+      ForbiddenError
+    )
     expect(users.update).not.toHaveBeenCalled()
   })
 
   it("recusa excluir a própria conta (actor == alvo)", async () => {
     const { uc, users } = makeDeps({
       ctx: fakeRequestContext(() => ({
-          correlationId: "c1",
-          locale: "pt-BR",
-          userId: "u-target",
-          ip: null,
-          userAgent: null,
-        })),
+        correlationId: "c1",
+        locale: "pt-BR",
+        userId: "u-target",
+        ip: null,
+        userAgent: null,
+      })),
     })
-    await expect(uc.execute({ userId: "u-target" })).rejects.toThrow(ForbiddenError)
+    await expect(uc.execute({ userId: "u-target" })).rejects.toThrow(
+      ForbiddenError
+    )
     expect(users.update).not.toHaveBeenCalled()
   })
 })

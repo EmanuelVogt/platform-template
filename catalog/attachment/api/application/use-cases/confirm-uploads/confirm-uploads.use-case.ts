@@ -32,7 +32,7 @@ export class ConfirmUploadsUseCase {
     @Inject(OBJECT_STORAGE) private readonly storage: ObjectStoragePort,
     @Inject(ATTACHMENT_REPOSITORY) private readonly repo: AttachmentRepository,
     @Inject(UPLOAD_PROFILES) private readonly profiles: UploadProfileCatalog,
-    private readonly txManager: TransactionManager,
+    private readonly txManager: TransactionManager
   ) {}
 
   @Traced({ name: "attachment.confirmUploads" })
@@ -43,11 +43,11 @@ export class ConfirmUploadsUseCase {
     // virar um `IN (...)` gigante só porque o perfil informado aceitaria
     // menos — vale o maior `maxFiles` entre todos os perfis de rota.
     const maxFilesAcrossProfiles = Math.max(
-      ...ROUTE_UPLOAD_PROFILE_NAMES.map((name) => this.profiles[name].maxFiles),
+      ...ROUTE_UPLOAD_PROFILE_NAMES.map((name) => this.profiles[name].maxFiles)
     )
     if (input.ids.length > maxFilesAcrossProfiles) {
       throw new UploadQuotaExceededError(
-        `Máximo de ${String(maxFilesAcrossProfiles)} arquivos por confirmação.`,
+        `Máximo de ${String(maxFilesAcrossProfiles)} arquivos por confirmação.`
       )
     }
 
@@ -56,7 +56,7 @@ export class ConfirmUploadsUseCase {
     if (found.length !== input.ids.length) throw new AttachmentNotFoundError()
     if (found.length > profile.maxFiles) {
       throw new UploadQuotaExceededError(
-        `Máximo de ${String(profile.maxFiles)} arquivos por envio.`,
+        `Máximo de ${String(profile.maxFiles)} arquivos por envio.`
       )
     }
 
@@ -75,15 +75,17 @@ export class ConfirmUploadsUseCase {
       if (object === null) throw new UploadNotConfirmableError()
       if (object.sizeBytes > p.sizeBytes) {
         throw new UploadQuotaExceededError(
-          `Cada arquivo pode ter no máximo ${formatMegabytes(profile.maxBytes)}.`,
+          `Cada arquivo pode ter no máximo ${formatMegabytes(profile.maxBytes)}.`
         )
       }
       total += object.sizeBytes
-      ready.push(attachment.markReady(object.sizeBytes, object.etag.replaceAll('"', "")))
+      ready.push(
+        attachment.markReady(object.sizeBytes, object.etag.replaceAll('"', ""))
+      )
     }
     if (total > profile.maxTotalBytes) {
       throw new UploadQuotaExceededError(
-        `O total não pode passar de ${formatMegabytes(profile.maxTotalBytes)}.`,
+        `O total não pode passar de ${formatMegabytes(profile.maxTotalBytes)}.`
       )
     }
 

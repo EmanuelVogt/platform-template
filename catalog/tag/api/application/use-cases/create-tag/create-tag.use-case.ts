@@ -5,16 +5,20 @@ import { Transactional } from "../../../../../shared/kernel/transactional/transa
 import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
 import { Tag } from "../../../domain/entities/tag.entity"
 import { TagNotFoundError } from "../../../domain/errors"
-import { TAG_REPOSITORY, type TagRepository } from "../../../domain/ports/tag.repository"
+import {
+  TAG_REPOSITORY,
+  type TagRepository,
+} from "../../../domain/ports/tag.repository"
 import { toTagView, type TagViewOutput } from "../../views"
 
 import type { CreateTagUseCaseInput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class CreateTagUseCase
-  implements UseCaseContract<CreateTagUseCaseInput, TagViewOutput>
-{
+export class CreateTagUseCase implements UseCaseContract<
+  CreateTagUseCaseInput,
+  TagViewOutput
+> {
   constructor(@Inject(TAG_REPOSITORY) private readonly tags: TagRepository) {}
 
   @Transactional()

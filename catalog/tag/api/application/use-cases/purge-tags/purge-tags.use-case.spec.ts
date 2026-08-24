@@ -24,7 +24,9 @@ function makeDeps(over: Record<string, any> = {}) {
     findByIds: vi.fn().mockResolvedValue([tag(true)]),
     hardDeleteByIds: vi.fn().mockResolvedValue(undefined),
   }
-  const outbox = over.outbox ?? { publish: vi.fn().mockResolvedValue(undefined) }
+  const outbox = over.outbox ?? {
+    publish: vi.fn().mockResolvedValue(undefined),
+  }
   const uc = new PurgeTagsUseCase(tags as never, outbox as never)
   return { uc, tags, outbox }
 }
@@ -71,7 +73,9 @@ describe("PurgeTagsUseCase", () => {
         hardDeleteByIds: vi.fn(),
       },
     })
-    await expect(uc.execute({ tagIds: ["ghost"] })).resolves.toEqual({ purged: 0 })
+    await expect(uc.execute({ tagIds: ["ghost"] })).resolves.toEqual({
+      purged: 0,
+    })
     expect(outbox.publish).not.toHaveBeenCalled()
   })
 })

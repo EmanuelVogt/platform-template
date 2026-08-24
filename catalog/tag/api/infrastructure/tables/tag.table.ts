@@ -1,5 +1,11 @@
 import { sql } from "drizzle-orm"
-import { boolean, index, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core"
+import {
+  boolean,
+  index,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core"
 
 import { tagSchema } from "./tag.schema"
 

@@ -39,7 +39,9 @@ export type AuditEntryReadRow = {
 }
 
 export interface AuditRepository {
-  list(input: ListAuditEntriesInput): Promise<PaginatedResult<AuditEntryReadRow>>
+  list(
+    input: ListAuditEntriesInput
+  ): Promise<PaginatedResult<AuditEntryReadRow>>
 }
 
 export const AUDIT_REPOSITORY: unique symbol = Symbol("AuditRepository")

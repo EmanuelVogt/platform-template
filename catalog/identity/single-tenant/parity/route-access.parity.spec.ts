@@ -21,7 +21,10 @@ const VERBS: Record<number, string> = {
 
 const AUTHENTICATED: AccessRequirement = { kind: "authenticated" }
 const PUBLIC: AccessRequirement = { kind: "public" }
-const permission = (key: string): AccessRequirement => ({ kind: "permission", key })
+const permission = (key: string): AccessRequirement => ({
+  kind: "permission",
+  key,
+})
 
 /** Exigência de acesso de cada rota do identity na v0.2 — a tabela que a
  *  entrada promete reproduzir. Rota nova sem linha aqui reprova o teste. */
@@ -54,12 +57,24 @@ const EXPECTED: Record<string, AccessRequirement> = {
   "DELETE admin/users/{id}": permission("admin.users.delete"),
   "POST admin/users/restore": permission("admin.users.trash.restore"),
   "POST admin/users/purge": permission("admin.users.trash.purge"),
-  "POST admin/users/{id}/resend-access-link": permission("admin.users.access_link.resend"),
-  "GET admin/permission-templates": permission("admin.permission_templates.read"),
-  "POST admin/permission-templates": permission("admin.permission_templates.create"),
-  "GET admin/permission-templates/{id}": permission("admin.permission_templates.read"),
-  "PUT admin/permission-templates/{id}": permission("admin.permission_templates.update"),
-  "DELETE admin/permission-templates/{id}": permission("admin.permission_templates.delete"),
+  "POST admin/users/{id}/resend-access-link": permission(
+    "admin.users.access_link.resend"
+  ),
+  "GET admin/permission-templates": permission(
+    "admin.permission_templates.read"
+  ),
+  "POST admin/permission-templates": permission(
+    "admin.permission_templates.create"
+  ),
+  "GET admin/permission-templates/{id}": permission(
+    "admin.permission_templates.read"
+  ),
+  "PUT admin/permission-templates/{id}": permission(
+    "admin.permission_templates.update"
+  ),
+  "DELETE admin/permission-templates/{id}": permission(
+    "admin.permission_templates.delete"
+  ),
 }
 
 /** Rotas marcadas com `@SelfService()` — o decorator escreve
@@ -106,20 +121,33 @@ function trim(segment: string): string {
 function collectRoutes(): Route[] {
   const routes: Route[] = []
   for (const controller of CONTROLLERS) {
-    const base = trim(String(Reflect.getMetadata(PATH_METADATA, controller) ?? ""))
+    const base = trim(
+      String(Reflect.getMetadata(PATH_METADATA, controller) ?? "")
+    )
     const prototype = controller.prototype as unknown as Record<string, unknown>
     for (const name of Object.getOwnPropertyNames(prototype)) {
       if (name === "constructor") continue
       const handler = prototype[name]
       if (typeof handler !== "function") continue
-      const verb = Reflect.getMetadata(METHOD_METADATA, handler) as number | undefined
+      const verb = Reflect.getMetadata(METHOD_METADATA, handler) as
+        | number
+        | undefined
       if (verb === undefined) continue
-      const suffix = trim(String(Reflect.getMetadata(PATH_METADATA, handler) ?? ""))
-      const path = [base, suffix].filter(Boolean).join("/").replace(/:(\w+)/g, "{$1}")
+      const suffix = trim(
+        String(Reflect.getMetadata(PATH_METADATA, handler) ?? "")
+      )
+      const path = [base, suffix]
+        .filter(Boolean)
+        .join("/")
+        .replace(/:(\w+)/g, "{$1}")
       routes.push({
         key: `${VERBS[verb]} ${path}`,
-        explicit: Reflect.getMetadata(ACCESS_REQUIREMENT, handler) as AccessRequirement | undefined,
-        rateLimit: Reflect.getMetadata(RATE_LIMIT_KEY, handler) as RateLimitConfig | undefined,
+        explicit: Reflect.getMetadata(ACCESS_REQUIREMENT, handler) as
+          | AccessRequirement
+          | undefined,
+        rateLimit: Reflect.getMetadata(RATE_LIMIT_KEY, handler) as
+          | RateLimitConfig
+          | undefined,
       })
     }
   }
@@ -130,18 +158,25 @@ describe("paridade de acesso das rotas do identity", () => {
   const routes = collectRoutes()
 
   it("expõe exatamente as rotas da v0.2, sem rota nova nem removida", () => {
-    expect(routes.map((route) => route.key).sort()).toEqual(Object.keys(EXPECTED).sort())
+    expect(routes.map((route) => route.key).sort()).toEqual(
+      Object.keys(EXPECTED).sort()
+    )
   })
 
-  it.each(Object.entries(EXPECTED))("%s mantém a exigência de acesso da v0.2", (key, expected) => {
-    const route = routes.find((candidate) => candidate.key === key)
+  it.each(Object.entries(EXPECTED))(
+    "%s mantém a exigência de acesso da v0.2",
+    (key, expected) => {
+      const route = routes.find((candidate) => candidate.key === key)
 
-    expect(route).toBeDefined()
-    expect(route?.explicit ?? AUTHENTICATED).toEqual(expected)
-  })
+      expect(route).toBeDefined()
+      expect(route?.explicit ?? AUTHENTICATED).toEqual(expected)
+    }
+  )
 
   it("nenhuma rota depende do default fail-closed do kernel", () => {
-    const implicit = routes.filter((route) => route.explicit === undefined).map((route) => route.key)
+    const implicit = routes
+      .filter((route) => route.explicit === undefined)
+      .map((route) => route.key)
 
     expect(implicit).toEqual([])
   })
@@ -164,7 +199,8 @@ describe("paridade de acesso das rotas do identity", () => {
 
   it("as demais rotas com rate-limit seguem sem critical (fail open na queda)", () => {
     const nonCritical = routes.filter(
-      (route) => route.rateLimit !== undefined && route.rateLimit.critical !== true,
+      (route) =>
+        route.rateLimit !== undefined && route.rateLimit.critical !== true
     )
 
     expect(nonCritical).toHaveLength(19)

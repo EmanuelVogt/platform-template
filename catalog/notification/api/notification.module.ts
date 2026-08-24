@@ -48,9 +48,15 @@ import type { NotificationConfig } from "./notification.config"
   controllers: CONTROLLERS,
   providers: [
     NotificationTemplateSourceRegistry,
-    { provide: NOTIFICATION_TEMPLATE_SOURCES, useExisting: NotificationTemplateSourceRegistry },
+    {
+      provide: NOTIFICATION_TEMPLATE_SOURCES,
+      useExisting: NotificationTemplateSourceRegistry,
+    },
     { provide: NOTIFICATIONS_CONFIG, useFactory: loadNotificationConfig },
-    { provide: NOTIFICATION_REPOSITORY, useClass: DrizzleNotificationRepository },
+    {
+      provide: NOTIFICATION_REPOSITORY,
+      useClass: DrizzleNotificationRepository,
+    },
     { provide: DELIVERY_REPOSITORY, useClass: DrizzleDeliveryRepository },
     { provide: NOTIFICATION_PREFERENCES, useClass: AllowAllPreferences },
     { provide: EMAIL_CHANNEL, useClass: EmailChannel },
@@ -73,13 +79,18 @@ import type { NotificationConfig } from "./notification.config"
       provide: MAILER,
       useFactory: (
         cfg: NotificationConfig,
-        lf: LoggerFactory,
+        lf: LoggerFactory
       ): LogMailer | ResendMailer => {
         if (cfg.MAIL_TRANSPORT === "resend") {
           if (cfg.RESEND_API_KEY === undefined || cfg.MAIL_FROM === undefined) {
-            throw new Error("MAIL_TRANSPORT=resend exige RESEND_API_KEY e MAIL_FROM")
+            throw new Error(
+              "MAIL_TRANSPORT=resend exige RESEND_API_KEY e MAIL_FROM"
+            )
           }
-          return new ResendMailer({ apiKey: cfg.RESEND_API_KEY, from: cfg.MAIL_FROM })
+          return new ResendMailer({
+            apiKey: cfg.RESEND_API_KEY,
+            from: cfg.MAIL_FROM,
+          })
         }
         // LogMailer registra o link (token raw) — proibido em produção.
         if (cfg.NODE_ENV === "production") {

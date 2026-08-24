@@ -1,10 +1,21 @@
-import { Body, Controller, HttpCode, HttpStatus, Param, Put } from "@nestjs/common"
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Put,
+} from "@nestjs/common"
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger"
 
 import { RequirePermission } from "../../../../../shared/kernel/access/decorators"
 import { Idempotent } from "../../../../../shared/kernel/idempotency/idempotent.decorator"
 import { UpdateTagUseCase } from "../../../application/use-cases/update-tag/update-tag.use-case"
-import { TagIdParamsDto, TagViewDto, UpdateTagDto } from "../../contracts/tag.contract"
+import {
+  TagIdParamsDto,
+  TagViewDto,
+  UpdateTagDto,
+} from "../../contracts/tag.contract"
 
 import type { UpdateTagInput } from "../../../application/use-cases/update-tag/types"
 import type { TagViewOutput } from "../../../application/views"

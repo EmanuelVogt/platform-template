@@ -20,4 +20,6 @@ export interface ActivityStatsReader {
   ): Promise<TableActivityRow[]>
 }
 
-export const ACTIVITY_STATS_READER: unique symbol = Symbol("ActivityStatsReader")
+export const ACTIVITY_STATS_READER: unique symbol = Symbol(
+  "ActivityStatsReader"
+)

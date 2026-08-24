@@ -114,7 +114,9 @@ function setup(scenario: Scenario) {
   const cleared: string[] = []
   const req = {
     cookies:
-      scenario.cookie === undefined ? {} : { [cfg.COOKIE_NAME]: scenario.cookie },
+      scenario.cookie === undefined
+        ? {}
+        : { [cfg.COOKIE_NAME]: scenario.cookie },
   } as unknown as Request & {
     userId?: string
     sessionId?: string

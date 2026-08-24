@@ -71,14 +71,14 @@ describe("Produto registra um tipo de e-mail ponta a ponta (e2e)", () => {
     // órfã deixada pelo refactor que tirou o e2e cruzado do notification.
     await truncateKernel(pool)
     await pool.query(
-      "truncate table notification.notifications, notification.notification_deliveries",
+      "truncate table notification.notifications, notification.notification_deliveries"
     )
     await pool.end()
 
     mailer = fakeMailer()
     app = await createE2eApp(
       (b) => b.overrideProvider(MAILER).useValue(mailer),
-      [FakeProductModule],
+      [FakeProductModule]
     )
   })
 
@@ -98,9 +98,9 @@ describe("Produto registra um tipo de e-mail ponta a ponta (e2e)", () => {
             type: "sample_welcome",
             locale: "pt-BR",
             data: { email, name },
-          }),
-        ),
-      ),
+          })
+        )
+      )
     )
 
     const pool = createTestPool()
@@ -108,7 +108,7 @@ describe("Produto registra um tipo de e-mail ponta a ponta (e2e)", () => {
       await app.get(OutboxDispatcher).poll()
       await app.get(DeliveryDispatcher).poll()
       const r = await pool.query<{ id: string; status: string }>(
-        "select id, status from notification.notification_deliveries where type = 'sample_welcome'",
+        "select id, status from notification.notification_deliveries where type = 'sample_welcome'"
       )
       return r.rows[0]?.status === "sent" ? r.rows[0] : undefined
     }
@@ -116,7 +116,9 @@ describe("Produto registra um tipo de e-mail ponta a ponta (e2e)", () => {
     const start = Date.now()
     while (!delivery) {
       if (Date.now() - start > 8000) {
-        throw new Error("timeout esperando a delivery de sample_welcome virar sent")
+        throw new Error(
+          "timeout esperando a delivery de sample_welcome virar sent"
+        )
       }
       await new Promise((resolve) => setTimeout(resolve, 50))
       delivery = await findSent()

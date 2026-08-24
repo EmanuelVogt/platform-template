@@ -9,7 +9,7 @@ export type AccessDecision = "allow" | "anon" | "forbidden"
 
 export function resolveAccess(
   user: CurrentUser | null,
-  access: RouteAccess,
+  access: RouteAccess
 ): AccessDecision {
   if (access.kind === "public") return "allow"
   if (!user) return "anon"

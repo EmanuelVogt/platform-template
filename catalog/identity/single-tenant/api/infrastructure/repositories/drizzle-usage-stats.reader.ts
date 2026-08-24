@@ -44,7 +44,10 @@ export class DrizzleUsageStatsReader implements UsageStatsReader {
         )
       )
       .groupBy(bucket)
-    return rows.map((row) => ({ bucket: new Date(row.bucket), count: row.count }))
+    return rows.map((row) => ({
+      bucket: new Date(row.bucket),
+      count: row.count,
+    }))
   }
 
   /**

@@ -42,10 +42,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
+              "enum": ["asc", "desc"]
             }
           },
           {
@@ -54,9 +51,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "occurredAt"
-              ]
+              "enum": ["occurredAt"]
             }
           },
           {
@@ -92,11 +87,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "insert",
-                "update",
-                "delete"
-              ]
+              "enum": ["insert", "update", "delete"]
             }
           },
           {
@@ -105,10 +96,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "user",
-                "system"
-              ]
+              "enum": ["user", "system"]
             }
           },
           {
@@ -152,9 +140,7 @@
             }
           }
         },
-        "tags": [
-          "Administration"
-        ]
+        "tags": ["Administration"]
       }
     }
   },
@@ -187,11 +173,7 @@
                 },
                 "op": {
                   "type": "string",
-                  "enum": [
-                    "insert",
-                    "update",
-                    "delete"
-                  ]
+                  "enum": ["insert", "update", "delete"]
                 },
                 "changedKeys": {
                   "type": "array",
@@ -215,12 +197,7 @@
                         "nullable": true
                       }
                     },
-                    "required": [
-                      "old",
-                      "new",
-                      "oldLabel",
-                      "newLabel"
-                    ]
+                    "required": ["old", "new", "oldLabel", "newLabel"]
                   }
                 },
                 "actorUserId": {
@@ -285,18 +262,10 @@
                 "maximum": 9007199254740991
               }
             },
-            "required": [
-              "total",
-              "page",
-              "pageSize",
-              "totalPages"
-            ]
+            "required": ["total", "page", "pageSize", "totalPages"]
           }
         },
-        "required": [
-          "data",
-          "page"
-        ]
+        "required": ["data", "page"]
       }
     }
   }

@@ -22,9 +22,10 @@ import type { RevokeDeviceInput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class RevokeDeviceUseCase
-  implements UseCaseContract<RevokeDeviceInput, void>
-{
+export class RevokeDeviceUseCase implements UseCaseContract<
+  RevokeDeviceInput,
+  void
+> {
   constructor(
     @Inject(DEVICE_REPOSITORY) private readonly devices: DeviceRepository,
     private readonly outbox: OutboxPublisher,

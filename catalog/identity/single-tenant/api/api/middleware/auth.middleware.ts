@@ -72,11 +72,7 @@ export class AuthMiddleware implements NestMiddleware {
     private readonly ctx: RequestContext
   ) {}
 
-  async use(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async use(req: Request, res: Response, next: NextFunction): Promise<void> {
     const raw = (req.cookies as Record<string, string> | undefined)?.[
       this.cfg.COOKIE_NAME
     ]
@@ -129,12 +125,7 @@ export class AuthMiddleware implements NestMiddleware {
     const nextExpiresAt = new Date(
       now.getTime() + this.cfg.SESSION_IDLE_TTL_SECONDS * 1000
     )
-    await this.sessions.touch(
-      session.props.id,
-      now,
-      nextExpiresAt,
-      touchBefore
-    )
+    await this.sessions.touch(session.props.id, now, nextExpiresAt, touchBefore)
   }
 
   private async lookup(tokenHash: string): Promise<Session | null> {

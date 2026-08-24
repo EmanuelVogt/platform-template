@@ -8,7 +8,10 @@ import type {
   AttachmentAccessLogRepository,
 } from "../../../domain/ports/attachment-access-log.repository"
 
-function makeUseCase(rows: AttachmentAccessLogListItem[], names: Map<string, string>) {
+function makeUseCase(
+  rows: AttachmentAccessLogListItem[],
+  names: Map<string, string>
+) {
   const listByAttachment = vi.fn().mockResolvedValue(rows)
   const findNamesByIds = vi.fn().mockResolvedValue(names)
   const repo = { listByAttachment } as unknown as AttachmentAccessLogRepository
@@ -50,7 +53,7 @@ describe("ListAttachmentAccessLogUseCase", () => {
       new Map([
         ["user-a", "Ana"],
         ["user-b", "Bruno"],
-      ]),
+      ])
     )
 
     const result = await useCase.execute({ attachmentId: "att-1" })
@@ -72,7 +75,7 @@ describe("ListAttachmentAccessLogUseCase", () => {
           occurredAt: new Date("2026-08-01T10:00:00.000Z"),
         },
       ],
-      new Map(),
+      new Map()
     )
 
     const result = await useCase.execute({ attachmentId: "att-1" })
@@ -92,7 +95,9 @@ describe("ListAttachmentAccessLogUseCase", () => {
   it("lista vazia é resultado válido, não erro (FILE-18)", async () => {
     const { useCase } = makeUseCase([], new Map())
 
-    await expect(useCase.execute({ attachmentId: "att-empty" })).resolves.toEqual({
+    await expect(
+      useCase.execute({ attachmentId: "att-empty" })
+    ).resolves.toEqual({
       data: [],
     })
   })

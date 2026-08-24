@@ -68,7 +68,9 @@ function makeDeps(over: Record<string, any> = {}) {
     recordInTx: vi.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => NOW }
-  const ctx = over.ctx ?? fakeRequestContext(() => ({
+  const ctx =
+    over.ctx ??
+    fakeRequestContext(() => ({
       ip: "1.2.3.4",
       userAgent: "jest",
       correlationId: "c1",
@@ -90,7 +92,7 @@ function makeDeps(over: Record<string, any> = {}) {
     authEvents,
     clock,
     ctx,
-    config,
+    config
   )
   return { uc, users, sessions, hasher, strength, breach, outbox, authEvents }
 }
@@ -112,7 +114,7 @@ describe("ChangePasswordUseCase", () => {
     expect(t.authEvents.recordInTx).toHaveBeenCalledWith(
       expect.objectContaining({
         props: expect.objectContaining({ eventType: "password_changed" }),
-      }),
+      })
     )
 
     expect(t.outbox.publish).toHaveBeenCalledWith(
@@ -126,24 +128,26 @@ describe("ChangePasswordUseCase", () => {
             at: NOW.toISOString(),
           }),
         }),
-      }),
+      })
     )
   })
 
   it("contexto sem userId lança ForbiddenError antes de qualquer IO", async () => {
     const t = makeDeps({
       ctx: fakeRequestContext(() => ({
-          ip: "1.2.3.4",
-          userAgent: "jest",
-          correlationId: "c1",
-          locale: "pt-BR",
-          traceId: null,
-          spanId: null,
-          userId: null,
-          sessionId: null,
-        })),
+        ip: "1.2.3.4",
+        userAgent: "jest",
+        correlationId: "c1",
+        locale: "pt-BR",
+        traceId: null,
+        spanId: null,
+        userId: null,
+        sessionId: null,
+      })),
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(ForbiddenError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      ForbiddenError
+    )
     expect(t.users.findById).not.toHaveBeenCalled()
     expect(t.users.update).not.toHaveBeenCalled()
   })
@@ -155,7 +159,9 @@ describe("ChangePasswordUseCase", () => {
         update: vi.fn(),
       },
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(ForbiddenError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      ForbiddenError
+    )
     expect(t.users.update).not.toHaveBeenCalled()
     expect(t.sessions.deleteOthers).not.toHaveBeenCalled()
   })
@@ -167,7 +173,9 @@ describe("ChangePasswordUseCase", () => {
         update: vi.fn(),
       },
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidCredentialsError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      InvalidCredentialsError
+    )
     expect(t.users.update).not.toHaveBeenCalled()
     expect(t.sessions.deleteOthers).not.toHaveBeenCalled()
   })
@@ -179,7 +187,9 @@ describe("ChangePasswordUseCase", () => {
         hash: vi.fn(),
       },
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidCredentialsError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      InvalidCredentialsError
+    )
     expect(t.users.update).not.toHaveBeenCalled()
     expect(t.sessions.deleteOthers).not.toHaveBeenCalled()
     expect(t.outbox.publish).not.toHaveBeenCalled()
@@ -191,7 +201,9 @@ describe("ChangePasswordUseCase", () => {
       config,
       strength: { score: vi.fn().mockReturnValue(1) },
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(WeakPasswordError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      WeakPasswordError
+    )
     expect(t.users.update).not.toHaveBeenCalled()
     expect(t.sessions.deleteOthers).not.toHaveBeenCalled()
   })
@@ -205,7 +217,9 @@ describe("ChangePasswordUseCase", () => {
       config,
       breach: { check: vi.fn().mockResolvedValue("breached") },
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(WeakPasswordError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      WeakPasswordError
+    )
     expect(t.users.update).not.toHaveBeenCalled()
     expect(t.sessions.deleteOthers).not.toHaveBeenCalled()
   })
@@ -230,7 +244,9 @@ describe("ChangePasswordUseCase", () => {
       config,
       breach: { check: vi.fn().mockResolvedValue("breached") },
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(WeakPasswordError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      WeakPasswordError
+    )
     expect(t.breach.check).toHaveBeenCalledWith(VALID_INPUT.newPassword)
     expect(t.users.update).not.toHaveBeenCalled()
   })
@@ -253,7 +269,7 @@ describe("ChangePasswordUseCase", () => {
           eventType: "breach_check_skipped",
           metadata: { mode: "fail_open" },
         }),
-      }),
+      })
     )
   })
 
@@ -317,7 +333,9 @@ describe("ChangePasswordUseCase", () => {
         update: vi.fn(),
       },
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(ForbiddenError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      ForbiddenError
+    )
     expect(t.sessions.deleteOthers).not.toHaveBeenCalled()
     expect(t.outbox.publish).not.toHaveBeenCalled()
     expect(t.authEvents.recordInTx).not.toHaveBeenCalled()
@@ -330,7 +348,9 @@ describe("ChangePasswordUseCase", () => {
         update: vi.fn(),
       },
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidCredentialsError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      InvalidCredentialsError
+    )
     expect(t.hasher.verify).not.toHaveBeenCalled()
     expect(t.users.update).not.toHaveBeenCalled()
     expect(t.outbox.publish).not.toHaveBeenCalled()
@@ -343,7 +363,9 @@ describe("ChangePasswordUseCase", () => {
         hash: vi.fn(),
       },
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidCredentialsError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      InvalidCredentialsError
+    )
     expect(t.breach.check).not.toHaveBeenCalled()
     expect(t.authEvents.recordInTx).not.toHaveBeenCalled()
   })

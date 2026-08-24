@@ -1,6 +1,9 @@
 import { Injectable } from "@nestjs/common"
 
-import type { ProfessionalCommitment, ProfessionalCommitments } from "../../domain/ports/professional-commitments.port"
+import type {
+  ProfessionalCommitment,
+  ProfessionalCommitments,
+} from "../../domain/ports/professional-commitments.port"
 import type { ProfessionalScope } from "../../domain/ports/professional-scope.port"
 
 /**

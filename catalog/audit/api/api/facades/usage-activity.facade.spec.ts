@@ -30,9 +30,7 @@ const window = {
 
 describe("UsageActivityFacade", () => {
   it("traduz a tabela alterada no assunto do sistema", async () => {
-    const facade = facadeReading([
-      { tableName: "tags", bucket, count: 3 },
-    ])
+    const facade = facadeReading([{ tableName: "tags", bucket, count: 3 }])
 
     expect(await facade.countActivityByArea(window)).toEqual([
       {
@@ -55,9 +53,7 @@ describe("UsageActivityFacade", () => {
   })
 
   it("não vaza nome de tabela para fora do módulo", async () => {
-    const facade = facadeReading([
-      { tableName: "tags", bucket, count: 1 },
-    ])
+    const facade = facadeReading([{ tableName: "tags", bucket, count: 1 }])
 
     const rows = await facade.countActivityByArea(window)
 

@@ -1,34 +1,38 @@
-import { ulid } from 'ulid';
+import { ulid } from "ulid"
 
-export type TokenType = 'email_verify' | 'password_reset' | 'access_link' | 'email_change';
+export type TokenType =
+  | "email_verify"
+  | "password_reset"
+  | "access_link"
+  | "email_change"
 
 export interface VerificationTokenProps {
-  readonly id: string;
-  readonly userId: string;
-  readonly tokenHash: string;
-  readonly type: TokenType;
-  readonly expiresAt: Date;
-  readonly consumedAt: Date | null;
-  readonly createdAt: Date;
+  readonly id: string
+  readonly userId: string
+  readonly tokenHash: string
+  readonly type: TokenType
+  readonly expiresAt: Date
+  readonly consumedAt: Date | null
+  readonly createdAt: Date
 }
 
 export interface CreateVerificationTokenInput {
-  userId: string;
-  tokenHash: string;
-  type: TokenType;
-  expiresAt: Date;
+  userId: string
+  tokenHash: string
+  type: TokenType
+  expiresAt: Date
 }
 
 export class VerificationToken {
-  readonly props: VerificationTokenProps;
+  readonly props: VerificationTokenProps
 
   private constructor(props: VerificationTokenProps) {
-    this.props = Object.freeze(props);
+    this.props = Object.freeze(props)
   }
 
   /** Hidrata a partir de props persistidas (repo). */
   static fromProps(props: VerificationTokenProps): VerificationToken {
-    return new VerificationToken(props);
+    return new VerificationToken(props)
   }
 
   static create({
@@ -45,11 +49,14 @@ export class VerificationToken {
       expiresAt,
       consumedAt: null,
       createdAt: new Date(),
-    });
+    })
   }
 
   /** true se ainda não consumido e não expirado em `now` (`>` estrito). */
   isValid(now: Date): boolean {
-    return this.props.consumedAt === null && this.props.expiresAt.getTime() > now.getTime();
+    return (
+      this.props.consumedAt === null &&
+      this.props.expiresAt.getTime() > now.getTime()
+    )
   }
 }

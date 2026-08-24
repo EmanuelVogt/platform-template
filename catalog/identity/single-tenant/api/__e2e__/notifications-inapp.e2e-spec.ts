@@ -3,7 +3,11 @@ import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
+import {
+  createTestPool,
+  truncateIdentity,
+  truncateKernel,
+} from "../../../../test/setup/test-db"
 import { AppModule } from "../../../app.module"
 import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
@@ -41,7 +45,7 @@ describe("produtores in-app (e2e)", () => {
   // a condição valer — o poll manual pode virar no-op se o de background já roda.
   async function pollUntil<T>(
     probe: () => Promise<T | undefined>,
-    timeoutMs = 8000,
+    timeoutMs = 8000
   ): Promise<T> {
     const start = Date.now()
     for (;;) {
@@ -76,7 +80,7 @@ describe("produtores in-app (e2e)", () => {
     await truncateIdentity(pool)
     await truncateKernel(pool)
     await pool.query(
-      "truncate table notification.notifications, notification.notification_deliveries",
+      "truncate table notification.notifications, notification.notification_deliveries"
     )
 
     mailer = fakeMailer()
@@ -110,7 +114,10 @@ describe("produtores in-app (e2e)", () => {
       .post("/v1/auth/change-password")
       .set("Origin", ORIGIN)
       .set("Cookie", cookie)
-      .send({ currentPassword: PASSWORD, newPassword: "Senha-Nova-Forte-2026!" })
+      .send({
+        currentPassword: PASSWORD,
+        newPassword: "Senha-Nova-Forte-2026!",
+      })
       .expect(204)
 
     // O login do device novo também produz in-app (device_new_login) — o feed
@@ -123,7 +130,9 @@ describe("produtores in-app (e2e)", () => {
         .set("Cookie", cookie)
         .expect(200)
       const items = res.body.data as Item[]
-      return items.some((i) => i.type === "password_changed") ? items : undefined
+      return items.some((i) => i.type === "password_changed")
+        ? items
+        : undefined
     })
     expect(feed.map((i) => i.type).sort()).toEqual([
       "device_new_login",
@@ -142,7 +151,7 @@ describe("produtores in-app (e2e)", () => {
 
     const delivery = await pollUntil(async () => {
       const r = await pool.query<{ status: string; channel: string }>(
-        "select status, channel from notification.notification_deliveries where type = 'password_changed'",
+        "select status, channel from notification.notification_deliveries where type = 'password_changed'"
       )
       return r.rows[0]?.status === "sent" ? r.rows[0] : undefined
     })
@@ -155,9 +164,10 @@ describe("produtores in-app (e2e)", () => {
       name: "Master",
       password: PASSWORD,
     })
-    await pool.query("UPDATE identity.users SET access_profile = 'master' WHERE id = $1", [
-      masterId,
-    ])
+    await pool.query(
+      "UPDATE identity.users SET access_profile = 'master' WHERE id = $1",
+      [masterId]
+    )
     const cookie = await login("inapp-master@example.com", PASSWORD)
 
     await request(app.getHttpServer())
@@ -165,7 +175,12 @@ describe("produtores in-app (e2e)", () => {
       .set("Origin", ORIGIN)
       .set("Cookie", cookie)
       .set("Idempotency-Key", "inapp-create-bia")
-      .send({ name: "Bia", email: "inapp-bia@example.com", accessProfile: "admin", permissions: ["admin.users.read"] })
+      .send({
+        name: "Bia",
+        email: "inapp-bia@example.com",
+        accessProfile: "admin",
+        permissions: ["admin.users.read"],
+      })
       .expect(201)
 
     // Token do access link sai pelo fake mailer (nunca em claro no banco).
@@ -187,7 +202,11 @@ describe("produtores in-app (e2e)", () => {
       })
       .expect(200)
 
-    type Item = { type: string; title: string; metadata: Record<string, unknown> }
+    type Item = {
+      type: string
+      title: string
+      metadata: Record<string, unknown>
+    }
     const feed = await pollUntil(async () => {
       const res = await request(app.getHttpServer())
         .get("/v1/notifications")

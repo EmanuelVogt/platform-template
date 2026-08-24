@@ -32,7 +32,11 @@ describe("PurgePendingAttachmentsJob", () => {
       deletePendingByIds: vi.fn(async () => undefined),
     }
     const storage = { delete: vi.fn(async () => undefined) }
-    const job = new PurgePendingAttachmentsJob(storage as never, repo as never, logger)
+    const job = new PurgePendingAttachmentsJob(
+      storage as never,
+      repo as never,
+      logger
+    )
 
     await job.run()
 
@@ -51,7 +55,11 @@ describe("PurgePendingAttachmentsJob", () => {
         throw new Error("NoSuchKey")
       }),
     }
-    const job = new PurgePendingAttachmentsJob(storage as never, repo as never, logger)
+    const job = new PurgePendingAttachmentsJob(
+      storage as never,
+      repo as never,
+      logger
+    )
 
     await job.run()
 
@@ -63,7 +71,11 @@ describe("PurgePendingAttachmentsJob", () => {
       findPendingOlderThan: vi.fn(async () => []),
       deletePendingByIds: vi.fn(async () => undefined),
     }
-    const job = new PurgePendingAttachmentsJob({ delete: vi.fn() } as never, repo as never, logger)
+    const job = new PurgePendingAttachmentsJob(
+      { delete: vi.fn() } as never,
+      repo as never,
+      logger
+    )
 
     await job.run()
 

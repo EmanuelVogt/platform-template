@@ -24,7 +24,7 @@ export class LogoutUseCase implements UseCaseContract<LogoutInput, void> {
     @Inject(SESSION_REPOSITORY) private readonly sessions: SessionRepository,
     @Inject(AUTH_EVENT_REPOSITORY)
     private readonly authEvents: AuthEventRepository,
-    private readonly ctx: RequestContext,
+    private readonly ctx: RequestContext
   ) {}
 
   @Transactional()
@@ -34,7 +34,7 @@ export class LogoutUseCase implements UseCaseContract<LogoutInput, void> {
     // deleteById escopa por dono (anti-IDOR) — userId garante que é a própria.
     await this.sessions.deleteById(ctx.sessionId, ctx.userId)
     await this.authEvents.recordInTx(
-      authEventOf(this.ctx.get(), { userId: ctx.userId, eventType: "logout" }),
+      authEventOf(this.ctx.get(), { userId: ctx.userId, eventType: "logout" })
     )
   }
 }

@@ -155,15 +155,24 @@ export class ListUsersResponseDto extends createZodDto(
 
 // Lixeira — restore/purge em lote (POST /v1/admin/users/restore|purge).
 export const trashUserIdsSchema = z.object({
-  userIds: z.array(z.string().min(1)).min(1, "Informe ao menos um usuário.").max(100),
+  userIds: z
+    .array(z.string().min(1))
+    .min(1, "Informe ao menos um usuário.")
+    .max(100),
 })
 export class TrashUserIdsDto extends createZodDto(trashUserIdsSchema) {}
 
-export const restoreUsersResponseSchema = z.object({ restored: z.number().int() })
-export class RestoreUsersResponseDto extends createZodDto(restoreUsersResponseSchema) {}
+export const restoreUsersResponseSchema = z.object({
+  restored: z.number().int(),
+})
+export class RestoreUsersResponseDto extends createZodDto(
+  restoreUsersResponseSchema
+) {}
 
 export const purgeUsersResponseSchema = z.object({ purged: z.number().int() })
-export class PurgeUsersResponseDto extends createZodDto(purgeUsersResponseSchema) {}
+export class PurgeUsersResponseDto extends createZodDto(
+  purgeUsersResponseSchema
+) {}
 
 // --- link de acesso ---
 export const createUserSchema = z.object({
@@ -217,7 +226,10 @@ export const updateMyProfileSchema = z.object({
   name,
   // ISO 'YYYY-MM-DD'. Opcional: quem não tem nascimento (master/seed) salva só o
   // nome. Validação de data real fica no domínio (updateOwnProfile).
-  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida.").optional(),
+  birthDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida.")
+    .optional(),
 })
 export class UpdateMyProfileDto extends createZodDto(updateMyProfileSchema) {}
 export type UpdateMyProfileInput = z.infer<typeof updateMyProfileSchema>
@@ -225,7 +237,9 @@ export type UpdateMyProfileInput = z.infer<typeof updateMyProfileSchema>
 export const avatarUploadResponseSchema = z.object({
   avatarAttachmentId: z.string(),
 })
-export class AvatarUploadResponseDto extends createZodDto(avatarUploadResponseSchema) {}
+export class AvatarUploadResponseDto extends createZodDto(
+  avatarUploadResponseSchema
+) {}
 
 export const accessLinkAvatarUploadResponseSchema = z.object({
   attachmentId: z.string(),
@@ -244,7 +258,9 @@ export type ChangeEmailInput = z.infer<typeof changeEmailSchema>
 export const validateEmailChangeQuerySchema = z.object({
   token,
 })
-export class ValidateEmailChangeQueryDto extends createZodDto(validateEmailChangeQuerySchema) {}
+export class ValidateEmailChangeQueryDto extends createZodDto(
+  validateEmailChangeQuerySchema
+) {}
 
 export const emailChangeInfoSchema = z.object({ newEmail: z.string() })
 export class EmailChangeInfoDto extends createZodDto(emailChangeInfoSchema) {}
@@ -252,7 +268,9 @@ export class EmailChangeInfoDto extends createZodDto(emailChangeInfoSchema) {}
 export const confirmEmailChangeSchema = z.object({
   token,
 })
-export class ConfirmEmailChangeDto extends createZodDto(confirmEmailChangeSchema) {}
+export class ConfirmEmailChangeDto extends createZodDto(
+  confirmEmailChangeSchema
+) {}
 export type ConfirmEmailChangeInput = z.infer<typeof confirmEmailChangeSchema>
 
 // Histórico de acesso
@@ -261,7 +279,9 @@ export const accessHistoryQuerySchema = baseListingQuerySchema.pick({
   pageSize: true,
   order: true,
 })
-export class AccessHistoryQueryDto extends createZodDto(accessHistoryQuerySchema) {}
+export class AccessHistoryQueryDto extends createZodDto(
+  accessHistoryQuerySchema
+) {}
 
 export const accessHistoryItemSchema = z.object({
   id: z.string(),
@@ -270,13 +290,19 @@ export const accessHistoryItemSchema = z.object({
   userAgent: z.string().nullable(),
   createdAt: z.string(),
 })
-export const accessHistoryListResponseSchema = makePaginatedSchema(accessHistoryItemSchema)
-export class AccessHistoryListResponseDto extends createZodDto(accessHistoryListResponseSchema) {}
+export const accessHistoryListResponseSchema = makePaginatedSchema(
+  accessHistoryItemSchema
+)
+export class AccessHistoryListResponseDto extends createZodDto(
+  accessHistoryListResponseSchema
+) {}
 
 export const validateAccessLinkQuerySchema = z.object({
   token,
 })
-export class ValidateAccessLinkQueryDto extends createZodDto(validateAccessLinkQuerySchema) {}
+export class ValidateAccessLinkQueryDto extends createZodDto(
+  validateAccessLinkQuerySchema
+) {}
 
 export const accessLinkInfoSchema = z.object({
   name: z.string(),
@@ -303,4 +329,6 @@ export const deviceResponseSchema = z.object({
 export const deviceListResponseSchema = z.object({
   devices: z.array(deviceResponseSchema),
 })
-export class DeviceListResponseDto extends createZodDto(deviceListResponseSchema) {}
+export class DeviceListResponseDto extends createZodDto(
+  deviceListResponseSchema
+) {}

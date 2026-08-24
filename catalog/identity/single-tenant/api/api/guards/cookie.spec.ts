@@ -4,7 +4,11 @@ import { setSessionCookie, clearSessionCookie, COOKIE_OPTIONS } from "./cookie"
 
 import type { Response } from "express"
 
-type Captured = { name?: string; value?: string; opts?: Record<string, unknown> }
+type Captured = {
+  name?: string
+  value?: string
+  opts?: Record<string, unknown>
+}
 
 function makeRes(captured: Captured) {
   return {

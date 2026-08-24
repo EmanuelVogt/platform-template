@@ -38,7 +38,10 @@ function assertTrashPermission(): void {
 }
 
 @UseCase()
-export class ListTagsUseCase implements UseCaseContract<ListTagsInput, ListTagsOutput> {
+export class ListTagsUseCase implements UseCaseContract<
+  ListTagsInput,
+  ListTagsOutput
+> {
   constructor(
     @Inject(TAG_REPOSITORY) private readonly tags: TagRepository,
     private readonly usage: TagUsageRegistry

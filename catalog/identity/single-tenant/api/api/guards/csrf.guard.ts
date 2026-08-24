@@ -32,7 +32,7 @@ export class CsrfGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     @Inject(CSRF) private readonly csrf: Csrf,
-    @Inject(IDENTITY_CONFIG) private readonly cfg: CsrfConfig,
+    @Inject(IDENTITY_CONFIG) private readonly cfg: CsrfConfig
   ) {}
 
   canActivate(context: ExecutionContext): boolean {

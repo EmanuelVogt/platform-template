@@ -23,16 +23,18 @@ import type { PurgeUsersInput, PurgeUsersOutput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class PurgeUsersUseCase
-  implements UseCaseContract<PurgeUsersInput, PurgeUsersOutput>
-{
+export class PurgeUsersUseCase implements UseCaseContract<
+  PurgeUsersInput,
+  PurgeUsersOutput
+> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
-    @Inject(AUTH_EVENT_REPOSITORY) private readonly authEvents: AuthEventRepository,
+    @Inject(AUTH_EVENT_REPOSITORY)
+    private readonly authEvents: AuthEventRepository,
     private readonly ctx: RequestContext,
     @Optional()
     @Inject(AUDIT_TRAIL_PURGER)
-    private readonly auditTrail: AuditTrailPurger | null = null,
+    private readonly auditTrail: AuditTrailPurger | null = null
   ) {}
 
   @Transactional()
@@ -50,14 +52,14 @@ export class PurgeUsersUseCase
           userId: user.props.id,
           actorUserId: this.ctx.getActor()?.id ?? null,
           eventType: "user_purged",
-        }),
+        })
       )
     }
     await this.users.hardDeleteByIds(found.map((user) => user.props.id))
     // Purge LGPD da trilha do titular DEPOIS do hard delete (que gera as linhas
     // op=delete com PII em row_old), na mesma tx via escape hatch.
     await this.auditTrail?.purgeEntities(
-      found.map((user) => ({ table: "users", entityId: user.props.id })),
+      found.map((user) => ({ table: "users", entityId: user.props.id }))
     )
     return { purged: found.length }
   }

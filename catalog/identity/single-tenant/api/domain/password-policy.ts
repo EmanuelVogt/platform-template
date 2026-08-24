@@ -1,9 +1,9 @@
-import { WeakPasswordError } from './errors';
+import { WeakPasswordError } from "./errors"
 
 export interface PasswordPolicyParams {
-  minZxcvbnScore: number;
+  minZxcvbnScore: number
   // Score vem da infra — esta função é pura e não chama zxcvbn.
-  zxcvbnScore: number;
+  zxcvbnScore: number
 }
 
 export function validatePasswordPolicy({
@@ -12,7 +12,7 @@ export function validatePasswordPolicy({
 }: PasswordPolicyParams): void {
   if (zxcvbnScore < minZxcvbnScore) {
     throw new WeakPasswordError(
-      'A senha é muito fraca. Escolha uma mais difícil de adivinhar.',
-    );
+      "A senha é muito fraca. Escolha uma mais difícil de adivinhar."
+    )
   }
 }

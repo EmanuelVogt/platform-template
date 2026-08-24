@@ -22,10 +22,10 @@ import type {
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class UpdatePermissionTemplateUseCase
-  implements
-    UseCaseContract<UpdatePermissionTemplateInput, UpdatePermissionTemplateOutput>
-{
+export class UpdatePermissionTemplateUseCase implements UseCaseContract<
+  UpdatePermissionTemplateInput,
+  UpdatePermissionTemplateOutput
+> {
   constructor(
     @Inject(PERMISSION_TEMPLATE_REPOSITORY)
     private readonly templates: PermissionTemplateRepository,

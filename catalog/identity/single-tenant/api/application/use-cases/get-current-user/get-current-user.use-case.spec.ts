@@ -7,7 +7,6 @@ import { fakeRequestContext } from "../../request-context.fixture"
 
 import { GetCurrentUserUseCase } from "./get-current-user.use-case"
 
-
 function makeUser(over: Partial<UserProps> = {}): User {
   return User.fromProps({
     id: "u-1",
@@ -42,7 +41,9 @@ function makeDeps(over: Record<string, any> = {}) {
       permissions: ["admin.users.read"],
     }),
   }
-  const ctx = over.ctx ?? fakeRequestContext(() => ({
+  const ctx =
+    over.ctx ??
+    fakeRequestContext(() => ({
       correlationId: "c1",
       locale: "pt-BR",
       userId: "u-1",
@@ -52,11 +53,15 @@ function makeDeps(over: Record<string, any> = {}) {
   return { uc, users }
 }
 
-
 describe("GetCurrentUserUseCase", () => {
   it("sem auth lança ForbiddenError", async () => {
     const t = makeDeps({
-      ctx: fakeRequestContext(() => ({ correlationId: "c1", locale: "pt-BR", userId: null, sessionId: null })),
+      ctx: fakeRequestContext(() => ({
+        correlationId: "c1",
+        locale: "pt-BR",
+        userId: null,
+        sessionId: null,
+      })),
     })
     await expect(t.uc.execute({})).rejects.toBeInstanceOf(ForbiddenError)
   })

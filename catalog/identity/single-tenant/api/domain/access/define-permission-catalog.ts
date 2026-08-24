@@ -18,7 +18,7 @@ export type PermissionCatalog<K extends string> = {
 }
 
 export function definePermissionCatalog<M extends readonly ModuleDef[]>(
-  modules: M,
+  modules: M
 ): PermissionCatalog<CatalogKey<M>> {
   type Key = CatalogKey<M>
 
@@ -34,14 +34,14 @@ export function definePermissionCatalog<M extends readonly ModuleDef[]>(
                 requires: p.requires,
                 feature: { key: f.key, label: f.label },
               },
-            ] as [string, CatalogEntry],
-        ),
-      ),
-    ),
+            ] as [string, CatalogEntry]
+        )
+      )
+    )
   )
 
   const allKeys = modules.flatMap((m) =>
-    m.features.flatMap((f) => f.permissions.map((p) => p.key)),
+    m.features.flatMap((f) => f.permissions.map((p) => p.key))
   ) as Key[]
 
   return {

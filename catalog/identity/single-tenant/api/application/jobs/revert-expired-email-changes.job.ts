@@ -32,7 +32,7 @@ export class RevertExpiredEmailChangesJob {
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(CLOCK) private readonly clock: Clock,
-    loggerFactory: LoggerFactory,
+    loggerFactory: LoggerFactory
   ) {
     this.log = loggerFactory.forModule("RevertExpiredEmailChanges")
   }

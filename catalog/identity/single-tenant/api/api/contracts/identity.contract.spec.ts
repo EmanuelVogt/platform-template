@@ -43,9 +43,7 @@ describe("identity.contract", () => {
   })
 
   it("changePasswordSchema exige currentPassword e newPassword", () => {
-    expect(() =>
-      changePasswordSchema.parse({ currentPassword: "a" }),
-    ).toThrow()
+    expect(() => changePasswordSchema.parse({ currentPassword: "a" })).toThrow()
   })
 
   it("verifyEmailSchema exige token", () => {
@@ -59,39 +57,44 @@ describe("identity.contract", () => {
   it("email aceita 254 caracteres e recusa 255", () => {
     const atLimit = emailOf(254 - "@example.com".length)
     expect(loginSchema.parse({ email: atLimit, password: "p" }).email).toBe(
-      atLimit,
+      atLimit
     )
     expect(() =>
-      loginSchema.parse({ email: emailOf(255 - "@example.com".length), password: "p" }),
+      loginSchema.parse({
+        email: emailOf(255 - "@example.com".length),
+        password: "p",
+      })
     ).toThrow()
     expect(() =>
-      forgotPasswordSchema.parse({ email: emailOf(255 - "@example.com".length) }),
+      forgotPasswordSchema.parse({
+        email: emailOf(255 - "@example.com".length),
+      })
     ).toThrow()
   })
 
   it("token aceita 128 caracteres e recusa 129", () => {
     expect(
-      resetPasswordSchema.parse({ token: rep("t", 128), password: "p" }).token,
+      resetPasswordSchema.parse({ token: rep("t", 128), password: "p" }).token
     ).toHaveLength(128)
     expect(() =>
-      resetPasswordSchema.parse({ token: rep("t", 129), password: "p" }),
+      resetPasswordSchema.parse({ token: rep("t", 129), password: "p" })
     ).toThrow()
     expect(() => verifyEmailSchema.parse({ token: rep("t", 129) })).toThrow()
   })
 
   it("name aceita 200 caracteres e recusa 201", () => {
     expect(
-      createUserSchema.parse({ ...CREATE_USER_BASE, name: rep("n", 200) }).name,
+      createUserSchema.parse({ ...CREATE_USER_BASE, name: rep("n", 200) }).name
     ).toHaveLength(200)
     expect(() =>
-      createUserSchema.parse({ ...CREATE_USER_BASE, name: rep("n", 201) }),
+      createUserSchema.parse({ ...CREATE_USER_BASE, name: rep("n", 201) })
     ).toThrow()
     expect(() =>
       updateUserSchema.parse({
         name: rep("n", 201),
         accessProfile: "admin",
         permissions: [],
-      }),
+      })
     ).toThrow()
   })
 
@@ -100,22 +103,22 @@ describe("identity.contract", () => {
       createUserSchema.parse({
         ...CREATE_USER_BASE,
         permissions: ["admin.users.read", "admin.users.read"],
-      }),
+      })
     ).toThrow()
   })
 
   it("areaIds, serviceIds e schedulingAreaIds duplicados são recusados", () => {
     expect(() =>
-      createUserSchema.parse({ ...CREATE_USER_BASE, areaIds: ["a", "a"] }),
+      createUserSchema.parse({ ...CREATE_USER_BASE, areaIds: ["a", "a"] })
     ).toThrow()
     expect(() =>
-      createUserSchema.parse({ ...CREATE_USER_BASE, serviceIds: ["s", "s"] }),
+      createUserSchema.parse({ ...CREATE_USER_BASE, serviceIds: ["s", "s"] })
     ).toThrow()
     expect(() =>
       createUserSchema.parse({
         ...CREATE_USER_BASE,
         schedulingAreaIds: ["a", "a"],
-      }),
+      })
     ).toThrow()
   })
 

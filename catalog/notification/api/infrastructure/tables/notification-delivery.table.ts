@@ -33,7 +33,9 @@ export const notificationDeliveries = notificationSchema.table(
       .defaultNow(),
     sentAt: timestamp("sent_at", { withTimezone: true }),
   },
-  (t) => [index("notification_deliveries_poll_idx").on(t.status, t.nextAttemptAt)]
+  (t) => [
+    index("notification_deliveries_poll_idx").on(t.status, t.nextAttemptAt),
+  ]
 )
 
 export type DeliveryRow = typeof notificationDeliveries.$inferSelect

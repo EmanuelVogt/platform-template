@@ -3,7 +3,10 @@ import { z } from "zod"
 
 import { defineCatalogEntry } from "../../application/catalog/notification-catalog"
 import { NotificationTemplateSourceRegistry } from "../../application/templates/notification-template-registry"
-import { EmailBindingMissingError, EmailRecipientMissingError } from "../../domain/errors"
+import {
+  EmailBindingMissingError,
+  EmailRecipientMissingError,
+} from "../../domain/errors"
 
 import { EmailChannel } from "./email.channel"
 
@@ -58,7 +61,11 @@ const BASE_EMAIL_CASES: readonly {
   },
   {
     type: "password_changed",
-    payload: { email: "a@b.com", at: "2026-06-10T18:30:00.000Z", locale: "pt-BR" },
+    payload: {
+      email: "a@b.com",
+      at: "2026-06-10T18:30:00.000Z",
+      locale: "pt-BR",
+    },
     template: "password-changed",
     subject: "Sua senha foi alterada",
   },
@@ -87,7 +94,11 @@ const BASE_EMAIL_CASES: readonly {
   },
   {
     type: "email_change_notice",
-    payload: { email: "antigo@b.com", at: "2026-06-16T12:00:00.000Z", locale: "pt-BR" },
+    payload: {
+      email: "antigo@b.com",
+      at: "2026-06-16T12:00:00.000Z",
+      locale: "pt-BR",
+    },
     template: "email-change-notice",
     subject: "Solicitação de troca de e-mail",
   },
@@ -103,7 +114,11 @@ describe("EmailChannel", () => {
     send = vi.fn().mockResolvedValue(undefined)
     const renderer: TemplateRenderer = { render }
     const mailer: Mailer = { send }
-    channel = new EmailChannel(new NotificationTemplateSourceRegistry(), renderer, mailer)
+    channel = new EmailChannel(
+      new NotificationTemplateSourceRegistry(),
+      renderer,
+      mailer
+    )
   })
 
   it.each(BASE_EMAIL_CASES)(
@@ -117,16 +132,22 @@ describe("EmailChannel", () => {
         html: "<html>ok</html>",
         idempotencyKey: "dlv-1",
       })
-    },
+    }
   )
 
   it("aplica o `view` do binding antes de renderizar (password_changed formata o instante)", async () => {
     await channel.send({
       id: "dlv-pc",
       type: "password_changed",
-      payload: { email: "a@b.com", at: "2026-06-10T18:30:00.000Z", locale: "pt-BR" },
+      payload: {
+        email: "a@b.com",
+        at: "2026-06-10T18:30:00.000Z",
+        locale: "pt-BR",
+      },
     })
-    expect(render).toHaveBeenCalledWith("password-changed", { at: "10/06/2026, 15:30" })
+    expect(render).toHaveBeenCalledWith("password-changed", {
+      at: "10/06/2026, 15:30",
+    })
   })
 
   it("usa `recipient` do binding quando presente, em vez de data.email", async () => {
@@ -149,18 +170,24 @@ describe("EmailChannel", () => {
     })
     channel = new EmailChannel(registry, { render }, { send })
 
-    await channel.send({ id: "dlv-r", type: "tipo_com_recipient", payload: { userId: "u1" } })
+    await channel.send({
+      id: "dlv-r",
+      type: "tipo_com_recipient",
+      payload: { userId: "u1" },
+    })
 
-    expect(send).toHaveBeenCalledWith(expect.objectContaining({ to: "u1@produto.internal" }))
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "u1@produto.internal" })
+    )
   })
 
   it("tipo sem binding de e-mail → EmailBindingMissingError (retry/dead-letter no dispatcher)", async () => {
-    await expect(channel.send({ id: "x", type: "device_revoked", payload: {} })).rejects.toThrow(
-      EmailBindingMissingError,
-    )
-    await expect(channel.send({ id: "x", type: "device_revoked", payload: {} })).rejects.toThrow(
-      /device_revoked/,
-    )
+    await expect(
+      channel.send({ id: "x", type: "device_revoked", payload: {} })
+    ).rejects.toThrow(EmailBindingMissingError)
+    await expect(
+      channel.send({ id: "x", type: "device_revoked", payload: {} })
+    ).rejects.toThrow(/device_revoked/)
   })
 
   it("recipient ausente e data.email não é string → EmailRecipientMissingError", async () => {
@@ -169,14 +196,14 @@ describe("EmailChannel", () => {
         id: "x",
         type: "access_link_sent",
         payload: { name: "Ana", link: "https://app/x" },
-      }),
+      })
     ).rejects.toThrow(EmailRecipientMissingError)
     await expect(
       channel.send({
         id: "x",
         type: "access_link_sent",
         payload: { name: "Ana", link: "https://app/x" },
-      }),
+      })
     ).rejects.toThrow(/access_link_sent/)
   })
 })

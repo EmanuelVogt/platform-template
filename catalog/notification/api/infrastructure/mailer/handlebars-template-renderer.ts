@@ -15,21 +15,25 @@ const DEFAULT_TEMPLATE_DIR = join(__dirname, "templates")
 
 /** Compila os .hbs sob demanda (cache por template) e aplica o layout compartilhado a cada render. */
 @Injectable()
-export class HandlebarsTemplateRenderer implements TemplateRenderer, OnModuleInit {
+export class HandlebarsTemplateRenderer
+  implements TemplateRenderer, OnModuleInit
+{
   private readonly compiled = new Map<string, HandlebarsTemplateDelegate>()
   private layout!: HandlebarsTemplateDelegate
 
   constructor(
     @Inject(NOTIFICATION_TEMPLATE_SOURCES)
-    private readonly sources: NotificationTemplateSources,
+    private readonly sources: NotificationTemplateSources
   ) {}
 
   onModuleInit(): void {
     Handlebars.registerPartial(
       "button",
-      readFileSync(join(DEFAULT_TEMPLATE_DIR, "partials", "button.hbs"), "utf8"),
+      readFileSync(join(DEFAULT_TEMPLATE_DIR, "partials", "button.hbs"), "utf8")
     )
-    this.layout = Handlebars.compile(readFileSync(join(DEFAULT_TEMPLATE_DIR, "layout.hbs"), "utf8"))
+    this.layout = Handlebars.compile(
+      readFileSync(join(DEFAULT_TEMPLATE_DIR, "layout.hbs"), "utf8")
+    )
   }
 
   private resolve(template: string): HandlebarsTemplateDelegate | undefined {
@@ -38,7 +42,9 @@ export class HandlebarsTemplateRenderer implements TemplateRenderer, OnModuleIni
     const binding = this.sources.findByTemplate(template)
     if (!binding) return undefined
     const dir = binding.templateDir ?? DEFAULT_TEMPLATE_DIR
-    const body = Handlebars.compile(readFileSync(join(dir, `${template}.hbs`), "utf8"))
+    const body = Handlebars.compile(
+      readFileSync(join(dir, `${template}.hbs`), "utf8")
+    )
     this.compiled.set(template, body)
     return body
   }

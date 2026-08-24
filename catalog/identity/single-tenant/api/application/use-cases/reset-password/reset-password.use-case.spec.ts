@@ -11,8 +11,6 @@ import { fakeRequestContext } from "../../request-context.fixture"
 
 import { ResetPasswordUseCase } from "./reset-password.use-case"
 
-
- 
 function makeDeps(over: Record<string, any> = {}) {
   const verificationTokens = over.verificationTokens ?? {
     consumeByHash: vi.fn().mockResolvedValue({ userId: "u-1" }),
@@ -42,25 +40,33 @@ function makeDeps(over: Record<string, any> = {}) {
         updatedAt: new Date("2026-01-01T00:00:00.000Z"),
         deletedAt: null,
         createdByUserId: null,
-      }),
+      })
     ),
     update: vi.fn().mockResolvedValue(undefined),
   }
   const sessions = over.sessions ?? {
     deleteAllForUser: vi.fn().mockResolvedValue(undefined),
   }
-  const hasher = over.hasher ?? { hash: vi.fn().mockResolvedValue("argon2-new") }
+  const hasher = over.hasher ?? {
+    hash: vi.fn().mockResolvedValue("argon2-new"),
+  }
   const strength = over.strength ?? { score: vi.fn().mockReturnValue(4) }
   const breach = over.breach ?? { check: vi.fn().mockResolvedValue("clear") }
   const tokens = over.tokens ?? {
     hashOf: vi.fn().mockReturnValue("hash-of-raw"),
   }
-  const outbox = over.outbox ?? { publish: vi.fn().mockResolvedValue(undefined) }
+  const outbox = over.outbox ?? {
+    publish: vi.fn().mockResolvedValue(undefined),
+  }
   const authEvents = over.authEvents ?? {
     recordInTx: vi.fn().mockResolvedValue(undefined),
   }
-  const clock = over.clock ?? { now: () => new Date("2026-05-30T00:00:00.000Z") }
-  const ctx = over.ctx ?? fakeRequestContext(() => ({
+  const clock = over.clock ?? {
+    now: () => new Date("2026-05-30T00:00:00.000Z"),
+  }
+  const ctx =
+    over.ctx ??
+    fakeRequestContext(() => ({
       ip: null,
       userAgent: null,
       correlationId: "c1",
@@ -81,11 +87,23 @@ function makeDeps(over: Record<string, any> = {}) {
     authEvents,
     clock,
     ctx,
-    config,
+    config
   )
-  return { uc, verificationTokens, users, sessions, hasher, strength, breach, tokens, outbox, authEvents, clock, ctx }
+  return {
+    uc,
+    verificationTokens,
+    users,
+    sessions,
+    hasher,
+    strength,
+    breach,
+    tokens,
+    outbox,
+    authEvents,
+    clock,
+    ctx,
+  }
 }
- 
 
 describe("ResetPasswordUseCase", () => {
   it("token inválido (consume retorna null) lança InvalidResetTokenError", async () => {
@@ -96,7 +114,7 @@ describe("ResetPasswordUseCase", () => {
       },
     })
     await expect(
-      t.uc.execute({ token: "tok", password: "nova-senha-forte-1" }),
+      t.uc.execute({ token: "tok", password: "nova-senha-forte-1" })
     ).rejects.toBeInstanceOf(InvalidResetTokenError)
     expect(t.sessions.deleteAllForUser).not.toHaveBeenCalled()
   })
@@ -108,7 +126,7 @@ describe("ResetPasswordUseCase", () => {
     expect(t.sessions.deleteAllForUser).toHaveBeenCalledWith("u-1")
     expect(t.verificationTokens.invalidateAllForUser).toHaveBeenCalledWith(
       "u-1",
-      "password_reset",
+      "password_reset"
     )
   })
 
@@ -119,7 +137,7 @@ describe("ResetPasswordUseCase", () => {
     expect(t.verificationTokens.consumeByHash).toHaveBeenCalledWith(
       "hash-of-raw",
       "password_reset",
-      expect.any(Date),
+      expect.any(Date)
     )
   })
 
@@ -137,14 +155,14 @@ describe("ResetPasswordUseCase", () => {
             at: expect.any(String),
           }),
         }),
-      }),
+      })
     )
   })
 
   it("senha fraca lança e NÃO troca a senha", async () => {
     const t = makeDeps({ strength: { score: vi.fn().mockReturnValue(0) } })
     await expect(
-      t.uc.execute({ token: "tok", password: "123" }),
+      t.uc.execute({ token: "tok", password: "123" })
     ).rejects.toThrow()
     expect(t.users.update).not.toHaveBeenCalled()
   })
@@ -158,7 +176,7 @@ describe("ResetPasswordUseCase", () => {
       }),
     })
     await expect(
-      t.uc.execute({ token: "tok", password: "nova-senha-forte-1" }),
+      t.uc.execute({ token: "tok", password: "nova-senha-forte-1" })
     ).rejects.toBeInstanceOf(WeakPasswordError)
     // breach é pré-condição: o token não chega a ser consumido nem a senha trocada.
     expect(t.breach.check).toHaveBeenCalled()
@@ -190,7 +208,7 @@ describe("ResetPasswordUseCase", () => {
       }),
     })
     await expect(
-      t.uc.execute({ token: "tok", password: "nova-senha-forte-1" }),
+      t.uc.execute({ token: "tok", password: "nova-senha-forte-1" })
     ).rejects.toBeInstanceOf(WeakPasswordError)
     expect(check).toHaveBeenCalledWith("nova-senha-forte-1")
     expect(t.users.update).not.toHaveBeenCalled()
@@ -213,7 +231,7 @@ describe("ResetPasswordUseCase", () => {
           eventType: "breach_check_skipped",
           metadata: { mode: "fail_open" },
         }),
-      }),
+      })
     )
   })
 
@@ -228,7 +246,7 @@ describe("ResetPasswordUseCase", () => {
       }),
     })
     await expect(
-      t.uc.execute({ token: "tok", password: "nova-senha-forte-1" }),
+      t.uc.execute({ token: "tok", password: "nova-senha-forte-1" })
     ).rejects.toBeInstanceOf(BreachCheckUnavailableError)
     expect(t.verificationTokens.consumeByHash).not.toHaveBeenCalled()
     expect(t.users.update).not.toHaveBeenCalled()
@@ -242,7 +260,7 @@ describe("ResetPasswordUseCase", () => {
       },
     })
     await expect(
-      t.uc.execute({ token: "tok", password: "nova-senha-forte-1" }),
+      t.uc.execute({ token: "tok", password: "nova-senha-forte-1" })
     ).rejects.toBeInstanceOf(InvalidResetTokenError)
     expect(t.users.update).not.toHaveBeenCalled()
     expect(t.sessions.deleteAllForUser).not.toHaveBeenCalled()
@@ -258,26 +276,26 @@ describe("ResetPasswordUseCase", () => {
           userId: "u-1",
           eventType: "password_reset_completed",
         }),
-      }),
+      })
     )
   })
 
   it("notificação inclui locale correto do contexto de requisição", async () => {
     const t = makeDeps({
       ctx: fakeRequestContext(() => ({
-          ip: null,
-          userAgent: null,
-          correlationId: "c2",
-          locale: "en-US",
-          userId: null,
-          sessionId: null,
-        })),
+        ip: null,
+        userAgent: null,
+        correlationId: "c2",
+        locale: "en-US",
+        userId: null,
+        sessionId: null,
+      })),
     })
     await t.uc.execute({ token: "tok", password: "nova-senha-forte-1" })
     expect(t.outbox.publish).toHaveBeenCalledWith(
       expect.objectContaining({
         payload: expect.objectContaining({ locale: "en-US" }),
-      }),
+      })
     )
   })
 })

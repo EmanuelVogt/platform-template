@@ -42,9 +42,10 @@ const sameIds = (a: readonly string[], b: readonly string[]): boolean =>
   a.length === b.length && new Set([...a, ...b]).size === new Set(a).size
 
 @UseCase()
-export class UpdateUserUseCase
-  implements UseCaseContract<UpdateUserInput, void>
-{
+export class UpdateUserUseCase implements UseCaseContract<
+  UpdateUserInput,
+  void
+> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(CLOCK) private readonly clock: Clock,
@@ -103,8 +104,14 @@ export class UpdateUserUseCase
     )
     await this.users.replacePermissions(user.props.id, access.permissions)
     await this.users.replaceProfessionalAreas(user.props.id, access.areaIds)
-    await this.users.replaceProfessionalServices(user.props.id, access.serviceIds)
-    await this.users.replaceSchedulingAreas(user.props.id, access.schedulingAreaIds)
+    await this.users.replaceProfessionalServices(
+      user.props.id,
+      access.serviceIds
+    )
+    await this.users.replaceSchedulingAreas(
+      user.props.id,
+      access.schedulingAreaIds
+    )
   }
 
   /**

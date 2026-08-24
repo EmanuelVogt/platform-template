@@ -24,8 +24,15 @@ export class ResendMailer implements Mailer {
     // Crash entre send e UPDATE status=sent → retry re-envia; a chave faz o
     // Resend dedupar (at-least-once vira efetivamente once no provider).
     const { error } = await this.resend.emails.send(
-      { from: this.from, to: message.to, subject: message.subject, html: message.html },
-      message.idempotencyKey !== undefined ? { idempotencyKey: message.idempotencyKey } : undefined,
+      {
+        from: this.from,
+        to: message.to,
+        subject: message.subject,
+        html: message.html,
+      },
+      message.idempotencyKey !== undefined
+        ? { idempotencyKey: message.idempotencyKey }
+        : undefined
     )
     if (error) {
       throw new MailDeliveryError(error.message)

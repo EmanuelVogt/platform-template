@@ -62,7 +62,7 @@ describe("NotificationTemplateSourceRegistry", () => {
   it("require de um tipo não registrado lança nomeando o tipo", () => {
     const registry = new NotificationTemplateSourceRegistry()
     expect(() => registry.require("tipo_inexistente" as never)).toThrow(
-      NotificationTemplateSourceNotRegisteredError,
+      NotificationTemplateSourceNotRegisteredError
     )
   })
 

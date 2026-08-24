@@ -17,12 +17,27 @@ import {
   AUTH_EVENT_REPOSITORY,
   type AuthEventRepository,
 } from "../../../domain/ports/auth-event.repository"
-import { BREACH_CHECK, type BreachCheck } from "../../../domain/ports/breach-check"
-import { PASSWORD_HASHER, type PasswordHasher } from "../../../domain/ports/password-hasher"
-import { PASSWORD_STRENGTH, type PasswordStrength } from "../../../domain/ports/password-strength"
+import {
+  BREACH_CHECK,
+  type BreachCheck,
+} from "../../../domain/ports/breach-check"
+import {
+  PASSWORD_HASHER,
+  type PasswordHasher,
+} from "../../../domain/ports/password-hasher"
+import {
+  PASSWORD_STRENGTH,
+  type PasswordStrength,
+} from "../../../domain/ports/password-strength"
 import { requireProfileImageStore } from "../../../domain/ports/profile-image-store"
-import { TOKEN_GENERATOR, type TokenGenerator } from "../../../domain/ports/token-generator"
-import { USER_REPOSITORY, type UserRepository } from "../../../domain/ports/user.repository"
+import {
+  TOKEN_GENERATOR,
+  type TokenGenerator,
+} from "../../../domain/ports/token-generator"
+import {
+  USER_REPOSITORY,
+  type UserRepository,
+} from "../../../domain/ports/user.repository"
 import {
   VERIFICATION_TOKEN_REPOSITORY,
   type VerificationTokenRepository,
@@ -38,9 +53,10 @@ import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/us
 import type { User } from "../../../domain/entities/user.entity"
 
 @UseCase()
-export class SetPasswordUseCase
-  implements UseCaseContract<SetPasswordInput, SetPasswordOutput>
-{
+export class SetPasswordUseCase implements UseCaseContract<
+  SetPasswordInput,
+  SetPasswordOutput
+> {
   constructor(
     @Inject(VERIFICATION_TOKEN_REPOSITORY)
     private readonly verificationTokens: VerificationTokenRepository,
@@ -50,14 +66,15 @@ export class SetPasswordUseCase
     @Inject(BREACH_CHECK) private readonly breach: BreachCheck,
     @Inject(TOKEN_GENERATOR) private readonly tokens: TokenGenerator,
     private readonly outbox: OutboxPublisher,
-    @Inject(AUTH_EVENT_REPOSITORY) private readonly authEvents: AuthEventRepository,
+    @Inject(AUTH_EVENT_REPOSITORY)
+    private readonly authEvents: AuthEventRepository,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly ctx: RequestContext,
     @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig,
     @Optional()
     @Inject(PROFILE_IMAGE_STORE)
     private readonly profileImages: ProfileImageStore | null = null,
-    private readonly createSession: CreateSessionService,
+    private readonly createSession: CreateSessionService
   ) {}
 
   @Traced({ name: "identity.setPassword" })
@@ -74,7 +91,7 @@ export class SetPasswordUseCase
     const active = await this.verificationTokens.findActiveByHash(
       this.tokens.hashOf(input.token),
       "access_link",
-      now,
+      now
     )
     if (!active) {
       throw new InvalidAccessLinkError()
@@ -87,7 +104,7 @@ export class SetPasswordUseCase
     const avatarAttachmentId = await this.resolveAvatar(
       input.avatarAttachmentId,
       user.props.id,
-      user.props.avatarAttachmentId,
+      user.props.avatarAttachmentId
     )
 
     return this.activateInTx(input, avatarAttachmentId, breachOutcome)
@@ -116,14 +133,14 @@ export class SetPasswordUseCase
   private async resolveAvatar(
     submitted: string | undefined,
     userId: string,
-    current: string | null,
+    current: string | null
   ): Promise<string | null> {
     if (submitted === undefined || submitted === current) {
       return current
     }
     const ok = await requireProfileImageStore(this.profileImages).exists(
       submitted,
-      userId,
+      userId
     )
     return ok ? submitted : current
   }
@@ -132,7 +149,7 @@ export class SetPasswordUseCase
   private async activateInTx(
     input: SetPasswordInput,
     avatarAttachmentId: string | null,
-    breachOutcome: BreachOutcome,
+    breachOutcome: BreachOutcome
   ): Promise<SetPasswordOutput> {
     const now = this.clock.now()
     const store = this.ctx.get()
@@ -140,7 +157,7 @@ export class SetPasswordUseCase
     const consumed = await this.verificationTokens.consumeByHash(
       this.tokens.hashOf(input.token),
       "access_link",
-      now,
+      now
     )
     if (!consumed) {
       throw new InvalidAccessLinkError()
@@ -158,15 +175,18 @@ export class SetPasswordUseCase
         birthDate: input.birthDate,
         avatarAttachmentId,
       },
-      now,
+      now
     )
     await this.users.update(activated)
-    await this.verificationTokens.invalidateAllForUser(consumed.userId, "access_link")
+    await this.verificationTokens.invalidateAllForUser(
+      consumed.userId,
+      "access_link"
+    )
 
     const session = await this.createSession.create(
       activated,
       { deviceCookie: input.deviceCookie, rememberMe: false },
-      now,
+      now
     )
 
     // Só aqui o dono da senha é conhecido: a lacuna da consulta é atribuída a
@@ -177,12 +197,12 @@ export class SetPasswordUseCase
           userId: consumed.userId,
           eventType: "breach_check_skipped",
           metadata: { mode: this.config.BREACH_CHECK_MODE },
-        }),
+        })
       )
     }
 
     await this.authEvents.recordInTx(
-      authEventOf(store, { userId: consumed.userId, eventType: "password_set" }),
+      authEventOf(store, { userId: consumed.userId, eventType: "password_set" })
     )
 
     // Notifica quem criou a conta; null = seed/master → ninguém a notificar.
@@ -194,12 +214,15 @@ export class SetPasswordUseCase
           type: "password_set",
           locale: store.locale,
           data: { userName: activated.props.name },
-        }),
+        })
       )
     }
 
     return {
-      user: toUserView(activated, await this.users.findPermissions(activated.props.id)),
+      user: toUserView(
+        activated,
+        await this.users.findPermissions(activated.props.id)
+      ),
       sessionToken: session.sessionToken,
       maxAgeSeconds: session.maxAge,
       sessionId: session.sessionId,

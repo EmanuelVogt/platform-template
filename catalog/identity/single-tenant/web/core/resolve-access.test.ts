@@ -17,11 +17,16 @@ describe("resolveAccess", () => {
   })
 
   it("devolve anon para visitante em rota por permissão", () => {
-    expect(resolveAccess(null, { kind: "permission", key: "admin.users.read" })).toBe("anon")
+    expect(
+      resolveAccess(null, { kind: "permission", key: "admin.users.read" })
+    ).toBe("anon")
   })
 
   it("permite rota autenticada para qualquer usuário logado", () => {
-    const user = makeCurrentUser({ accessProfile: "professional", permissions: [] })
+    const user = makeCurrentUser({
+      accessProfile: "professional",
+      permissions: [],
+    })
 
     expect(resolveAccess(user, { kind: "authenticated" })).toBe("allow")
   })
@@ -29,18 +34,24 @@ describe("resolveAccess", () => {
   it("permite rota por permissão quando o usuário tem a chave", () => {
     const user = makeCurrentUser({ permissions: ["admin.users.read"] })
 
-    expect(resolveAccess(user, { kind: "permission", key: "admin.users.read" })).toBe("allow")
+    expect(
+      resolveAccess(user, { kind: "permission", key: "admin.users.read" })
+    ).toBe("allow")
   })
 
   it("devolve forbidden quando o usuário logado não tem a chave", () => {
     const user = makeCurrentUser({ permissions: ["admin.users.read"] })
 
-    expect(resolveAccess(user, { kind: "permission", key: "admin.users.delete" })).toBe("forbidden")
+    expect(
+      resolveAccess(user, { kind: "permission", key: "admin.users.delete" })
+    ).toBe("forbidden")
   })
 
   it("permite rota por permissão para o perfil master", () => {
     const user = makeCurrentUser({ accessProfile: "master", permissions: [] })
 
-    expect(resolveAccess(user, { kind: "permission", key: "admin.users.delete" })).toBe("allow")
+    expect(
+      resolveAccess(user, { kind: "permission", key: "admin.users.delete" })
+    ).toBe("allow")
   })
 })

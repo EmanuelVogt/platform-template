@@ -27,9 +27,10 @@ import type { ResendVerificationInput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class ResendVerificationUseCase
-  implements UseCaseContract<ResendVerificationInput, void>
-{
+export class ResendVerificationUseCase implements UseCaseContract<
+  ResendVerificationInput,
+  void
+> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(VERIFICATION_TOKEN_REPOSITORY)
@@ -38,7 +39,7 @@ export class ResendVerificationUseCase
     private readonly outbox: OutboxPublisher,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly ctx: RequestContext,
-    @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig,
+    @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig
   ) {}
 
   @Transactional()
@@ -62,11 +63,11 @@ export class ResendVerificationUseCase
 
     await this.verificationTokens.invalidateAllForUser(
       user.props.id,
-      "email_verify",
+      "email_verify"
     )
     const { raw, hash } = this.tokens.generate()
     const expiresAt = new Date(
-      now.getTime() + this.config.VERIFY_TOKEN_TTL_SECONDS * 1000,
+      now.getTime() + this.config.VERIFY_TOKEN_TTL_SECONDS * 1000
     )
     await this.verificationTokens.create(
       VerificationToken.create({
@@ -74,7 +75,7 @@ export class ResendVerificationUseCase
         tokenHash: hash,
         type: "email_verify",
         expiresAt,
-      }),
+      })
     )
 
     await this.users.update(user.markVerificationRequested(now))
@@ -85,8 +86,12 @@ export class ResendVerificationUseCase
         recipientId: user.props.id,
         type: "email_verification",
         locale: this.ctx.get().locale,
-        data: { email: user.props.email, link, tokenExpiresAt: expiresAt.toISOString() },
-      }),
+        data: {
+          email: user.props.email,
+          link,
+          tokenExpiresAt: expiresAt.toISOString(),
+        },
+      })
     )
   }
 }

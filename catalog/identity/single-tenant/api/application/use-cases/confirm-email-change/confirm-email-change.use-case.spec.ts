@@ -42,7 +42,10 @@ function makeUser(over: Partial<UserProps> = {}): User {
 
 function makeDeps(over: Record<string, any> = {}) {
   const verificationTokens = over.verificationTokens ?? {
-    findActiveByHash: vi.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2026-06-02T12:00:00.000Z") }),
+    findActiveByHash: vi.fn().mockResolvedValue({
+      userId: "u-1",
+      expiresAt: new Date("2026-06-02T12:00:00.000Z"),
+    }),
     consumeByHash: vi.fn().mockResolvedValue({ userId: "u-1" }),
     invalidateAllForUser: vi.fn().mockResolvedValue(undefined),
   }
@@ -60,7 +63,9 @@ function makeDeps(over: Record<string, any> = {}) {
     recordInTx: vi.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => NOW }
-  const ctx = over.ctx ?? fakeRequestContext(() => ({
+  const ctx =
+    over.ctx ??
+    fakeRequestContext(() => ({
       ip: "1.2.3.4",
       userAgent: "jest",
       correlationId: "c1",
@@ -80,7 +85,13 @@ function makeDeps(over: Record<string, any> = {}) {
   }
 
   const config = makeIdentityConfig()
-  const createSession = new CreateSessionService(sessions, devices, tokens, config, ctx)
+  const createSession = new CreateSessionService(
+    sessions,
+    devices,
+    tokens,
+    config,
+    ctx
+  )
 
   const uc = new ConfirmEmailChangeUseCase(
     verificationTokens,
@@ -89,10 +100,20 @@ function makeDeps(over: Record<string, any> = {}) {
     authEvents,
     clock,
     ctx,
-    createSession,
+    createSession
   )
 
-  return { uc, verificationTokens, users, tokens, authEvents, clock, ctx, sessions, devices }
+  return {
+    uc,
+    verificationTokens,
+    users,
+    tokens,
+    authEvents,
+    clock,
+    ctx,
+    sessions,
+    devices,
+  }
 }
 
 describe("ConfirmEmailChangeUseCase", () => {
@@ -115,9 +136,12 @@ describe("ConfirmEmailChangeUseCase", () => {
       expect(t.verificationTokens.consumeByHash).toHaveBeenCalledWith(
         "token-hash",
         "email_change",
-        NOW,
+        NOW
       )
-      expect(t.verificationTokens.invalidateAllForUser).toHaveBeenCalledWith("u-1", "email_change")
+      expect(t.verificationTokens.invalidateAllForUser).toHaveBeenCalledWith(
+        "u-1",
+        "email_change"
+      )
     })
 
     it("persiste o usuário com confirmEmailChange antes de criar sessão", async () => {
@@ -132,11 +156,11 @@ describe("ConfirmEmailChangeUseCase", () => {
             status: "active",
             emailVerified: true,
           }),
-        }),
+        })
       )
       // update precisa ser antes de sessions.create
       expect(t.users.update.mock.invocationCallOrder[0]).toBeLessThan(
-        t.sessions.create.mock.invocationCallOrder[0] ?? Infinity,
+        t.sessions.create.mock.invocationCallOrder[0] ?? Infinity
       )
     })
 
@@ -146,8 +170,11 @@ describe("ConfirmEmailChangeUseCase", () => {
 
       expect(t.authEvents.recordInTx).toHaveBeenCalledWith(
         expect.objectContaining({
-          props: expect.objectContaining({ eventType: "email_changed", userId: "u-1" }),
-        }),
+          props: expect.objectContaining({
+            eventType: "email_changed",
+            userId: "u-1",
+          }),
+        })
       )
       expect(t.authEvents.record).not.toHaveBeenCalled()
     })
@@ -156,18 +183,28 @@ describe("ConfirmEmailChangeUseCase", () => {
       const t = makeDeps({
         devices: {
           findByUserAndCookieHash: vi.fn().mockResolvedValue({
-            props: { id: "dev-1", userId: "u-1", cookieTokenHash: "cookie-hash", label: null,
+            props: {
+              id: "dev-1",
+              userId: "u-1",
+              cookieTokenHash: "cookie-hash",
+              label: null,
               firstSeenAt: new Date("2026-01-01T00:00:00.000Z"),
-              createdAt: new Date("2026-01-01T00:00:00.000Z") },
+              createdAt: new Date("2026-01-01T00:00:00.000Z"),
+            },
           }),
           create: vi.fn(),
         },
         tokens: {
-          generate: vi.fn().mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
+          generate: vi
+            .fn()
+            .mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
           hashOf: vi.fn().mockReturnValue("cookie-hash"),
         },
       })
-      const out = await t.uc.execute({ token: "raw-token", deviceCookie: "raw-cookie" })
+      const out = await t.uc.execute({
+        token: "raw-token",
+        deviceCookie: "raw-cookie",
+      })
 
       expect(t.devices.create).not.toHaveBeenCalled()
       expect(out.deviceCookie).toBe("raw-cookie")
@@ -185,7 +222,7 @@ describe("ConfirmEmailChangeUseCase", () => {
       })
 
       await expect(t.uc.execute({ token: "bad-token" })).rejects.toBeInstanceOf(
-        InvalidEmailChangeTokenError,
+        InvalidEmailChangeTokenError
       )
       // Tx não foi iniciada — consume não é chamado
       expect(t.verificationTokens.consumeByHash).not.toHaveBeenCalled()
@@ -193,7 +230,11 @@ describe("ConfirmEmailChangeUseCase", () => {
     })
 
     it("token válido mas usuário sem pendingEmail lança InvalidEmailChangeTokenError no pré-check", async () => {
-      const userSemPendente = makeUser({ pendingEmail: null, status: "active", emailVerified: true })
+      const userSemPendente = makeUser({
+        pendingEmail: null,
+        status: "active",
+        emailVerified: true,
+      })
       const t = makeDeps({
         users: {
           findById: vi.fn().mockResolvedValue(userSemPendente),
@@ -201,14 +242,17 @@ describe("ConfirmEmailChangeUseCase", () => {
           findPermissions: vi.fn().mockResolvedValue([]),
         },
         verificationTokens: {
-          findActiveByHash: vi.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2026-06-02T12:00:00.000Z") }),
+          findActiveByHash: vi.fn().mockResolvedValue({
+            userId: "u-1",
+            expiresAt: new Date("2026-06-02T12:00:00.000Z"),
+          }),
           consumeByHash: vi.fn(),
           invalidateAllForUser: vi.fn(),
         },
       })
 
       await expect(t.uc.execute({ token: "raw-token" })).rejects.toBeInstanceOf(
-        InvalidEmailChangeTokenError,
+        InvalidEmailChangeTokenError
       )
       expect(t.verificationTokens.consumeByHash).not.toHaveBeenCalled()
       expect(t.users.update).not.toHaveBeenCalled()
@@ -222,14 +266,17 @@ describe("ConfirmEmailChangeUseCase", () => {
           findPermissions: vi.fn().mockResolvedValue([]),
         },
         verificationTokens: {
-          findActiveByHash: vi.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2026-06-02T12:00:00.000Z") }),
+          findActiveByHash: vi.fn().mockResolvedValue({
+            userId: "u-1",
+            expiresAt: new Date("2026-06-02T12:00:00.000Z"),
+          }),
           consumeByHash: vi.fn(),
           invalidateAllForUser: vi.fn(),
         },
       })
 
       await expect(t.uc.execute({ token: "raw-token" })).rejects.toBeInstanceOf(
-        InvalidEmailChangeTokenError,
+        InvalidEmailChangeTokenError
       )
       expect(t.verificationTokens.consumeByHash).not.toHaveBeenCalled()
     })
@@ -240,22 +287,30 @@ describe("ConfirmEmailChangeUseCase", () => {
       // findActiveByHash retorna ok (pré-check passa), consumeByHash retorna null (race)
       const t = makeDeps({
         verificationTokens: {
-          findActiveByHash: vi.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2026-06-02T12:00:00.000Z") }),
+          findActiveByHash: vi.fn().mockResolvedValue({
+            userId: "u-1",
+            expiresAt: new Date("2026-06-02T12:00:00.000Z"),
+          }),
           consumeByHash: vi.fn().mockResolvedValue(null),
           invalidateAllForUser: vi.fn(),
         },
       })
 
       await expect(t.uc.execute({ token: "raw-token" })).rejects.toBeInstanceOf(
-        InvalidEmailChangeTokenError,
+        InvalidEmailChangeTokenError
       )
       expect(t.users.update).not.toHaveBeenCalled()
       expect(t.verificationTokens.invalidateAllForUser).not.toHaveBeenCalled()
     })
 
     it("consumeByHash retorna userId mas user não tem pendingEmail (estado corrompido): lança InvalidEmailChangeTokenError", async () => {
-      const userSemPendente = makeUser({ pendingEmail: null, status: "active", emailVerified: true })
-      const findByIdMock = vi.fn()
+      const userSemPendente = makeUser({
+        pendingEmail: null,
+        status: "active",
+        emailVerified: true,
+      })
+      const findByIdMock = vi
+        .fn()
         // primeira chamada = pré-check (user com pendingEmail)
         .mockResolvedValueOnce(makeUser())
         // segunda chamada = dentro da tx (estado diferente)
@@ -270,13 +325,14 @@ describe("ConfirmEmailChangeUseCase", () => {
       })
 
       await expect(t.uc.execute({ token: "raw-token" })).rejects.toBeInstanceOf(
-        InvalidEmailChangeTokenError,
+        InvalidEmailChangeTokenError
       )
       expect(t.users.update).not.toHaveBeenCalled()
     })
 
     it("consumeByHash retorna token mas findById retorna null dentro da tx: lança InvalidEmailChangeTokenError", async () => {
-      const findByIdMock = vi.fn()
+      const findByIdMock = vi
+        .fn()
         .mockResolvedValueOnce(makeUser())
         .mockResolvedValueOnce(null)
 
@@ -289,7 +345,7 @@ describe("ConfirmEmailChangeUseCase", () => {
       })
 
       await expect(t.uc.execute({ token: "raw-token" })).rejects.toBeInstanceOf(
-        InvalidEmailChangeTokenError,
+        InvalidEmailChangeTokenError
       )
       expect(t.users.update).not.toHaveBeenCalled()
     })
@@ -297,7 +353,9 @@ describe("ConfirmEmailChangeUseCase", () => {
 
   describe("colisão de e-mail (unique violation 23505)", () => {
     it("e-mail tomado entre pedido e confirmação lança EmailAlreadyInUseError", async () => {
-      const pgUniqueError = Object.assign(new Error("unique violation"), { code: "23505" })
+      const pgUniqueError = Object.assign(new Error("unique violation"), {
+        code: "23505",
+      })
       const t = makeDeps({
         users: {
           findById: vi.fn().mockResolvedValue(makeUser()),
@@ -307,7 +365,7 @@ describe("ConfirmEmailChangeUseCase", () => {
       })
 
       await expect(t.uc.execute({ token: "raw-token" })).rejects.toBeInstanceOf(
-        EmailAlreadyInUseError,
+        EmailAlreadyInUseError
       )
       // Sessão NÃO é criada quando o update falha
       expect(t.sessions.create).not.toHaveBeenCalled()
@@ -315,7 +373,9 @@ describe("ConfirmEmailChangeUseCase", () => {
     })
 
     it("erro de DB genérico (não unique) é relançado sem ser convertido", async () => {
-      const dbError = Object.assign(new Error("connection error"), { code: "08006" })
+      const dbError = Object.assign(new Error("connection error"), {
+        code: "08006",
+      })
       const t = makeDeps({
         users: {
           findById: vi.fn().mockResolvedValue(makeUser()),
@@ -348,7 +408,9 @@ describe("ConfirmEmailChangeUseCase", () => {
         },
       })
 
-      await expect(t.uc.execute({ token: "raw-token" })).rejects.toBe("db failure")
+      await expect(t.uc.execute({ token: "raw-token" })).rejects.toBe(
+        "db failure"
+      )
     })
 
     it("update rejeita com objeto sem propriedade code: relança sem converter", async () => {
@@ -361,7 +423,9 @@ describe("ConfirmEmailChangeUseCase", () => {
         },
       })
 
-      await expect(t.uc.execute({ token: "raw-token" })).rejects.toBe(errorSemCode)
+      await expect(t.uc.execute({ token: "raw-token" })).rejects.toBe(
+        errorSemCode
+      )
     })
   })
 })

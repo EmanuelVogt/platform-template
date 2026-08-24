@@ -1,7 +1,11 @@
 import { z } from "zod"
 
 export const attachmentConfigSchema = z.object({
-  ATTACHMENT_MAX_UPLOAD_BYTES: z.coerce.number().int().positive().default(5242880),
+  ATTACHMENT_MAX_UPLOAD_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(5242880),
   ATTACHMENT_ACCESS_LOG_RETENTION_DAYS: z.coerce
     .number()
     .int()
@@ -28,17 +32,23 @@ export const attachmentConfigSchema = z.object({
     .positive()
     .default(2_147_483_648),
   // Uploads em voo, na instância — teto de memória/handles concorrentes.
-  ATTACHMENT_MAX_CONCURRENT_UPLOADS: z.coerce.number().int().positive().default(16),
+  ATTACHMENT_MAX_CONCURRENT_UPLOADS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(16),
 })
 
 export type AttachmentConfig = z.infer<typeof attachmentConfigSchema>
 export const ATTACHMENT_CONFIG: unique symbol = Symbol("ATTACHMENT_CONFIG")
 
-export function parseAttachmentConfig(source: NodeJS.ProcessEnv): AttachmentConfig {
+export function parseAttachmentConfig(
+  source: NodeJS.ProcessEnv
+): AttachmentConfig {
   const parsed = attachmentConfigSchema.safeParse(source)
   if (!parsed.success) {
     throw new Error(
-      `Configuração do módulo attachment inválida:\n${parsed.error.message}`,
+      `Configuração do módulo attachment inválida:\n${parsed.error.message}`
     )
   }
   return parsed.data

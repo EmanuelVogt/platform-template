@@ -63,15 +63,26 @@ export const linkableTagSchema = z.object({
   color: z.string().nullable(),
 })
 export const linkableTagsResponseSchema = z.array(linkableTagSchema)
-export class LinkableTagsResponseDto extends createZodDto(linkableTagsResponseSchema) {}
+export class LinkableTagsResponseDto extends createZodDto(
+  linkableTagsResponseSchema
+) {}
 
 export const tagIdsSchema = z.object({
-  tagIds: z.array(z.string().min(1)).min(1, "Informe ao menos uma tag.").max(100),
+  tagIds: z
+    .array(z.string().min(1))
+    .min(1, "Informe ao menos uma tag.")
+    .max(100),
 })
 export class TagIdsDto extends createZodDto(tagIdsSchema) {}
 
-export const restoreTagsResponseSchema = z.object({ restored: z.number().int() })
-export class RestoreTagsResponseDto extends createZodDto(restoreTagsResponseSchema) {}
+export const restoreTagsResponseSchema = z.object({
+  restored: z.number().int(),
+})
+export class RestoreTagsResponseDto extends createZodDto(
+  restoreTagsResponseSchema
+) {}
 
 export const purgeTagsResponseSchema = z.object({ purged: z.number().int() })
-export class PurgeTagsResponseDto extends createZodDto(purgeTagsResponseSchema) {}
+export class PurgeTagsResponseDto extends createZodDto(
+  purgeTagsResponseSchema
+) {}

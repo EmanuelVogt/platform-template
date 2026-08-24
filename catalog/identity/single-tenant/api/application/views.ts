@@ -1,5 +1,8 @@
 import type { AccessProfile } from "../domain/access/permission.types"
-import type { AuthEvent, AuthEventType } from "../domain/entities/auth-event.entity"
+import type {
+  AuthEvent,
+  AuthEventType,
+} from "../domain/entities/auth-event.entity"
 import type { User, UserStatus } from "../domain/entities/user.entity"
 import type { PermissionKey } from "../domain/permissions/permission-catalog"
 import type { DeviceWithActivity } from "../domain/ports/device.repository"
@@ -73,7 +76,9 @@ export function toUserListItemView(row: UserListRow): UserListItemView {
     avatarAttachmentId: props.avatarAttachmentId,
     createdAt: props.createdAt.toISOString(),
     status: props.status,
-    accessLinkExpiresAt: row.accessLinkExpiresAt ? row.accessLinkExpiresAt.toISOString() : null,
+    accessLinkExpiresAt: row.accessLinkExpiresAt
+      ? row.accessLinkExpiresAt.toISOString()
+      : null,
     accessLinkExpired: row.accessLinkExpired,
     deletedAt: props.deletedAt ? props.deletedAt.toISOString() : null,
   }
@@ -88,7 +93,9 @@ export type AccessHistoryItemView = {
 }
 
 /** LGPD: NUNCA expor emailHash/correlationId/traceId/metadata no histórico. */
-export function toAccessHistoryItemView(event: AuthEvent): AccessHistoryItemView {
+export function toAccessHistoryItemView(
+  event: AuthEvent
+): AccessHistoryItemView {
   const p = event.props
   return {
     id: p.id,
@@ -109,7 +116,10 @@ export type DeviceView = {
   current: boolean
 }
 
-export function toDeviceView(d: DeviceWithActivity, current: boolean): DeviceView {
+export function toDeviceView(
+  d: DeviceWithActivity,
+  current: boolean
+): DeviceView {
   return {
     id: d.id,
     ipAddress: d.ipAddress,

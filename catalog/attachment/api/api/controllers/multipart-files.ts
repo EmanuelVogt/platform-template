@@ -2,7 +2,10 @@ import { Inject, Injectable } from "@nestjs/common"
 import busboy from "busboy"
 
 import { InFlightGate } from "../../../../shared/kernel/collections/in-flight-gate"
-import { ATTACHMENT_CONFIG, type AttachmentConfig } from "../../attachment.config"
+import {
+  ATTACHMENT_CONFIG,
+  type AttachmentConfig,
+} from "../../attachment.config"
 import {
   InvalidMultipartRequestError,
   PayloadTooLargeError,
@@ -45,7 +48,10 @@ export interface MultipartLimits {
   readonly fieldSize?: number
 }
 
-function createParser(req: Request, limits: MultipartLimits): ReturnType<typeof busboy> {
+function createParser(
+  req: Request,
+  limits: MultipartLimits
+): ReturnType<typeof busboy> {
   try {
     return busboy({
       headers: req.headers,
@@ -79,7 +85,7 @@ export async function* readMultipartFiles(
   req: Request,
   res: Response,
   fieldName: string,
-  limits: MultipartLimits,
+  limits: MultipartLimits
 ): AsyncGenerator<IncomingFile> {
   const parser = createParser(req, limits)
   const queue: IncomingFile[] = []

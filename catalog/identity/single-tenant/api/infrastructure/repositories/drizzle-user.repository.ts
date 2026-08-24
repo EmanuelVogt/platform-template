@@ -102,9 +102,7 @@ export class DrizzleUserRepository implements UserRepository {
     const rows = await this.db
       .select({ id: users.id })
       .from(users)
-      .where(
-        and(eq(users.id, userId), eq(users.servesClients, true), visible)
-      )
+      .where(and(eq(users.id, userId), eq(users.servesClients, true), visible))
       .limit(1)
     return rows.length > 0
   }
@@ -354,7 +352,9 @@ export class DrizzleUserRepository implements UserRepository {
     userId: string,
     permissions: readonly PermissionKey[]
   ): Promise<void> {
-    await this.db.delete(userPermissions).where(eq(userPermissions.userId, userId))
+    await this.db
+      .delete(userPermissions)
+      .where(eq(userPermissions.userId, userId))
     if (permissions.length === 0) return
     await this.db
       .insert(userPermissions)
@@ -459,7 +459,10 @@ export class DrizzleUserRepository implements UserRepository {
 
   async findByIds(ids: string[]): Promise<User[]> {
     if (ids.length === 0) return []
-    const rows = await this.db.select().from(users).where(inArray(users.id, ids))
+    const rows = await this.db
+      .select()
+      .from(users)
+      .where(inArray(users.id, ids))
     return rows.map((row) => this.toEntity(row))
   }
 
@@ -479,11 +482,11 @@ export class DrizzleUserRepository implements UserRepository {
                   eq(verificationTokens.userId, users.id),
                   eq(verificationTokens.type, "email_change"),
                   isNull(verificationTokens.consumedAt),
-                  gt(verificationTokens.expiresAt, now),
-                ),
-              ),
-          ),
-        ),
+                  gt(verificationTokens.expiresAt, now)
+                )
+              )
+          )
+        )
       )
     return rows.map((row) => this.toEntity(row))
   }
@@ -728,7 +731,7 @@ export class DrizzleUserRepository implements UserRepository {
 
   /** Último token 'access_link' por user (mapa userId → {expiresAt, consumedAt}). */
   private async latestAccessLinkByUser(
-    userIds: string[],
+    userIds: string[]
   ): Promise<Map<string, { expiresAt: Date; consumedAt: Date | null }>> {
     const map = new Map<string, { expiresAt: Date; consumedAt: Date | null }>()
     if (userIds.length === 0) return map
@@ -742,14 +745,17 @@ export class DrizzleUserRepository implements UserRepository {
       .where(
         and(
           eq(verificationTokens.type, "access_link"),
-          inArray(verificationTokens.userId, userIds),
-        ),
+          inArray(verificationTokens.userId, userIds)
+        )
       )
       .orderBy(desc(verificationTokens.createdAt))
     // Primeiro por user (orderBy desc createdAt) é o mais recente.
     for (const row of rows) {
       if (!map.has(row.userId)) {
-        map.set(row.userId, { expiresAt: row.expiresAt, consumedAt: row.consumedAt })
+        map.set(row.userId, {
+          expiresAt: row.expiresAt,
+          consumedAt: row.consumedAt,
+        })
       }
     }
     return map

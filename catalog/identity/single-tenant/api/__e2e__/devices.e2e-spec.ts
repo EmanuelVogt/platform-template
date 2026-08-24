@@ -3,7 +3,11 @@ import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
-import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
+import {
+  createTestPool,
+  truncateIdentity,
+  truncateKernel,
+} from "../../../../test/setup/test-db"
 import { AppModule } from "../../../app.module"
 import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"

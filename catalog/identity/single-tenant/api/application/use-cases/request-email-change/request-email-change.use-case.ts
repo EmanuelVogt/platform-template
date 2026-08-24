@@ -54,9 +54,10 @@ import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/us
  * reativa a conta; a expiração do token reverte (maintenance job).
  */
 @UseCase()
-export class RequestEmailChangeUseCase
-  implements UseCaseContract<RequestEmailChangeInput, void>
-{
+export class RequestEmailChangeUseCase implements UseCaseContract<
+  RequestEmailChangeInput,
+  void
+> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(SESSION_REPOSITORY) private readonly sessions: SessionRepository,
@@ -69,7 +70,7 @@ export class RequestEmailChangeUseCase
     private readonly authEvents: AuthEventRepository,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly ctx: RequestContext,
-    @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig,
+    @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig
   ) {}
 
   @Traced({ name: "identity.requestEmailChange" })
@@ -86,7 +87,10 @@ export class RequestEmailChangeUseCase
     if (user.props.passwordHash === null) {
       throw new InvalidCredentialsError()
     }
-    const ok = await this.hasher.verify(input.currentPassword, user.props.passwordHash)
+    const ok = await this.hasher.verify(
+      input.currentPassword,
+      user.props.passwordHash
+    )
     if (!ok) {
       throw new InvalidCredentialsError()
     }
@@ -143,11 +147,14 @@ export class RequestEmailChangeUseCase
       throw new InvalidCredentialsError()
     }
     await this.users.update(user.requestEmailChange(newEmail, now))
-    await this.verificationTokens.invalidateAllForUser(user.props.id, "email_change")
+    await this.verificationTokens.invalidateAllForUser(
+      user.props.id,
+      "email_change"
+    )
 
     const { raw, hash } = this.tokens.generate()
     const expiresAt = new Date(
-      now.getTime() + this.config.EMAIL_CHANGE_TOKEN_TTL_SECONDS * 1000,
+      now.getTime() + this.config.EMAIL_CHANGE_TOKEN_TTL_SECONDS * 1000
     )
     await this.verificationTokens.create(
       VerificationToken.create({
@@ -155,7 +162,7 @@ export class RequestEmailChangeUseCase
         tokenHash: hash,
         type: "email_change",
         expiresAt,
-      }),
+      })
     )
 
     // Desloga de todos os dispositivos: conta inativa até reativar.
@@ -167,8 +174,12 @@ export class RequestEmailChangeUseCase
         recipientId: user.props.id,
         type: "email_change_requested",
         locale: this.ctx.get().locale,
-        data: { email: newEmail, link, tokenExpiresAt: expiresAt.toISOString() },
-      }),
+        data: {
+          email: newEmail,
+          link,
+          tokenExpiresAt: expiresAt.toISOString(),
+        },
+      })
     )
     await this.outbox.publish(
       NotificationRequested.from({
@@ -176,13 +187,13 @@ export class RequestEmailChangeUseCase
         type: "email_change_notice",
         locale: this.ctx.get().locale,
         data: { email: user.props.email, at: now.toISOString() },
-      }),
+      })
     )
     await this.authEvents.recordInTx(
       authEventOf(this.ctx.get(), {
         userId: user.props.id,
         eventType: "email_change_requested",
-      }),
+      })
     )
   }
 }

@@ -4,7 +4,11 @@ import request from "supertest"
 import { ulid } from "ulid"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
-import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
+import {
+  createTestPool,
+  truncateIdentity,
+  truncateKernel,
+} from "../../../../test/setup/test-db"
 import { AppModule } from "../../../app.module"
 import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
@@ -32,14 +36,20 @@ type Lifecycle = {
 async function seedNotification(
   pool: Pool,
   recipientId: string,
-  over: Lifecycle = {},
+  over: Lifecycle = {}
 ): Promise<string> {
   const id = ulid()
   await pool.query(
     `insert into notification.notifications
        (id, recipient_id, type, title, body, actions, metadata, locale, seen_at, read_at, archived_at)
      values ($1, $2, 'password_changed', 't', 'b', '[]', '{"at":"2026-06-10T00:00:00.000Z"}', 'pt-BR', $3, $4, $5)`,
-    [id, recipientId, over.seenAt ?? null, over.readAt ?? null, over.archivedAt ?? null],
+    [
+      id,
+      recipientId,
+      over.seenAt ?? null,
+      over.readAt ?? null,
+      over.archivedAt ?? null,
+    ]
   )
   return id
 }
@@ -56,7 +66,7 @@ describe("feed de notificações (e2e)", () => {
     await truncateIdentity(pool)
     await truncateKernel(pool)
     await pool.query(
-      "truncate table notification.notifications, notification.notification_deliveries",
+      "truncate table notification.notifications, notification.notification_deliveries"
     )
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
@@ -99,7 +109,7 @@ describe("feed de notificações (e2e)", () => {
       await app.get(OutboxDispatcher).poll()
       const r = await pool.query<{ n: number }>(
         "select count(*)::int as n from notification.notifications where recipient_id = $1 and type = 'device_new_login'",
-        [userA],
+        [userA]
       )
       if ((r.rows[0]?.n ?? 0) >= 1) {
         break
@@ -121,9 +131,15 @@ describe("feed de notificações (e2e)", () => {
   })
 
   const get = (path: string) =>
-    request(app.getHttpServer()).get(path).set("Origin", ORIGIN).set("Cookie", cookie)
+    request(app.getHttpServer())
+      .get(path)
+      .set("Origin", ORIGIN)
+      .set("Cookie", cookie)
   const post = (path: string) =>
-    request(app.getHttpServer()).post(path).set("Origin", ORIGIN).set("Cookie", cookie)
+    request(app.getHttpServer())
+      .post(path)
+      .set("Origin", ORIGIN)
+      .set("Cookie", cookie)
 
   it("GET /v1/notifications lista só as do user logado, inbox por default", async () => {
     await seedNotification(pool, userA)
@@ -137,23 +153,41 @@ describe("feed de notificações (e2e)", () => {
 
   it("GET /v1/notifications?filter aplica a semântica da spec", async () => {
     await seedNotification(pool, userA)
-    await seedNotification(pool, userA, { readAt: "2026-06-10T01:00:00.000Z", seenAt: "2026-06-10T01:00:00.000Z" })
-    await seedNotification(pool, userA, { archivedAt: "2026-06-10T02:00:00.000Z" })
+    await seedNotification(pool, userA, {
+      readAt: "2026-06-10T01:00:00.000Z",
+      seenAt: "2026-06-10T01:00:00.000Z",
+    })
+    await seedNotification(pool, userA, {
+      archivedAt: "2026-06-10T02:00:00.000Z",
+    })
 
     expect((await get("/v1/notifications").expect(200)).body.page.total).toBe(2)
-    expect((await get("/v1/notifications?filter=unread").expect(200)).body.page.total).toBe(1)
-    expect((await get("/v1/notifications?filter=read").expect(200)).body.page.total).toBe(1)
-    expect((await get("/v1/notifications?filter=archived").expect(200)).body.page.total).toBe(1)
-    expect((await get("/v1/notifications?filter=all").expect(200)).body.page.total).toBe(3)
+    expect(
+      (await get("/v1/notifications?filter=unread").expect(200)).body.page.total
+    ).toBe(1)
+    expect(
+      (await get("/v1/notifications?filter=read").expect(200)).body.page.total
+    ).toBe(1)
+    expect(
+      (await get("/v1/notifications?filter=archived").expect(200)).body.page
+        .total
+    ).toBe(1)
+    expect(
+      (await get("/v1/notifications?filter=all").expect(200)).body.page.total
+    ).toBe(3)
   })
 
   it("GET /v1/notifications/unseen-count reflete o badge; POST /seen zera", async () => {
     await seedNotification(pool, userA)
     await seedNotification(pool, userA)
 
-    expect((await get("/v1/notifications/unseen-count").expect(200)).body.count).toBe(2)
+    expect(
+      (await get("/v1/notifications/unseen-count").expect(200)).body.count
+    ).toBe(2)
     await post("/v1/notifications/seen").expect(204)
-    expect((await get("/v1/notifications/unseen-count").expect(200)).body.count).toBe(0)
+    expect(
+      (await get("/v1/notifications/unseen-count").expect(200)).body.count
+    ).toBe(0)
   })
 
   it("POST /read-all marca todas lidas (e vistas) só do user logado", async () => {
@@ -162,13 +196,19 @@ describe("feed de notificações (e2e)", () => {
     const idB = await seedNotification(pool, userB)
 
     await post("/v1/notifications/read-all").expect(204)
-    expect((await get("/v1/notifications?filter=read").expect(200)).body.page.total).toBe(2)
-    expect((await get("/v1/notifications?filter=unread").expect(200)).body.page.total).toBe(0)
-    expect((await get("/v1/notifications/unseen-count").expect(200)).body.count).toBe(0)
+    expect(
+      (await get("/v1/notifications?filter=read").expect(200)).body.page.total
+    ).toBe(2)
+    expect(
+      (await get("/v1/notifications?filter=unread").expect(200)).body.page.total
+    ).toBe(0)
+    expect(
+      (await get("/v1/notifications/unseen-count").expect(200)).body.count
+    ).toBe(0)
 
     const b = await pool.query<{ read_at: Date | null }>(
       "select read_at from notification.notifications where id = $1",
-      [idB],
+      [idB]
     )
     expect(b.rows[0]?.read_at).toBeNull()
   })
@@ -180,7 +220,7 @@ describe("feed de notificações (e2e)", () => {
     await post(`/v1/notifications/${idA}/read`).expect(204)
     const a = await pool.query<{ read_at: Date | null; seen_at: Date | null }>(
       "select read_at, seen_at from notification.notifications where id = $1",
-      [idA],
+      [idA]
     )
     expect(a.rows[0]?.read_at).not.toBeNull()
     expect(a.rows[0]?.seen_at).not.toBeNull()
@@ -188,7 +228,7 @@ describe("feed de notificações (e2e)", () => {
     await post(`/v1/notifications/${idB}/read`).expect(204)
     const b = await pool.query<{ read_at: Date | null }>(
       "select read_at from notification.notifications where id = $1",
-      [idB],
+      [idB]
     )
     expect(b.rows[0]?.read_at).toBeNull()
   })
@@ -198,7 +238,10 @@ describe("feed de notificações (e2e)", () => {
 
     await post(`/v1/notifications/${id}/archive`).expect(204)
     expect((await get("/v1/notifications").expect(200)).body.page.total).toBe(0)
-    expect((await get("/v1/notifications?filter=archived").expect(200)).body.page.total).toBe(1)
+    expect(
+      (await get("/v1/notifications?filter=archived").expect(200)).body.page
+        .total
+    ).toBe(1)
   })
 
   it("sem sessão → 401 problem+json", async () => {

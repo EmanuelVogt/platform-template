@@ -8,9 +8,7 @@ import { ResendVerificationUseCase } from "../../../application/use-cases/resend
 @ApiTags("Session")
 @Controller("auth")
 export class ResendVerificationController {
-  constructor(
-    private readonly resendVerification: ResendVerificationUseCase,
-  ) {}
+  constructor(private readonly resendVerification: ResendVerificationUseCase) {}
 
   @ApiOperation({ operationId: "resendVerification" })
   @SelfService()

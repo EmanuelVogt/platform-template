@@ -23,7 +23,9 @@ const DEFAULT_MASTER_NAME = "Platform Admin"
 function requireEnv(name: string): string {
   const value = process.env[name]
   if (value === undefined || value.trim() === "") {
-    throw new Error(`${name} ausente: bootstrap-master exige a credencial via env`)
+    throw new Error(
+      `${name} ausente: bootstrap-master exige a credencial via env`
+    )
   }
   return value
 }
@@ -82,10 +84,14 @@ async function main(): Promise<void> {
       .returning({ id: users.id })
 
     if (inserted.length === 0) {
-      process.stdout.write(`[bootstrap-master] ${email} já existe — nada a fazer\n`)
+      process.stdout.write(
+        `[bootstrap-master] ${email} já existe — nada a fazer\n`
+      )
       return
     }
-    process.stdout.write(`[bootstrap-master] criado ${email} (access_profile=master)\n`)
+    process.stdout.write(
+      `[bootstrap-master] criado ${email} (access_profile=master)\n`
+    )
   } finally {
     await pool.end()
   }
@@ -93,7 +99,7 @@ async function main(): Promise<void> {
 
 void main().catch((err: unknown) => {
   process.stderr.write(
-    `[bootstrap-master] falhou: ${err instanceof Error ? err.message : String(err)}\n`,
+    `[bootstrap-master] falhou: ${err instanceof Error ? err.message : String(err)}\n`
   )
   process.exitCode = 1
 })

@@ -20,9 +20,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Admin"
-        ]
+        "tags": ["Admin"]
       },
       "get": {
         "operationId": "getPermissionTemplate",
@@ -49,9 +47,7 @@
             }
           }
         },
-        "tags": [
-          "Admin"
-        ]
+        "tags": ["Admin"]
       },
       "put": {
         "operationId": "updatePermissionTemplate",
@@ -98,9 +94,7 @@
             }
           }
         },
-        "tags": [
-          "Admin"
-        ]
+        "tags": ["Admin"]
       }
     },
     "/v1/admin/users/{id}": {
@@ -121,9 +115,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Admin"
-        ]
+        "tags": ["Admin"]
       },
       "put": {
         "operationId": "updateUser",
@@ -163,9 +155,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Admin"
-        ]
+        "tags": ["Admin"]
       }
     },
     "/v1/auth/devices": {
@@ -177,9 +167,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Device"
-        ]
+        "tags": ["Device"]
       },
       "get": {
         "operationId": "listDevices",
@@ -196,9 +184,7 @@
             }
           }
         },
-        "tags": [
-          "Device"
-        ]
+        "tags": ["Device"]
       }
     },
     "/v1/auth/devices/{id}": {
@@ -219,9 +205,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Device"
-        ]
+        "tags": ["Device"]
       }
     },
     "/v1/access-catalog": {
@@ -240,9 +224,7 @@
             }
           }
         },
-        "tags": [
-          "Access"
-        ]
+        "tags": ["Access"]
       }
     },
     "/v1/admin/permission-templates": {
@@ -261,9 +243,7 @@
             }
           }
         },
-        "tags": [
-          "Admin"
-        ]
+        "tags": ["Admin"]
       },
       "post": {
         "operationId": "createPermissionTemplate",
@@ -301,9 +281,7 @@
             }
           }
         },
-        "tags": [
-          "Admin"
-        ]
+        "tags": ["Admin"]
       }
     },
     "/v1/admin/users": {
@@ -347,10 +325,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
+              "enum": ["asc", "desc"]
             }
           },
           {
@@ -359,12 +334,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "name",
-                "email",
-                "createdAt",
-                "deletedAt"
-              ]
+              "enum": ["name", "email", "createdAt", "deletedAt"]
             }
           },
           {
@@ -373,10 +343,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
+              "enum": ["true", "false"]
             }
           },
           {
@@ -385,10 +352,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "active"
-              ]
+              "enum": ["pending", "active"]
             }
           },
           {
@@ -397,10 +361,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
+              "enum": ["true", "false"]
             }
           }
         ],
@@ -416,9 +377,7 @@
             }
           }
         },
-        "tags": [
-          "Admin"
-        ]
+        "tags": ["Admin"]
       },
       "post": {
         "operationId": "createUser",
@@ -449,9 +408,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Admin"
-        ]
+        "tags": ["Admin"]
       }
     },
     "/v1/auth/access-history": {
@@ -486,10 +443,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
+              "enum": ["asc", "desc"]
             }
           }
         ],
@@ -505,9 +459,7 @@
             }
           }
         },
-        "tags": [
-          "Session"
-        ]
+        "tags": ["Session"]
       }
     },
     "/v1/auth/access-link": {
@@ -536,9 +488,7 @@
             }
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": []
       }
     },
@@ -568,9 +518,7 @@
             }
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": []
       }
     },
@@ -590,9 +538,7 @@
             }
           }
         },
-        "tags": [
-          "Session"
-        ]
+        "tags": ["Session"]
       }
     },
     "/v1/auth/profile": {
@@ -614,9 +560,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Session"
-        ]
+        "tags": ["Session"]
       }
     },
     "/v1/admin/users/purge": {
@@ -645,9 +589,7 @@
             }
           }
         },
-        "tags": [
-          "Admin"
-        ]
+        "tags": ["Admin"]
       }
     },
     "/v1/admin/users/restore": {
@@ -676,9 +618,7 @@
             }
           }
         },
-        "tags": [
-          "Admin"
-        ]
+        "tags": ["Admin"]
       }
     },
     "/v1/admin/users/{id}/resend-access-link": {
@@ -699,9 +639,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Admin"
-        ]
+        "tags": ["Admin"]
       }
     },
     "/v1/auth/access-link/avatar": {
@@ -723,10 +661,7 @@
                     "type": "string"
                   }
                 },
-                "required": [
-                  "file",
-                  "token"
-                ]
+                "required": ["file", "token"]
               }
             }
           }
@@ -743,9 +678,7 @@
             }
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": []
       }
     },
@@ -768,9 +701,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": []
       }
     },
@@ -790,9 +721,7 @@
                     "format": "binary"
                   }
                 },
-                "required": [
-                  "file"
-                ]
+                "required": ["file"]
               }
             }
           }
@@ -809,9 +738,7 @@
             }
           }
         },
-        "tags": [
-          "Session"
-        ]
+        "tags": ["Session"]
       }
     },
     "/v1/auth/change-email": {
@@ -833,9 +760,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Session"
-        ]
+        "tags": ["Session"]
       }
     },
     "/v1/auth/change-password": {
@@ -857,9 +782,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Session"
-        ]
+        "tags": ["Session"]
       }
     },
     "/v1/auth/confirm-email-change": {
@@ -888,9 +811,7 @@
             }
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": []
       }
     },
@@ -924,9 +845,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": []
       }
     },
@@ -956,9 +875,7 @@
             }
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": []
       }
     },
@@ -971,9 +888,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Session"
-        ]
+        "tags": ["Session"]
       }
     },
     "/v1/auth/resend-verification": {
@@ -985,9 +900,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Session"
-        ]
+        "tags": ["Session"]
       }
     },
     "/v1/auth/reset-password": {
@@ -1020,9 +933,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": []
       }
     },
@@ -1052,9 +963,7 @@
             }
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": []
       }
     },
@@ -1077,9 +986,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "security": []
       }
     }
@@ -1181,27 +1088,15 @@
                               }
                             }
                           },
-                          "required": [
-                            "key",
-                            "label",
-                            "requires"
-                          ]
+                          "required": ["key", "label", "requires"]
                         }
                       }
                     },
-                    "required": [
-                      "key",
-                      "label",
-                      "permissions"
-                    ]
+                    "required": ["key", "label", "permissions"]
                   }
                 }
               },
-              "required": [
-                "key",
-                "label",
-                "features"
-              ]
+              "required": ["key", "label", "features"]
             }
           },
           "profiles": {
@@ -1219,18 +1114,11 @@
                   "type": "boolean"
                 }
               },
-              "required": [
-                "key",
-                "label",
-                "assignable"
-              ]
+              "required": ["key", "label", "assignable"]
             }
           }
         },
-        "required": [
-          "modules",
-          "profiles"
-        ]
+        "required": ["modules", "profiles"]
       },
       "AccessHistoryListResponseDto": {
         "type": "object",
@@ -1306,18 +1194,10 @@
                 "maximum": 9007199254740991
               }
             },
-            "required": [
-              "total",
-              "page",
-              "pageSize",
-              "totalPages"
-            ]
+            "required": ["total", "page", "pageSize", "totalPages"]
           }
         },
-        "required": [
-          "data",
-          "page"
-        ]
+        "required": ["data", "page"]
       },
       "AccessLinkAvatarUploadResponseDto": {
         "type": "object",
@@ -1326,9 +1206,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "attachmentId"
-        ]
+        "required": ["attachmentId"]
       },
       "AccessLinkInfoDto": {
         "type": "object",
@@ -1344,11 +1222,7 @@
             "nullable": true
           }
         },
-        "required": [
-          "name",
-          "email",
-          "avatarAttachmentId"
-        ]
+        "required": ["name", "email", "avatarAttachmentId"]
       },
       "AvatarUploadResponseDto": {
         "type": "object",
@@ -1357,9 +1231,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "avatarAttachmentId"
-        ]
+        "required": ["avatarAttachmentId"]
       },
       "CancelAccessLinkDto": {
         "type": "object",
@@ -1369,9 +1241,7 @@
             "minLength": 1
           }
         },
-        "required": [
-          "token"
-        ]
+        "required": ["token"]
       },
       "ChangeEmailDto": {
         "type": "object",
@@ -1385,10 +1255,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "currentPassword",
-          "newEmail"
-        ]
+        "required": ["currentPassword", "newEmail"]
       },
       "ChangePasswordDto": {
         "type": "object",
@@ -1404,10 +1271,7 @@
             "maxLength": 256
           }
         },
-        "required": [
-          "currentPassword",
-          "newPassword"
-        ]
+        "required": ["currentPassword", "newPassword"]
       },
       "ConfirmEmailChangeDto": {
         "type": "object",
@@ -1417,9 +1281,7 @@
             "minLength": 1
           }
         },
-        "required": [
-          "token"
-        ]
+        "required": ["token"]
       },
       "CreateUserDto": {
         "type": "object",
@@ -1433,10 +1295,7 @@
           },
           "accessProfile": {
             "type": "string",
-            "enum": [
-              "admin",
-              "professional"
-            ]
+            "enum": ["admin", "professional"]
           },
           "servesClients": {
             "default": false,
@@ -1503,12 +1362,7 @@
             }
           }
         },
-        "required": [
-          "name",
-          "email",
-          "accessProfile",
-          "permissions"
-        ]
+        "required": ["name", "email", "accessProfile", "permissions"]
       },
       "CurrentUserResponseDto": {
         "type": "object",
@@ -1534,11 +1388,7 @@
               },
               "accessProfile": {
                 "type": "string",
-                "enum": [
-                  "master",
-                  "admin",
-                  "professional"
-                ]
+                "enum": ["master", "admin", "professional"]
               },
               "permissions": {
                 "maxItems": 24,
@@ -1595,9 +1445,7 @@
             ]
           }
         },
-        "required": [
-          "user"
-        ]
+        "required": ["user"]
       },
       "DeviceListResponseDto": {
         "type": "object",
@@ -1645,9 +1493,7 @@
             }
           }
         },
-        "required": [
-          "devices"
-        ]
+        "required": ["devices"]
       },
       "EmailChangeInfoDto": {
         "type": "object",
@@ -1656,9 +1502,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "newEmail"
-        ]
+        "required": ["newEmail"]
       },
       "ForgotPasswordDto": {
         "type": "object",
@@ -1667,9 +1511,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "email"
-        ]
+        "required": ["email"]
       },
       "ListPermissionTemplatesResponseDto": {
         "type": "object",
@@ -1740,9 +1582,7 @@
             }
           }
         },
-        "required": [
-          "templates"
-        ]
+        "required": ["templates"]
       },
       "ListUsersResponseDto": {
         "type": "object",
@@ -1766,11 +1606,7 @@
                 },
                 "accessProfile": {
                   "type": "string",
-                  "enum": [
-                    "master",
-                    "admin",
-                    "professional"
-                  ]
+                  "enum": ["master", "admin", "professional"]
                 },
                 "servesClients": {
                   "type": "boolean"
@@ -1835,10 +1671,7 @@
                 },
                 "status": {
                   "type": "string",
-                  "enum": [
-                    "pending",
-                    "active"
-                  ]
+                  "enum": ["pending", "active"]
                 },
                 "accessLinkExpiresAt": {
                   "type": "string",
@@ -1896,18 +1729,10 @@
                 "maximum": 9007199254740991
               }
             },
-            "required": [
-              "total",
-              "page",
-              "pageSize",
-              "totalPages"
-            ]
+            "required": ["total", "page", "pageSize", "totalPages"]
           }
         },
-        "required": [
-          "data",
-          "page"
-        ]
+        "required": ["data", "page"]
       },
       "LoginDto": {
         "type": "object",
@@ -1925,10 +1750,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "email",
-          "password"
-        ]
+        "required": ["email", "password"]
       },
       "PermissionTemplateBodyDto": {
         "type": "object",
@@ -1978,10 +1800,7 @@
             }
           }
         },
-        "required": [
-          "name",
-          "permissions"
-        ]
+        "required": ["name", "permissions"]
       },
       "PermissionTemplateResponseDto": {
         "type": "object",
@@ -2049,9 +1868,7 @@
             ]
           }
         },
-        "required": [
-          "template"
-        ]
+        "required": ["template"]
       },
       "PurgeUsersResponseDto": {
         "type": "object",
@@ -2062,9 +1879,7 @@
             "maximum": 9007199254740991
           }
         },
-        "required": [
-          "purged"
-        ]
+        "required": ["purged"]
       },
       "ResetPasswordDto": {
         "type": "object",
@@ -2079,10 +1894,7 @@
             "maxLength": 256
           }
         },
-        "required": [
-          "token",
-          "password"
-        ]
+        "required": ["token", "password"]
       },
       "RestoreUsersResponseDto": {
         "type": "object",
@@ -2093,9 +1905,7 @@
             "maximum": 9007199254740991
           }
         },
-        "required": [
-          "restored"
-        ]
+        "required": ["restored"]
       },
       "SetPasswordDto": {
         "type": "object",
@@ -2121,12 +1931,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "token",
-          "password",
-          "name",
-          "birthDate"
-        ]
+        "required": ["token", "password", "name", "birthDate"]
       },
       "TrashUserIdsDto": {
         "type": "object",
@@ -2141,9 +1946,7 @@
             }
           }
         },
-        "required": [
-          "userIds"
-        ]
+        "required": ["userIds"]
       },
       "UpdateMyProfileDto": {
         "type": "object",
@@ -2157,9 +1960,7 @@
             "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
           }
         },
-        "required": [
-          "name"
-        ]
+        "required": ["name"]
       },
       "UpdateUserDto": {
         "type": "object",
@@ -2170,10 +1971,7 @@
           },
           "accessProfile": {
             "type": "string",
-            "enum": [
-              "admin",
-              "professional"
-            ]
+            "enum": ["admin", "professional"]
           },
           "servesClients": {
             "default": false,
@@ -2240,11 +2038,7 @@
             }
           }
         },
-        "required": [
-          "name",
-          "accessProfile",
-          "permissions"
-        ]
+        "required": ["name", "accessProfile", "permissions"]
       },
       "VerifyEmailDto": {
         "type": "object",
@@ -2254,9 +2048,7 @@
             "minLength": 1
           }
         },
-        "required": [
-          "token"
-        ]
+        "required": ["token"]
       }
     }
   }

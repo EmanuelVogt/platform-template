@@ -35,7 +35,11 @@ describe("CreatePermissionTemplateUseCase", () => {
 
   it("nome em uso → 409", async () => {
     const existing = PermissionTemplate.create(
-      { name: "Recepção", description: null, permissions: ["admin.users.read"] },
+      {
+        name: "Recepção",
+        description: null,
+        permissions: ["admin.users.read"],
+      },
       NOW
     )
     const { uc, templates } = makeDeps({

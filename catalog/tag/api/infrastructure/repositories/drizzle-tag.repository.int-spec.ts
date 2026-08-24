@@ -73,7 +73,10 @@ describe("DrizzleTagRepository (int)", () => {
     await repo.insert(trashed)
     await repo.save(trashed.stash(NOW))
 
-    const described = await repo.describeByIds([live.props.id, trashed.props.id])
+    const described = await repo.describeByIds([
+      live.props.id,
+      trashed.props.id,
+    ])
     expect(described.get(live.props.id)).toEqual({
       id: live.props.id,
       name: "Viva",

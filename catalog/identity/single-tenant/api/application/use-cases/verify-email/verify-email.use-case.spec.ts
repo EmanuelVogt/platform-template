@@ -6,7 +6,6 @@ import { fakeRequestContext } from "../../request-context.fixture"
 
 import { VerifyEmailUseCase } from "./verify-email.use-case"
 
-
 const NOW = new Date("2026-05-30T00:00:00.000Z")
 
 function makeUser(over: Partial<UserProps> = {}): User {
@@ -51,7 +50,9 @@ function makeDeps(over: Record<string, any> = {}) {
     recordInTx: vi.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => NOW }
-  const ctx = over.ctx ?? fakeRequestContext(() => ({
+  const ctx =
+    over.ctx ??
+    fakeRequestContext(() => ({
       ip: null,
       userAgent: null,
       correlationId: "c1",
@@ -65,11 +66,10 @@ function makeDeps(over: Record<string, any> = {}) {
     tokens,
     authEvents,
     clock,
-    ctx,
+    ctx
   )
   return { uc, verificationTokens, users, tokens, authEvents, clock, ctx }
 }
-
 
 describe("VerifyEmailUseCase", () => {
   it("token inválido (consume retorna null) lança e NÃO atualiza o usuário", async () => {
@@ -77,7 +77,7 @@ describe("VerifyEmailUseCase", () => {
       verificationTokens: { consumeByHash: vi.fn().mockResolvedValue(null) },
     })
     await expect(t.uc.execute({ token: "tok" })).rejects.toBeInstanceOf(
-      InvalidResetTokenError,
+      InvalidResetTokenError
     )
     expect(t.users.update).not.toHaveBeenCalled()
   })
@@ -87,7 +87,7 @@ describe("VerifyEmailUseCase", () => {
       users: { findById: vi.fn().mockResolvedValue(null), update: vi.fn() },
     })
     await expect(t.uc.execute({ token: "tok" })).rejects.toBeInstanceOf(
-      InvalidResetTokenError,
+      InvalidResetTokenError
     )
     expect(t.users.update).not.toHaveBeenCalled()
   })
@@ -99,13 +99,13 @@ describe("VerifyEmailUseCase", () => {
     expect(t.verificationTokens.consumeByHash).toHaveBeenCalledWith(
       "hash-of-raw",
       "email_verify",
-      expect.any(Date),
+      expect.any(Date)
     )
     expect(t.users.update).toHaveBeenCalledTimes(1)
     expect(t.authEvents.recordInTx).toHaveBeenCalledWith(
       expect.objectContaining({
         props: expect.objectContaining({ eventType: "email_verified" }),
-      }),
+      })
     )
   })
 
@@ -116,7 +116,7 @@ describe("VerifyEmailUseCase", () => {
       authEvents,
     })
     await expect(t.uc.execute({ token: "tok" })).rejects.toBeInstanceOf(
-      InvalidResetTokenError,
+      InvalidResetTokenError
     )
     expect(authEvents.recordInTx).not.toHaveBeenCalled()
   })

@@ -37,7 +37,7 @@ const allowAll = {
 // 1x1 PNG válido (assinatura 0x89 'PNG').
 const PNG_1PX = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
-  "base64",
+  "base64"
 )
 
 /**
@@ -66,7 +66,11 @@ function makeInMemoryStorage(): {
       return Promise.resolve(
         o === undefined
           ? null
-          : { contentType: o.contentType, sizeBytes: o.body.byteLength, etag: "" },
+          : {
+              contentType: o.contentType,
+              sizeBytes: o.body.byteLength,
+              etag: "",
+            }
       )
     },
     delete: (key) => {
@@ -85,7 +89,10 @@ function makeInMemoryStorage(): {
 }
 
 /** Storage cujo `getStream` recusa passar de `maxSockets` chamadas simultâneas. */
-function makeSocketLimitedStorage(base: ObjectStoragePort, maxSockets: number): ObjectStoragePort {
+function makeSocketLimitedStorage(
+  base: ObjectStoragePort,
+  maxSockets: number
+): ObjectStoragePort {
   const originalGetStream = base.getStream.bind(base)
   let inFlight = 0
   return {
@@ -112,7 +119,7 @@ async function seedAttachment(
     profile?: string
     originalFilename?: string
     contentType?: string
-  },
+  }
 ): Promise<string> {
   const id = ulid()
   const storageKey = `e2e/${id}.png`
@@ -124,11 +131,19 @@ async function seedAttachment(
     `insert into attachment.attachments
        (id, storage_key, content_type, size_bytes, checksum, original_filename, owner_user_id, status, profile)
      values ($1, $2, $3, $4, 'checksum-e2e', $5, $6, 'ready', $7)`,
-    [id, storageKey, contentType, PNG_1PX.byteLength, originalFilename, opts.ownerUserId, profile],
+    [
+      id,
+      storageKey,
+      contentType,
+      PNG_1PX.byteLength,
+      originalFilename,
+      opts.ownerUserId,
+      profile,
+    ]
   )
   await pool.query(
     "insert into attachment.attachment_acls (attachment_id, visibility) values ($1, $2)",
-    [id, opts.visibility],
+    [id, opts.visibility]
   )
   return id
 }
@@ -153,7 +168,6 @@ describe("Attachment (e2e): download com ACL", () => {
     await truncateIdentity(pool)
     await truncateKernel(pool)
     await truncateAttachment(pool)
-
     ;({ storage, getStreamCallCount } = makeInMemoryStorage())
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(RATE_LIMITER)
@@ -182,7 +196,10 @@ describe("Attachment (e2e): download com ACL", () => {
     const loginRes = await request(app.getHttpServer())
       .post("/v1/auth/login")
       .set("Origin", ORIGIN)
-      .send({ email: "att-dl@example.com", password: "Senha-Att-Muito-Forte-2026!" })
+      .send({
+        email: "att-dl@example.com",
+        password: "Senha-Att-Muito-Forte-2026!",
+      })
       .expect(200)
     const cookie = loginRes.headers["set-cookie"]
 
@@ -204,7 +221,7 @@ describe("Attachment (e2e): download com ACL", () => {
 
     const { rows } = await pool.query<{ action: string; outcome: string }>(
       "SELECT action, outcome FROM attachment.attachment_access_logs WHERE attachment_id = $1",
-      [attachmentId],
+      [attachmentId]
     )
     const outcomes = rows.map((r) => `${r.action}/${r.outcome}`)
     expect(outcomes).toContain("download/allowed")
@@ -225,12 +242,18 @@ describe("Attachment (e2e): download com ACL", () => {
     const ownerLogin = await request(app.getHttpServer())
       .post("/v1/auth/login")
       .set("Origin", ORIGIN)
-      .send({ email: "att-owner@example.com", password: "Senha-Att-Muito-Forte-2026!" })
+      .send({
+        email: "att-owner@example.com",
+        password: "Senha-Att-Muito-Forte-2026!",
+      })
       .expect(200)
     const otherLogin = await request(app.getHttpServer())
       .post("/v1/auth/login")
       .set("Origin", ORIGIN)
-      .send({ email: "att-other@example.com", password: "Senha-Att-Muito-Forte-2026!" })
+      .send({
+        email: "att-other@example.com",
+        password: "Senha-Att-Muito-Forte-2026!",
+      })
       .expect(200)
 
     const attachmentId = await seedAttachment(pool, storage, {
@@ -257,7 +280,10 @@ describe("Attachment (e2e): download com ACL", () => {
     const loginRes = await request(app.getHttpServer())
       .post("/v1/auth/login")
       .set("Origin", ORIGIN)
-      .send({ email: "att-force-dl@example.com", password: "Senha-Att-Muito-Forte-2026!" })
+      .send({
+        email: "att-force-dl@example.com",
+        password: "Senha-Att-Muito-Forte-2026!",
+      })
       .expect(200)
     const cookies = loginRes.headers["set-cookie"]
 
@@ -275,7 +301,7 @@ describe("Attachment (e2e): download com ACL", () => {
 
     expect(res.headers["content-type"]).toBe("application/octet-stream")
     expect(res.headers["content-disposition"]).toBe(
-      `attachment; filename="log.txt"; filename*=UTF-8''log.txt`,
+      `attachment; filename="log.txt"; filename*=UTF-8''log.txt`
     )
     expect(res.headers["x-content-type-options"]).toBe("nosniff")
     expect(res.headers["cache-control"]).toBe("private, max-age=300")
@@ -290,7 +316,10 @@ describe("Attachment (e2e): download com ACL", () => {
     const loginRes = await request(app.getHttpServer())
       .post("/v1/auth/login")
       .set("Origin", ORIGIN)
-      .send({ email: "att-unknown-profile@example.com", password: "Senha-Att-Muito-Forte-2026!" })
+      .send({
+        email: "att-unknown-profile@example.com",
+        password: "Senha-Att-Muito-Forte-2026!",
+      })
       .expect(200)
     const cookies = loginRes.headers["set-cookie"]
 
@@ -320,7 +349,10 @@ describe("Attachment (e2e): download com ACL", () => {
     const loginRes = await request(app.getHttpServer())
       .post("/v1/auth/login")
       .set("Origin", ORIGIN)
-      .send({ email: "att-legacy-inline@example.com", password: "Senha-Att-Muito-Forte-2026!" })
+      .send({
+        email: "att-legacy-inline@example.com",
+        password: "Senha-Att-Muito-Forte-2026!",
+      })
       .expect(200)
     const cookies = loginRes.headers["set-cookie"]
 
@@ -349,7 +381,10 @@ describe("Attachment (e2e): download com ACL", () => {
     const loginRes = await request(app.getHttpServer())
       .post("/v1/auth/login")
       .set("Origin", ORIGIN)
-      .send({ email: "att-avatar-inline@example.com", password: "Senha-Att-Muito-Forte-2026!" })
+      .send({
+        email: "att-avatar-inline@example.com",
+        password: "Senha-Att-Muito-Forte-2026!",
+      })
       .expect(200)
     const cookies = loginRes.headers["set-cookie"]
 
@@ -368,7 +403,7 @@ describe("Attachment (e2e): download com ACL", () => {
     expect(res.headers["content-disposition"]).toBeUndefined()
     expect(res.headers["x-content-type-options"]).toBe("nosniff")
     expect(res.headers["cache-control"]).toBe(
-      "private, max-age=86400, immutable",
+      "private, max-age=86400, immutable"
     )
   })
 
@@ -398,12 +433,12 @@ describe("Attachment (e2e): download com ACL", () => {
     const simultaneos = 3 * loadEnv().DATABASE_POOL_MAX
     const responses = await Promise.all(
       Array.from({ length: simultaneos }, () =>
-        request(server).get(`/v1/attachments/${id}`),
-      ),
+        request(server).get(`/v1/attachments/${id}`)
+      )
     )
 
     expect(responses.map((res) => res.status)).toEqual(
-      Array<number>(simultaneos).fill(200),
+      Array<number>(simultaneos).fill(200)
     )
   })
 
@@ -416,7 +451,10 @@ describe("Attachment (e2e): download com ACL", () => {
     const loginRes = await request(app.getHttpServer())
       .post("/v1/auth/login")
       .set("Origin", ORIGIN)
-      .send({ email: "att-304@example.com", password: "Senha-Att-Muito-Forte-2026!" })
+      .send({
+        email: "att-304@example.com",
+        password: "Senha-Att-Muito-Forte-2026!",
+      })
       .expect(200)
     const cookies = loginRes.headers["set-cookie"]
 
@@ -451,7 +489,10 @@ describe("Attachment (e2e): download com ACL", () => {
     const loginRes = await request(app.getHttpServer())
       .post("/v1/auth/login")
       .set("Origin", ORIGIN)
-      .send({ email: "att-304-burst@example.com", password: "Senha-Att-Muito-Forte-2026!" })
+      .send({
+        email: "att-304-burst@example.com",
+        password: "Senha-Att-Muito-Forte-2026!",
+      })
       .expect(200)
     const cookies = loginRes.headers["set-cookie"]
 
@@ -474,10 +515,12 @@ describe("Attachment (e2e): download com ACL", () => {
           request(app.getHttpServer())
             .get(`/v1/attachments/${id}`)
             .set("Cookie", cookies!)
-            .set("If-None-Match", etag),
-        ),
+            .set("If-None-Match", etag)
+        )
       )
-      expect(responses.map((res) => res.status)).toEqual(Array<number>(51).fill(304))
+      expect(responses.map((res) => res.status)).toEqual(
+        Array<number>(51).fill(304)
+      )
     } finally {
       storage.getStream = originalGetStream
     }
@@ -492,10 +535,15 @@ describe("Attachment (e2e): download com ACL", () => {
     const loginRes = await request(app.getHttpServer())
       .post("/v1/auth/login")
       .set("Origin", ORIGIN)
-      .send({ email: "att-abort@example.com", password: "Senha-Att-Muito-Forte-2026!" })
+      .send({
+        email: "att-abort@example.com",
+        password: "Senha-Att-Muito-Forte-2026!",
+      })
       .expect(200)
     const setCookie: unknown = loginRes.headers["set-cookie"]
-    const cookies = Array.isArray(setCookie) ? setCookie.join("; ") : String(setCookie)
+    const cookies = Array.isArray(setCookie)
+      ? setCookie.join("; ")
+      : String(setCookie)
 
     const id = await seedAttachment(pool, storage, {
       ownerUserId: userId,
@@ -517,15 +565,21 @@ describe("Attachment (e2e): download com ACL", () => {
     const server = app.getHttpServer() as Server
     await ensureListening(server)
     const address = server.address()
-    const port = typeof address === "object" && address !== null ? address.port : 0
+    const port =
+      typeof address === "object" && address !== null ? address.port : 0
 
     try {
       await new Promise<void>((resolve) => {
         const req = http.request(
-          { host: "127.0.0.1", port, path: `/v1/attachments/${id}`, headers: { cookie: cookies } },
+          {
+            host: "127.0.0.1",
+            port,
+            path: `/v1/attachments/${id}`,
+            headers: { cookie: cookies },
+          },
           (res) => {
             res.once("data", () => req.destroy())
-          },
+          }
         )
         req.on("error", () => {
           resolve()
@@ -554,7 +608,6 @@ describe("Attachment (e2e): falha do storage depois dos headers (REM-12)", () =>
     await truncateIdentity(pool)
     await truncateKernel(pool)
     await truncateAttachment(pool)
-
     ;({ storage } = makeInMemoryStorage())
     errorCalls = []
     const loggerFactory = {
@@ -597,10 +650,15 @@ describe("Attachment (e2e): falha do storage depois dos headers (REM-12)", () =>
     const loginRes = await request(app.getHttpServer())
       .post("/v1/auth/login")
       .set("Origin", ORIGIN)
-      .send({ email: "att-dl-fail@example.com", password: "Senha-Att-Muito-Forte-2026!" })
+      .send({
+        email: "att-dl-fail@example.com",
+        password: "Senha-Att-Muito-Forte-2026!",
+      })
       .expect(200)
     const setCookie: unknown = loginRes.headers["set-cookie"]
-    const cookies = Array.isArray(setCookie) ? setCookie.join("; ") : String(setCookie)
+    const cookies = Array.isArray(setCookie)
+      ? setCookie.join("; ")
+      : String(setCookie)
 
     const id = await seedAttachment(pool, storage, {
       ownerUserId: userId,
@@ -623,7 +681,10 @@ describe("Attachment (e2e): falha do storage depois dos headers (REM-12)", () =>
             this.push(Buffer.alloc(20, "x"))
             return
           }
-          setTimeout(() => this.destroy(new Error("falha simulada pós-headers")), 10)
+          setTimeout(
+            () => this.destroy(new Error("falha simulada pós-headers")),
+            10
+          )
         },
       })
       return Promise.resolve(failingStream)
@@ -632,41 +693,43 @@ describe("Attachment (e2e): falha do storage depois dos headers (REM-12)", () =>
     const server = app.getHttpServer() as Server
     await ensureListening(server)
     const address = server.address()
-    const port = typeof address === "object" && address !== null ? address.port : 0
+    const port =
+      typeof address === "object" && address !== null ? address.port : 0
 
     try {
-      const received = await new Promise<{ bytes: number; endedWithoutError: boolean }>(
-        (resolve) => {
-          let bytes = 0
-          // agent:false — o servidor derruba a conexão pós-headers; sem isso o
-          // socket morto pode voltar pro pool do agent global e confundir uma
-          // requisição de outro teste que reúse a porta depois do app.close().
-          const req = http.request(
-            {
-              host: "127.0.0.1",
-              port,
-              path: `/v1/attachments/${id}`,
-              headers: { cookie: cookies },
-              agent: false,
-            },
-            (res) => {
-              res.on("data", (chunk: Buffer) => {
-                bytes += chunk.length
-              })
-              res.on("end", () => {
-                resolve({ bytes, endedWithoutError: true })
-              })
-              res.on("close", () => {
-                resolve({ bytes, endedWithoutError: false })
-              })
-            },
-          )
-          req.on("error", () => {
-            resolve({ bytes, endedWithoutError: false })
-          })
-          req.end()
-        },
-      )
+      const received = await new Promise<{
+        bytes: number
+        endedWithoutError: boolean
+      }>((resolve) => {
+        let bytes = 0
+        // agent:false — o servidor derruba a conexão pós-headers; sem isso o
+        // socket morto pode voltar pro pool do agent global e confundir uma
+        // requisição de outro teste que reúse a porta depois do app.close().
+        const req = http.request(
+          {
+            host: "127.0.0.1",
+            port,
+            path: `/v1/attachments/${id}`,
+            headers: { cookie: cookies },
+            agent: false,
+          },
+          (res) => {
+            res.on("data", (chunk: Buffer) => {
+              bytes += chunk.length
+            })
+            res.on("end", () => {
+              resolve({ bytes, endedWithoutError: true })
+            })
+            res.on("close", () => {
+              resolve({ bytes, endedWithoutError: false })
+            })
+          }
+        )
+        req.on("error", () => {
+          resolve({ bytes, endedWithoutError: false })
+        })
+        req.end()
+      })
 
       // Content-Length anunciado é o tamanho inteiro do PNG semeado — corpo
       // incompleto (e sem "end" limpo) prova que a conexão foi derrubada.
@@ -683,7 +746,7 @@ describe("Attachment (e2e): falha do storage depois dos headers (REM-12)", () =>
       // registrar (log próprio, não relacionado) — filtra pela chave do
       // teardown do download em vez de exigir que seja o único log de erro.
       const downloadFailedLogs = errorCalls.filter(
-        (call) => call.msg === "attachment.download_stream_failed",
+        (call) => call.msg === "attachment.download_stream_failed"
       )
       expect(downloadFailedLogs).toHaveLength(1)
     } finally {

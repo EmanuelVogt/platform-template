@@ -26,27 +26,28 @@ import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/us
 
 /** Pré-valida o token de troca (sem consumir) e devolve o novo e-mail para a UI. */
 @UseCase()
-export class ValidateEmailChangeQuery
-  implements UseCaseContract<ValidateEmailChangeInput, ValidateEmailChangeOutput>
-{
+export class ValidateEmailChangeQuery implements UseCaseContract<
+  ValidateEmailChangeInput,
+  ValidateEmailChangeOutput
+> {
   constructor(
     @Inject(VERIFICATION_TOKEN_REPOSITORY)
     private readonly verificationTokens: VerificationTokenRepository,
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(TOKEN_GENERATOR) private readonly tokens: TokenGenerator,
-    @Inject(CLOCK) private readonly clock: Clock,
+    @Inject(CLOCK) private readonly clock: Clock
   ) {}
 
   @ReadOnly()
   @Traced({ name: "identity.validateEmailChange" })
   async execute(
-    input: ValidateEmailChangeInput,
+    input: ValidateEmailChangeInput
   ): Promise<ValidateEmailChangeOutput> {
     const now = this.clock.now()
     const active = await this.verificationTokens.findActiveByHash(
       this.tokens.hashOf(input.token),
       "email_change",
-      now,
+      now
     )
     if (!active) {
       throw new InvalidEmailChangeTokenError()

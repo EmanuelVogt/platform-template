@@ -46,7 +46,9 @@ describe("HmacCsrf", () => {
   })
 
   it("sign é determinístico: mesma sessão produz mesmo token", () => {
-    expect(csrf.sign("sess-deterministic")).toBe(csrf.sign("sess-deterministic"))
+    expect(csrf.sign("sess-deterministic")).toBe(
+      csrf.sign("sess-deterministic")
+    )
   })
 
   it("sign produz tokens distintos para sessões distintas", () => {

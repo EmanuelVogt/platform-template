@@ -13,9 +13,10 @@ import type { DeletePermissionTemplateInput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class DeletePermissionTemplateUseCase
-  implements UseCaseContract<DeletePermissionTemplateInput, void>
-{
+export class DeletePermissionTemplateUseCase implements UseCaseContract<
+  DeletePermissionTemplateInput,
+  void
+> {
   constructor(
     @Inject(PERMISSION_TEMPLATE_REPOSITORY)
     private readonly templates: PermissionTemplateRepository

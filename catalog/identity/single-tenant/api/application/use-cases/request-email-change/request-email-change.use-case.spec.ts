@@ -91,9 +91,20 @@ function makeDeps(over: Record<string, any> = {}) {
     authEvents,
     clock,
     ctx,
-    config,
+    config
   )
-  return { uc, users, sessions, verificationTokens, tokens, hasher, outbox, authEvents, clock, ctx }
+  return {
+    uc,
+    users,
+    sessions,
+    verificationTokens,
+    tokens,
+    hasher,
+    outbox,
+    authEvents,
+    clock,
+    ctx,
+  }
 }
 
 describe("RequestEmailChangeUseCase", () => {
@@ -101,36 +112,47 @@ describe("RequestEmailChangeUseCase", () => {
     it("troca solicitada: desativa conta, invalida tokens, cria novo token, deloga, publica 2 notificações e grava evento", async () => {
       const t = makeDeps()
       await expect(
-        t.uc.execute({ currentPassword: "senha-ok", newEmail: "novo@example.com" }),
+        t.uc.execute({
+          currentPassword: "senha-ok",
+          newEmail: "novo@example.com",
+        })
       ).resolves.toBeUndefined()
 
       expect(t.users.update).toHaveBeenCalledTimes(1)
-      expect(t.verificationTokens.invalidateAllForUser).toHaveBeenCalledWith("u-1", "email_change")
+      expect(t.verificationTokens.invalidateAllForUser).toHaveBeenCalledWith(
+        "u-1",
+        "email_change"
+      )
       expect(t.verificationTokens.create).toHaveBeenCalledTimes(1)
       expect(t.sessions.deleteAllForUser).toHaveBeenCalledWith("u-1")
       expect(t.outbox.publish).toHaveBeenCalledTimes(2)
       expect(t.outbox.publish).toHaveBeenCalledWith(
         expect.objectContaining({
           payload: expect.objectContaining({ type: "email_change_requested" }),
-        }),
+        })
       )
       expect(t.outbox.publish).toHaveBeenCalledWith(
         expect.objectContaining({
           payload: expect.objectContaining({ type: "email_change_notice" }),
-        }),
+        })
       )
       expect(t.authEvents.recordInTx).toHaveBeenCalledWith(
         expect.objectContaining({
-          props: expect.objectContaining({ eventType: "email_change_requested" }),
-        }),
+          props: expect.objectContaining({
+            eventType: "email_change_requested",
+          }),
+        })
       )
     })
 
     it("link enviado ao novo e-mail contém o token raw e a URL configurada", async () => {
       const t = makeDeps()
-      await t.uc.execute({ currentPassword: "senha-ok", newEmail: "novo@example.com" })
+      await t.uc.execute({
+        currentPassword: "senha-ok",
+        newEmail: "novo@example.com",
+      })
       const call = t.outbox.publish.mock.calls.find(
-        ([ev]: [any]) => ev.payload?.type === "email_change_requested",
+        ([ev]: [any]) => ev.payload?.type === "email_change_requested"
       )
       expect(call).toBeDefined()
       const data = call[0].payload.data as Record<string, unknown>
@@ -141,7 +163,10 @@ describe("RequestEmailChangeUseCase", () => {
 
     it("e-mail novo é normalizado (trim + lowercase) antes de comparar e persistir", async () => {
       const t = makeDeps()
-      await t.uc.execute({ currentPassword: "senha-ok", newEmail: "  NOVO@Example.COM  " })
+      await t.uc.execute({
+        currentPassword: "senha-ok",
+        newEmail: "  NOVO@Example.COM  ",
+      })
       expect(t.users.update).toHaveBeenCalledTimes(1)
     })
   })
@@ -150,16 +175,19 @@ describe("RequestEmailChangeUseCase", () => {
     it("lança ForbiddenError quando não há userId no contexto", async () => {
       const t = makeDeps({
         ctx: fakeRequestContext(() => ({
-            ip: "1.2.3.4",
-            userAgent: "jest",
-            correlationId: "c1",
-            locale: "pt-BR",
-            userId: null,
-            sessionId: null,
-          })),
+          ip: "1.2.3.4",
+          userAgent: "jest",
+          correlationId: "c1",
+          locale: "pt-BR",
+          userId: null,
+          sessionId: null,
+        })),
       })
       await expect(
-        t.uc.execute({ currentPassword: "senha-ok", newEmail: "novo@example.com" }),
+        t.uc.execute({
+          currentPassword: "senha-ok",
+          newEmail: "novo@example.com",
+        })
       ).rejects.toBeInstanceOf(ForbiddenError)
       expect(t.users.findById).not.toHaveBeenCalled()
     })
@@ -173,7 +201,10 @@ describe("RequestEmailChangeUseCase", () => {
         },
       })
       await expect(
-        t.uc.execute({ currentPassword: "senha-ok", newEmail: "novo@example.com" }),
+        t.uc.execute({
+          currentPassword: "senha-ok",
+          newEmail: "novo@example.com",
+        })
       ).rejects.toBeInstanceOf(ForbiddenError)
       expect(t.hasher.verify).not.toHaveBeenCalled()
     })
@@ -189,7 +220,10 @@ describe("RequestEmailChangeUseCase", () => {
         },
       })
       await expect(
-        t.uc.execute({ currentPassword: "qualquer", newEmail: "novo@example.com" }),
+        t.uc.execute({
+          currentPassword: "qualquer",
+          newEmail: "novo@example.com",
+        })
       ).rejects.toBeInstanceOf(InvalidCredentialsError)
       expect(t.hasher.verify).not.toHaveBeenCalled()
     })
@@ -199,7 +233,10 @@ describe("RequestEmailChangeUseCase", () => {
         hasher: { verify: vi.fn().mockResolvedValue(false) },
       })
       await expect(
-        t.uc.execute({ currentPassword: "errada", newEmail: "novo@example.com" }),
+        t.uc.execute({
+          currentPassword: "errada",
+          newEmail: "novo@example.com",
+        })
       ).rejects.toBeInstanceOf(InvalidCredentialsError)
       expect(t.users.update).not.toHaveBeenCalled()
       expect(t.sessions.deleteAllForUser).not.toHaveBeenCalled()
@@ -210,7 +247,10 @@ describe("RequestEmailChangeUseCase", () => {
     it("lança EmailUnchangedError quando novo e-mail é igual ao atual (após normalização)", async () => {
       const t = makeDeps()
       await expect(
-        t.uc.execute({ currentPassword: "senha-ok", newEmail: "ANA@EXAMPLE.COM" }),
+        t.uc.execute({
+          currentPassword: "senha-ok",
+          newEmail: "ANA@EXAMPLE.COM",
+        })
       ).rejects.toBeInstanceOf(EmailUnchangedError)
       expect(t.users.update).not.toHaveBeenCalled()
     })
@@ -221,15 +261,20 @@ describe("RequestEmailChangeUseCase", () => {
       const tenSecondsAgo = new Date(NOW.getTime() - 10_000)
       const t = makeDeps({
         users: {
-          findById: vi.fn().mockResolvedValue(
-            makeUser({ lastEmailChangeRequestedAt: tenSecondsAgo }),
-          ),
+          findById: vi
+            .fn()
+            .mockResolvedValue(
+              makeUser({ lastEmailChangeRequestedAt: tenSecondsAgo })
+            ),
           findByEmail: vi.fn().mockResolvedValue(null),
           update: vi.fn(),
         },
       })
       await expect(
-        t.uc.execute({ currentPassword: "senha-ok", newEmail: "novo@example.com" }),
+        t.uc.execute({
+          currentPassword: "senha-ok",
+          newEmail: "novo@example.com",
+        })
       ).rejects.toBeInstanceOf(RateLimitedError)
       expect(t.users.update).not.toHaveBeenCalled()
     })
@@ -238,9 +283,11 @@ describe("RequestEmailChangeUseCase", () => {
       const tenSecondsAgo = new Date(NOW.getTime() - 10_000)
       const t = makeDeps({
         users: {
-          findById: vi.fn().mockResolvedValue(
-            makeUser({ lastEmailChangeRequestedAt: tenSecondsAgo }),
-          ),
+          findById: vi
+            .fn()
+            .mockResolvedValue(
+              makeUser({ lastEmailChangeRequestedAt: tenSecondsAgo })
+            ),
           findByEmail: vi.fn().mockResolvedValue(null),
           update: vi.fn(),
         },
@@ -257,18 +304,21 @@ describe("RequestEmailChangeUseCase", () => {
     it("não aplica cooldown quando lastEmailChangeRequestedAt é null (primeira solicitação)", async () => {
       const t = makeDeps({
         users: {
-          findById: vi.fn().mockResolvedValue(
-            makeUser({ lastEmailChangeRequestedAt: null }),
-          ),
-          findByIdForUpdate: vi.fn().mockResolvedValue(
-            makeUser({ lastEmailChangeRequestedAt: null }),
-          ),
+          findById: vi
+            .fn()
+            .mockResolvedValue(makeUser({ lastEmailChangeRequestedAt: null })),
+          findByIdForUpdate: vi
+            .fn()
+            .mockResolvedValue(makeUser({ lastEmailChangeRequestedAt: null })),
           findByEmail: vi.fn().mockResolvedValue(null),
           update: vi.fn().mockResolvedValue(undefined),
         },
       })
       await expect(
-        t.uc.execute({ currentPassword: "senha-ok", newEmail: "novo@example.com" }),
+        t.uc.execute({
+          currentPassword: "senha-ok",
+          newEmail: "novo@example.com",
+        })
       ).resolves.toBeUndefined()
     })
 
@@ -276,18 +326,25 @@ describe("RequestEmailChangeUseCase", () => {
       const longAgo = new Date(NOW.getTime() - 120_000)
       const t = makeDeps({
         users: {
-          findById: vi.fn().mockResolvedValue(
-            makeUser({ lastEmailChangeRequestedAt: longAgo }),
-          ),
-          findByIdForUpdate: vi.fn().mockResolvedValue(
-            makeUser({ lastEmailChangeRequestedAt: longAgo }),
-          ),
+          findById: vi
+            .fn()
+            .mockResolvedValue(
+              makeUser({ lastEmailChangeRequestedAt: longAgo })
+            ),
+          findByIdForUpdate: vi
+            .fn()
+            .mockResolvedValue(
+              makeUser({ lastEmailChangeRequestedAt: longAgo })
+            ),
           findByEmail: vi.fn().mockResolvedValue(null),
           update: vi.fn().mockResolvedValue(undefined),
         },
       })
       await expect(
-        t.uc.execute({ currentPassword: "senha-ok", newEmail: "novo@example.com" }),
+        t.uc.execute({
+          currentPassword: "senha-ok",
+          newEmail: "novo@example.com",
+        })
       ).resolves.toBeUndefined()
     })
 
@@ -296,19 +353,26 @@ describe("RequestEmailChangeUseCase", () => {
       const exactlyAtCooldown = new Date(NOW.getTime() - 60_000)
       const t = makeDeps({
         users: {
-          findById: vi.fn().mockResolvedValue(
-            makeUser({ lastEmailChangeRequestedAt: exactlyAtCooldown }),
-          ),
-          findByIdForUpdate: vi.fn().mockResolvedValue(
-            makeUser({ lastEmailChangeRequestedAt: exactlyAtCooldown }),
-          ),
+          findById: vi
+            .fn()
+            .mockResolvedValue(
+              makeUser({ lastEmailChangeRequestedAt: exactlyAtCooldown })
+            ),
+          findByIdForUpdate: vi
+            .fn()
+            .mockResolvedValue(
+              makeUser({ lastEmailChangeRequestedAt: exactlyAtCooldown })
+            ),
           findByEmail: vi.fn().mockResolvedValue(null),
           update: vi.fn().mockResolvedValue(undefined),
         },
         config: { EMAIL_CHANGE_COOLDOWN_SECONDS: 60 },
       })
       await expect(
-        t.uc.execute({ currentPassword: "senha-ok", newEmail: "novo@example.com" }),
+        t.uc.execute({
+          currentPassword: "senha-ok",
+          newEmail: "novo@example.com",
+        })
       ).resolves.toBeUndefined()
     })
 
@@ -317,9 +381,11 @@ describe("RequestEmailChangeUseCase", () => {
       const halfSecondShort = new Date(NOW.getTime() - 59_500)
       const t = makeDeps({
         users: {
-          findById: vi.fn().mockResolvedValue(
-            makeUser({ lastEmailChangeRequestedAt: halfSecondShort }),
-          ),
+          findById: vi
+            .fn()
+            .mockResolvedValue(
+              makeUser({ lastEmailChangeRequestedAt: halfSecondShort })
+            ),
           findByEmail: vi.fn().mockResolvedValue(null),
           update: vi.fn(),
         },
@@ -338,12 +404,19 @@ describe("RequestEmailChangeUseCase", () => {
       const t = makeDeps({
         users: {
           findById: vi.fn().mockResolvedValue(makeUser()),
-          findByEmail: vi.fn().mockResolvedValue(makeUser({ id: "u-2", email: "novo@example.com" })),
+          findByEmail: vi
+            .fn()
+            .mockResolvedValue(
+              makeUser({ id: "u-2", email: "novo@example.com" })
+            ),
           update: vi.fn(),
         },
       })
       await expect(
-        t.uc.execute({ currentPassword: "senha-ok", newEmail: "novo@example.com" }),
+        t.uc.execute({
+          currentPassword: "senha-ok",
+          newEmail: "novo@example.com",
+        })
       ).rejects.toBeInstanceOf(EmailAlreadyInUseError)
       expect(t.users.update).toHaveBeenCalledTimes(1)
       const saved = t.users.update.mock.calls[0][0] as User
@@ -366,7 +439,10 @@ describe("RequestEmailChangeUseCase", () => {
         },
       })
       await expect(
-        t.uc.execute({ currentPassword: "senha-ok", newEmail: "novo@example.com" }),
+        t.uc.execute({
+          currentPassword: "senha-ok",
+          newEmail: "novo@example.com",
+        })
       ).rejects.toBeInstanceOf(EmailAlreadyInUseError)
       const saved = t.users.update.mock.calls[0][0] as User
       expect(saved.props.lastEmailChangeRequestedAt).toEqual(NOW)
@@ -378,12 +454,19 @@ describe("RequestEmailChangeUseCase", () => {
           findById: vi
             .fn()
             .mockResolvedValue(makeUser({ lastEmailChangeRequestedAt: NOW })),
-          findByEmail: vi.fn().mockResolvedValue(makeUser({ id: "u-2", email: "novo@example.com" })),
+          findByEmail: vi
+            .fn()
+            .mockResolvedValue(
+              makeUser({ id: "u-2", email: "novo@example.com" })
+            ),
           update: vi.fn(),
         },
       })
       await expect(
-        t.uc.execute({ currentPassword: "senha-ok", newEmail: "novo@example.com" }),
+        t.uc.execute({
+          currentPassword: "senha-ok",
+          newEmail: "novo@example.com",
+        })
       ).rejects.toBeInstanceOf(RateLimitedError)
       expect(t.users.findByEmail).not.toHaveBeenCalled()
       expect(t.users.update).not.toHaveBeenCalled()
@@ -393,9 +476,18 @@ describe("RequestEmailChangeUseCase", () => {
   describe("asserts negativos — nenhuma escrita em falha", () => {
     it("ForbiddenError (sem userId): nenhuma porta de escrita chamada", async () => {
       const t = makeDeps({
-        ctx: fakeRequestContext(() => ({ ip: "x", userAgent: "x", correlationId: "x", locale: "pt-BR", userId: null, sessionId: null })),
+        ctx: fakeRequestContext(() => ({
+          ip: "x",
+          userAgent: "x",
+          correlationId: "x",
+          locale: "pt-BR",
+          userId: null,
+          sessionId: null,
+        })),
       })
-      await expect(t.uc.execute({ currentPassword: "x", newEmail: "x@x.com" })).rejects.toThrow()
+      await expect(
+        t.uc.execute({ currentPassword: "x", newEmail: "x@x.com" })
+      ).rejects.toThrow()
       expect(t.users.update).not.toHaveBeenCalled()
       expect(t.verificationTokens.create).not.toHaveBeenCalled()
       expect(t.sessions.deleteAllForUser).not.toHaveBeenCalled()
@@ -404,9 +496,14 @@ describe("RequestEmailChangeUseCase", () => {
     })
 
     it("InvalidCredentialsError (senha errada): nenhuma porta de escrita chamada", async () => {
-      const t = makeDeps({ hasher: { verify: vi.fn().mockResolvedValue(false) } })
+      const t = makeDeps({
+        hasher: { verify: vi.fn().mockResolvedValue(false) },
+      })
       await expect(
-        t.uc.execute({ currentPassword: "errada", newEmail: "novo@example.com" }),
+        t.uc.execute({
+          currentPassword: "errada",
+          newEmail: "novo@example.com",
+        })
       ).rejects.toThrow()
       expect(t.users.update).not.toHaveBeenCalled()
       expect(t.verificationTokens.create).not.toHaveBeenCalled()
@@ -419,13 +516,20 @@ describe("RequestEmailChangeUseCase", () => {
       const tenSecondsAgo = new Date(NOW.getTime() - 10_000)
       const t = makeDeps({
         users: {
-          findById: vi.fn().mockResolvedValue(makeUser({ lastEmailChangeRequestedAt: tenSecondsAgo })),
+          findById: vi
+            .fn()
+            .mockResolvedValue(
+              makeUser({ lastEmailChangeRequestedAt: tenSecondsAgo })
+            ),
           findByEmail: vi.fn().mockResolvedValue(null),
           update: vi.fn(),
         },
       })
       await expect(
-        t.uc.execute({ currentPassword: "senha-ok", newEmail: "novo@example.com" }),
+        t.uc.execute({
+          currentPassword: "senha-ok",
+          newEmail: "novo@example.com",
+        })
       ).rejects.toThrow()
       expect(t.users.update).not.toHaveBeenCalled()
       expect(t.sessions.deleteAllForUser).not.toHaveBeenCalled()

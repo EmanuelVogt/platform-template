@@ -27,7 +27,7 @@ export class GetSessionController {
   constructor(
     private readonly getCurrentUser: GetCurrentUserUseCase,
     @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig,
-    @Inject(CSRF) private readonly csrf: Csrf,
+    @Inject(CSRF) private readonly csrf: Csrf
   ) {}
 
   @ApiOperation({ operationId: "getSession" })
@@ -37,7 +37,7 @@ export class GetSessionController {
   @ApiOkResponse({ type: CurrentUserResponseDto })
   async handle(
     @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
+    @Res({ passthrough: true }) res: Response
   ): Promise<{ user: UserView }> {
     const result = await this.getCurrentUser.execute({})
     // Bootstrap do SPA: reemite o cookie CSRF sob SameSite=none (sessionId vem

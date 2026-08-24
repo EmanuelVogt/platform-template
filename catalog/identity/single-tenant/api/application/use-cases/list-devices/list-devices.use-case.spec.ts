@@ -29,7 +29,11 @@ describe("ListDevicesUseCase", () => {
       },
     ])
     const devices = { listActiveByUser } as unknown as DeviceRepository
-    const ctx = fakeRequestContext(() => ({ userId: "u-1", sessionId: "s-1", deviceId: "d-1" }))
+    const ctx = fakeRequestContext(() => ({
+      userId: "u-1",
+      sessionId: "s-1",
+      deviceId: "d-1",
+    }))
     const clock = { now: () => now }
     const config = {
       SESSION_IDLE_TTL_SECONDS: 100,

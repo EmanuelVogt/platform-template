@@ -27,7 +27,7 @@ const PASSWORD = "Senha-Att-Delete-Muito-Forte-2026!"
 // 1x1 PNG válido (assinatura 0x89 'PNG').
 const PNG_1PX = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
-  "base64",
+  "base64"
 )
 
 function makeInMemoryStorage(): ObjectStoragePort {
@@ -43,7 +43,9 @@ function makeInMemoryStorage(): ObjectStoragePort {
     head: (key) => {
       const o = objects.get(key)
       return Promise.resolve(
-        o ? { contentType: o.contentType, sizeBytes: o.body.length, etag: "" } : null,
+        o
+          ? { contentType: o.contentType, sizeBytes: o.body.length, etag: "" }
+          : null
       )
     },
     delete: (key) => {
@@ -84,15 +86,22 @@ describe("Attachment delete (e2e): trilha atrelada à tx", () => {
       .post("/v1/auth/avatar")
       .set("Origin", ORIGIN)
       .set("Cookie", cookie)
-      .attach("file", PNG_1PX, { filename: "avatar.png", contentType: "image/png" })
+      .attach("file", PNG_1PX, {
+        filename: "avatar.png",
+        contentType: "image/png",
+      })
       .expect(200)
     return res.body.avatarAttachmentId as string
   }
 
   async function deleteLogRows(attachmentId: string) {
-    const { rows } = await pool.query<{ action: string; outcome: string; user_id: string }>(
+    const { rows } = await pool.query<{
+      action: string
+      outcome: string
+      user_id: string
+    }>(
       "SELECT action, outcome, user_id FROM attachment.attachment_access_logs WHERE attachment_id = $1 AND action = 'delete'",
-      [attachmentId],
+      [attachmentId]
     )
     return rows
   }
@@ -109,7 +118,7 @@ describe("Attachment delete (e2e): trilha atrelada à tx", () => {
         .overrideProvider(RATE_LIMITER)
         .useValue(allowAllRateLimiter)
         .overrideProvider(OBJECT_STORAGE)
-        .useValue(storage),
+        .useValue(storage)
     )
   })
 
@@ -128,11 +137,15 @@ describe("Attachment delete (e2e): trilha atrelada à tx", () => {
 
     const rows = await deleteLogRows(firstAvatarId)
     expect(rows).toHaveLength(1)
-    expect(rows[0]).toMatchObject({ action: "delete", outcome: "allowed", user_id: userId })
+    expect(rows[0]).toMatchObject({
+      action: "delete",
+      outcome: "allowed",
+      user_id: userId,
+    })
 
     const { rows: attachmentRows } = await pool.query<{ status: string }>(
       "SELECT status FROM attachment.attachments WHERE id = $1",
-      [firstAvatarId],
+      [firstAvatarId]
     )
     expect(attachmentRows[0]?.status).toBe("deleted")
   })
@@ -142,7 +155,9 @@ describe("Attachment delete (e2e): trilha atrelada à tx", () => {
     await seedUser(app, pool, { email, password: PASSWORD })
     const cookie = await login(email)
 
-    const accessLog = app.get<AttachmentAccessLogRepository>(ATTACHMENT_ACCESS_LOG_REPOSITORY)
+    const accessLog = app.get<AttachmentAccessLogRepository>(
+      ATTACHMENT_ACCESS_LOG_REPOSITORY
+    )
     const originalRecordInTx = accessLog.recordInTx.bind(accessLog)
     const spy = vi
       .spyOn(accessLog, "recordInTx")
@@ -162,7 +177,7 @@ describe("Attachment delete (e2e): trilha atrelada à tx", () => {
 
       const { rows: attachmentRows } = await pool.query<{ status: string }>(
         "SELECT status FROM attachment.attachments WHERE id = $1",
-        [firstAvatarId],
+        [firstAvatarId]
       )
       expect(attachmentRows[0]?.status).toBe("ready") // soft-delete também desfeito
     } finally {

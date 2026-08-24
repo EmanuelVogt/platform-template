@@ -7,4 +7,5 @@ import type { AccessProfileDef } from "./access-profile.types"
  * `AccessProfile` deixa de tipar). O perfil só é persistível depois de uma
  * migration do produto com `ALTER TYPE identity.access_profile ADD VALUE`.
  */
-export const PRODUCT_ACCESS_PROFILES = [] as const satisfies readonly AccessProfileDef[]
+export const PRODUCT_ACCESS_PROFILES =
+  [] as const satisfies readonly AccessProfileDef[]

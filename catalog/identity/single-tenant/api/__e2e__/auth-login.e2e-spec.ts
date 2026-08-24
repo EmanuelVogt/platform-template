@@ -3,7 +3,11 @@ import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
+import {
+  createTestPool,
+  truncateIdentity,
+  truncateKernel,
+} from "../../../../test/setup/test-db"
 import { AppModule } from "../../../app.module"
 import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
@@ -118,13 +122,19 @@ describe("Login — força bruta distribuída por conta (e2e)", () => {
         .post("/v1/auth/login")
         .set("Origin", ORIGIN)
         .set("X-Forwarded-For", ip)
-        .send({ email: BRUTE_EMAIL, password: "senha-errada", rememberMe: false })
+        .send({
+          email: BRUTE_EMAIL,
+          password: "senha-errada",
+          rememberMe: false,
+        })
 
     const responses: Awaited<ReturnType<typeof attempt>>[] = []
     for (let i = 0; i < 11; i++) {
       // Alterna os IPs: o teto de 10 é da conta, não de um IP (o bucket por
       // IP é 30/min e nem chega perto de estourar aqui).
-      responses.push(await attempt(i % 2 === 0 ? "203.0.113.7" : "198.51.100.9"))
+      responses.push(
+        await attempt(i % 2 === 0 ? "203.0.113.7" : "198.51.100.9")
+      )
     }
     const last = responses[10]!
     expect(last.status).toBe(429)

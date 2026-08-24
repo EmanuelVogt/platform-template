@@ -7,4 +7,5 @@ import type { ModuleDef } from "./permission.types"
  * O `declare module` de `PermissionKeyRegistry` continua sendo quem publica as
  * chaves para o tipo — este array é o lado de runtime.
  */
-export const PRODUCT_PERMISSION_CATALOGS = [] as const satisfies readonly ModuleDef[]
+export const PRODUCT_PERMISSION_CATALOGS =
+  [] as const satisfies readonly ModuleDef[]

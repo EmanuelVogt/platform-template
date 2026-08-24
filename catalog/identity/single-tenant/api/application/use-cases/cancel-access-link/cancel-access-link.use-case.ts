@@ -10,7 +10,10 @@ import {
   AUTH_EVENT_REPOSITORY,
   type AuthEventRepository,
 } from "../../../domain/ports/auth-event.repository"
-import { TOKEN_GENERATOR, type TokenGenerator } from "../../../domain/ports/token-generator"
+import {
+  TOKEN_GENERATOR,
+  type TokenGenerator,
+} from "../../../domain/ports/token-generator"
 import {
   VERIFICATION_TOKEN_REPOSITORY,
   type VerificationTokenRepository,
@@ -21,16 +24,18 @@ import type { CancelAccessLinkInput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class CancelAccessLinkUseCase
-  implements UseCaseContract<CancelAccessLinkInput, void>
-{
+export class CancelAccessLinkUseCase implements UseCaseContract<
+  CancelAccessLinkInput,
+  void
+> {
   constructor(
     @Inject(VERIFICATION_TOKEN_REPOSITORY)
     private readonly verificationTokens: VerificationTokenRepository,
     @Inject(TOKEN_GENERATOR) private readonly tokens: TokenGenerator,
-    @Inject(AUTH_EVENT_REPOSITORY) private readonly authEvents: AuthEventRepository,
+    @Inject(AUTH_EVENT_REPOSITORY)
+    private readonly authEvents: AuthEventRepository,
     @Inject(CLOCK) private readonly clock: Clock,
-    private readonly ctx: RequestContext,
+    private readonly ctx: RequestContext
   ) {}
 
   // Recusar o convite: consome o token (link morre). User segue pending —
@@ -43,7 +48,7 @@ export class CancelAccessLinkUseCase
     const consumed = await this.verificationTokens.consumeByHash(
       this.tokens.hashOf(input.token),
       "access_link",
-      now,
+      now
     )
     if (!consumed) {
       throw new InvalidAccessLinkError()
@@ -52,7 +57,7 @@ export class CancelAccessLinkUseCase
       authEventOf(store, {
         userId: consumed.userId,
         eventType: "access_link_cancelled",
-      }),
+      })
     )
   }
 }

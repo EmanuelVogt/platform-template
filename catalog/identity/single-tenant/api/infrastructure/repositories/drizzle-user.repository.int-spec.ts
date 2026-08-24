@@ -69,7 +69,9 @@ describe("DrizzleUserRepository (int)", () => {
         new Date()
       )
     )
-    expect((await repo.findById(user.props.id))?.props.servesClients).toBe(false)
+    expect((await repo.findById(user.props.id))?.props.servesClients).toBe(
+      false
+    )
   })
 
   it("gate da configuração de horários segue a marcação, não o perfil", async () => {
@@ -351,7 +353,10 @@ describe("DrizzleUserRepository.list (paginação/sort/filtro/search)", () => {
   it("search ILIKE OR sobre nome e email (case-insensitive)", async () => {
     await seed(DATASET)
     const r = await repo.list({ page: 1, pageSize: 50, q: "ana" })
-    expect(r.data.map((u) => u.user.props.name).sort()).toEqual(["Ana", "Diana"])
+    expect(r.data.map((u) => u.user.props.name).sort()).toEqual([
+      "Ana",
+      "Diana",
+    ])
   })
 
   it("search por email", async () => {
@@ -431,7 +436,11 @@ describe("DrizzleUserRepository.list (access-link state / status filter)", () =>
   })
 
   it("pending com token válido: accessLinkExpiresAt preenchido, accessLinkExpired = false", async () => {
-    const user = User.create({ name: "Criado", email: "pendente-valido@example.com", accessProfile: "admin" })
+    const user = User.create({
+      name: "Criado",
+      email: "pendente-valido@example.com",
+      accessProfile: "admin",
+    })
     await repo.insert(user)
     const expiresAt = new Date(Date.now() + 3_600_000)
     await tokensRepo.create(
@@ -453,7 +462,11 @@ describe("DrizzleUserRepository.list (access-link state / status filter)", () =>
   })
 
   it("pending com token expirado: accessLinkExpiresAt = null, accessLinkExpired = true", async () => {
-    const user = User.create({ name: "Expirado", email: "pendente-expirado@example.com", accessProfile: "admin" })
+    const user = User.create({
+      name: "Expirado",
+      email: "pendente-expirado@example.com",
+      accessProfile: "admin",
+    })
     await repo.insert(user)
     await tokensRepo.create(
       VerificationToken.fromProps({
@@ -474,7 +487,11 @@ describe("DrizzleUserRepository.list (access-link state / status filter)", () =>
   })
 
   it("pending sem token: accessLinkExpiresAt = null, accessLinkExpired = true", async () => {
-    const user = User.create({ name: "Sem token", email: "pendente-sem-token@example.com", accessProfile: "admin" })
+    const user = User.create({
+      name: "Sem token",
+      email: "pendente-sem-token@example.com",
+      accessProfile: "admin",
+    })
     await repo.insert(user)
     const r = await repo.list({ page: 1, pageSize: 50 })
     expect(r.data).toHaveLength(1)
@@ -490,7 +507,11 @@ describe("DrizzleUserRepository.list (access-link state / status filter)", () =>
       passwordHash: "$argon2id$fake",
       pepperVersion: 1,
     })
-    const pendingUser = User.create({ name: "Pendente", email: "pendente@example.com", accessProfile: "admin" })
+    const pendingUser = User.create({
+      name: "Pendente",
+      email: "pendente@example.com",
+      accessProfile: "admin",
+    })
     await repo.insert(activeUser)
     await repo.insert(pendingUser)
     const r = await repo.list({ page: 1, pageSize: 50, status: "pending" })
@@ -505,7 +526,11 @@ describe("DrizzleUserRepository.list (access-link state / status filter)", () =>
       passwordHash: "$argon2id$fake",
       pepperVersion: 1,
     })
-    const pendingUser = User.create({ name: "Pendente", email: "pendente@example.com", accessProfile: "admin" })
+    const pendingUser = User.create({
+      name: "Pendente",
+      email: "pendente@example.com",
+      accessProfile: "admin",
+    })
     await repo.insert(activeUser)
     await repo.insert(pendingUser)
     const r = await repo.list({ page: 1, pageSize: 50, status: "active" })
@@ -583,11 +608,15 @@ describe("DrizzleUserRepository (soft delete — hard gate)", () => {
     await repo.insert(dead)
 
     const trash = await repo.list({ page: 1, pageSize: 10, deleted: true })
-    expect(trash.data.map((r) => r.user.props.email)).toEqual(["morta@example.com"])
+    expect(trash.data.map((r) => r.user.props.email)).toEqual([
+      "morta@example.com",
+    ])
     expect(trash.data[0]!.user.isDeleted()).toBe(true)
 
     const normal = await repo.list({ page: 1, pageSize: 10 })
-    expect(normal.data.map((r) => r.user.props.email)).toEqual(["viva@example.com"])
+    expect(normal.data.map((r) => r.user.props.email)).toEqual([
+      "viva@example.com",
+    ])
   })
 
   it("findByIds devolve os existentes (inclui soft-deleted); hardDeleteByIds remove a linha", async () => {
@@ -598,7 +627,7 @@ describe("DrizzleUserRepository (soft delete — hard gate)", () => {
 
     const found = await repo.findByIds([a.props.id, b.props.id, "nao-existe"])
     expect(found.map((u) => u.props.id).sort()).toEqual(
-      [a.props.id, b.props.id].sort(),
+      [a.props.id, b.props.id].sort()
     )
 
     await repo.hardDeleteByIds([b.props.id])
@@ -607,15 +636,26 @@ describe("DrizzleUserRepository (soft delete — hard gate)", () => {
   })
 
   it("list({deleted:true, sort:'deletedAt'}) ordena pelo instante da exclusão", async () => {
-    const first = makeUser("a@example.com").delete(new Date("2026-06-01T00:00:00Z"))
-    const second = makeUser("b@example.com").delete(new Date("2026-06-02T00:00:00Z"))
+    const first = makeUser("a@example.com").delete(
+      new Date("2026-06-01T00:00:00Z")
+    )
+    const second = makeUser("b@example.com").delete(
+      new Date("2026-06-02T00:00:00Z")
+    )
     await repo.insert(first)
     await repo.insert(second)
 
     const out = await repo.list({
-      page: 1, pageSize: 10, deleted: true, sort: "deletedAt", order: "desc",
+      page: 1,
+      pageSize: 10,
+      deleted: true,
+      sort: "deletedAt",
+      order: "desc",
     })
-    expect(out.data.map((r) => r.user.props.email)).toEqual(["b@example.com", "a@example.com"])
+    expect(out.data.map((r) => r.user.props.email)).toEqual([
+      "b@example.com",
+      "a@example.com",
+    ])
   })
 })
 

@@ -1,7 +1,7 @@
 export interface PurgeUsersInput {
-  userIds: string[];
+  userIds: string[]
 }
 
 export interface PurgeUsersOutput {
-  purged: number;
+  purged: number
 }

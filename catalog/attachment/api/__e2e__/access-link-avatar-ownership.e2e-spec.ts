@@ -28,7 +28,7 @@ const MASTER_PASSWORD = "Senha-Master-Muito-Forte-2026!"
 // 1x1 PNG válido (assinatura 0x89 'PNG').
 const PNG_1PX = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
-  "base64",
+  "base64"
 )
 
 /** Storage em memória: substitui o adapter R2 no teste (sem IO externo). */
@@ -45,7 +45,9 @@ function makeInMemoryStorage(): ObjectStoragePort {
     head: (key) => {
       const o = objects.get(key)
       return Promise.resolve(
-        o ? { contentType: o.contentType, sizeBytes: o.body.length, etag: "" } : null,
+        o
+          ? { contentType: o.contentType, sizeBytes: o.body.length, etag: "" }
+          : null
       )
     },
     delete: (key) => {
@@ -69,7 +71,10 @@ function linkFromHtml(html: string): string {
   return match[1]!
 }
 
-async function waitFor(predicate: () => boolean, timeoutMs = 4000): Promise<void> {
+async function waitFor(
+  predicate: () => boolean,
+  timeoutMs = 4000
+): Promise<void> {
   const start = Date.now()
   while (!predicate()) {
     if (Date.now() - start > timeoutMs) {
@@ -110,7 +115,7 @@ describe("Access-link avatar (e2e): ownership entre identity e attachment", () =
         .overrideProvider(MAILER)
         .useValue(mailer)
         .overrideProvider(OBJECT_STORAGE)
-        .useValue(makeInMemoryStorage()),
+        .useValue(makeInMemoryStorage())
     )
     dispatcher = app.get(OutboxDispatcher)
   })
@@ -125,7 +130,7 @@ describe("Access-link avatar (e2e): ownership entre identity e attachment", () =
     masterCookie: string[],
     email: string,
     name: string,
-    idempotencyKey: string,
+    idempotencyKey: string
   ): Promise<string> {
     await request(app.getHttpServer())
       .post("/v1/admin/users")
@@ -145,7 +150,9 @@ describe("Access-link avatar (e2e): ownership entre identity e attachment", () =
       mailer.sent.find((message) => message.to === email)
     await waitFor(() => sentTo() !== undefined)
 
-    const token = new URL(linkFromHtml(sentTo()!.html)).searchParams.get("token")
+    const token = new URL(linkFromHtml(sentTo()!.html)).searchParams.get(
+      "token"
+    )
     expect(token).toBeTruthy()
     return token!
   }
@@ -167,20 +174,33 @@ describe("Access-link avatar (e2e): ownership entre identity e attachment", () =
 
     // Convidar Dani para obter token pré-auth e fazer upload como Dani.
     const daniEmail = seedEmail("access-link-avatar", "dani")
-    const daniToken = await inviteUser(masterCookie, daniEmail, "Dani", "invite-dani-act")
+    const daniToken = await inviteUser(
+      masterCookie,
+      daniEmail,
+      "Dani",
+      "invite-dani-act"
+    )
 
     // Upload de avatar usando o token pré-auth de Dani (ownerUserId = Dani).
     const uploadRes = await request(app.getHttpServer())
       .post("/v1/auth/access-link/avatar")
       .set("Origin", ORIGIN)
-      .attach("file", PNG_1PX, { filename: "avatar.png", contentType: "image/png" })
+      .attach("file", PNG_1PX, {
+        filename: "avatar.png",
+        contentType: "image/png",
+      })
       .field("token", daniToken)
       .expect(201)
     const foreignId = uploadRes.body.attachmentId as string
     expect(foreignId).toBeTruthy()
 
     const cleoEmail = seedEmail("access-link-avatar", "cleo")
-    const cleoToken = await inviteUser(masterCookie, cleoEmail, "Cleo", "invite-cleo-act")
+    const cleoToken = await inviteUser(
+      masterCookie,
+      cleoEmail,
+      "Cleo",
+      "invite-cleo-act"
+    )
 
     // Tentar ativar Cleo com o attachmentId dono de Dani → ownership check rejeita.
     const setRes = await request(app.getHttpServer())
@@ -199,7 +219,7 @@ describe("Access-link avatar (e2e): ownership entre identity e attachment", () =
     // No banco: avatar_attachment_id de Cleo deve ser NULL.
     const { rows } = await pool.query<{ avatar_attachment_id: string | null }>(
       "SELECT avatar_attachment_id FROM identity.users WHERE email = $1",
-      [cleoEmail],
+      [cleoEmail]
     )
     expect(rows[0]?.avatar_attachment_id).toBeNull()
   })

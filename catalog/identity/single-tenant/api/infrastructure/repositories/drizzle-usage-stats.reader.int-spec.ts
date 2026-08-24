@@ -58,7 +58,10 @@ describe("DrizzleUsageStatsReader (int)", () => {
     )
   }
 
-  async function insertSession(userId: string, lastSeenAt: string): Promise<void> {
+  async function insertSession(
+    userId: string,
+    lastSeenAt: string
+  ): Promise<void> {
     await pool.query(
       `INSERT INTO identity.sessions (id, user_id, token_hash, created_at, last_seen_at, expires_at)
        VALUES ($1, $2, $3, now(), $4, now() + interval '30 days')`,
@@ -84,9 +87,21 @@ describe("DrizzleUsageStatsReader (int)", () => {
   describe("countLoginsByBucket", () => {
     it("soma as entradas por dia no fuso de Brasília", async () => {
       const userId = await insertUser("Recepção")
-      await insertAuthEvent(userId, "login_success", "2026-03-05T09:00:00-03:00")
-      await insertAuthEvent(userId, "login_success", "2026-03-05T18:30:00-03:00")
-      await insertAuthEvent(userId, "login_success", "2026-03-06T08:00:00-03:00")
+      await insertAuthEvent(
+        userId,
+        "login_success",
+        "2026-03-05T09:00:00-03:00"
+      )
+      await insertAuthEvent(
+        userId,
+        "login_success",
+        "2026-03-05T18:30:00-03:00"
+      )
+      await insertAuthEvent(
+        userId,
+        "login_success",
+        "2026-03-06T08:00:00-03:00"
+      )
 
       const rows = await reader.countLoginsByBucket(window)
 
@@ -101,7 +116,11 @@ describe("DrizzleUsageStatsReader (int)", () => {
 
     it("entrada às 23h fica no dia local, não no dia seguinte", async () => {
       const userId = await insertUser("Recepção")
-      await insertAuthEvent(userId, "login_success", "2026-03-05T23:30:00-03:00")
+      await insertAuthEvent(
+        userId,
+        "login_success",
+        "2026-03-05T23:30:00-03:00"
+      )
 
       const rows = await reader.countLoginsByBucket(window)
 
@@ -112,9 +131,17 @@ describe("DrizzleUsageStatsReader (int)", () => {
 
     it("conta só entrada bem-sucedida — falha, bloqueio e saída ficam de fora", async () => {
       const userId = await insertUser("Recepção")
-      await insertAuthEvent(userId, "login_success", "2026-03-05T09:00:00-03:00")
+      await insertAuthEvent(
+        userId,
+        "login_success",
+        "2026-03-05T09:00:00-03:00"
+      )
       await insertAuthEvent(userId, "login_failed", "2026-03-05T09:01:00-03:00")
-      await insertAuthEvent(userId, "account_locked", "2026-03-05T09:02:00-03:00")
+      await insertAuthEvent(
+        userId,
+        "account_locked",
+        "2026-03-05T09:02:00-03:00"
+      )
       await insertAuthEvent(userId, "logout", "2026-03-05T17:00:00-03:00")
 
       const rows = await reader.countLoginsByBucket(window)
@@ -126,16 +153,32 @@ describe("DrizzleUsageStatsReader (int)", () => {
 
     it("ignora entrada fora da janela pedida", async () => {
       const userId = await insertUser("Recepção")
-      await insertAuthEvent(userId, "login_success", "2026-02-27T09:00:00-03:00")
-      await insertAuthEvent(userId, "login_success", "2026-03-11T09:00:00-03:00")
+      await insertAuthEvent(
+        userId,
+        "login_success",
+        "2026-02-27T09:00:00-03:00"
+      )
+      await insertAuthEvent(
+        userId,
+        "login_success",
+        "2026-03-11T09:00:00-03:00"
+      )
 
       expect(await reader.countLoginsByBucket(window)).toEqual([])
     })
 
     it("agrega por semana quando a unidade é semana", async () => {
       const userId = await insertUser("Recepção")
-      await insertAuthEvent(userId, "login_success", "2026-03-03T09:00:00-03:00")
-      await insertAuthEvent(userId, "login_success", "2026-03-08T09:00:00-03:00")
+      await insertAuthEvent(
+        userId,
+        "login_success",
+        "2026-03-03T09:00:00-03:00"
+      )
+      await insertAuthEvent(
+        userId,
+        "login_success",
+        "2026-03-08T09:00:00-03:00"
+      )
 
       const rows = await reader.countLoginsByBucket({ ...window, unit: "week" })
 
@@ -158,8 +201,16 @@ describe("DrizzleUsageStatsReader (int)", () => {
 
     it("sem sessão, cai na última entrada registrada na trilha", async () => {
       const userId = await insertUser("Recepção")
-      await insertAuthEvent(userId, "login_success", "2026-02-10T08:00:00-03:00")
-      await insertAuthEvent(userId, "login_success", "2026-02-20T08:00:00-03:00")
+      await insertAuthEvent(
+        userId,
+        "login_success",
+        "2026-02-10T08:00:00-03:00"
+      )
+      await insertAuthEvent(
+        userId,
+        "login_success",
+        "2026-02-20T08:00:00-03:00"
+      )
 
       const [row] = await reader.listUserInactivity()
 
@@ -168,7 +219,11 @@ describe("DrizzleUsageStatsReader (int)", () => {
 
     it("sessão viva vence a entrada antiga da trilha", async () => {
       const userId = await insertUser("Recepção")
-      await insertAuthEvent(userId, "login_success", "2026-02-10T08:00:00-03:00")
+      await insertAuthEvent(
+        userId,
+        "login_success",
+        "2026-02-10T08:00:00-03:00"
+      )
       await insertSession(userId, "2026-03-09T15:00:00-03:00")
 
       const [row] = await reader.listUserInactivity()
@@ -179,7 +234,11 @@ describe("DrizzleUsageStatsReader (int)", () => {
     it("entrada da trilha mais recente que a sessão vence a sessão", async () => {
       const userId = await insertUser("Recepção")
       await insertSession(userId, "2026-02-01T10:00:00-03:00")
-      await insertAuthEvent(userId, "login_success", "2026-03-09T08:00:00-03:00")
+      await insertAuthEvent(
+        userId,
+        "login_success",
+        "2026-03-09T08:00:00-03:00"
+      )
 
       const [row] = await reader.listUserInactivity()
 
@@ -187,7 +246,9 @@ describe("DrizzleUsageStatsReader (int)", () => {
     })
 
     it("quem nunca acessou vem com último acesso nulo e a data de criação", async () => {
-      await insertUser("Convidado novo", { createdAt: "2026-03-08T09:00:00-03:00" })
+      await insertUser("Convidado novo", {
+        createdAt: "2026-03-08T09:00:00-03:00",
+      })
 
       const [row] = await reader.listUserInactivity()
 
@@ -205,7 +266,9 @@ describe("DrizzleUsageStatsReader (int)", () => {
     })
 
     it("colaborador excluído fica fora da lista", async () => {
-      await insertUser("Saiu da empresa", { deletedAt: "2026-03-01T10:00:00-03:00" })
+      await insertUser("Saiu da empresa", {
+        deletedAt: "2026-03-01T10:00:00-03:00",
+      })
       await insertUser("Continua")
 
       const rows = await reader.listUserInactivity()

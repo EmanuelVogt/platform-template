@@ -11,8 +11,12 @@ export const notifications = notificationSchema.table(
     type: text("type").notNull(),
     title: text("title").notNull(),
     body: text("body").notNull(),
-    actions: jsonb("actions").notNull().default(sql`'[]'::jsonb`),
-    metadata: jsonb("metadata").notNull().default(sql`'{}'::jsonb`),
+    actions: jsonb("actions")
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    metadata: jsonb("metadata")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
     locale: text("locale").notNull(),
     seenAt: timestamp("seen_at", { withTimezone: true }),
     readAt: timestamp("read_at", { withTimezone: true }),

@@ -40,7 +40,7 @@ export const UPLOAD_PROFILES: unique symbol = Symbol("UploadProfiles")
 export type UploadProfileCatalog = Record<UploadProfileName, UploadProfile>
 
 export function buildUploadProfileNames(
-  productDefs: readonly UploadProfileDef[] = PRODUCT_UPLOAD_PROFILES,
+  productDefs: readonly UploadProfileDef[] = PRODUCT_UPLOAD_PROFILES
 ): readonly string[] {
   return [...BASE_UPLOAD_PROFILE_NAMES, ...productDefs.map((def) => def.key)]
 }
@@ -53,7 +53,7 @@ export const UPLOAD_PROFILE_NAMES = buildUploadProfileNames() as readonly [
 export type UploadProfileName = (typeof UPLOAD_PROFILE_NAMES)[number]
 
 export function buildRouteUploadProfileNames(
-  productDefs: readonly UploadProfileDef[] = PRODUCT_UPLOAD_PROFILES,
+  productDefs: readonly UploadProfileDef[] = PRODUCT_UPLOAD_PROFILES
 ): readonly string[] {
   return [
     "document",
@@ -63,16 +63,17 @@ export function buildRouteUploadProfileNames(
   ]
 }
 
-export const ROUTE_UPLOAD_PROFILE_NAMES = buildRouteUploadProfileNames() as readonly [
-  "document",
-  "image",
-  "multi",
-  ...RouteProductUploadProfileKey[],
-]
+export const ROUTE_UPLOAD_PROFILE_NAMES =
+  buildRouteUploadProfileNames() as readonly [
+    "document",
+    "image",
+    "multi",
+    ...RouteProductUploadProfileKey[],
+  ]
 
 export function buildUploadProfiles(
   config: UploadProfileConfig,
-  productDefs: readonly UploadProfileDef[] = PRODUCT_UPLOAD_PROFILES,
+  productDefs: readonly UploadProfileDef[] = PRODUCT_UPLOAD_PROFILES
 ): UploadProfileCatalog {
   const direct: UploadProfile = {
     accept: "image",

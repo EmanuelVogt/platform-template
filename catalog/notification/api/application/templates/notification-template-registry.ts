@@ -46,7 +46,10 @@ export class NotificationTemplateSourceNotRegisteredError extends Error {
  */
 @Injectable()
 export class NotificationTemplateSourceRegistry implements NotificationTemplateSources {
-  private readonly byType = new Map<NotificationType, NotificationTemplateSource>()
+  private readonly byType = new Map<
+    NotificationType,
+    NotificationTemplateSource
+  >()
 
   constructor() {
     for (const source of BASE_TEMPLATE_SOURCES) {

@@ -3,7 +3,6 @@ import { join } from "node:path"
 
 import { describe, it } from "vitest"
 
-
 import { expectContractSubset } from "../../../shared/test/parity/contract-snapshot"
 
 describe("audit — contrato HTTP", () => {

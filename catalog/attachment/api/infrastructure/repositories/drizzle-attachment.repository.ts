@@ -41,13 +41,13 @@ export class DrizzleAttachmentRepository implements AttachmentRepository {
           createdAt: p.createdAt,
           updatedAt: p.updatedAt,
         }
-      }),
+      })
     )
     await this.db.insert(attachmentAcls).values(
       items.map((attachment) => ({
         attachmentId: attachment.props.id,
         visibility: attachment.props.visibility,
-      })),
+      }))
     )
   }
 
@@ -61,9 +61,14 @@ export class DrizzleAttachmentRepository implements AttachmentRepository {
     const rows = await this.db
       .select()
       .from(attachments)
-      .innerJoin(attachmentAcls, eq(attachmentAcls.attachmentId, attachments.id))
+      .innerJoin(
+        attachmentAcls,
+        eq(attachmentAcls.attachmentId, attachments.id)
+      )
       .where(inArray(attachments.id, ids))
-    return rows.map((row) => this.toEntity(row.attachments, row.attachment_acls))
+    return rows.map((row) =>
+      this.toEntity(row.attachments, row.attachment_acls)
+    )
   }
 
   async update(attachment: Attachment): Promise<void> {
@@ -89,9 +94,19 @@ export class DrizzleAttachmentRepository implements AttachmentRepository {
     const rows = await this.db
       .select()
       .from(attachments)
-      .innerJoin(attachmentAcls, eq(attachmentAcls.attachmentId, attachments.id))
-      .where(and(eq(attachments.status, "pending"), lt(attachments.createdAt, cutoff)))
-    return rows.map((row) => this.toEntity(row.attachments, row.attachment_acls))
+      .innerJoin(
+        attachmentAcls,
+        eq(attachmentAcls.attachmentId, attachments.id)
+      )
+      .where(
+        and(
+          eq(attachments.status, "pending"),
+          lt(attachments.createdAt, cutoff)
+        )
+      )
+    return rows.map((row) =>
+      this.toEntity(row.attachments, row.attachment_acls)
+    )
   }
 
   // WHERE carrega o status na própria query de delete: uma linha que virou
@@ -103,22 +118,31 @@ export class DrizzleAttachmentRepository implements AttachmentRepository {
     if (ids.length === 0) return
     const deleted = await this.db
       .delete(attachments)
-      .where(and(inArray(attachments.id, ids), eq(attachments.status, "pending")))
+      .where(
+        and(inArray(attachments.id, ids), eq(attachments.status, "pending"))
+      )
       .returning({ id: attachments.id })
     if (deleted.length === 0) return
     await this.db.delete(attachmentAcls).where(
       inArray(
         attachmentAcls.attachmentId,
-        deleted.map((row) => row.id),
-      ),
+        deleted.map((row) => row.id)
+      )
     )
   }
 
   async sumPendingBytesByOwner(ownerId: string): Promise<number> {
     const [row] = await this.db
-      .select({ total: sql<string>`coalesce(sum(${attachments.sizeBytes}), 0)` })
+      .select({
+        total: sql<string>`coalesce(sum(${attachments.sizeBytes}), 0)`,
+      })
       .from(attachments)
-      .where(and(eq(attachments.status, "pending"), eq(attachments.ownerUserId, ownerId)))
+      .where(
+        and(
+          eq(attachments.status, "pending"),
+          eq(attachments.ownerUserId, ownerId)
+        )
+      )
     return Number(row?.total ?? 0)
   }
 

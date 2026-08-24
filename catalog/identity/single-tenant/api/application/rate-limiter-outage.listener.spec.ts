@@ -7,7 +7,6 @@ import { ResilientRateLimiter } from "../../../shared/kernel/rate-limit/resilien
 import { RateLimiterOutageListener } from "./rate-limiter-outage.listener"
 import { ACCESS_HISTORY_EVENT_TYPES } from "./use-cases/list-access-history/types"
 
-
 import type { LoggerFactory } from "../../../shared/kernel/logging/logger.factory"
 import type { RateLimiter } from "../../../shared/kernel/rate-limit/rate-limiter.port"
 
@@ -29,17 +28,15 @@ function makeListener(over: { ctx?: unknown } = {}) {
     listByUser: vi.fn(),
     deleteOlderThan: vi.fn(),
   }
-  const ctx =
-    over.ctx ??
-    {
-      tryGet: () => ({
-        ip: "203.0.113.4",
-        userAgent: "jest",
-        correlationId: "corr-outage",
-        traceId: "trace-1",
-        spanId: "span-1",
-      }),
-    }
+  const ctx = over.ctx ?? {
+    tryGet: () => ({
+      ip: "203.0.113.4",
+      userAgent: "jest",
+      correlationId: "corr-outage",
+      traceId: "trace-1",
+      spanId: "span-1",
+    }),
+  }
   const listener = new RateLimiterOutageListener(
     authEvents,
     ctx as ConstructorParameters<typeof RateLimiterOutageListener>[1]

@@ -29,7 +29,7 @@ export class DrizzleAttachmentAccessLogRepository implements AttachmentAccessLog
   async recordInTx(entry: AccessLogEntry): Promise<void> {
     if (!this.tx.isInTransaction()) {
       throw new Error(
-        "recordInTx exige uma transação aberta; use record() fora de tx",
+        "recordInTx exige uma transação aberta; use record() fora de tx"
       )
     }
     await this.tx
@@ -53,7 +53,7 @@ export class DrizzleAttachmentAccessLogRepository implements AttachmentAccessLog
 
   async listByAttachment(
     attachmentId: string,
-    limit: number,
+    limit: number
   ): Promise<AttachmentAccessLogListItem[]> {
     const rows = await this.executor
       .select({
@@ -67,8 +67,8 @@ export class DrizzleAttachmentAccessLogRepository implements AttachmentAccessLog
       .where(
         and(
           eq(attachmentAccessLogs.attachmentId, attachmentId),
-          eq(attachmentAccessLogs.outcome, "allowed"),
-        ),
+          eq(attachmentAccessLogs.outcome, "allowed")
+        )
       )
       .orderBy(desc(attachmentAccessLogs.createdAt))
       .limit(limit)

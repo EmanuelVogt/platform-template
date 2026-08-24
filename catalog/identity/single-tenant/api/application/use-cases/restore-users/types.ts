@@ -1,7 +1,7 @@
 export interface RestoreUsersInput {
-  userIds: string[];
+  userIds: string[]
 }
 
 export interface RestoreUsersOutput {
-  restored: number;
+  restored: number
 }

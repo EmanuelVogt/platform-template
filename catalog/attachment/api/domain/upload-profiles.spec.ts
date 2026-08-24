@@ -17,7 +17,8 @@ import type { UploadProfileDef } from "./upload/upload-profile.types"
 import type { UploadProfile } from "./upload-profiles"
 
 const config = parseAttachmentConfig({})
-const productUploadProfiles = PRODUCT_UPLOAD_PROFILES as readonly UploadProfileDef[]
+const productUploadProfiles =
+  PRODUCT_UPLOAD_PROFILES as readonly UploadProfileDef[]
 
 describe("BASE_UPLOAD_PROFILE_NAMES", () => {
   it("é exatamente avatar, access-link-avatar, document, image, multi", () => {
@@ -71,7 +72,7 @@ describe("buildUploadProfiles", () => {
         ATTACHMENT_MAX_UPLOAD_BYTES: "1024",
         ATTACHMENT_MULTI_MAX_FILE_BYTES: "2048",
         ATTACHMENT_MULTI_MAX_TOTAL_BYTES: "4096",
-      }),
+      })
     )
     expect(profiles.avatar.maxBytes).toBe(1024)
     expect(profiles.multi.maxBytes).toBe(2048)
@@ -88,7 +89,10 @@ describe("buildUploadProfiles", () => {
       visibility: "restricted",
       uploadRoute: true,
     }
-    const profiles = buildUploadProfiles(config, [fakeDef]) as Record<string, UploadProfile>
+    const profiles = buildUploadProfiles(config, [fakeDef]) as Record<
+      string,
+      UploadProfile
+    >
     expect(profiles["sample-product-thing"]).toEqual({
       accept: "any",
       maxBytes: 10,
@@ -145,9 +149,9 @@ describe("UPLOAD_PROFILE_NAMES / ROUTE_UPLOAD_PROFILE_NAMES", () => {
       "document",
       "image",
       "multi",
-      ...productUploadProfiles.filter((def) => def.uploadRoute).map(
-        (def) => def.key,
-      ),
+      ...productUploadProfiles
+        .filter((def) => def.uploadRoute)
+        .map((def) => def.key),
     ])
   })
 

@@ -1,3 +1,3 @@
 export interface DeleteUserInput {
-  userId: string;
+  userId: string
 }

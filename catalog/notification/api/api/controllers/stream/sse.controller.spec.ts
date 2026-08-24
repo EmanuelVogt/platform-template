@@ -15,9 +15,13 @@ describe("SseController", () => {
   it("registra a conexão pro recipient autenticado e fecha no close do request", () => {
     const subject = new Subject<MessageEvent>()
     const close = vi.fn()
-    const register = vi.fn().mockReturnValue({ stream: subject.asObservable(), close })
+    const register = vi
+      .fn()
+      .mockReturnValue({ stream: subject.asObservable(), close })
     const registry = { register } as unknown as ConnectionRegistryPort
-    const ctx = { getActor: () => ({ id: "u1", kind: "user" }) } as unknown as RequestContext
+    const ctx = {
+      getActor: () => ({ id: "u1", kind: "user" }),
+    } as unknown as RequestContext
 
     const handlers = new Map<string, () => void>()
     const req = {
@@ -46,7 +50,9 @@ describe("SseController", () => {
       .fn()
       .mockReturnValue({ stream: subject.asObservable(), close: vi.fn() })
     const registry = { register } as unknown as ConnectionRegistryPort
-    const ctx = { getActor: () => ({ id: "u1", kind: "user" }) } as unknown as RequestContext
+    const ctx = {
+      getActor: () => ({ id: "u1", kind: "user" }),
+    } as unknown as RequestContext
     const req = {
       headers: { origin: SAME_ORIGIN },
       on: vi.fn(),
@@ -61,7 +67,9 @@ describe("SseController", () => {
   it("Origin diferente de WEB_ORIGIN → 403, sem registrar a conexão", () => {
     const register = vi.fn()
     const registry = { register } as unknown as ConnectionRegistryPort
-    const ctx = { getActor: () => ({ id: "u1", kind: "user" }) } as unknown as RequestContext
+    const ctx = {
+      getActor: () => ({ id: "u1", kind: "user" }),
+    } as unknown as RequestContext
     const req = {
       headers: { origin: "https://evil.example" },
       on: vi.fn(),

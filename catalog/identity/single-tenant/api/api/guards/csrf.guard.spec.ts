@@ -41,7 +41,7 @@ function makeGuard(
   csrf: Csrf,
   cfg: CsrfConfig,
   isPublic = false,
-  isMachineToMachine = false,
+  isMachineToMachine = false
 ): CsrfGuard {
   const reflector = {
     getAllAndOverride: (key: string) => {
@@ -67,8 +67,8 @@ describe("CsrfGuard — Origin/Referer (lax)", () => {
     const guard = makeGuard(noopCsrf, baseCfg)
     expect(
       guard.canActivate(
-        makeContext({ method: "POST", origin: "http://localhost:5173" }),
-      ),
+        makeContext({ method: "POST", origin: "http://localhost:5173" })
+      )
     ).toBe(true)
   })
 
@@ -76,16 +76,16 @@ describe("CsrfGuard — Origin/Referer (lax)", () => {
     const guard = makeGuard(noopCsrf, baseCfg)
     expect(() =>
       guard.canActivate(
-        makeContext({ method: "POST", origin: "http://evil.example" }),
-      ),
+        makeContext({ method: "POST", origin: "http://evil.example" })
+      )
     ).toThrow(ForbiddenException)
   })
 
   it("403 em POST sem Origin nem Referer", () => {
     const guard = makeGuard(noopCsrf, baseCfg)
-    expect(() =>
-      guard.canActivate(makeContext({ method: "POST" })),
-    ).toThrow(ForbiddenException)
+    expect(() => guard.canActivate(makeContext({ method: "POST" }))).toThrow(
+      ForbiddenException
+    )
   })
 
   it("rota máquina-a-máquina passa sem Origin (ADR 0074)", () => {
@@ -96,7 +96,7 @@ describe("CsrfGuard — Origin/Referer (lax)", () => {
   it("rota máquina-a-máquina não afrouxa as demais", () => {
     const guard = makeGuard(noopCsrf, baseCfg, true, false)
     expect(() => guard.canActivate(makeContext({ method: "POST" }))).toThrow(
-      ForbiddenException,
+      ForbiddenException
     )
   })
 
@@ -104,8 +104,8 @@ describe("CsrfGuard — Origin/Referer (lax)", () => {
     const guard = makeGuard(noopCsrf, baseCfg)
     expect(
       guard.canActivate(
-        makeContext({ method: "POST", referer: "http://localhost:5173/login" }),
-      ),
+        makeContext({ method: "POST", referer: "http://localhost:5173/login" })
+      )
     ).toBe(true)
   })
 })
@@ -125,8 +125,8 @@ describe("CsrfGuard — SameSite=none (double-submit ancorado no sessionId)", ()
           origin: "http://localhost:5173",
           sessionId,
           csrfHeader: token,
-        }),
-      ),
+        })
+      )
     ).toBe(true)
   })
 
@@ -139,8 +139,8 @@ describe("CsrfGuard — SameSite=none (double-submit ancorado no sessionId)", ()
           origin: "http://localhost:5173",
           sessionId,
           csrfHeader: csrf.sign("sess-2"),
-        }),
-      ),
+        })
+      )
     ).toThrow(ForbiddenException)
   })
 
@@ -152,8 +152,8 @@ describe("CsrfGuard — SameSite=none (double-submit ancorado no sessionId)", ()
           method: "POST",
           origin: "http://localhost:5173",
           csrfHeader: token,
-        }),
-      ),
+        })
+      )
     ).toThrow(ForbiddenException)
   })
 
@@ -165,8 +165,8 @@ describe("CsrfGuard — SameSite=none (double-submit ancorado no sessionId)", ()
           method: "POST",
           origin: "http://localhost:5173",
           sessionId,
-        }),
-      ),
+        })
+      )
     ).toThrow(ForbiddenException)
   })
 
@@ -174,8 +174,8 @@ describe("CsrfGuard — SameSite=none (double-submit ancorado no sessionId)", ()
     const guard = makeGuard(csrf, cfg, true)
     expect(
       guard.canActivate(
-        makeContext({ method: "POST", origin: "http://localhost:5173" }),
-      ),
+        makeContext({ method: "POST", origin: "http://localhost:5173" })
+      )
     ).toBe(true)
   })
 })

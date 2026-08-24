@@ -24,12 +24,14 @@ describe("UploadAvatarController", () => {
 
   beforeEach(() => {
     useCase = { execute: vi.fn() }
-    controller = new UploadAvatarController(useCase as unknown as UploadAvatarUseCase)
+    controller = new UploadAvatarController(
+      useCase as unknown as UploadAvatarUseCase
+    )
   })
 
   it("rejeita quando nenhum arquivo é enviado", async () => {
     await expect(controller.handle(undefined)).rejects.toBeInstanceOf(
-      AvatarFileRequiredError,
+      AvatarFileRequiredError
     )
     expect(useCase.execute).not.toHaveBeenCalled()
   })
@@ -54,14 +56,14 @@ describe("UploadAvatarController", () => {
     // achar os metadados do decorator), mas sem o tipo "method" que o
     // @typescript-eslint/unbound-method sinalizaria por causa do "this" perdido —
     // aqui a função nunca é chamada fora de contexto, só inspecionada.
-    const controllerPrototype = UploadAvatarController.prototype as unknown as Record<
-      "handle",
-      unknown
-    >
+    const controllerPrototype =
+      UploadAvatarController.prototype as unknown as Record<"handle", unknown>
     const [FileInterceptor] = Reflect.getMetadata(
       INTERCEPTORS_METADATA,
-      controllerPrototype.handle as object,
-    ) as [new () => { multer: { limits?: { fileSize?: number; fields?: number } } }]
+      controllerPrototype.handle as object
+    ) as [
+      new () => { multer: { limits?: { fileSize?: number; fields?: number } } },
+    ]
 
     const { multer } = new FileInterceptor()
 

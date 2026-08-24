@@ -43,7 +43,8 @@ function makeDeps(
     templateSources: NotificationTemplateSourceRegistry
   }> = {}
 ) {
-  const templateSources = over.templateSources ?? new NotificationTemplateSourceRegistry()
+  const templateSources =
+    over.templateSources ?? new NotificationTemplateSourceRegistry()
   const markIfNew = vi.fn().mockResolvedValue(over.markIfNew ?? true)
   const insert = vi.fn().mockResolvedValue(undefined)
   const enqueue = vi.fn().mockResolvedValue(undefined)
@@ -60,9 +61,17 @@ function makeDeps(
     { onCommit } as unknown as TransactionManager,
     { publishNew },
     templateSources,
-    loggerFactory,
+    loggerFactory
   )
-  return { handler, markIfNew, insert, enqueue, allowedChannels, onCommit, publishNew }
+  return {
+    handler,
+    markIfNew,
+    insert,
+    enqueue,
+    allowedChannels,
+    onCommit,
+    publishNew,
+  }
 }
 
 const passwordSet = () =>
@@ -88,7 +97,7 @@ describe("NotificationRequestedHandler", () => {
       t.handler.handle({
         ...envelope,
         payload: { ...envelope.payload, type: "tipo_inexistente" as never },
-      }),
+      })
     ).rejects.toThrow(/fora do catálogo/)
     expect(t.insert).not.toHaveBeenCalled()
   })
@@ -116,7 +125,7 @@ describe("NotificationRequestedHandler", () => {
         type: "tipo_do_produto" as never,
         locale: "pt-BR",
         data: { email: "a@b.com" },
-      }),
+      })
     )
 
     expect(t.insert).not.toHaveBeenCalled()
@@ -147,7 +156,7 @@ describe("NotificationRequestedHandler", () => {
         type: "password_changed",
         locale: "pt-BR",
         data: { email: "a@b.com", at: "2026-06-10T00:00:00.000Z" },
-      }),
+      })
     )
     expect(t.insert).toHaveBeenCalledTimes(1)
     expect(t.enqueue).toHaveBeenCalledWith([
@@ -156,7 +165,11 @@ describe("NotificationRequestedHandler", () => {
         type: "password_changed",
         channel: "email",
         notificationId: expect.any(String),
-        payload: { email: "a@b.com", at: "2026-06-10T00:00:00.000Z", locale: "pt-BR" },
+        payload: {
+          email: "a@b.com",
+          at: "2026-06-10T00:00:00.000Z",
+          locale: "pt-BR",
+        },
       }),
     ])
   })
@@ -183,7 +196,7 @@ describe("NotificationRequestedHandler", () => {
           link: "https://app.local/configurar-senha?token=raw",
           tokenExpiresAt: "2099-01-01T00:00:00.000Z",
         },
-      }),
+      })
     )
     expect(t.insert).not.toHaveBeenCalled()
     expect(t.onCommit).not.toHaveBeenCalled()

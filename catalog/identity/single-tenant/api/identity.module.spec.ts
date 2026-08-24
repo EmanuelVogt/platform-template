@@ -54,9 +54,11 @@ describe("identidade instalada sozinha, sem o módulo de anexos", () => {
       providers: [UploadAvatarUseCase, UploadAccessLinkAvatarUseCase, ...STUBS],
     }).compile()
 
-    expect(moduleRef.get(UploadAvatarUseCase)).toBeInstanceOf(UploadAvatarUseCase)
+    expect(moduleRef.get(UploadAvatarUseCase)).toBeInstanceOf(
+      UploadAvatarUseCase
+    )
     expect(moduleRef.get(UploadAccessLinkAvatarUseCase)).toBeInstanceOf(
-      UploadAccessLinkAvatarUseCase,
+      UploadAccessLinkAvatarUseCase
     )
   })
 })

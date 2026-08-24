@@ -26,6 +26,9 @@ export class MarkAllSeenUseCase implements UseCaseContract<void, void> {
   @Transactional()
   @Traced({ name: "notification.markAllSeen" })
   async execute(): Promise<void> {
-    await this.notifications.markAllSeen(requireRecipient(this.ctx), this.clock.now())
+    await this.notifications.markAllSeen(
+      requireRecipient(this.ctx),
+      this.clock.now()
+    )
   }
 }

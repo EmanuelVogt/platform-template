@@ -10,9 +10,7 @@ import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorato
 import { NotificationRequested } from "../../../../notification/api/events/notification-requested.event"
 import { User } from "../../../domain/entities/user.entity"
 import { VerificationToken } from "../../../domain/entities/verification-token.entity"
-import {
-  EmailAlreadyInUseError,
-} from "../../../domain/errors"
+import { EmailAlreadyInUseError } from "../../../domain/errors"
 import {
   AUTH_EVENT_REPOSITORY,
   type AuthEventRepository,
@@ -21,8 +19,14 @@ import {
   PROFESSIONAL_SCOPE,
   type ProfessionalScope,
 } from "../../../domain/ports/professional-scope.port"
-import { TOKEN_GENERATOR, type TokenGenerator } from "../../../domain/ports/token-generator"
-import { USER_REPOSITORY, type UserRepository } from "../../../domain/ports/user.repository"
+import {
+  TOKEN_GENERATOR,
+  type TokenGenerator,
+} from "../../../domain/ports/token-generator"
+import {
+  USER_REPOSITORY,
+  type UserRepository,
+} from "../../../domain/ports/user.repository"
 import {
   VERIFICATION_TOKEN_REPOSITORY,
   type VerificationTokenRepository,
@@ -36,18 +40,22 @@ import type { CreateUserInput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class CreateUserUseCase implements UseCaseContract<CreateUserInput, void> {
+export class CreateUserUseCase implements UseCaseContract<
+  CreateUserInput,
+  void
+> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(VERIFICATION_TOKEN_REPOSITORY)
     private readonly verificationTokens: VerificationTokenRepository,
     @Inject(TOKEN_GENERATOR) private readonly tokens: TokenGenerator,
     private readonly outbox: OutboxPublisher,
-    @Inject(AUTH_EVENT_REPOSITORY) private readonly authEvents: AuthEventRepository,
+    @Inject(AUTH_EVENT_REPOSITORY)
+    private readonly authEvents: AuthEventRepository,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly ctx: RequestContext,
     @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig,
-    @Inject(PROFESSIONAL_SCOPE) private readonly scope: ProfessionalScope,
+    @Inject(PROFESSIONAL_SCOPE) private readonly scope: ProfessionalScope
   ) {}
 
   @Transactional()
@@ -86,12 +94,18 @@ export class CreateUserUseCase implements UseCaseContract<CreateUserInput, void>
     await this.users.insert(user)
     await this.users.replacePermissions(user.props.id, access.permissions)
     await this.users.replaceProfessionalAreas(user.props.id, access.areaIds)
-    await this.users.replaceProfessionalServices(user.props.id, access.serviceIds)
-    await this.users.replaceSchedulingAreas(user.props.id, access.schedulingAreaIds)
+    await this.users.replaceProfessionalServices(
+      user.props.id,
+      access.serviceIds
+    )
+    await this.users.replaceSchedulingAreas(
+      user.props.id,
+      access.schedulingAreaIds
+    )
 
     const { raw, hash } = this.tokens.generate()
     const expiresAt = new Date(
-      now.getTime() + this.config.ACCESS_LINK_TOKEN_TTL_SECONDS * 1000,
+      now.getTime() + this.config.ACCESS_LINK_TOKEN_TTL_SECONDS * 1000
     )
     await this.verificationTokens.create(
       VerificationToken.create({
@@ -99,7 +113,7 @@ export class CreateUserUseCase implements UseCaseContract<CreateUserInput, void>
         tokenHash: hash,
         type: "access_link",
         expiresAt,
-      }),
+      })
     )
 
     const link = `${this.config.WEB_ORIGIN}/configurar-senha?token=${raw}`
@@ -114,14 +128,14 @@ export class CreateUserUseCase implements UseCaseContract<CreateUserInput, void>
           link,
           tokenExpiresAt: expiresAt.toISOString(),
         },
-      }),
+      })
     )
     await this.authEvents.recordInTx(
       authEventOf(store, {
         userId: user.props.id,
         actorUserId: actorId,
         eventType: "access_link_sent",
-      }),
+      })
     )
   }
 }

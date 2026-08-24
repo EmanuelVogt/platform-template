@@ -14,11 +14,9 @@ function pendingHasher() {
     verify: Mock
     needsRehash: Mock
   } = {
-    hash: vi.fn(
-      () => new Promise<string>((resolve) => pending.push(resolve)),
-    ),
+    hash: vi.fn(() => new Promise<string>((resolve) => pending.push(resolve))),
     verify: vi.fn(
-      () => new Promise<boolean>((resolve) => pending.push(resolve)),
+      () => new Promise<boolean>((resolve) => pending.push(resolve))
     ),
     needsRehash: vi.fn().mockReturnValue(false),
   }
@@ -52,7 +50,7 @@ describe("BoundedPasswordHasher", () => {
     void hasher.verify("senha", "hash-real")
 
     await expect(hasher.verify("senha", "hash-dummy")).rejects.toBeInstanceOf(
-      PasswordHashingSaturatedError,
+      PasswordHashingSaturatedError
     )
     expect(inner.verify).toHaveBeenCalledTimes(1)
   })
@@ -63,7 +61,7 @@ describe("BoundedPasswordHasher", () => {
 
     const first = hasher.hash("senha")
     await expect(hasher.hash("outra")).rejects.toBeInstanceOf(
-      PasswordHashingSaturatedError,
+      PasswordHashingSaturatedError
     )
 
     pending[0]?.("hash-1" as never)

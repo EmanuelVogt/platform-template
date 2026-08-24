@@ -4,7 +4,12 @@ import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { createE2eApp } from "../../../../test/setup/app-factory"
-import { createTestPool, seedEmail, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
+import {
+  createTestPool,
+  seedEmail,
+  truncateIdentity,
+  truncateKernel,
+} from "../../../../test/setup/test-db"
 import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
 import { MAILER } from "../../notification/domain/ports/mailer"
 import { allowAllRateLimiter } from "../testing/allow-all-rate-limiter"
@@ -25,7 +30,7 @@ const SUITE = "sse"
 function probeSSE(
   server: ReturnType<typeof http.createServer>,
   path: string,
-  cookie: string[],
+  cookie: string[]
 ): Promise<{ statusCode: number; contentType: string }> {
   return new Promise((resolve, reject) => {
     const addr = server.address()
@@ -53,7 +58,7 @@ function probeSSE(
         // termina por si só; destruir evita que o teste penda.
         res.destroy()
         resolve({ statusCode, contentType })
-      },
+      }
     )
     req.on("error", (err) => {
       // ECONNRESET é esperado quando destruímos o socket do lado do cliente
@@ -76,7 +81,7 @@ describe("SSE handshake /v1/notifications/stream (e2e)", () => {
     await truncateIdentity(pool)
     await truncateKernel(pool)
     await pool.query(
-      "TRUNCATE TABLE notification.notifications, notification.notification_deliveries",
+      "TRUNCATE TABLE notification.notifications, notification.notification_deliveries"
     )
 
     app = await createE2eApp((b) =>
@@ -84,7 +89,7 @@ describe("SSE handshake /v1/notifications/stream (e2e)", () => {
         .overrideProvider(RATE_LIMITER)
         .useValue(allowAllRateLimiter)
         .overrideProvider(MAILER)
-        .useValue(fakeMailer()),
+        .useValue(fakeMailer())
     )
     // listen(0) abre numa porta efêmera — necessário para o http nativo conseguir
     // endereçar o servidor fora do ciclo do supertest.
@@ -117,7 +122,7 @@ describe("SSE handshake /v1/notifications/stream (e2e)", () => {
     const { statusCode, contentType } = await probeSSE(
       app.getHttpServer(),
       "/v1/notifications/stream",
-      cookie,
+      cookie
     )
 
     expect(statusCode).toBe(200)

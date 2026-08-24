@@ -28,7 +28,10 @@ export class DrizzleAuthEventRepository implements AuthEventRepository {
   }
 
   async record(event: AuthEvent): Promise<void> {
-    await this.tx.outsideTransaction().insert(authEvents).values(this.toRow(event))
+    await this.tx
+      .outsideTransaction()
+      .insert(authEvents)
+      .values(this.toRow(event))
   }
 
   async recordInTx(event: AuthEvent): Promise<void> {
@@ -91,7 +94,9 @@ export class DrizzleAuthEventRepository implements AuthEventRepository {
       )
     }
     const db = this.tx.getExecutor()
-    await db.execute(sql`SELECT set_config('app.auth_events_purge', 'on', true)`)
+    await db.execute(
+      sql`SELECT set_config('app.auth_events_purge', 'on', true)`
+    )
     const result = await db
       .delete(authEvents)
       .where(lt(authEvents.createdAt, cutoff))

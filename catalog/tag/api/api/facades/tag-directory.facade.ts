@@ -1,6 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common"
 
-import { TAG_REPOSITORY, type TagRepository } from "../../domain/ports/tag.repository"
+import {
+  TAG_REPOSITORY,
+  type TagRepository,
+} from "../../domain/ports/tag.repository"
 
 export type TagRef = {
   id: string

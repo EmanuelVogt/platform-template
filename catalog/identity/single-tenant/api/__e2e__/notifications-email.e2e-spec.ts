@@ -3,7 +3,11 @@ import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
+import {
+  createTestPool,
+  truncateIdentity,
+  truncateKernel,
+} from "../../../../test/setup/test-db"
 import { AppModule } from "../../../app.module"
 import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
@@ -31,7 +35,7 @@ describe("Cutover de e-mail: identity → notification (e2e)", () => {
     await truncateIdentity(pool)
     await truncateKernel(pool)
     await pool.query(
-      "truncate table notification.notifications, notification.notification_deliveries",
+      "truncate table notification.notifications, notification.notification_deliveries"
     )
     await pool.end()
 
@@ -62,9 +66,10 @@ describe("Cutover de e-mail: identity → notification (e2e)", () => {
       name: "Master",
       password: "Senha-Master-Muito-Forte-2026!",
     })
-    await pool.query("UPDATE identity.users SET access_profile = 'master' WHERE id = $1", [
-      masterId,
-    ])
+    await pool.query(
+      "UPDATE identity.users SET access_profile = 'master' WHERE id = $1",
+      [masterId]
+    )
 
     const loginRes = await request(app.getHttpServer())
       .post("/v1/auth/login")
@@ -81,7 +86,12 @@ describe("Cutover de e-mail: identity → notification (e2e)", () => {
       .set("Origin", ORIGIN)
       .set("Cookie", cookie!)
       .set("Idempotency-Key", "cutover-create-bia")
-      .send({ name: "Bia", email: "bia-cutover@example.com", accessProfile: "admin", permissions: ["admin.users.read"] })
+      .send({
+        name: "Bia",
+        email: "bia-cutover@example.com",
+        accessProfile: "admin",
+        permissions: ["admin.users.read"],
+      })
       .expect(201)
 
     // 2-hop assíncrono: o poll manual pode virar no-op se o de background já
@@ -96,7 +106,7 @@ describe("Cutover de e-mail: identity → notification (e2e)", () => {
         status: string
         payload: { link: string; email: string }
       }>(
-        "select id, status, payload from notification.notification_deliveries where type = 'access_link_sent'",
+        "select id, status, payload from notification.notification_deliveries where type = 'access_link_sent'"
       )
       return r.rows[0]?.status === "sent" ? r.rows[0] : undefined
     }
@@ -104,7 +114,9 @@ describe("Cutover de e-mail: identity → notification (e2e)", () => {
     const start = Date.now()
     while (!delivery) {
       if (Date.now() - start > 8000) {
-        throw new Error("timeout esperando a delivery de access_link_sent virar sent")
+        throw new Error(
+          "timeout esperando a delivery de access_link_sent virar sent"
+        )
       }
       await new Promise((resolve) => setTimeout(resolve, 50))
       delivery = await findSent()
@@ -114,14 +126,16 @@ describe("Cutover de e-mail: identity → notification (e2e)", () => {
     expect(delivery.payload.email).toBe("bia-cutover@example.com")
 
     // Tipo base mantém o assunto v0.1 pelo caminho genérico; idempotencyKey = delivery.id.
-    const sentMessage = mailer.sent.find((m) => m.to === "bia-cutover@example.com")
+    const sentMessage = mailer.sent.find(
+      (m) => m.to === "bia-cutover@example.com"
+    )
     expect(sentMessage?.subject).toBe("Configure seu acesso à plataforma")
     expect(sentMessage?.idempotencyKey).toBe(delivery.id)
 
     // access_link_sent é email-only: nenhuma linha in-app DESSE tipo (o login
     // do master gera device_new_login in-app legítimo — filtra por type).
     const inapp = await pool.query<{ n: number }>(
-      "select count(*)::int as n from notification.notifications where type = 'access_link_sent'",
+      "select count(*)::int as n from notification.notifications where type = 'access_link_sent'"
     )
     expect(inapp.rows[0]?.n).toBe(0)
 

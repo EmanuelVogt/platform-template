@@ -28,7 +28,10 @@ function linkFromHtml(html: string): string {
   return match[1]!
 }
 
-async function waitFor(predicate: () => boolean, timeoutMs = 4000): Promise<void> {
+async function waitFor(
+  predicate: () => boolean,
+  timeoutMs = 4000
+): Promise<void> {
   const start = Date.now()
   while (!predicate()) {
     if (Date.now() - start > timeoutMs) {
@@ -55,7 +58,7 @@ describe("Verificação de e-mail (e2e)", () => {
         .overrideProvider(RATE_LIMITER)
         .useValue(allowAllRateLimiter)
         .overrideProvider(MAILER)
-        .useValue(mailer),
+        .useValue(mailer)
     )
     dispatcher = app.get(OutboxDispatcher)
   })
@@ -70,7 +73,7 @@ describe("Verificação de e-mail (e2e)", () => {
    */
   async function setupUnverifiedUser(
     email: string,
-    password: string,
+    password: string
   ): Promise<{ sessionCookie: string[]; token: string }> {
     const pool = createTestPool()
     await seedUser(app, pool, {
@@ -98,10 +101,15 @@ describe("Verificação de e-mail (e2e)", () => {
     // Casa por destinatário + assunto: o login pode disparar um e-mail de
     // device_new_login antes do de verificação, deslocando o índice.
     const sentVerification = (): EmailMessage | undefined =>
-      mailer.sent.find((message) => message.to === email && message.subject === "Verifique seu e-mail")
+      mailer.sent.find(
+        (message) =>
+          message.to === email && message.subject === "Verifique seu e-mail"
+      )
     await waitFor(() => sentVerification() !== undefined)
 
-    const token = new URL(linkFromHtml(sentVerification()!.html)).searchParams.get("token")
+    const token = new URL(
+      linkFromHtml(sentVerification()!.html)
+    ).searchParams.get("token")
     expect(token).toBeTruthy()
     return { sessionCookie, token: token! }
   }
@@ -120,7 +128,7 @@ describe("Verificação de e-mail (e2e)", () => {
     const pool = createTestPool()
     const { rows } = await pool.query<{ email_verified: boolean }>(
       "SELECT email_verified FROM identity.users WHERE email = $1",
-      [email],
+      [email]
     )
     await pool.end()
     expect(rows[0]?.email_verified).toBe(true)
@@ -173,7 +181,7 @@ describe("Verificação de e-mail (e2e)", () => {
     })
     const { rows: userRows } = await pool.query<{ id: string }>(
       "SELECT id FROM identity.users WHERE email = $1",
-      [email],
+      [email]
     )
     const userId = userRows[0]?.id
     expect(userId).toBeTruthy()
@@ -186,7 +194,7 @@ describe("Verificação de e-mail (e2e)", () => {
       `INSERT INTO identity.verification_tokens
          (id, user_id, type, token_hash, expires_at, created_at)
        VALUES ($1, $2, 'email_verify', $3, now() - interval '1 hour', now())`,
-      [ulid(), userId, tokenHash],
+      [ulid(), userId, tokenHash]
     )
     await pool.end()
 

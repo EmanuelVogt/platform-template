@@ -33,12 +33,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "unread",
-                "read",
-                "archived",
-                "all"
-              ]
+              "enum": ["unread", "read", "archived", "all"]
             }
           }
         ],
@@ -54,9 +49,7 @@
             }
           }
         },
-        "tags": [
-          "Notifications"
-        ]
+        "tags": ["Notifications"]
       }
     },
     "/v1/notifications/unseen-count": {
@@ -75,9 +68,7 @@
             }
           }
         },
-        "tags": [
-          "Notifications"
-        ]
+        "tags": ["Notifications"]
       }
     },
     "/v1/notifications/seen": {
@@ -89,9 +80,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Notifications"
-        ]
+        "tags": ["Notifications"]
       }
     },
     "/v1/notifications/read-all": {
@@ -103,9 +92,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Notifications"
-        ]
+        "tags": ["Notifications"]
       }
     },
     "/v1/notifications/{id}/read": {
@@ -127,9 +114,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Notifications"
-        ]
+        "tags": ["Notifications"]
       }
     },
     "/v1/notifications/{id}/archive": {
@@ -151,9 +136,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Notifications"
-        ]
+        "tags": ["Notifications"]
       }
     }
   },
@@ -191,10 +174,7 @@
                             "pattern": "^\\/"
                           }
                         },
-                        "required": [
-                          "label",
-                          "deepLink"
-                        ]
+                        "required": ["label", "deepLink"]
                       }
                     },
                     "locale": {
@@ -225,9 +205,7 @@
                     },
                     "type": {
                       "type": "string",
-                      "enum": [
-                        "password_changed"
-                      ]
+                      "enum": ["password_changed"]
                     },
                     "metadata": {
                       "type": "object",
@@ -238,9 +216,7 @@
                           "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
                         }
                       },
-                      "required": [
-                        "at"
-                      ]
+                      "required": ["at"]
                     }
                   },
                   "required": [
@@ -282,10 +258,7 @@
                             "pattern": "^\\/"
                           }
                         },
-                        "required": [
-                          "label",
-                          "deepLink"
-                        ]
+                        "required": ["label", "deepLink"]
                       }
                     },
                     "locale": {
@@ -316,9 +289,7 @@
                     },
                     "type": {
                       "type": "string",
-                      "enum": [
-                        "device_new_login"
-                      ]
+                      "enum": ["device_new_login"]
                     },
                     "metadata": {
                       "type": "object",
@@ -336,11 +307,7 @@
                           "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
                         }
                       },
-                      "required": [
-                        "deviceLabel",
-                        "ip",
-                        "at"
-                      ]
+                      "required": ["deviceLabel", "ip", "at"]
                     }
                   },
                   "required": [
@@ -382,10 +349,7 @@
                             "pattern": "^\\/"
                           }
                         },
-                        "required": [
-                          "label",
-                          "deepLink"
-                        ]
+                        "required": ["label", "deepLink"]
                       }
                     },
                     "locale": {
@@ -416,9 +380,7 @@
                     },
                     "type": {
                       "type": "string",
-                      "enum": [
-                        "device_revoked"
-                      ]
+                      "enum": ["device_revoked"]
                     },
                     "metadata": {
                       "type": "object",
@@ -427,9 +389,7 @@
                           "type": "string"
                         }
                       },
-                      "required": [
-                        "deviceId"
-                      ]
+                      "required": ["deviceId"]
                     }
                   },
                   "required": [
@@ -471,10 +431,7 @@
                             "pattern": "^\\/"
                           }
                         },
-                        "required": [
-                          "label",
-                          "deepLink"
-                        ]
+                        "required": ["label", "deepLink"]
                       }
                     },
                     "locale": {
@@ -505,9 +462,7 @@
                     },
                     "type": {
                       "type": "string",
-                      "enum": [
-                        "password_set"
-                      ]
+                      "enum": ["password_set"]
                     },
                     "metadata": {
                       "type": "object",
@@ -516,9 +471,7 @@
                           "type": "string"
                         }
                       },
-                      "required": [
-                        "userName"
-                      ]
+                      "required": ["userName"]
                     }
                   },
                   "required": [
@@ -562,18 +515,10 @@
                 "maximum": 9007199254740991
               }
             },
-            "required": [
-              "total",
-              "page",
-              "pageSize",
-              "totalPages"
-            ]
+            "required": ["total", "page", "pageSize", "totalPages"]
           }
         },
-        "required": [
-          "data",
-          "page"
-        ]
+        "required": ["data", "page"]
       },
       "UnseenCountResponseDto": {
         "type": "object",
@@ -584,9 +529,7 @@
             "maximum": 9007199254740991
           }
         },
-        "required": [
-          "count"
-        ]
+        "required": ["count"]
       }
     }
   }

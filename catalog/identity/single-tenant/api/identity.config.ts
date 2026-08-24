@@ -29,13 +29,21 @@ export const identityConfigSchema = z
       .default(34560000),
 
     // --- sessão ---
-    SESSION_IDLE_TTL_SECONDS: z.coerce.number().int().positive().default(604800), // 7d
+    SESSION_IDLE_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(604800), // 7d
     SESSION_ABSOLUTE_TTL_SECONDS: z.coerce
       .number()
       .int()
       .positive()
       .default(2592000), // 30d
-    SESSION_TOUCH_INTERVAL_SECONDS: z.coerce.number().int().positive().default(60),
+    SESSION_TOUCH_INTERVAL_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(60),
     SESSION_REMEMBER_IDLE_TTL_SECONDS: z.coerce
       .number()
       .int()
@@ -54,14 +62,30 @@ export const identityConfigSchema = z
     // --- tokens ---
     RESET_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(3600),
     VERIFY_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(86400),
-    ACCESS_LINK_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(604800), // 7 dias
+    ACCESS_LINK_TOKEN_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(604800), // 7 dias
     // TTL curto: conta fica inativa até confirmar; expirou → auto-revert pro e-mail antigo.
-    EMAIL_CHANGE_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(3600), // 1h
+    EMAIL_CHANGE_TOKEN_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(3600), // 1h
 
     // --- cooldown anti-spam de e-mail (por conta, fluxos independentes) ---
     RESET_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(60),
-    VERIFICATION_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(60),
-    EMAIL_CHANGE_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(60),
+    VERIFICATION_COOLDOWN_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(60),
+    EMAIL_CHANGE_COOLDOWN_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(60),
 
     // --- argon2 (floors OWASP) ---
     ARGON_MEMORY_KIB: z.coerce.number().int().min(19456).default(65536),
@@ -90,22 +114,26 @@ export const identityConfigSchema = z
       .positive()
       .default(180),
   })
-  .refine((c) => c.SESSION_TOUCH_INTERVAL_SECONDS < c.SESSION_IDLE_TTL_SECONDS, {
-    message:
-      "SESSION_TOUCH_INTERVAL_SECONDS deve ser menor que SESSION_IDLE_TTL_SECONDS",
-    path: ["SESSION_TOUCH_INTERVAL_SECONDS"],
-  })
+  .refine(
+    (c) => c.SESSION_TOUCH_INTERVAL_SECONDS < c.SESSION_IDLE_TTL_SECONDS,
+    {
+      message:
+        "SESSION_TOUCH_INTERVAL_SECONDS deve ser menor que SESSION_IDLE_TTL_SECONDS",
+      path: ["SESSION_TOUCH_INTERVAL_SECONDS"],
+    }
+  )
   .refine(
     (c) => c.COOKIE_SAMESITE !== "none" || typeof c.CSRF_SECRET === "string",
     {
       message: "COOKIE_SAMESITE=none exige CSRF_SECRET definido",
       path: ["CSRF_SECRET"],
-    },
+    }
   )
   // Prefixos __Host-/__Secure- só são aceitos pelo browser com Secure; sem isso
   // o cookie é descartado silenciosamente (quebra auth em dev sobre HTTP).
   .refine((c) => c.COOKIE_SECURE || !/^__(Host|Secure)-/.test(c.COOKIE_NAME), {
-    message: "COOKIE_NAME com prefixo __Host-/__Secure- exige COOKIE_SECURE=true",
+    message:
+      "COOKIE_NAME com prefixo __Host-/__Secure- exige COOKIE_SECURE=true",
     path: ["COOKIE_SECURE"],
   })
   .refine(
@@ -114,7 +142,7 @@ export const identityConfigSchema = z
       message:
         "DEVICE_COOKIE_NAME com prefixo __Host-/__Secure- exige COOKIE_SECURE=true",
       path: ["COOKIE_SECURE"],
-    },
+    }
   )
 
 export type IdentityConfig = z.infer<typeof identityConfigSchema>
@@ -129,7 +157,7 @@ export function parseIdentityConfig(source: NodeJS.ProcessEnv): IdentityConfig {
   const parsed = identityConfigSchema.safeParse(source)
   if (!parsed.success) {
     throw new Error(
-      `Configuração do módulo identity inválida:\n${z.prettifyError(parsed.error)}`,
+      `Configuração do módulo identity inválida:\n${z.prettifyError(parsed.error)}`
     )
   }
   return parsed.data

@@ -16,7 +16,7 @@ import type { PermissionKey } from "../domain/permissions/permission-catalog"
 import type { ProfessionalScope } from "../domain/ports/professional-scope.port"
 
 export function assertValidPermissionSet(
-  permissions: readonly PermissionKey[],
+  permissions: readonly PermissionKey[]
 ): void {
   const set = new Set(permissions)
   const missing = new Set<PermissionKey>()
@@ -27,19 +27,19 @@ export function assertValidPermissionSet(
   }
   if (missing.size > 0) {
     throw new InvalidPermissionSetError(
-      `Permissões pré-requisito ausentes: ${[...missing].join(", ")}`,
+      `Permissões pré-requisito ausentes: ${[...missing].join(", ")}`
     )
   }
 }
 
 export function assertProfileFloor(
   profile: AccessProfile,
-  permissions: readonly PermissionKey[],
+  permissions: readonly PermissionKey[]
 ): void {
   if (!requiresPermissionFloor(profile)) return
   if (permissions.some((key) => moduleOf(key) === profile)) return
   throw new InvalidPermissionSetError(
-    `O perfil de acesso exige ao menos uma permissão do módulo "${profile}".`,
+    `O perfil de acesso exige ao menos uma permissão do módulo "${profile}".`
   )
 }
 
@@ -65,7 +65,7 @@ export type GrantContext = {
  */
 export function assertCanGrant(
   grant: GrantContext,
-  requested: readonly PermissionKey[],
+  requested: readonly PermissionKey[]
 ): void {
   if (grant.actor.isMaster) return
   const current = new Set(grant.current)
@@ -89,7 +89,7 @@ export async function resolveUserAccess(
     schedulingAreaIds: readonly string[]
   },
   scope: ProfessionalScope,
-  grant: GrantContext,
+  grant: GrantContext
 ): Promise<ResolvedUserAccess> {
   assertCanGrant(grant, input.permissions)
   assertValidPermissionSet(input.permissions)
@@ -113,12 +113,12 @@ async function resolveAttendanceScope(
     areaIds: readonly string[]
     serviceIds: readonly string[]
   },
-  scope: ProfessionalScope,
+  scope: ProfessionalScope
 ): Promise<{ areaIds: string[]; serviceIds: string[] }> {
   if (!input.servesClients) return { areaIds: [], serviceIds: [] }
   if (input.areaIds.length === 0) {
     throw new InvalidProfessionalScopeError(
-      "Selecione ao menos uma área de atuação.",
+      "Selecione ao menos uma área de atuação."
     )
   }
   await scope.assertValid(input.areaIds, input.serviceIds)
@@ -127,7 +127,7 @@ async function resolveAttendanceScope(
 
 async function resolveSchedulingAreas(
   input: { schedulingAreaIds: readonly string[] },
-  scope: ProfessionalScope,
+  scope: ProfessionalScope
 ): Promise<string[]> {
   if (input.schedulingAreaIds.length === 0) return []
   // Reusa a validação estrutural do port (existência/atividade da área);

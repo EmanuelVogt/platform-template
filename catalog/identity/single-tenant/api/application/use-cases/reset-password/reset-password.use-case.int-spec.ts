@@ -94,7 +94,7 @@ describe("ResetPasswordUseCase — breach fora da tx (R17)", () => {
 
   function makeUseCase(
     check: () => Promise<BreachVerdict>,
-    mode: "fail_open" | "fail_closed",
+    mode: "fail_open" | "fail_closed"
   ) {
     const verificationTokens = {
       consumeByHash: vi
@@ -123,7 +123,7 @@ describe("ResetPasswordUseCase — breach fora da tx (R17)", () => {
       authEvents as never,
       { now: () => NOW },
       ctx,
-      configWith(mode),
+      configWith(mode)
     )
     return { uc, users, verificationTokens, authEvents }
   }
@@ -136,7 +136,7 @@ describe("ResetPasswordUseCase — breach fora da tx (R17)", () => {
     }, "fail_closed")
 
     await ctx.run(anonymousStore(), () =>
-      t.uc.execute({ token: "tok", password: "nova-senha-forte-1" }),
+      t.uc.execute({ token: "tok", password: "nova-senha-forte-1" })
     )
 
     expect(inTxDuringBreach).toBe(false)
@@ -147,7 +147,7 @@ describe("ResetPasswordUseCase — breach fora da tx (R17)", () => {
     const t = makeUseCase(() => Promise.resolve("skipped"), "fail_open")
 
     await ctx.run(anonymousStore(), () =>
-      t.uc.execute({ token: "tok", password: "nova-senha-forte-1" }),
+      t.uc.execute({ token: "tok", password: "nova-senha-forte-1" })
     )
 
     expect(t.users.update).toHaveBeenCalledTimes(1)
@@ -158,20 +158,20 @@ describe("ResetPasswordUseCase — breach fora da tx (R17)", () => {
           eventType: "breach_check_skipped",
           metadata: { mode: "fail_open" },
         }),
-      }),
+      })
     )
   })
 
   it("fail_closed + consulta indisponível: nada é consumido nem gravado", async () => {
     const t = makeUseCase(
       () => Promise.reject(new Error("HIBP fora")),
-      "fail_closed",
+      "fail_closed"
     )
 
     await expect(
       ctx.run(anonymousStore(), () =>
-        t.uc.execute({ token: "tok", password: "nova-senha-forte-1" }),
-      ),
+        t.uc.execute({ token: "tok", password: "nova-senha-forte-1" })
+      )
     ).rejects.toThrow()
 
     expect(t.verificationTokens.consumeByHash).not.toHaveBeenCalled()

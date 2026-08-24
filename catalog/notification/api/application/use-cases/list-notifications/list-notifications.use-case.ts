@@ -16,9 +16,10 @@ import type { ListNotificationsInput, ListNotificationsOutput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class ListNotificationsUseCase
-  implements UseCaseContract<ListNotificationsInput, ListNotificationsOutput>
-{
+export class ListNotificationsUseCase implements UseCaseContract<
+  ListNotificationsInput,
+  ListNotificationsOutput
+> {
   constructor(
     @Inject(NOTIFICATION_REPOSITORY)
     private readonly notifications: NotificationRepositoryPort,
@@ -28,7 +29,9 @@ export class ListNotificationsUseCase
 
   @ReadOnly()
   @Traced({ name: "notification.list" })
-  async execute(input: ListNotificationsInput): Promise<ListNotificationsOutput> {
+  async execute(
+    input: ListNotificationsInput
+  ): Promise<ListNotificationsOutput> {
     const recipientId = requireRecipient(this.ctx)
     const { data, total } = await this.notifications.list(recipientId, input)
     return toPaginated(

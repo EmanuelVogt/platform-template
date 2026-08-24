@@ -22,7 +22,9 @@ export class LogMailer implements Mailer {
   }
 
   async send(message: EmailMessage): Promise<void> {
-    const links = [...message.html.matchAll(HREF_PATTERN)].map((match) => match[1])
+    const links = [...message.html.matchAll(HREF_PATTERN)].map(
+      (match) => match[1]
+    )
     this.log.info("e-mail (dev)", {
       to: message.to,
       subject: message.subject,

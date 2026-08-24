@@ -39,12 +39,12 @@ function makeDeps(found: User[]) {
   }
   const authEvents = { recordInTx: vi.fn().mockResolvedValue(undefined) }
   const ctx = fakeRequestContext(() => ({
-      correlationId: "c1",
-      locale: "pt-BR",
-      userId: "u-admin",
-      ip: "1.2.3.4",
-      userAgent: "jest",
-    }))
+    correlationId: "c1",
+    locale: "pt-BR",
+    userId: "u-admin",
+    ip: "1.2.3.4",
+    userAgent: "jest",
+  }))
   const uc = new RestoreUsersUseCase(users as never, authEvents as never, ctx)
   return { uc, users, authEvents }
 }
@@ -63,8 +63,12 @@ describe("RestoreUsersUseCase", () => {
     expect(updated.props.id).toBe("u-dead")
     expect(updated.isDeleted()).toBe(false)
     expect(authEvents.recordInTx).toHaveBeenCalledTimes(1)
-    expect(authEvents.recordInTx.mock.calls[0]?.[0].props.eventType).toBe("user_restored")
-    expect(authEvents.recordInTx.mock.calls[0]?.[0].props.actorUserId).toBe("u-admin")
+    expect(authEvents.recordInTx.mock.calls[0]?.[0].props.eventType).toBe(
+      "user_restored"
+    )
+    expect(authEvents.recordInTx.mock.calls[0]?.[0].props.actorUserId).toBe(
+      "u-admin"
+    )
   })
 
   it("ids inexistentes: no-op com restored 0", async () => {

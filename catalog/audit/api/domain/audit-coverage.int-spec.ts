@@ -5,7 +5,10 @@ import {
   detachIdentityTables,
   reattachIdentityTables,
 } from "../testing/reattach-identity-tables"
-import { detachTagTables, reattachTagTables } from "../testing/reattach-tag-tables"
+import {
+  detachTagTables,
+  reattachTagTables,
+} from "../testing/reattach-tag-tables"
 
 import { AUDITED, EXEMPT, MODULE_SCHEMAS } from "./audit-coverage"
 
@@ -40,7 +43,10 @@ describe("audit coverage enforcement (int)", () => {
     // and refuse automatic retro-attach; this simulates that manual step.
     await reattachTagTables(pool)
 
-    const { rows: tables } = await pool.query<{ schema: string; table: string }>(
+    const { rows: tables } = await pool.query<{
+      schema: string
+      table: string
+    }>(
       `SELECT table_schema AS schema, table_name AS table
        FROM information_schema.tables
        WHERE table_type = 'BASE TABLE' AND table_schema = ANY($1)`,

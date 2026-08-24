@@ -35,8 +35,13 @@ function makeUser(over: Partial<UserProps> = {}): User {
 }
 
 function makeDeps(over: Record<string, unknown> = {}) {
-  const verificationTokens = (over.verificationTokens as Record<string, Mock> | undefined) ?? {
-    findActiveByHash: vi.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2026-06-17T00:00:00.000Z") }),
+  const verificationTokens = (over.verificationTokens as
+    | Record<string, Mock>
+    | undefined) ?? {
+    findActiveByHash: vi.fn().mockResolvedValue({
+      userId: "u-1",
+      expiresAt: new Date("2026-06-17T00:00:00.000Z"),
+    }),
   }
   const users = (over.users as Record<string, Mock> | undefined) ?? {
     findById: vi.fn().mockResolvedValue(makeUser()),
@@ -44,13 +49,15 @@ function makeDeps(over: Record<string, unknown> = {}) {
   const tokens = (over.tokens as Record<string, Mock> | undefined) ?? {
     hashOf: vi.fn().mockReturnValue("token-hash"),
   }
-  const clock = (over.clock as { now: () => Date } | undefined) ?? { now: () => NOW }
+  const clock = (over.clock as { now: () => Date } | undefined) ?? {
+    now: () => NOW,
+  }
 
   const uc = new ValidateEmailChangeQuery(
     verificationTokens as never,
     users as never,
     tokens as never,
-    clock,
+    clock
   )
   return { uc, verificationTokens, users, tokens, clock }
 }
@@ -64,7 +71,7 @@ describe("ValidateEmailChangeQuery", () => {
     expect(t.verificationTokens.findActiveByHash).toHaveBeenCalledWith(
       "token-hash",
       "email_change",
-      NOW,
+      NOW
     )
     expect(t.users.findById).toHaveBeenCalledWith("u-1")
   })
@@ -76,7 +83,7 @@ describe("ValidateEmailChangeQuery", () => {
       },
     })
     await expect(t.uc.execute({ token: "raw-token" })).rejects.toBeInstanceOf(
-      InvalidEmailChangeTokenError,
+      InvalidEmailChangeTokenError
     )
     expect(t.users.findById).not.toHaveBeenCalled()
   })
@@ -88,7 +95,7 @@ describe("ValidateEmailChangeQuery", () => {
       },
     })
     await expect(t.uc.execute({ token: "raw-token" })).rejects.toBeInstanceOf(
-      InvalidEmailChangeTokenError,
+      InvalidEmailChangeTokenError
     )
   })
 
@@ -99,7 +106,7 @@ describe("ValidateEmailChangeQuery", () => {
       },
     })
     await expect(t.uc.execute({ token: "raw-token" })).rejects.toBeInstanceOf(
-      InvalidEmailChangeTokenError,
+      InvalidEmailChangeTokenError
     )
   })
 
@@ -110,7 +117,7 @@ describe("ValidateEmailChangeQuery", () => {
     expect(t.verificationTokens.findActiveByHash).toHaveBeenCalledWith(
       expect.any(String),
       "email_change",
-      customNow,
+      customNow
     )
   })
 
@@ -122,7 +129,7 @@ describe("ValidateEmailChangeQuery", () => {
       users: { findById: vi.fn() },
     })
     await expect(t.uc.execute({ token: "tok" })).rejects.toBeInstanceOf(
-      InvalidEmailChangeTokenError,
+      InvalidEmailChangeTokenError
     )
     expect(t.users.findById).not.toHaveBeenCalled()
   })
@@ -136,7 +143,9 @@ describe("ValidateEmailChangeQuery", () => {
         }),
       },
       users: {
-        findById: vi.fn().mockResolvedValue(makeUser({ pendingEmail: "x@y.com" })),
+        findById: vi
+          .fn()
+          .mockResolvedValue(makeUser({ pendingEmail: "x@y.com" })),
       },
     })
     await t.uc.execute({ token: "raw" })

@@ -3,7 +3,11 @@ import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
+import {
+  createTestPool,
+  truncateIdentity,
+  truncateKernel,
+} from "../../../../test/setup/test-db"
 import { AppModule } from "../../../app.module"
 import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
@@ -81,7 +85,11 @@ describe("authz — AuthMiddleware + AccessGuard + validações (e2e)", () => {
       email: "authz-creator@example.com",
       password: PASSWORD,
       accessProfile: "admin",
-      permissions: ["admin.users.read", "admin.users.create", "admin.users.update"],
+      permissions: [
+        "admin.users.read",
+        "admin.users.create",
+        "admin.users.update",
+      ],
     })
     powerfulId = await seedUser(app, pool, {
       email: "authz-power@example.com",

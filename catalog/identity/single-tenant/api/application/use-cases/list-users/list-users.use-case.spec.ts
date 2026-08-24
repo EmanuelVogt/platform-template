@@ -14,7 +14,7 @@ import type { UserListRow } from "../../../domain/ports/user.repository"
 /** Roda o use-case dentro de um request com as permissões dadas ao ator. */
 async function asActor<T>(
   permissions: string[],
-  run: () => Promise<T>,
+  run: () => Promise<T>
 ): Promise<T> {
   const ctx = new RequestContext()
   const store: RequestContextStore = {
@@ -79,7 +79,7 @@ function makeUserRow(over: Partial<UserListRow> = {}): UserListRow {
 
 function makePaginatedResult(
   rows: UserListRow[],
-  total = rows.length,
+  total = rows.length
 ): PaginatedResult<UserListRow> {
   return {
     data: rows,
@@ -159,7 +159,12 @@ describe("ListUsersUseCase", () => {
 
     const out = await uc.execute({ page: 3, pageSize: 10 })
 
-    expect(out.page).toEqual({ total: 42, page: 1, pageSize: 20, totalPages: 3 })
+    expect(out.page).toEqual({
+      total: 42,
+      page: 1,
+      pageSize: 20,
+      totalPages: 3,
+    })
   })
 
   it("repassa filtros (q, status, emailVerified, deleted) direto ao port", async () => {
@@ -174,7 +179,7 @@ describe("ListUsersUseCase", () => {
     }
 
     await asActor(["admin.users.read", "admin.users.trash.read"], () =>
-      uc.execute(input),
+      uc.execute(input)
     )
 
     expect(users.list).toHaveBeenCalledWith(input)
@@ -185,8 +190,8 @@ describe("ListUsersUseCase", () => {
 
     await expect(
       asActor(["admin.users.read"], () =>
-        uc.execute({ page: 1, pageSize: 20, deleted: true }),
-      ),
+        uc.execute({ page: 1, pageSize: 20, deleted: true })
+      )
     ).rejects.toThrow(ForbiddenError)
     expect(users.list).not.toHaveBeenCalled()
   })
@@ -196,7 +201,7 @@ describe("ListUsersUseCase", () => {
 
     const out = await asActor(
       ["admin.users.read", "admin.users.trash.read"],
-      () => uc.execute({ page: 1, pageSize: 20, deleted: true }),
+      () => uc.execute({ page: 1, pageSize: 20, deleted: true })
     )
 
     expect(out.data).toEqual([])
@@ -211,14 +216,19 @@ describe("ListUsersUseCase", () => {
     const { uc, users } = makeDeps({ listResult: makePaginatedResult([]) })
 
     await expect(
-      uc.execute({ page: 1, pageSize: 20, deleted: false }),
+      uc.execute({ page: 1, pageSize: 20, deleted: false })
     ).resolves.toBeDefined()
     expect(users.list).toHaveBeenCalledTimes(1)
   })
 
   it("repassa sort e order ao port sem modificar", async () => {
     const { uc, users } = makeDeps({ listResult: makePaginatedResult([]) })
-    const input = { page: 1, pageSize: 20, sort: "email" as const, order: "desc" as const }
+    const input = {
+      page: 1,
+      pageSize: 20,
+      sort: "email" as const,
+      order: "desc" as const,
+    }
 
     await uc.execute(input)
 
@@ -236,7 +246,10 @@ describe("ListUsersUseCase", () => {
 
   it("accessLinkExpiresAt serializado em ISO quando não-nulo", async () => {
     const expiresAt = new Date("2026-06-01T12:00:00.000Z")
-    const row = makeUserRow({ accessLinkExpiresAt: expiresAt, accessLinkExpired: true })
+    const row = makeUserRow({
+      accessLinkExpiresAt: expiresAt,
+      accessLinkExpired: true,
+    })
     const { uc } = makeDeps({ listResult: makePaginatedResult([row]) })
 
     const out = await uc.execute({ page: 1, pageSize: 20 })
@@ -313,7 +326,9 @@ describe("ListUsersUseCase", () => {
     const users = { list: vi.fn().mockRejectedValue(new Error("db offline")) }
     const uc = new ListUsersUseCase(users as never)
 
-    await expect(uc.execute({ page: 1, pageSize: 20 })).rejects.toThrow("db offline")
+    await expect(uc.execute({ page: 1, pageSize: 20 })).rejects.toThrow(
+      "db offline"
+    )
     expect(users.list).toHaveBeenCalledTimes(1)
   })
 })

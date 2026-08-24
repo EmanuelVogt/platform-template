@@ -8,7 +8,9 @@ import { ListNotificationsUseCase } from "./list-notifications.use-case"
 import type { RequestContext } from "../../../../../shared/kernel/context/request-context"
 import type { NotificationRepositoryPort } from "../../../domain/ports/notification.repository.port"
 
-const ctx = { getActor: () => ({ id: "u1", kind: "user" }) } as unknown as RequestContext
+const ctx = {
+  getActor: () => ({ id: "u1", kind: "user" }),
+} as unknown as RequestContext
 
 describe("ListNotificationsUseCase", () => {
   it("lista com escopo de dono e devolve itens mapeados + paginação", async () => {
@@ -27,11 +29,18 @@ describe("ListNotificationsUseCase", () => {
     const out = await new ListNotificationsUseCase(
       repo,
       new NotificationMapper(),
-      ctx,
+      ctx
     ).execute({ page: 2, pageSize: 5, filter: "unread" })
 
-    expect(list).toHaveBeenCalledWith("u1", { page: 2, pageSize: 5, filter: "unread" })
-    expect(out.data[0]).toMatchObject({ id: n.props.id, type: "password_changed" })
+    expect(list).toHaveBeenCalledWith("u1", {
+      page: 2,
+      pageSize: 5,
+      filter: "unread",
+    })
+    expect(out.data[0]).toMatchObject({
+      id: n.props.id,
+      type: "password_changed",
+    })
     expect(out.page).toMatchObject({ page: 2, pageSize: 5, total: 7 })
   })
 
@@ -39,10 +48,14 @@ describe("ListNotificationsUseCase", () => {
     const repo = { list: vi.fn() } as unknown as NotificationRepositoryPort
     const anon = { getActor: () => null } as unknown as RequestContext
     await expect(
-      new ListNotificationsUseCase(repo, new NotificationMapper(), anon).execute({
+      new ListNotificationsUseCase(
+        repo,
+        new NotificationMapper(),
+        anon
+      ).execute({
         page: 1,
         pageSize: 10,
-      }),
+      })
     ).rejects.toThrow()
   })
 })

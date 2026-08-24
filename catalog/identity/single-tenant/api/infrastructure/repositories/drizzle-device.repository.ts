@@ -58,7 +58,9 @@ export class DrizzleDeviceRepository implements DeviceRepository {
   ): Promise<DeviceWithActivity[]> {
     // Mesma regra de isExpired, em SQL: idle por last_seen_at, absoluto por created_at.
     const idleThreshold = new Date(now.getTime() - idleTtlSeconds * 1000)
-    const absoluteThreshold = new Date(now.getTime() - absoluteTtlSeconds * 1000)
+    const absoluteThreshold = new Date(
+      now.getTime() - absoluteTtlSeconds * 1000
+    )
     const activeFilter = and(
       eq(sessions.userId, userId),
       gt(sessions.lastSeenAt, idleThreshold),

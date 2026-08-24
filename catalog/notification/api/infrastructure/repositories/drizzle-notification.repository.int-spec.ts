@@ -1,9 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
-import {
-  createTestDb,
-  createTestPool,
-} from "../../../../../test/setup/test-db"
+import { createTestDb, createTestPool } from "../../../../../test/setup/test-db"
 import { makeTestLogger } from "../../../../../test/setup/test-logger"
 import { TransactionManager } from "../../../../shared/kernel/transactional/transaction-manager"
 import { Notification } from "../../domain/entities/notification.entity"
@@ -66,11 +63,23 @@ describe("DrizzleNotificationRepository (int)", () => {
 
     const inbox = await repo.list("u1", { page: 1, pageSize: 10 })
     expect(inbox.total).toBe(2)
-    const unread = await repo.list("u1", { page: 1, pageSize: 10, filter: "unread" })
+    const unread = await repo.list("u1", {
+      page: 1,
+      pageSize: 10,
+      filter: "unread",
+    })
     expect(unread.data.map((n) => n.props.id)).toEqual([a.props.id])
-    const read = await repo.list("u1", { page: 1, pageSize: 10, filter: "read" })
+    const read = await repo.list("u1", {
+      page: 1,
+      pageSize: 10,
+      filter: "read",
+    })
     expect(read.data.map((n) => n.props.id)).toEqual([b.props.id])
-    const archived = await repo.list("u1", { page: 1, pageSize: 10, filter: "archived" })
+    const archived = await repo.list("u1", {
+      page: 1,
+      pageSize: 10,
+      filter: "archived",
+    })
     expect(archived.data.map((n) => n.props.id)).toEqual([c.props.id])
     const all = await repo.list("u1", { page: 1, pageSize: 10, filter: "all" })
     expect(all.total).toBe(3)

@@ -47,7 +47,11 @@ describe("DrizzleRefLabelReader (int)", () => {
       [id]
     )
     const labels = await reader.findLabels(
-      { schema: "identity", table: "permission_templates", labelColumn: "name" },
+      {
+        schema: "identity",
+        table: "permission_templates",
+        labelColumn: "name",
+      },
       [id, "id-que-nao-existe"]
     )
     expect(labels.get(id)).toBe("Óleo essencial")
@@ -56,7 +60,11 @@ describe("DrizzleRefLabelReader (int)", () => {
 
   it("lista vazia de ids não vai ao banco", async () => {
     const labels = await reader.findLabels(
-      { schema: "identity", table: "permission_templates", labelColumn: "name" },
+      {
+        schema: "identity",
+        table: "permission_templates",
+        labelColumn: "name",
+      },
       []
     )
     expect(labels.size).toBe(0)

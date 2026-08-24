@@ -1,7 +1,10 @@
 import { Inject, Injectable } from "@nestjs/common"
 
 import { CLOCK, type Clock } from "../../../../shared/kernel/clock/clock"
-import { type AppLogger, LoggerFactory } from "../../../../shared/kernel/logging/logger.factory"
+import {
+  type AppLogger,
+  LoggerFactory,
+} from "../../../../shared/kernel/logging/logger.factory"
 import { MaintenanceJob } from "../../../../shared/kernel/scheduling/maintenance-job.decorator"
 import { registerMaintenanceJob } from "../../../../shared/kernel/scheduling/maintenance-registry"
 
@@ -34,7 +37,10 @@ export class PurgeAuditJob {
     cutoff.setMonth(cutoff.getMonth() - RETENTION_MONTHS)
     const removed = await this.trail.deleteOlderThan(cutoff)
     if (removed > 0) {
-      this.log.info("audit.purged", { removed, retentionMonths: RETENTION_MONTHS })
+      this.log.info("audit.purged", {
+        removed,
+        retentionMonths: RETENTION_MONTHS,
+      })
     }
   }
 }

@@ -13,9 +13,7 @@ import type { PermissionTemplateRepository } from "../../domain/ports/permission
 import type { PermissionTemplateRow } from "../tables/permission-template.table"
 
 @Injectable()
-export class DrizzlePermissionTemplateRepository
-  implements PermissionTemplateRepository
-{
+export class DrizzlePermissionTemplateRepository implements PermissionTemplateRepository {
   constructor(private readonly tx: TransactionManager) {}
 
   private get db() {
@@ -81,7 +79,9 @@ export class DrizzlePermissionTemplateRepository
   }
 
   async deleteById(id: string): Promise<void> {
-    await this.db.delete(permissionTemplates).where(eq(permissionTemplates.id, id))
+    await this.db
+      .delete(permissionTemplates)
+      .where(eq(permissionTemplates.id, id))
   }
 
   private async insertPermissions(

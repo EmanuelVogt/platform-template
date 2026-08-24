@@ -32,7 +32,11 @@ function asResponse(res: FakeResponse): Response {
   return res as unknown as Response
 }
 
-function partOf(file: { field: string; filename: string; content: string }): string {
+function partOf(file: {
+  field: string
+  filename: string
+  content: string
+}): string {
   return (
     `--${BOUNDARY}\r\n` +
     `Content-Disposition: form-data; name="${file.field}"; filename="${file.filename}"\r\n` +
@@ -48,7 +52,7 @@ function fieldPartOf(field: { name: string; value: string }): string {
 }
 
 function bodyWith(
-  files: { field: string; filename: string; content: string }[],
+  files: { field: string; filename: string; content: string }[]
 ): Buffer {
   return Buffer.from(`${files.map(partOf).join("")}--${BOUNDARY}--\r\n`)
 }
@@ -66,7 +70,7 @@ function withRequestShape(stream: Readable, contentType: string): Request {
 function fakeRequest(body: Buffer): Request {
   return withRequestShape(
     Readable.from([body]),
-    `multipart/form-data; boundary=${BOUNDARY}`,
+    `multipart/form-data; boundary=${BOUNDARY}`
   )
 }
 
@@ -82,13 +86,21 @@ function streamingRequest(): { req: Request; socket: PassThrough } {
 async function collect(
   req: Request,
   res: FakeResponse,
-  limits: MultipartLimits = GENEROUS_LIMITS,
+  limits: MultipartLimits = GENEROUS_LIMITS
 ): Promise<{ filename: string; content: string }[]> {
   const out: { filename: string; content: string }[] = []
-  for await (const file of readMultipartFiles(req, asResponse(res), "file", limits)) {
+  for await (const file of readMultipartFiles(
+    req,
+    asResponse(res),
+    "file",
+    limits
+  )) {
     const chunks: Buffer[] = []
     for await (const chunk of file.stream) chunks.push(chunk as Buffer)
-    out.push({ filename: file.filename, content: Buffer.concat(chunks).toString() })
+    out.push({
+      filename: file.filename,
+      content: Buffer.concat(chunks).toString(),
+    })
   }
   return out
 }
@@ -101,7 +113,9 @@ function deferred(): { done: Promise<void>; resolve: () => void } {
   return { done, resolve }
 }
 
-async function nextFile(files: AsyncGenerator<IncomingFile>): Promise<IncomingFile> {
+async function nextFile(
+  files: AsyncGenerator<IncomingFile>
+): Promise<IncomingFile> {
   const result = await files.next()
   if (result.done === true) throw new Error("esperava um arquivo no corpo")
   return result.value
@@ -113,7 +127,7 @@ describe("readMultipartFiles", () => {
       bodyWith([
         { field: "file", filename: "a.txt", content: "primeiro" },
         { field: "file", filename: "b.txt", content: "segundo" },
-      ]),
+      ])
     )
 
     expect(await collect(req, fakeResponse())).toEqual([
@@ -127,33 +141,33 @@ describe("readMultipartFiles", () => {
       bodyWith([
         { field: "outro", filename: "x.txt", content: "estranho" },
         { field: "file", filename: "a.txt", content: "nunca chega" },
-      ]),
+      ])
     )
 
     await expect(collect(req, fakeResponse())).rejects.toBeInstanceOf(
-      UnexpectedMultipartFieldError,
+      UnexpectedMultipartFieldError
     )
   })
 
   it("recusa parte que não é arquivo (fieldsLimit: 0 campos não-arquivo aceitos)", async () => {
     const req = fakeRequest(
       Buffer.from(
-        `${fieldPartOf({ name: "description", value: "oi" })}--${BOUNDARY}--\r\n`,
-      ),
+        `${fieldPartOf({ name: "description", value: "oi" })}--${BOUNDARY}--\r\n`
+      )
     )
 
     await expect(collect(req, fakeResponse())).rejects.toBeInstanceOf(
-      InvalidMultipartRequestError,
+      InvalidMultipartRequestError
     )
   })
 
   it("recusa arquivo acima do fileSize do perfil (413 PayloadTooLargeError)", async () => {
     const req = fakeRequest(
-      bodyWith([{ field: "file", filename: "a.txt", content: "0123456789" }]),
+      bodyWith([{ field: "file", filename: "a.txt", content: "0123456789" }])
     )
 
     await expect(
-      collect(req, fakeResponse(), { maxBytes: 4, maxFiles: 10 }),
+      collect(req, fakeResponse(), { maxBytes: 4, maxFiles: 10 })
     ).rejects.toBeInstanceOf(PayloadTooLargeError)
   })
 
@@ -162,12 +176,12 @@ describe("readMultipartFiles", () => {
   // upload pegava 413 num único PNG com maxFiles=1).
   it("aceita lote no limite exato de maxFiles", async () => {
     const req = fakeRequest(
-      bodyWith([{ field: "file", filename: "a.txt", content: "um" }]),
+      bodyWith([{ field: "file", filename: "a.txt", content: "um" }])
     )
 
-    expect(await collect(req, fakeResponse(), { maxBytes: 1_000_000, maxFiles: 1 })).toEqual([
-      { filename: "a.txt", content: "um" },
-    ])
+    expect(
+      await collect(req, fakeResponse(), { maxBytes: 1_000_000, maxFiles: 1 })
+    ).toEqual([{ filename: "a.txt", content: "um" }])
   })
 
   // Quem barra o excesso é `files`; `fields: 0` já derruba parte não-arquivo.
@@ -176,11 +190,11 @@ describe("readMultipartFiles", () => {
       bodyWith([
         { field: "file", filename: "a.txt", content: "um" },
         { field: "file", filename: "b.txt", content: "dois" },
-      ]),
+      ])
     )
 
     await expect(
-      collect(req, fakeResponse(), { maxBytes: 1_000_000, maxFiles: 1 }),
+      collect(req, fakeResponse(), { maxBytes: 1_000_000, maxFiles: 1 })
     ).rejects.toBeInstanceOf(PayloadTooLargeError)
   })
 
@@ -192,7 +206,7 @@ describe("readMultipartFiles", () => {
 
   it("não mexe na conexão quando o corpo chega inteiro", async () => {
     const req = fakeRequest(
-      bodyWith([{ field: "file", filename: "a.txt", content: "primeiro" }]),
+      bodyWith([{ field: "file", filename: "a.txt", content: "primeiro" }])
     )
     const res = fakeResponse()
 
@@ -207,11 +221,16 @@ describe("readMultipartFiles", () => {
 
     socket.write(
       partOf({ field: "file", filename: "a.txt", content: "primeiro" }) +
-        partOf({ field: "file", filename: "b.txt", content: "segundo" }),
+        partOf({ field: "file", filename: "b.txt", content: "segundo" })
     )
 
     const seen: IncomingFile[] = []
-    for await (const file of readMultipartFiles(req, asResponse(res), "file", GENEROUS_LIMITS)) {
+    for await (const file of readMultipartFiles(
+      req,
+      asResponse(res),
+      "file",
+      GENEROUS_LIMITS
+    )) {
       seen.push(file)
       break
     }
@@ -228,12 +247,17 @@ describe("readMultipartFiles", () => {
   it("acorda o laço quando o cliente desliga no meio do envio", async () => {
     const { req, socket } = streamingRequest()
     const res = fakeResponse()
-    const files = readMultipartFiles(req, asResponse(res), "file", GENEROUS_LIMITS)
+    const files = readMultipartFiles(
+      req,
+      asResponse(res),
+      "file",
+      GENEROUS_LIMITS
+    )
 
     socket.write(
       `--${BOUNDARY}\r\n` +
         `Content-Disposition: form-data; name="file"; filename="a.txt"\r\n` +
-        `Content-Type: text/plain\r\n\r\nprimeiros bytes`,
+        `Content-Type: text/plain\r\n\r\nprimeiros bytes`
     )
     const file = await nextFile(files)
     socket.destroy()
@@ -245,45 +269,46 @@ describe("readMultipartFiles", () => {
   // Cenário real do envio grande: o consumidor está parado esperando os
   // próximos bytes do arquivo quando a conexão morre. Nada além do arquivo em
   // voo ser derrubado com erro libera esse consumidor.
-  it(
-    "libera o consumidor que está drenando o arquivo quando a requisição cai",
-    async () => {
-      const { req, socket } = streamingRequest()
-      const draining = deferred()
-      const seen: Readable[] = []
+  it("libera o consumidor que está drenando o arquivo quando a requisição cai", async () => {
+    const { req, socket } = streamingRequest()
+    const draining = deferred()
+    const seen: Readable[] = []
 
-      const consume = (async () => {
-        for await (const file of readMultipartFiles(
-          req,
-          asResponse(fakeResponse()),
-          "file",
-          GENEROUS_LIMITS,
-        )) {
-          seen.push(file.stream)
-          for await (const chunk of file.stream) {
-            void chunk
-            draining.resolve()
-          }
+    const consume = (async () => {
+      for await (const file of readMultipartFiles(
+        req,
+        asResponse(fakeResponse()),
+        "file",
+        GENEROUS_LIMITS
+      )) {
+        seen.push(file.stream)
+        for await (const chunk of file.stream) {
+          void chunk
+          draining.resolve()
         }
-      })()
+      }
+    })()
 
-      socket.write(
-        `--${BOUNDARY}\r\n` +
-          `Content-Disposition: form-data; name="file"; filename="a.txt"\r\n` +
-          `Content-Type: text/plain\r\n\r\nprimeiros bytes`,
-      )
-      await draining.done
-      socket.destroy()
+    socket.write(
+      `--${BOUNDARY}\r\n` +
+        `Content-Disposition: form-data; name="file"; filename="a.txt"\r\n` +
+        `Content-Type: text/plain\r\n\r\nprimeiros bytes`
+    )
+    await draining.done
+    socket.destroy()
 
-      await expect(consume).rejects.toBeInstanceOf(UploadInterruptedError)
-      expect(seen[0]?.destroyed).toBe(true)
-    },
-    3000,
-  )
+    await expect(consume).rejects.toBeInstanceOf(UploadInterruptedError)
+    expect(seen[0]?.destroyed).toBe(true)
+  }, 3000)
 
   it("acorda o laço quando o cliente desliga sem nenhum arquivo completo", async () => {
     const { req, socket } = streamingRequest()
-    const files = readMultipartFiles(req, asResponse(fakeResponse()), "file", GENEROUS_LIMITS)
+    const files = readMultipartFiles(
+      req,
+      asResponse(fakeResponse()),
+      "file",
+      GENEROUS_LIMITS
+    )
 
     const pending = files.next()
     socket.write(`--${BOUNDARY}\r\n`)
@@ -293,10 +318,13 @@ describe("readMultipartFiles", () => {
   })
 
   it("recusa corpo que não é multipart", async () => {
-    const req = withRequestShape(Readable.from([Buffer.from("{}")]), "application/json")
+    const req = withRequestShape(
+      Readable.from([Buffer.from("{}")]),
+      "application/json"
+    )
 
     await expect(collect(req, fakeResponse())).rejects.toBeInstanceOf(
-      InvalidMultipartRequestError,
+      InvalidMultipartRequestError
     )
   })
 
@@ -304,15 +332,15 @@ describe("readMultipartFiles", () => {
     const req = fakeRequest(Buffer.from(`--${BOUNDARY}\r\n`))
 
     await expect(collect(req, fakeResponse())).rejects.toBeInstanceOf(
-      InvalidMultipartRequestError,
+      InvalidMultipartRequestError
     )
   })
 
   it("recusa campo não-arquivo acima do fieldSize (400, valor truncado)", async () => {
     const req = fakeRequest(
       Buffer.from(
-        `${fieldPartOf({ name: "legenda", value: "0123456789" })}--${BOUNDARY}--\r\n`,
-      ),
+        `${fieldPartOf({ name: "legenda", value: "0123456789" })}--${BOUNDARY}--\r\n`
+      )
     )
 
     await expect(
@@ -321,54 +349,54 @@ describe("readMultipartFiles", () => {
         maxFiles: 1,
         fields: 1,
         fieldSize: 4,
-      }),
+      })
     ).rejects.toBeInstanceOf(InvalidMultipartRequestError)
   })
 
-  it(
-    "recusa mais partes que o teto de `parts` (400/413) e destrói o arquivo em voo",
-    async () => {
-      const { req, socket } = streamingRequest()
-      const draining = deferred()
-      const seen: Readable[] = []
-      const limits: MultipartLimits = { maxBytes: 1_000_000, maxFiles: 2, fields: 1 }
+  it("recusa mais partes que o teto de `parts` (400/413) e destrói o arquivo em voo", async () => {
+    const { req, socket } = streamingRequest()
+    const draining = deferred()
+    const seen: Readable[] = []
+    const limits: MultipartLimits = {
+      maxBytes: 1_000_000,
+      maxFiles: 2,
+      fields: 1,
+    }
 
-      const consume = (async () => {
-        for await (const file of readMultipartFiles(
-          req,
-          asResponse(fakeResponse()),
-          "file",
-          limits,
-        )) {
-          seen.push(file.stream)
-          for await (const chunk of file.stream) {
-            void chunk
-            draining.resolve()
-          }
+    const consume = (async () => {
+      for await (const file of readMultipartFiles(
+        req,
+        asResponse(fakeResponse()),
+        "file",
+        limits
+      )) {
+        seen.push(file.stream)
+        for await (const chunk of file.stream) {
+          void chunk
+          draining.resolve()
         }
-      })()
+      }
+    })()
 
-      socket.write(
-        `--${BOUNDARY}\r\n` +
-          `Content-Disposition: form-data; name="file"; filename="a.txt"\r\n` +
-          `Content-Type: text/plain\r\n\r\nprimeiros bytes`,
-      )
-      await draining.done
+    socket.write(
+      `--${BOUNDARY}\r\n` +
+        `Content-Disposition: form-data; name="file"; filename="a.txt"\r\n` +
+        `Content-Type: text/plain\r\n\r\nprimeiros bytes`
+    )
+    await draining.done
 
-      // Campo (parte 2, dentro de fields:1) + 2º arquivo (parte 3, dentro de
-      // files:2) — a 3ª parte alcança o teto de `parts` (maxFiles+1=3) sem
-      // estourar `files` nem `fields`: só `partsLimit` dispara, isolado dos
-      // outros dois — é o que faltava provar (REM-15). `\r\n` inicial fecha a
-      // parte 1, que não tinha o boundary de encerramento ainda.
-      socket.write(
-        `\r\n${fieldPartOf({ name: "legenda", value: "oi" })}` +
-          partOf({ field: "file", filename: "b.txt", content: "outro" }) +
-          `--${BOUNDARY}--\r\n`,
-      )
+    // Campo (parte 2, dentro de fields:1) + 2º arquivo (parte 3, dentro de
+    // files:2) — a 3ª parte alcança o teto de `parts` (maxFiles+1=3) sem
+    // estourar `files` nem `fields`: só `partsLimit` dispara, isolado dos
+    // outros dois — é o que faltava provar (REM-15). `\r\n` inicial fecha a
+    // parte 1, que não tinha o boundary de encerramento ainda.
+    socket.write(
+      `\r\n${fieldPartOf({ name: "legenda", value: "oi" })}` +
+        partOf({ field: "file", filename: "b.txt", content: "outro" }) +
+        `--${BOUNDARY}--\r\n`
+    )
 
-      await expect(consume).rejects.toBeInstanceOf(PayloadTooLargeError)
-      expect(seen[0]?.destroyed).toBe(true)
-    },
-    3000,
-  )
+    await expect(consume).rejects.toBeInstanceOf(PayloadTooLargeError)
+    expect(seen[0]?.destroyed).toBe(true)
+  }, 3000)
 })

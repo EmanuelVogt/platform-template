@@ -50,7 +50,7 @@ function makeUseCaseWithSpy(): {
 /** Roda o use-case dentro de um request com as permissões dadas ao ator. */
 async function asActor<T>(
   permissions: string[],
-  run: () => Promise<T>,
+  run: () => Promise<T>
 ): Promise<T> {
   const ctx = new RequestContext()
   const store: RequestContextStore = {
@@ -83,8 +83,8 @@ describe("ListTagsUseCase — lixeira", () => {
 
     await expect(
       asActor(["admin.tags.read"], () =>
-        uc.execute({ page: 1, pageSize: 20, deleted: true }),
-      ),
+        uc.execute({ page: 1, pageSize: 20, deleted: true })
+      )
     ).rejects.toThrow(ForbiddenError)
     expect(tags.list).not.toHaveBeenCalled()
   })
@@ -94,7 +94,7 @@ describe("ListTagsUseCase — lixeira", () => {
 
     const out = await asActor(
       ["admin.tags.read", "admin.tags.trash.read"],
-      () => uc.execute({ page: 1, pageSize: 20, deleted: true }),
+      () => uc.execute({ page: 1, pageSize: 20, deleted: true })
     )
 
     expect(out.data[0]).toMatchObject({ id: "t1" })
@@ -109,7 +109,7 @@ describe("ListTagsUseCase — lixeira", () => {
     const { uc, tags } = makeUseCaseWithSpy()
 
     await expect(
-      uc.execute({ page: 1, pageSize: 20, deleted: false }),
+      uc.execute({ page: 1, pageSize: 20, deleted: false })
     ).resolves.toBeDefined()
     expect(tags.list).toHaveBeenCalledTimes(1)
   })

@@ -82,7 +82,9 @@ describe("DrizzleDeviceRepository (int)", () => {
   it("findByUserAndCookieHash escopa por user", async () => {
     const a = await seedUser("a-scope@example.com")
     const b = await seedUser("b-scope@example.com")
-    await devices.create(Device.create({ userId: a, cookieTokenHash: "shared" }))
+    await devices.create(
+      Device.create({ userId: a, cookieTokenHash: "shared" })
+    )
     expect(await devices.findByUserAndCookieHash(a, "shared")).not.toBeNull()
     expect(await devices.findByUserAndCookieHash(b, "shared")).toBeNull()
   })

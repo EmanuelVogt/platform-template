@@ -16,12 +16,13 @@ import type { GetCurrentUserInput, GetCurrentUserOutput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class GetCurrentUserUseCase
-  implements UseCaseContract<GetCurrentUserInput, GetCurrentUserOutput>
-{
+export class GetCurrentUserUseCase implements UseCaseContract<
+  GetCurrentUserInput,
+  GetCurrentUserOutput
+> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
-    private readonly ctx: RequestContext,
+    private readonly ctx: RequestContext
   ) {}
 
   @ReadOnly()

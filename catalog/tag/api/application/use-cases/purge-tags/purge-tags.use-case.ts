@@ -6,15 +6,19 @@ import { Transactional } from "../../../../../shared/kernel/transactional/transa
 import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
 import { TagPurged } from "../../../api/events/tag-purged.event"
 import { TagNotInTrashError } from "../../../domain/errors"
-import { TAG_REPOSITORY, type TagRepository } from "../../../domain/ports/tag.repository"
+import {
+  TAG_REPOSITORY,
+  type TagRepository,
+} from "../../../domain/ports/tag.repository"
 
 import type { PurgeTagsInput, PurgeTagsOutput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class PurgeTagsUseCase
-  implements UseCaseContract<PurgeTagsInput, PurgeTagsOutput>
-{
+export class PurgeTagsUseCase implements UseCaseContract<
+  PurgeTagsInput,
+  PurgeTagsOutput
+> {
   constructor(
     @Inject(TAG_REPOSITORY) private readonly tags: TagRepository,
     private readonly outbox: OutboxPublisher

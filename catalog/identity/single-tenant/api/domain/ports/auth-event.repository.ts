@@ -32,4 +32,6 @@ export interface AuthEventRepository {
   deleteOlderThan(cutoff: Date): Promise<number>
 }
 
-export const AUTH_EVENT_REPOSITORY: unique symbol = Symbol("AuthEventRepository")
+export const AUTH_EVENT_REPOSITORY: unique symbol = Symbol(
+  "AuthEventRepository"
+)

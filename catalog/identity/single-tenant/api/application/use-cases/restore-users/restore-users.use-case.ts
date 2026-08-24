@@ -18,13 +18,15 @@ import type { RestoreUsersInput, RestoreUsersOutput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class RestoreUsersUseCase
-  implements UseCaseContract<RestoreUsersInput, RestoreUsersOutput>
-{
+export class RestoreUsersUseCase implements UseCaseContract<
+  RestoreUsersInput,
+  RestoreUsersOutput
+> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
-    @Inject(AUTH_EVENT_REPOSITORY) private readonly authEvents: AuthEventRepository,
-    private readonly ctx: RequestContext,
+    @Inject(AUTH_EVENT_REPOSITORY)
+    private readonly authEvents: AuthEventRepository,
+    private readonly ctx: RequestContext
   ) {}
 
   @Transactional()
@@ -41,7 +43,7 @@ export class RestoreUsersUseCase
           userId: user.props.id,
           actorUserId: this.ctx.getActor()?.id ?? null,
           eventType: "user_restored",
-        }),
+        })
       )
     }
     return { restored: deleted.length }

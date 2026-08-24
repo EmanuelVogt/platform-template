@@ -1,8 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  type OnApplicationShutdown,
-} from "@nestjs/common"
+import { Inject, Injectable, type OnApplicationShutdown } from "@nestjs/common"
 import { Interval } from "@nestjs/schedule"
 import { and, asc, eq, inArray, lt, lte, sql } from "drizzle-orm"
 
@@ -27,7 +23,11 @@ import {
 import type { ChannelPort } from "../../domain/ports/channel.port"
 
 // Antes do decorator, que resolve a spec no registry ao avaliar a classe.
-registerMaintenanceJob({ name: "delivery.purge", cron: "30 3 * * *", lockId: 3 })
+registerMaintenanceJob({
+  name: "delivery.purge",
+  cron: "30 3 * * *",
+  lockId: 3,
+})
 
 const POLL_INTERVAL_MS = 1000
 const BATCH_SIZE = 10
@@ -176,7 +176,11 @@ export class DeliveryDispatcher implements OnApplicationShutdown {
       await this.txm
         .getExecutor()
         .update(notificationDeliveries)
-        .set({ status: "sent", sentAt: new Date(), payload: redactPayload(payload) })
+        .set({
+          status: "sent",
+          sentAt: new Date(),
+          payload: redactPayload(payload),
+        })
         .where(eq(notificationDeliveries.id, row.id))
       this.log.info("delivery.sent", {
         deliveryId: row.id,

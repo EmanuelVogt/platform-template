@@ -22,7 +22,7 @@ import type { Response } from "express"
 export class LogoutController {
   constructor(
     private readonly logout: LogoutUseCase,
-    @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig,
+    @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig
   ) {}
 
   @ApiOperation({ operationId: "logout" })

@@ -23,7 +23,9 @@ export class AccessHistoryController {
   @HttpCode(HttpStatus.OK)
   @ListQuery(accessHistoryQuerySchema)
   @ApiOkResponse({ type: AccessHistoryListResponseDto })
-  async handle(@Query() query: AccessHistoryQueryDto): Promise<ListAccessHistoryOutput> {
+  async handle(
+    @Query() query: AccessHistoryQueryDto
+  ): Promise<ListAccessHistoryOutput> {
     return this.listHistory.execute({
       page: query.page,
       pageSize: query.pageSize,

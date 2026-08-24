@@ -6,7 +6,10 @@ import {
 } from "@nestjs/common"
 import { Subject } from "rxjs"
 
-import type { ConnectionRegistryPort, SseConnection } from "../../domain/ports/connection-registry.port"
+import type {
+  ConnectionRegistryPort,
+  SseConnection,
+} from "../../domain/ports/connection-registry.port"
 
 const MAX_CONNECTIONS_PER_USER = 5
 const HEARTBEAT_INTERVAL_MS = 25_000

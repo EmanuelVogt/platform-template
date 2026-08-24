@@ -24,7 +24,7 @@ import type { Response } from "express"
 export class RequestEmailChangeController {
   constructor(
     private readonly requestEmailChange: RequestEmailChangeUseCase,
-    @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig,
+    @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig
   ) {}
 
   @ApiOperation({ operationId: "requestEmailChange" })
@@ -34,7 +34,7 @@ export class RequestEmailChangeController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async handle(
     @Body() dto: ChangeEmailDto,
-    @Res({ passthrough: true }) res: Response,
+    @Res({ passthrough: true }) res: Response
   ): Promise<void> {
     await this.requestEmailChange.execute({
       currentPassword: dto.currentPassword,

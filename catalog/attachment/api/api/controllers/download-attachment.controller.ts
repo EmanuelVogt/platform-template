@@ -5,7 +5,10 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger"
 
 import { OptionalAuth } from "../../../../shared/kernel/access/decorators"
 import { buildContentDisposition } from "../../../../shared/kernel/http/content-disposition"
-import { type AppLogger, LoggerFactory } from "../../../../shared/kernel/logging/logger.factory"
+import {
+  type AppLogger,
+  LoggerFactory,
+} from "../../../../shared/kernel/logging/logger.factory"
 import { RateLimit } from "../../../../shared/kernel/rate-limit/rate-limit.decorator"
 import { GetAttachmentForDownloadUseCase } from "../../application/use-cases/get-attachment-for-download/get-attachment-for-download.use-case"
 import { AttachmentIdParamDto } from "../contracts/attachment.contract"
@@ -40,7 +43,7 @@ export class DownloadAttachmentController {
 
   constructor(
     private readonly download: GetAttachmentForDownloadUseCase,
-    loggerFactory: LoggerFactory,
+    loggerFactory: LoggerFactory
   ) {
     this.log = loggerFactory.forModule("DownloadAttachment")
   }
@@ -52,7 +55,7 @@ export class DownloadAttachmentController {
   async handle(
     @Param() params: AttachmentIdParamDto,
     @Req() req: Request,
-    @Res() res: Response,
+    @Res() res: Response
   ): Promise<void> {
     const result = await this.download.execute({ id: params.id })
 
@@ -68,7 +71,10 @@ export class DownloadAttachmentController {
       res.setHeader("Content-Type", result.contentType)
     } else {
       res.setHeader("Content-Type", "application/octet-stream")
-      res.setHeader("Content-Disposition", buildContentDisposition(result.originalFilename))
+      res.setHeader(
+        "Content-Disposition",
+        buildContentDisposition(result.originalFilename)
+      )
     }
     res.setHeader("X-Content-Type-Options", "nosniff")
     res.setHeader("Content-Length", String(result.sizeBytes))

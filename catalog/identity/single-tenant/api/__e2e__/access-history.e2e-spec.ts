@@ -3,7 +3,11 @@ import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
+import {
+  createTestPool,
+  truncateIdentity,
+  truncateKernel,
+} from "../../../../test/setup/test-db"
 import { AppModule } from "../../../app.module"
 import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
@@ -52,7 +56,11 @@ describe("Histórico de acesso — GET /auth/access-history (e2e)", () => {
     await app.init()
 
     const seedPool = createTestPool()
-    await seedUser(app, seedPool, { email: EMAIL, name: "Access History", password: PASSWORD })
+    await seedUser(app, seedPool, {
+      email: EMAIL,
+      name: "Access History",
+      password: PASSWORD,
+    })
     await seedPool.end()
   })
 
@@ -72,7 +80,12 @@ describe("Histórico de acesso — GET /auth/access-history (e2e)", () => {
 
     const { data, page } = res.body as {
       data: Record<string, unknown>[]
-      page: { total: number; page: number; pageSize: number; totalPages: number }
+      page: {
+        total: number
+        page: number
+        pageSize: number
+        totalPages: number
+      }
     }
 
     // envelope de paginação

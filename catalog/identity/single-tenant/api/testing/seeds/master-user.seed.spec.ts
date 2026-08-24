@@ -7,8 +7,12 @@ import type { PasswordHasher } from "../../domain/ports/password-hasher"
 
 function makeDb(returning: { id: string }[]): DrizzleDb {
   const returningFn = vi.fn().mockResolvedValue(returning)
-  const onConflictDoNothingFn = vi.fn().mockReturnValue({ returning: returningFn })
-  const valuesFn = vi.fn().mockReturnValue({ onConflictDoNothing: onConflictDoNothingFn })
+  const onConflictDoNothingFn = vi
+    .fn()
+    .mockReturnValue({ returning: returningFn })
+  const valuesFn = vi
+    .fn()
+    .mockReturnValue({ onConflictDoNothing: onConflictDoNothingFn })
   const insertFn = vi.fn().mockReturnValue({ values: valuesFn })
   return { insert: insertFn } as unknown as DrizzleDb
 }
@@ -63,10 +67,14 @@ describe("masterUserSeed.run (REM-28)", () => {
     const writeSpy = vi.spyOn(process.stdout, "write").mockReturnValue(true)
 
     try {
-      await masterUserSeed.run({ db: makeDb([{ id: "u1" }]), hasher: makeHasher() })
+      await masterUserSeed.run({
+        db: makeDb([{ id: "u1" }]),
+        hasher: makeHasher(),
+      })
 
       const generatedPasswordLines = writeSpy.mock.calls.filter(
-        ([chunk]) => typeof chunk === "string" && chunk.includes("senha gerada:")
+        ([chunk]) =>
+          typeof chunk === "string" && chunk.includes("senha gerada:")
       )
       expect(generatedPasswordLines).toHaveLength(1)
     } finally {

@@ -8,10 +8,10 @@ export const accessAction = attachmentSchema.enum("attachment_access_action", [
   "delete",
 ])
 
-export const accessOutcome = attachmentSchema.enum("attachment_access_outcome", [
-  "allowed",
-  "denied",
-])
+export const accessOutcome = attachmentSchema.enum(
+  "attachment_access_outcome",
+  ["allowed", "denied"]
+)
 
 export const attachmentAccessLogs = attachmentSchema.table(
   "attachment_access_logs",
@@ -29,9 +29,12 @@ export const attachmentAccessLogs = attachmentSchema.table(
       .defaultNow(),
   },
   (t) => [
-    index("attachment_access_logs_attachment_idx").on(t.attachmentId, t.createdAt),
+    index("attachment_access_logs_attachment_idx").on(
+      t.attachmentId,
+      t.createdAt
+    ),
     index("attachment_access_logs_user_idx").on(t.userId, t.createdAt),
-  ],
+  ]
 )
 
 export type AttachmentAccessLogInsert = typeof attachmentAccessLogs.$inferInsert

@@ -128,12 +128,20 @@ describe("AuditRegistry", () => {
       const registry = new AuditRegistry()
       expect(() => {
         registry.registerTables([
-          { schema: "identity", table: "users", owner: "admin.users.audit.read" },
+          {
+            schema: "identity",
+            table: "users",
+            owner: "admin.users.audit.read",
+          },
         ])
       }).toThrow(DuplicateAuditRegistrationError)
       expect(() => {
         registry.registerTables([
-          { schema: "identity", table: "users", owner: "admin.users.audit.read" },
+          {
+            schema: "identity",
+            table: "users",
+            owner: "admin.users.audit.read",
+          },
         ])
       }).toThrow(/users/)
     })

@@ -17,5 +17,5 @@ export const CurrentUser = createParamDecorator(
       throw new UnauthorizedException("Usuário não autenticado.")
     }
     return req.userId
-  },
+  }
 )

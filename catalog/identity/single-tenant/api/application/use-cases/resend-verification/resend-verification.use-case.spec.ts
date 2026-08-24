@@ -7,7 +7,6 @@ import { fakeRequestContext } from "../../request-context.fixture"
 
 import { ResendVerificationUseCase } from "./resend-verification.use-case"
 
-
 const NOW = new Date("2026-05-30T00:00:00.000Z")
 
 function makeUser(over: Partial<UserProps> = {}): User {
@@ -49,9 +48,13 @@ function makeDeps(over: Record<string, any> = {}) {
   const tokens = over.tokens ?? {
     generate: vi.fn().mockReturnValue({ raw: "raw-tok", hash: "hash-tok" }),
   }
-  const outbox = over.outbox ?? { publish: vi.fn().mockResolvedValue(undefined) }
+  const outbox = over.outbox ?? {
+    publish: vi.fn().mockResolvedValue(undefined),
+  }
   const clock = over.clock ?? { now: () => NOW }
-  const ctx = over.ctx ?? fakeRequestContext(() => ({
+  const ctx =
+    over.ctx ??
+    fakeRequestContext(() => ({
       ip: null,
       userAgent: null,
       correlationId: "c1",
@@ -68,16 +71,20 @@ function makeDeps(over: Record<string, any> = {}) {
     outbox,
     clock,
     ctx,
-    config,
+    config
   )
   return { uc, users, verificationTokens, tokens, outbox, clock, ctx }
 }
 
-
 describe("ResendVerificationUseCase", () => {
   it("sem auth lança ForbiddenError", async () => {
     const t = makeDeps({
-      ctx: fakeRequestContext(() => ({ correlationId: "c1", locale: "pt-BR", userId: null, sessionId: null })),
+      ctx: fakeRequestContext(() => ({
+        correlationId: "c1",
+        locale: "pt-BR",
+        userId: null,
+        sessionId: null,
+      })),
     })
     await expect(t.uc.execute({})).rejects.toBeInstanceOf(ForbiddenError)
   })
@@ -114,14 +121,16 @@ describe("ResendVerificationUseCase", () => {
       users: {
         findById: vi
           .fn()
-          .mockResolvedValue(makeUser({ lastVerificationRequestedAt: twoHoursAgo })),
+          .mockResolvedValue(
+            makeUser({ lastVerificationRequestedAt: twoHoursAgo })
+          ),
         update: vi.fn().mockResolvedValue(undefined),
       },
     })
     await t.uc.execute({})
     expect(t.verificationTokens.invalidateAllForUser).toHaveBeenCalledWith(
       "u-1",
-      "email_verify",
+      "email_verify"
     )
     expect(t.verificationTokens.create).toHaveBeenCalledTimes(1)
     expect(t.users.update).toHaveBeenCalledTimes(1)
@@ -147,7 +156,7 @@ describe("ResendVerificationUseCase", () => {
     await t.uc.execute({})
     expect(t.verificationTokens.invalidateAllForUser).toHaveBeenCalledWith(
       "u-1",
-      "email_verify",
+      "email_verify"
     )
     expect(t.verificationTokens.create).toHaveBeenCalledTimes(1)
     expect(t.users.update).toHaveBeenCalledTimes(1)
@@ -163,7 +172,7 @@ describe("ResendVerificationUseCase", () => {
             link: expect.stringContaining("/verificar-email?token=raw-tok"),
           }),
         }),
-      }),
+      })
     )
   })
 })

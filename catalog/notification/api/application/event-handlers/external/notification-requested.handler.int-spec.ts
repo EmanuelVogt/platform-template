@@ -1,7 +1,19 @@
 import { ulid } from "ulid"
-import { type Mocked, afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  type Mocked,
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 
-import { createTestDb, createTestPool } from "../../../../../../test/setup/test-db"
+import {
+  createTestDb,
+  createTestPool,
+} from "../../../../../../test/setup/test-db"
 import { makeTestLogger } from "../../../../../../test/setup/test-logger"
 import { ProcessedEventsRepository } from "../../../../../shared/kernel/outbox/processed-events.repository"
 import { TransactionManager } from "../../../../../shared/kernel/transactional/transaction-manager"

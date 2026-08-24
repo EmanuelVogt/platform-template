@@ -61,7 +61,12 @@ export const BASE_AUDITED_TABLES: readonly AuditedTableRegistration[] = [
     owner: USERS_OWNER,
   },
   { schema: "identity", table: "devices", owner: USERS_OWNER, technical: true },
-  { schema: "identity", table: "sessions", owner: USERS_OWNER, technical: true },
+  {
+    schema: "identity",
+    table: "sessions",
+    owner: USERS_OWNER,
+    technical: true,
+  },
   {
     schema: "identity",
     table: "verification_tokens",

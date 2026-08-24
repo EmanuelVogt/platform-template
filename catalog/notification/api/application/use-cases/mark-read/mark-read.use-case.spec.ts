@@ -7,7 +7,9 @@ import { MarkReadUseCase } from "./mark-read.use-case"
 import type { RequestContext } from "../../../../../shared/kernel/context/request-context"
 import type { NotificationRepositoryPort } from "../../../domain/ports/notification.repository.port"
 
-const ctx = { getActor: () => ({ id: "u1", kind: "user" }) } as unknown as RequestContext
+const ctx = {
+  getActor: () => ({ id: "u1", kind: "user" }),
+} as unknown as RequestContext
 const clock = { now: () => new Date("2026-06-10T01:00:00Z") }
 
 describe("MarkReadUseCase", () => {

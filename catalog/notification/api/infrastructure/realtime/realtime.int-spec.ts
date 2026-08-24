@@ -24,7 +24,11 @@ describe("realtime Redis pub/sub (int)", () => {
     pub = new Redis(url)
     sub = new Redis(url)
     registry = new SseConnectionRegistry()
-    listener = new RedisRealtimeListener(sub, registry, makeTestLogger().loggerFactory)
+    listener = new RedisRealtimeListener(
+      sub,
+      registry,
+      makeTestLogger().loggerFactory
+    )
     listener.onModuleInit()
     // SPEC_DEVIATION: aguarda a confirmação do SUBSCRIBE antes de liberar o
     // beforeAll. Reason: onModuleInit() dispara subscribe() sem aguardar

@@ -62,7 +62,9 @@ describe("DrizzlePermissionTemplateRepository (int)", () => {
   it("findByName resolve e null para inexistente", async () => {
     const template = makeTemplate("Gerência")
     await repo.insert(template)
-    expect((await repo.findByName("Gerência"))?.props.id).toBe(template.props.id)
+    expect((await repo.findByName("Gerência"))?.props.id).toBe(
+      template.props.id
+    )
     expect(await repo.findByName("Nada")).toBeNull()
   })
 
@@ -95,9 +97,7 @@ describe("DrizzlePermissionTemplateRepository (int)", () => {
     await repo.insert(template)
     await repo.deleteById(template.props.id)
     expect(await repo.findById(template.props.id)).toBeNull()
-    const orphans = await db
-      .select()
-      .from(permissionTemplatePermissions)
+    const orphans = await db.select().from(permissionTemplatePermissions)
     expect(orphans).toEqual([])
   })
 })

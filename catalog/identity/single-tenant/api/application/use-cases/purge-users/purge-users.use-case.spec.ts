@@ -41,17 +41,17 @@ function makeDeps(found: User[], withAuditTrail = true) {
   const authEvents = { recordInTx: vi.fn().mockResolvedValue(undefined) }
   const auditTrail = { purgeEntities: vi.fn().mockResolvedValue(0) }
   const ctx = fakeRequestContext(() => ({
-      correlationId: "c1",
-      locale: "pt-BR",
-      userId: "u-admin",
-      ip: "1.2.3.4",
-      userAgent: "jest",
-    }))
+    correlationId: "c1",
+    locale: "pt-BR",
+    userId: "u-admin",
+    ip: "1.2.3.4",
+    userAgent: "jest",
+  }))
   const uc = new PurgeUsersUseCase(
     users as never,
     authEvents as never,
     ctx,
-    withAuditTrail ? auditTrail : null,
+    withAuditTrail ? auditTrail : null
   )
   return { uc, users, authEvents, auditTrail }
 }
@@ -73,14 +73,15 @@ describe("PurgeUsersUseCase", () => {
     ])
     const purgeOrder = auditTrail.purgeEntities.mock.invocationCallOrder[0] ?? 0
     expect(users.hardDeleteByIds.mock.invocationCallOrder[0]).toBeLessThan(
-      purgeOrder,
+      purgeOrder
     )
     expect(authEvents.recordInTx).toHaveBeenCalledTimes(2)
-    expect(authEvents.recordInTx.mock.calls.map((c) => c[0].props.eventType)).toEqual(
-      ["user_purged", "user_purged"],
-    )
+    expect(
+      authEvents.recordInTx.mock.calls.map((c) => c[0].props.eventType)
+    ).toEqual(["user_purged", "user_purged"])
     // Evento gravado antes do delete (mesma tx): ordem das invocações.
-    const lastEventOrder = authEvents.recordInTx.mock.invocationCallOrder.at(-1) ?? 0
+    const lastEventOrder =
+      authEvents.recordInTx.mock.invocationCallOrder.at(-1) ?? 0
     const deleteOrder = users.hardDeleteByIds.mock.invocationCallOrder[0]!
     expect(lastEventOrder).toBeLessThan(deleteOrder)
   })
@@ -89,7 +90,9 @@ describe("PurgeUsersUseCase", () => {
     const alive = makeUser({ deletedAt: null })
     const { uc, users, authEvents } = makeDeps([alive])
 
-    await expect(uc.execute({ userIds: ["u-1"] })).rejects.toThrow(UserNotInTrashError)
+    await expect(uc.execute({ userIds: ["u-1"] })).rejects.toThrow(
+      UserNotInTrashError
+    )
     expect(users.hardDeleteByIds).not.toHaveBeenCalled()
     expect(authEvents.recordInTx).not.toHaveBeenCalled()
   })

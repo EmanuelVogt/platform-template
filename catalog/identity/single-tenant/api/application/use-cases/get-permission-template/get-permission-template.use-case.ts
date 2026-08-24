@@ -17,10 +17,10 @@ import type {
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class GetPermissionTemplateUseCase
-  implements
-    UseCaseContract<GetPermissionTemplateInput, GetPermissionTemplateOutput>
-{
+export class GetPermissionTemplateUseCase implements UseCaseContract<
+  GetPermissionTemplateInput,
+  GetPermissionTemplateOutput
+> {
   constructor(
     @Inject(PERMISSION_TEMPLATE_REPOSITORY)
     private readonly templates: PermissionTemplateRepository

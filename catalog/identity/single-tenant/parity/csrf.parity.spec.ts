@@ -39,7 +39,7 @@ type FakeRequest = {
 
 function contextFor(
   request: FakeRequest,
-  metadata: Record<string, boolean | AccessRequirement> = {},
+  metadata: Record<string, boolean | AccessRequirement> = {}
 ): ExecutionContext {
   const handler = (): void => undefined
   for (const [key, value] of Object.entries(metadata)) {
@@ -76,7 +76,10 @@ describe("paridade do CsrfGuard", () => {
   })
 
   it("aceita mutação com Origin do front", () => {
-    const context = contextFor({ method: "POST", headers: { origin: WEB_ORIGIN } })
+    const context = contextFor({
+      method: "POST",
+      headers: { origin: WEB_ORIGIN },
+    })
 
     expect(guard("lax").canActivate(context)).toBe(true)
   })
@@ -123,7 +126,7 @@ describe("paridade do CsrfGuard", () => {
   it("dispensa double-submit em rota pública (pré-login não tem sessão)", () => {
     const context = contextFor(
       { method: "POST", headers: { origin: WEB_ORIGIN } },
-      { [ACCESS_REQUIREMENT]: { kind: "public" } },
+      { [ACCESS_REQUIREMENT]: { kind: "public" } }
     )
 
     expect(guard("none").canActivate(context)).toBe(true)
@@ -132,7 +135,7 @@ describe("paridade do CsrfGuard", () => {
   it("dispensa a checagem de Origin em rota máquina-a-máquina", () => {
     const context = contextFor(
       { method: "POST", headers: {} },
-      { [IS_MACHINE_TO_MACHINE_KEY]: true },
+      { [IS_MACHINE_TO_MACHINE_KEY]: true }
     )
 
     expect(guard("lax").canActivate(context)).toBe(true)

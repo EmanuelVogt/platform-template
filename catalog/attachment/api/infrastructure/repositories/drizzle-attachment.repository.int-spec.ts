@@ -26,11 +26,11 @@ const MIGRATIONS_DIR = join(__dirname, "../../../../../drizzle/migrations")
 // "01_generic_upload_profiles.sql" vira "<seq>_attachment_generic_upload_profiles.sql").
 function findMigration0005Path(): string {
   const file = readdirSync(MIGRATIONS_DIR).find((name) =>
-    name.endsWith("_attachment_generic_upload_profiles.sql"),
+    name.endsWith("_attachment_generic_upload_profiles.sql")
   )
   if (!file) {
     throw new Error(
-      "migração 0005 (generic_upload_profiles) não encontrada em drizzle/migrations",
+      "migração 0005 (generic_upload_profiles) não encontrada em drizzle/migrations"
     )
   }
   return join(MIGRATIONS_DIR, file)
@@ -115,11 +115,11 @@ describe("DrizzleAttachmentRepository", () => {
     await repo.insertMany([old, fresh])
     await pool.query(
       `UPDATE attachment.attachments SET created_at = now() - interval '48 hours' WHERE id = $1`,
-      [old.props.id],
+      [old.props.id]
     )
 
     const stale = await repo.findPendingOlderThan(
-      new Date(Date.now() - 24 * 60 * 60 * 1000),
+      new Date(Date.now() - 24 * 60 * 60 * 1000)
     )
 
     expect(stale.map((a) => a.props.id)).toEqual([old.props.id])
@@ -132,12 +132,12 @@ describe("DrizzleAttachmentRepository", () => {
       `INSERT INTO attachment.attachments
          (id, storage_key, content_type, size_bytes, original_filename, profile, owner_user_id, status, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, 'feedback-attachment', $6, 'ready', $7, $7)`,
-      [id, `attachments/${id}`, "application/pdf", 10, null, "user-1", now],
+      [id, `attachments/${id}`, "application/pdf", 10, null, "user-1", now]
     )
     await pool.query(
       `INSERT INTO attachment.attachment_acls (attachment_id, visibility, created_at, updated_at)
        VALUES ($1, 'restricted', $2, $2)`,
-      [id, now],
+      [id, now]
     )
 
     await pool.query(readFileSync(findMigration0005Path(), "utf-8"))
@@ -148,21 +148,38 @@ describe("DrizzleAttachmentRepository", () => {
 
   it("sumPendingBytesByOwner soma só os pendentes do dono, ignora prontos e de outro dono", async () => {
     const pendingA = Attachment.createPending({
-      contentType: "application/pdf", sizeBytes: 100, originalFilename: null,
-      profile: "multi", visibility: "restricted", ownerUserId: "owner-1",
+      contentType: "application/pdf",
+      sizeBytes: 100,
+      originalFilename: null,
+      profile: "multi",
+      visibility: "restricted",
+      ownerUserId: "owner-1",
     })
     const pendingB = Attachment.createPending({
-      contentType: "application/pdf", sizeBytes: 50, originalFilename: null,
-      profile: "multi", visibility: "restricted", ownerUserId: "owner-1",
+      contentType: "application/pdf",
+      sizeBytes: 50,
+      originalFilename: null,
+      profile: "multi",
+      visibility: "restricted",
+      ownerUserId: "owner-1",
     })
     const readyOwner1 = Attachment.create({
-      storageKey: "attachments/ready-owner1", contentType: "image/png", sizeBytes: 999,
-      checksum: "z", originalFilename: null, profile: "avatar",
-      visibility: "restricted", ownerUserId: "owner-1",
+      storageKey: "attachments/ready-owner1",
+      contentType: "image/png",
+      sizeBytes: 999,
+      checksum: "z",
+      originalFilename: null,
+      profile: "avatar",
+      visibility: "restricted",
+      ownerUserId: "owner-1",
     })
     const pendingOtherOwner = Attachment.createPending({
-      contentType: "application/pdf", sizeBytes: 777, originalFilename: null,
-      profile: "multi", visibility: "restricted", ownerUserId: "owner-2",
+      contentType: "application/pdf",
+      sizeBytes: 777,
+      originalFilename: null,
+      profile: "multi",
+      visibility: "restricted",
+      ownerUserId: "owner-2",
     })
     await repo.insertMany([pendingA, pendingB, pendingOtherOwner])
     await repo.insert(readyOwner1)
@@ -177,23 +194,34 @@ describe("DrizzleAttachmentRepository", () => {
 
   it("deletePendingByIds só apaga quem ainda está pending — linha que virou ready sobrevive", async () => {
     const stillPending = Attachment.createPending({
-      contentType: "application/pdf", sizeBytes: 10, originalFilename: null,
-      profile: "multi", visibility: "restricted", ownerUserId: "user-1",
+      contentType: "application/pdf",
+      sizeBytes: 10,
+      originalFilename: null,
+      profile: "multi",
+      visibility: "restricted",
+      ownerUserId: "user-1",
     })
     const turnedReady = Attachment.createPending({
-      contentType: "application/pdf", sizeBytes: 10, originalFilename: null,
-      profile: "multi", visibility: "restricted", ownerUserId: "user-1",
+      contentType: "application/pdf",
+      sizeBytes: 10,
+      originalFilename: null,
+      profile: "multi",
+      visibility: "restricted",
+      ownerUserId: "user-1",
     })
     await repo.insertMany([stillPending, turnedReady])
     // Simula a corrida: confirmUploads mudou o status pra 'ready' entre a
     // seleção do job (findPendingOlderThan) e o delete.
-    await pool.query(`UPDATE attachment.attachments SET status = 'ready' WHERE id = $1`, [
-      turnedReady.props.id,
-    ])
+    await pool.query(
+      `UPDATE attachment.attachments SET status = 'ready' WHERE id = $1`,
+      [turnedReady.props.id]
+    )
 
     await repo.deletePendingByIds([stillPending.props.id, turnedReady.props.id])
 
     expect(await repo.findById(stillPending.props.id)).toBeNull()
-    expect((await repo.findById(turnedReady.props.id))?.props.status).toBe("ready")
+    expect((await repo.findById(turnedReady.props.id))?.props.status).toBe(
+      "ready"
+    )
   })
 })

@@ -11,7 +11,7 @@ import { ForgotPasswordDto } from "../../contracts/identity.contract"
 @Controller("auth")
 export class ForgotPasswordController {
   constructor(
-    private readonly requestPasswordReset: RequestPasswordResetUseCase,
+    private readonly requestPasswordReset: RequestPasswordResetUseCase
   ) {}
 
   @ApiOperation({ operationId: "forgotPassword" })

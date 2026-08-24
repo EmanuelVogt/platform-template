@@ -2,7 +2,10 @@ import { z } from "zod"
 
 import type { NOTIFICATION_TYPES } from "../../api/events/notification-requested.event"
 
-export type NotificationCategory = "security" | "transactional" | "informational"
+export type NotificationCategory =
+  | "security"
+  | "transactional"
+  | "informational"
 export type NotificationChannelKind = "system" | "email" | "push"
 
 export type RenderedInApp = {

@@ -13,9 +13,10 @@ import type { ListPermissionTemplatesOutput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class ListPermissionTemplatesUseCase
-  implements UseCaseContract<void, ListPermissionTemplatesOutput>
-{
+export class ListPermissionTemplatesUseCase implements UseCaseContract<
+  void,
+  ListPermissionTemplatesOutput
+> {
   constructor(
     @Inject(PERMISSION_TEMPLATE_REPOSITORY)
     private readonly templates: PermissionTemplateRepository

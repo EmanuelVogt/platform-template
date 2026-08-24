@@ -7,7 +7,10 @@
     { "name": "identity", "range": ">=2.0.0 <3.0.0" },
     { "name": "notification", "range": ">=2.0.0 <3.0.0" }
   ],
-  "apiModule": { "export": "AttachmentModule", "path": "modules/attachment/attachment.module" },
+  "apiModule": {
+    "export": "AttachmentModule",
+    "path": "modules/attachment/attachment.module"
+  },
   "schemaExports": [
     "modules/attachment/infrastructure/tables/attachment.schema",
     "modules/attachment/infrastructure/tables/attachment.table",

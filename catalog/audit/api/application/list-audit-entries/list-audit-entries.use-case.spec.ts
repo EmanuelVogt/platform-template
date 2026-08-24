@@ -17,7 +17,9 @@ import type {
   RefTarget,
 } from "../../domain/ports/ref-label.reader"
 
-function fakeReader(byTable: Record<string, Record<string, string>>): RefLabelReader {
+function fakeReader(
+  byTable: Record<string, Record<string, string>>
+): RefLabelReader {
   return {
     findLabels: (target: RefTarget, ids: readonly string[]) => {
       const known = byTable[target.table] ?? {}
@@ -126,7 +128,11 @@ describe("ListAuditEntriesUseCase", () => {
 
   it("expande table raiz para raiz+satélites no repositório", async () => {
     const { useCase, list } = makeUseCase([], new Map())
-    await useCase.execute({ page: 1, pageSize: 20, table: "permission_templates" })
+    await useCase.execute({
+      page: 1,
+      pageSize: 20,
+      table: "permission_templates",
+    })
     expect(list).toHaveBeenCalledWith(
       expect.objectContaining({
         tables: ["permission_templates", "permission_template_permissions"],
@@ -158,7 +164,12 @@ describe("ListAuditEntriesUseCase", () => {
     expect(findNamesByIds).toHaveBeenCalledTimes(1)
     const calledWith = findNamesByIds.mock.calls[0]?.[0] as string[]
     expect([...calledWith].sort()).toEqual(["u1", "u2"])
-    expect(res.data.map((e) => e.actorName)).toEqual(["Ana", "Ana", "Beto", null])
+    expect(res.data.map((e) => e.actorName)).toEqual([
+      "Ana",
+      "Ana",
+      "Beto",
+      null,
+    ])
   })
 
   it("resolve labels de FK nas changes (update e insert de satélite)", async () => {

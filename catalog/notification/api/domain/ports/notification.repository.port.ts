@@ -12,7 +12,10 @@ export type ListNotificationsParams = {
 export interface NotificationRepositoryPort {
   insert(notification: Notification): Promise<void>
   /** Escopo de dono no WHERE — id alheio retorna null (no-op silencioso, sem oráculo). */
-  findByIdForRecipient(id: string, recipientId: string): Promise<Notification | null>
+  findByIdForRecipient(
+    id: string,
+    recipientId: string
+  ): Promise<Notification | null>
   update(notification: Notification): Promise<void>
   list(
     recipientId: string,

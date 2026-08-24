@@ -15,7 +15,9 @@ import { DrizzleTagRepository } from "./infrastructure/repositories/drizzle-tag.
 
 import type { Provider } from "@nestjs/common"
 
-const PORTS: Provider[] = [{ provide: TAG_REPOSITORY, useClass: DrizzleTagRepository }]
+const PORTS: Provider[] = [
+  { provide: TAG_REPOSITORY, useClass: DrizzleTagRepository },
+]
 
 const USE_CASES = [
   CreateTagUseCase,

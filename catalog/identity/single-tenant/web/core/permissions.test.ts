@@ -30,7 +30,10 @@ describe("can", () => {
   })
 
   it("nega qualquer chave para o perfil professional sem permissões", () => {
-    const user = makeCurrentUser({ accessProfile: "professional", permissions: [] })
+    const user = makeCurrentUser({
+      accessProfile: "professional",
+      permissions: [],
+    })
 
     expect(can(user, "admin.users.read")).toBe(false)
   })

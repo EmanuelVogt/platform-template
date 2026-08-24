@@ -25,7 +25,11 @@ import { IdentityAccessPolicy } from "../access/identity-access.policy"
 
 import { AUTH_MIDDLEWARE_ROUTE, AuthMiddleware } from "./auth.middleware"
 
-import type { INestApplication, MiddlewareConsumer, NestModule } from "@nestjs/common"
+import type {
+  INestApplication,
+  MiddlewareConsumer,
+  NestModule,
+} from "@nestjs/common"
 
 const COOKIE_NAME = "__Host-rit_session"
 const PERMISSION = "admin.users.read"

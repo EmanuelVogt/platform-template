@@ -23,7 +23,9 @@ export class ValidateAccessLinkController {
   @HttpCode(HttpStatus.OK)
   @ListQuery(validateAccessLinkQuerySchema)
   @ApiOkResponse({ type: AccessLinkInfoDto })
-  async handle(@Query() query: ValidateAccessLinkQueryDto): Promise<AccessLinkInfoDto> {
+  async handle(
+    @Query() query: ValidateAccessLinkQueryDto
+  ): Promise<AccessLinkInfoDto> {
     return this.validate.execute({ token: query.token })
   }
 }

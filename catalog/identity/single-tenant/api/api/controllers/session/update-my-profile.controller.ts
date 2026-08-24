@@ -17,6 +17,9 @@ export class UpdateMyProfileController {
   @RateLimit({ limit: 20, windowSeconds: 60 })
   @HttpCode(HttpStatus.NO_CONTENT)
   async handle(@Body() dto: UpdateMyProfileDto): Promise<void> {
-    await this.updateProfile.execute({ name: dto.name, birthDate: dto.birthDate })
+    await this.updateProfile.execute({
+      name: dto.name,
+      birthDate: dto.birthDate,
+    })
   }
 }

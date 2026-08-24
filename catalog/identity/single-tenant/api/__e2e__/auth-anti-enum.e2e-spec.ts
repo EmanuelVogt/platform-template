@@ -3,7 +3,11 @@ import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
+import {
+  createTestPool,
+  truncateIdentity,
+  truncateKernel,
+} from "../../../../test/setup/test-db"
 import { AppModule } from "../../../app.module"
 import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
@@ -152,7 +156,7 @@ describe("Login — 429 do bucket por conta não distingue e-mail (e2e)", () => 
     expect(inexistente.status).toBe(429)
     expect(bodyShape(inexistente.body)).toEqual(bodyShape(existente.body))
     expect(inexistente.headers["retry-after"]).toBe(
-      existente.headers["retry-after"],
+      existente.headers["retry-after"]
     )
     expect(JSON.stringify(inexistente.body)).not.toMatch(/lock|verif|exist/i)
   })

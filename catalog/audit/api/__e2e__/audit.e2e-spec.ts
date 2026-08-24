@@ -192,10 +192,7 @@ describe("Audit log (e2e)", () => {
   })
 })
 
-async function login(
-  app: INestApplication,
-  email: string
-): Promise<string[]> {
+async function login(app: INestApplication, email: string): Promise<string[]> {
   const res = await request(app.getHttpServer())
     .post("/v1/auth/login")
     .set("Origin", ORIGIN)

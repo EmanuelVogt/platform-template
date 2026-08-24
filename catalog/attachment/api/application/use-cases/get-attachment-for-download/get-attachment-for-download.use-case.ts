@@ -1,6 +1,9 @@
 import { Inject } from "@nestjs/common"
 
-import { OBJECT_STORAGE, type ObjectStoragePort } from "../../../../../shared/infra/storage/object-storage.port"
+import {
+  OBJECT_STORAGE,
+  type ObjectStoragePort,
+} from "../../../../../shared/infra/storage/object-storage.port"
 import { RequestContext } from "../../../../../shared/kernel/context/request-context"
 import { Traced } from "../../../../../shared/kernel/tracing/traced.decorator"
 import { NonTransactional } from "../../../../../shared/kernel/transactional/transactional.decorator"
@@ -40,10 +43,12 @@ export class GetAttachmentForDownloadUseCase {
     @Inject(ATTACHMENT_REPOSITORY) private readonly repo: AttachmentRepository,
     @Inject(ATTACHMENT_ACCESS_LOG_REPOSITORY)
     private readonly accessLog: AttachmentAccessLogRepository,
-    private readonly ctx: RequestContext,
+    private readonly ctx: RequestContext
   ) {}
 
-  @NonTransactional("io externo: stream do storage seguraria conexão do pool durante o download")
+  @NonTransactional(
+    "io externo: stream do storage seguraria conexão do pool durante o download"
+  )
   @Traced({ name: "attachment.download" })
   async execute(input: {
     id: string
@@ -53,7 +58,10 @@ export class GetAttachmentForDownloadUseCase {
     const actorId = this.ctx.getActor()?.id ?? null
     const attachment = await this.repo.findById(input.id)
 
-    if (attachment?.props.status !== "ready" || attachment.props.checksum === null) {
+    if (
+      attachment?.props.status !== "ready" ||
+      attachment.props.checksum === null
+    ) {
       await this.log(input.id, "denied", store, actorId)
       throw new AttachmentNotFoundError()
     }
@@ -82,7 +90,7 @@ export class GetAttachmentForDownloadUseCase {
     attachmentId: string,
     outcome: "allowed" | "denied",
     store: AccessLogContext,
-    actorId: string | null,
+    actorId: string | null
   ): Promise<void> {
     await this.accessLog.record({
       attachmentId,

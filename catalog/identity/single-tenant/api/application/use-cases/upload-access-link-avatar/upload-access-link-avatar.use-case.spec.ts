@@ -17,21 +17,35 @@ const VALID_INPUT = {
 }
 
 function pendingUserProps() {
-  return { props: { id: "u-1", name: "Ana", email: "ana@x.test", status: "pending" } }
+  return {
+    props: { id: "u-1", name: "Ana", email: "ana@x.test", status: "pending" },
+  }
 }
 
 function makeDeps(over: Record<string, any> = {}) {
   const verificationTokens = over.verificationTokens ?? {
-    findActiveByHash: vi.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2099-01-01") }),
+    findActiveByHash: vi
+      .fn()
+      .mockResolvedValue({ userId: "u-1", expiresAt: new Date("2099-01-01") }),
   }
-  const users = over.users ?? { findById: vi.fn().mockResolvedValue(pendingUserProps()) }
-  const tokens = over.tokens ?? { hashOf: vi.fn().mockReturnValue("hash-of-raw") }
+  const users = over.users ?? {
+    findById: vi.fn().mockResolvedValue(pendingUserProps()),
+  }
+  const tokens = over.tokens ?? {
+    hashOf: vi.fn().mockReturnValue("hash-of-raw"),
+  }
   const clock = over.clock ?? { now: () => NOW }
   const attachments =
     "attachments" in over
       ? over.attachments
       : { upload: vi.fn().mockResolvedValue({ id: "att-1" }) }
-  const uc = new UploadAccessLinkAvatarUseCase(verificationTokens, users, tokens, clock, attachments)
+  const uc = new UploadAccessLinkAvatarUseCase(
+    verificationTokens,
+    users,
+    tokens,
+    clock,
+    attachments
+  )
   return { uc, verificationTokens, users, tokens, attachments }
 }
 
@@ -63,7 +77,9 @@ describe("UploadAccessLinkAvatarUseCase", () => {
     const t = makeDeps({
       verificationTokens: { findActiveByHash: vi.fn().mockResolvedValue(null) },
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidAccessLinkError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      InvalidAccessLinkError
+    )
     expect(t.attachments.upload).not.toHaveBeenCalled()
   })
 
@@ -73,23 +89,33 @@ describe("UploadAccessLinkAvatarUseCase", () => {
       verificationTokens: { findActiveByHash: vi.fn().mockResolvedValue(null) },
       users,
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidAccessLinkError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      InvalidAccessLinkError
+    )
     expect(users.findById).not.toHaveBeenCalled()
   })
 
   it("usuário não-pending lança InvalidAccessLinkError sem chamar facade", async () => {
     const t = makeDeps({
-      users: { findById: vi.fn().mockResolvedValue({ props: { status: "active" } }) },
+      users: {
+        findById: vi.fn().mockResolvedValue({ props: { status: "active" } }),
+      },
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidAccessLinkError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      InvalidAccessLinkError
+    )
     expect(t.attachments.upload).not.toHaveBeenCalled()
   })
 
   it("usuário com status suspended lança InvalidAccessLinkError", async () => {
     const t = makeDeps({
-      users: { findById: vi.fn().mockResolvedValue({ props: { status: "suspended" } }) },
+      users: {
+        findById: vi.fn().mockResolvedValue({ props: { status: "suspended" } }),
+      },
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidAccessLinkError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      InvalidAccessLinkError
+    )
     expect(t.attachments.upload).not.toHaveBeenCalled()
   })
 
@@ -97,7 +123,9 @@ describe("UploadAccessLinkAvatarUseCase", () => {
     const t = makeDeps({
       users: { findById: vi.fn().mockResolvedValue(null) },
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidAccessLinkError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      InvalidAccessLinkError
+    )
     expect(t.attachments.upload).not.toHaveBeenCalled()
   })
 
@@ -105,7 +133,9 @@ describe("UploadAccessLinkAvatarUseCase", () => {
     const t = makeDeps({
       users: { findById: vi.fn().mockResolvedValue(undefined) },
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidAccessLinkError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      InvalidAccessLinkError
+    )
     expect(t.attachments.upload).not.toHaveBeenCalled()
   })
 })

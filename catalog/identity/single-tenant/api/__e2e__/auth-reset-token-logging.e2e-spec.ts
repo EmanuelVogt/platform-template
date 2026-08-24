@@ -3,7 +3,11 @@ import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
+import {
+  createTestPool,
+  truncateIdentity,
+  truncateKernel,
+} from "../../../../test/setup/test-db"
 import { AppModule } from "../../../app.module"
 import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
@@ -25,7 +29,7 @@ describe("Reset — token nunca em corpo/instance/log (e2e)", () => {
     // captura stdout (pino) para inspecionar vazamento de token
     originalWrite = process.stdout.write.bind(process.stdout)
     ;(process.stdout.write as unknown) = (
-      chunk: string | Uint8Array,
+      chunk: string | Uint8Array
     ): boolean => {
       logged.push(chunk.toString())
       return true

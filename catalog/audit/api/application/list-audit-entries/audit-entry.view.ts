@@ -50,7 +50,11 @@ function buildChanges(
 ): Record<string, AuditChange> {
   const old = asRecord(row.rowOld)
   const next = asRecord(row.rowNew)
-  const change = (k: string, oldValue: unknown, newValue: unknown): AuditChange => ({
+  const change = (
+    k: string,
+    oldValue: unknown,
+    newValue: unknown
+  ): AuditChange => ({
     old: oldValue,
     new: newValue,
     oldLabel: resolve(row.tableName, k, oldValue),
@@ -87,7 +91,7 @@ export function toAuditEntryView(
     changedKeys: row.changedKeys,
     changes: buildChanges(row, resolve),
     actorUserId: row.actorUserId,
-    actorName: row.actorUserId ? names.get(row.actorUserId) ?? null : null,
+    actorName: row.actorUserId ? (names.get(row.actorUserId) ?? null) : null,
     correlationId: row.correlationId,
     origin: row.origin,
     txId: row.txId,

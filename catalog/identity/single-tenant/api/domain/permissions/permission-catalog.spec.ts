@@ -27,7 +27,7 @@ import type { PermissionKey } from "./permission-catalog"
 // (regra nova do vitest lint set). Reason: describe > it > flatMap > flatMap >
 // map já passava do limite de 4; helper nomeado fora do it() quebra a cadeia.
 function permissionKeysOf(
-  feature: (typeof MODULES)[number]["features"][number],
+  feature: (typeof MODULES)[number]["features"][number]
 ): string[] {
   return feature.permissions.map((p) => p.key)
 }
@@ -98,7 +98,9 @@ describe("permission-catalog", () => {
   })
 
   it("PERMISSION_KEYS = soma das chaves do catálogo", () => {
-    const catalogCount = MODULES.flatMap((m) => m.features.flatMap(permissionKeysOf)).length
+    const catalogCount = MODULES.flatMap((m) =>
+      m.features.flatMap(permissionKeysOf)
+    ).length
     expect(PERMISSION_KEYS).toHaveLength(catalogCount)
   })
 })
@@ -113,7 +115,7 @@ describe("featureOf — feature dona da chave", () => {
 
   it("chaves da mesma feature compartilham o mesmo dono", () => {
     expect(featureOf("admin.users.read")).toEqual(
-      featureOf("admin.users.audit.read"),
+      featureOf("admin.users.audit.read")
     )
   })
 
@@ -147,7 +149,7 @@ describe("AUDIT_PERMISSION_KEYS — chaves 'Ver logs' derivadas do catálogo", (
   it("o base-set (só admin) tem 3 chaves de auditoria; o slot de produto só acrescenta", () => {
     const baseCatalog = definePermissionCatalog([ADMIN_CATALOG])
     const baseAuditKeys = baseCatalog.PERMISSION_KEYS.filter(
-      (key) => key.endsWith(".audit.read") && key !== FULL_AUDIT_PERMISSION,
+      (key) => key.endsWith(".audit.read") && key !== FULL_AUDIT_PERMISSION
     )
     expect(baseAuditKeys).toHaveLength(3)
     expect(AUDIT_PERMISSION_KEYS).toEqual(expect.arrayContaining(baseAuditKeys))
@@ -164,7 +166,7 @@ describe("AUDIT_PERMISSION_KEYS — chaves 'Ver logs' derivadas do catálogo", (
 
 function handlerOf<T extends object, K extends keyof T>(
   proto: T,
-  name: K,
+  name: K
 ): T[K] {
   return proto[name]
 }
@@ -186,8 +188,8 @@ describe("PermissionKeyRegistry augmentado por este catálogo", () => {
     expect(
       Reflect.getMetadata(
         ACCESS_REQUIREMENT,
-        handlerOf(Fixture.prototype, "allowed"),
-      ),
+        handlerOf(Fixture.prototype, "allowed")
+      )
     ).toEqual({ kind: "permission", key: "admin.users.read" })
   })
 
@@ -195,8 +197,8 @@ describe("PermissionKeyRegistry augmentado por este catálogo", () => {
     expect(
       Reflect.getMetadata(
         ACCESS_REQUIREMENT,
-        handlerOf(Fixture.prototype, "invalid"),
-      ),
+        handlerOf(Fixture.prototype, "invalid")
+      )
     ).toEqual({ kind: "permission", key: "nope" })
   })
 })

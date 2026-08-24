@@ -36,7 +36,12 @@ export class DrizzleNotificationRepository implements NotificationRepositoryPort
     const rows = await this.db
       .select()
       .from(notifications)
-      .where(and(eq(notifications.id, id), eq(notifications.recipientId, recipientId)))
+      .where(
+        and(
+          eq(notifications.id, id),
+          eq(notifications.recipientId, recipientId)
+        )
+      )
       .limit(1)
     return rows[0] ? toNotificationEntity(rows[0]) : null
   }
@@ -45,7 +50,11 @@ export class DrizzleNotificationRepository implements NotificationRepositoryPort
     const row = toNotificationRow(notification)
     await this.db
       .update(notifications)
-      .set({ seenAt: row.seenAt, readAt: row.readAt, archivedAt: row.archivedAt })
+      .set({
+        seenAt: row.seenAt,
+        readAt: row.readAt,
+        archivedAt: row.archivedAt,
+      })
       .where(
         and(
           eq(notifications.id, notification.props.id),
@@ -72,7 +81,10 @@ export class DrizzleNotificationRepository implements NotificationRepositoryPort
         .offset((params.page - 1) * params.pageSize),
       this.db.select({ value: count() }).from(notifications).where(where),
     ])
-    return { data: rows.map(toNotificationEntity), total: totals[0]?.value ?? 0 }
+    return {
+      data: rows.map(toNotificationEntity),
+      total: totals[0]?.value ?? 0,
+    }
   }
 
   private lifecycleConds(filter: ListNotificationsParams["filter"]): SQL[] {
@@ -80,7 +92,10 @@ export class DrizzleNotificationRepository implements NotificationRepositoryPort
       case "unread":
         return [isNull(notifications.readAt), isNull(notifications.archivedAt)]
       case "read":
-        return [isNotNull(notifications.readAt), isNull(notifications.archivedAt)]
+        return [
+          isNotNull(notifications.readAt),
+          isNull(notifications.archivedAt),
+        ]
       case "archived":
         return [isNotNull(notifications.archivedAt)]
       case "all":
@@ -123,7 +138,10 @@ export class DrizzleNotificationRepository implements NotificationRepositoryPort
   async markAllRead(recipientId: string, at: Date): Promise<number> {
     const updated = await this.db
       .update(notifications)
-      .set({ readAt: at, seenAt: sql`coalesce(${notifications.seenAt}, ${at})` })
+      .set({
+        readAt: at,
+        seenAt: sql`coalesce(${notifications.seenAt}, ${at})`,
+      })
       .where(
         and(
           eq(notifications.recipientId, recipientId),

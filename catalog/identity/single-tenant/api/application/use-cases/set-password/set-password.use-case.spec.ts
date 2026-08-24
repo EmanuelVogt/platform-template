@@ -62,21 +62,29 @@ function makeSessionService() {
   }
   const config = makeIdentityConfig()
   const ctx = fakeRequestContext(() => ({
-      ip: "1.2.3.4",
-      userAgent: "jest",
-      correlationId: "c1",
-      locale: "pt-BR",
-      userId: null,
-      sessionId: null,
-      traceId: null,
-      spanId: null,
-    }))
-  return new CreateSessionService(sessions as never, devices as never, tokens as never, config, ctx)
+    ip: "1.2.3.4",
+    userAgent: "jest",
+    correlationId: "c1",
+    locale: "pt-BR",
+    userId: null,
+    sessionId: null,
+    traceId: null,
+    spanId: null,
+  }))
+  return new CreateSessionService(
+    sessions as never,
+    devices as never,
+    tokens as never,
+    config,
+    ctx
+  )
 }
 
 function makeDeps(over: Record<string, any> = {}) {
   const verificationTokens = over.verificationTokens ?? {
-    findActiveByHash: vi.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2099-01-01") }),
+    findActiveByHash: vi
+      .fn()
+      .mockResolvedValue({ userId: "u-1", expiresAt: new Date("2099-01-01") }),
     consumeByHash: vi.fn().mockResolvedValue({ userId: "u-1" }),
     invalidateAllForUser: vi.fn().mockResolvedValue(undefined),
   }
@@ -85,14 +93,26 @@ function makeDeps(over: Record<string, any> = {}) {
     update: vi.fn().mockResolvedValue(undefined),
     findPermissions: vi.fn().mockResolvedValue([]),
   }
-  const hasher = over.hasher ?? { hash: vi.fn().mockResolvedValue("argon2-novo") }
+  const hasher = over.hasher ?? {
+    hash: vi.fn().mockResolvedValue("argon2-novo"),
+  }
   const strength = over.strength ?? { score: vi.fn().mockReturnValue(4) }
   const breach = over.breach ?? { check: vi.fn().mockResolvedValue("clear") }
-  const tokens = over.tokens ?? { hashOf: vi.fn().mockReturnValue("hash-of-raw") }
-  const outbox = over.outbox ?? { publish: vi.fn().mockResolvedValue(undefined) }
-  const authEvents = over.authEvents ?? { recordInTx: vi.fn().mockResolvedValue(undefined) }
-  const clock = over.clock ?? { now: () => new Date("2026-06-08T00:00:00.000Z") }
-  const ctx = over.ctx ?? fakeRequestContext(() => ({
+  const tokens = over.tokens ?? {
+    hashOf: vi.fn().mockReturnValue("hash-of-raw"),
+  }
+  const outbox = over.outbox ?? {
+    publish: vi.fn().mockResolvedValue(undefined),
+  }
+  const authEvents = over.authEvents ?? {
+    recordInTx: vi.fn().mockResolvedValue(undefined),
+  }
+  const clock = over.clock ?? {
+    now: () => new Date("2026-06-08T00:00:00.000Z"),
+  }
+  const ctx =
+    over.ctx ??
+    fakeRequestContext(() => ({
       ip: null,
       userAgent: null,
       correlationId: "c1",
@@ -121,16 +141,24 @@ function makeDeps(over: Record<string, any> = {}) {
     ctx,
     config,
     attachments,
-    createSession,
+    createSession
   )
-  return { uc, verificationTokens, users, hasher, outbox, authEvents, attachments }
+  return {
+    uc,
+    verificationTokens,
+    users,
+    hasher,
+    outbox,
+    authEvents,
+    attachments,
+  }
 }
 
 describe("SetPasswordUseCase", () => {
   it("sem provider da porta e com avatar submetido: lança ProfileImageStoreMissingError sem consumir o token", async () => {
     const t = makeDeps({ attachments: null })
     await expect(
-      t.uc.execute({ ...VALID_INPUT, avatarAttachmentId: "att-x" }),
+      t.uc.execute({ ...VALID_INPUT, avatarAttachmentId: "att-x" })
     ).rejects.toMatchObject({
       status: 501,
       type: "https://errors.example.com/identity/profile-image-store-missing",
@@ -155,7 +183,9 @@ describe("SetPasswordUseCase", () => {
         invalidateAllForUser: vi.fn(),
       },
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidAccessLinkError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      InvalidAccessLinkError
+    )
     expect(t.verificationTokens.consumeByHash).not.toHaveBeenCalled()
     expect(t.users.update).not.toHaveBeenCalled()
   })
@@ -163,23 +193,37 @@ describe("SetPasswordUseCase", () => {
   it("consume null na tx lança InvalidAccessLinkError", async () => {
     const t = makeDeps({
       verificationTokens: {
-        findActiveByHash: vi.fn().mockResolvedValue({ userId: "u-1", expiresAt: new Date("2099-01-01") }),
+        findActiveByHash: vi.fn().mockResolvedValue({
+          userId: "u-1",
+          expiresAt: new Date("2099-01-01"),
+        }),
         consumeByHash: vi.fn().mockResolvedValue(null),
         invalidateAllForUser: vi.fn(),
       },
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidAccessLinkError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      InvalidAccessLinkError
+    )
     expect(t.users.update).not.toHaveBeenCalled()
   })
 
   it("happy: ativa conta, cria sessão, invalida tokens e audita password_set", async () => {
     const t = makeDeps()
     const out = await t.uc.execute(VALID_INPUT)
-    expect(t.verificationTokens.consumeByHash).toHaveBeenCalledWith("hash-of-raw", "access_link", expect.any(Date))
+    expect(t.verificationTokens.consumeByHash).toHaveBeenCalledWith(
+      "hash-of-raw",
+      "access_link",
+      expect.any(Date)
+    )
     expect(t.users.update).toHaveBeenCalledTimes(1)
-    expect(t.verificationTokens.invalidateAllForUser).toHaveBeenCalledWith("u-1", "access_link")
+    expect(t.verificationTokens.invalidateAllForUser).toHaveBeenCalledWith(
+      "u-1",
+      "access_link"
+    )
     expect(t.authEvents.recordInTx).toHaveBeenCalledWith(
-      expect.objectContaining({ props: expect.objectContaining({ eventType: "password_set" }) }),
+      expect.objectContaining({
+        props: expect.objectContaining({ eventType: "password_set" }),
+      })
     )
     expect(out.sessionToken).toBe("raw-sess")
     expect(typeof out.sessionId).toBe("string")
@@ -197,7 +241,9 @@ describe("SetPasswordUseCase", () => {
     const t = makeDeps({
       users: { findById: vi.fn().mockResolvedValue(active), update: vi.fn() },
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidAccessLinkError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      InvalidAccessLinkError
+    )
     expect(t.users.update).not.toHaveBeenCalled()
   })
 
@@ -218,7 +264,7 @@ describe("SetPasswordUseCase", () => {
           recipientId: "admin-1",
           data: { userName: "Ana Oliveira" },
         }),
-      }),
+      })
     )
   })
 
@@ -230,7 +276,9 @@ describe("SetPasswordUseCase", () => {
 
   it("senha fraca lança WeakPasswordError ANTES de consultar token", async () => {
     const t = makeDeps({ strength: { score: vi.fn().mockReturnValue(0) } })
-    await expect(t.uc.execute({ ...VALID_INPUT, password: "123" })).rejects.toBeInstanceOf(WeakPasswordError)
+    await expect(
+      t.uc.execute({ ...VALID_INPUT, password: "123" })
+    ).rejects.toBeInstanceOf(WeakPasswordError)
     expect(t.verificationTokens.findActiveByHash).not.toHaveBeenCalled()
     expect(t.verificationTokens.consumeByHash).not.toHaveBeenCalled()
   })
@@ -249,7 +297,9 @@ describe("SetPasswordUseCase", () => {
       breach: { check: vi.fn().mockResolvedValue("breached") },
       verificationTokens,
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(WeakPasswordError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      WeakPasswordError
+    )
     expect(verificationTokens.findActiveByHash).not.toHaveBeenCalled()
     expect(verificationTokens.consumeByHash).not.toHaveBeenCalled()
   })
@@ -258,7 +308,10 @@ describe("SetPasswordUseCase", () => {
     const t = makeDeps({
       attachments: { exists: vi.fn().mockResolvedValue(false) },
     })
-    await t.uc.execute({ ...VALID_INPUT, avatarAttachmentId: "att-third-party" })
+    await t.uc.execute({
+      ...VALID_INPUT,
+      avatarAttachmentId: "att-third-party",
+    })
     // O user atualizado não deve ter o avatar de terceiro
     const updatedUser: User = t.users.update.mock.calls[0][0]
     expect(updatedUser.props.avatarAttachmentId).toBeNull()
@@ -281,7 +334,9 @@ describe("SetPasswordUseCase", () => {
         findPermissions: vi.fn(),
       },
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidAccessLinkError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      InvalidAccessLinkError
+    )
     expect(t.users.update).not.toHaveBeenCalled()
     expect(t.verificationTokens.consumeByHash).not.toHaveBeenCalled()
   })
@@ -320,7 +375,9 @@ describe("SetPasswordUseCase", () => {
       }),
       breach: { check },
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(WeakPasswordError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      WeakPasswordError
+    )
     expect(check).toHaveBeenCalledWith(VALID_INPUT.password)
   })
 
@@ -339,7 +396,7 @@ describe("SetPasswordUseCase", () => {
           eventType: "breach_check_skipped",
           metadata: { mode: "fail_open" },
         }),
-      }),
+      })
     )
   })
 
@@ -360,7 +417,7 @@ describe("SetPasswordUseCase", () => {
       verificationTokens,
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
-      BreachCheckUnavailableError,
+      BreachCheckUnavailableError
     )
     expect(verificationTokens.consumeByHash).not.toHaveBeenCalled()
   })
@@ -380,7 +437,9 @@ describe("SetPasswordUseCase", () => {
     const t = makeDeps({
       users: { findById, update: vi.fn(), findPermissions: vi.fn() },
     })
-    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidAccessLinkError)
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(
+      InvalidAccessLinkError
+    )
     expect(t.users.update).not.toHaveBeenCalled()
   })
 

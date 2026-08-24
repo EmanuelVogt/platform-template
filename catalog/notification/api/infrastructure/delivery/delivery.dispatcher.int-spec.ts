@@ -12,7 +12,10 @@ import type { ChannelPort } from "../../domain/ports/channel.port"
 import type { NotificationConfig } from "../../notification.config"
 import type { Pool } from "pg"
 
-const config = { DELIVERY_MAX_ATTEMPTS: 2, MAIL_TRANSPORT: "log" } as NotificationConfig
+const config = {
+  DELIVERY_MAX_ATTEMPTS: 2,
+  MAIL_TRANSPORT: "log",
+} as NotificationConfig
 
 function insertDelivery(
   pool: Pool,
@@ -25,7 +28,11 @@ function insertDelivery(
   }> = {}
 ) {
   const id = over.id ?? ulid()
-  const payload = over.payload ?? { email: "a@b.com", link: "https://x/?token=raw", locale: "pt-BR" }
+  const payload = over.payload ?? {
+    email: "a@b.com",
+    link: "https://x/?token=raw",
+    locale: "pt-BR",
+  }
   return pool
     .query(
       `insert into notification.notification_deliveries
@@ -152,7 +159,9 @@ describe("DeliveryDispatcher (int)", () => {
 
   it("dois polls concorrentes entregam cada delivery uma vez (lease preservada)", async () => {
     const ids = await Promise.all(
-      Array.from({ length: 6 }, (_, i) => insertDelivery(pool, { id: `d-${i}` }))
+      Array.from({ length: 6 }, (_, i) =>
+        insertDelivery(pool, { id: `d-${i}` })
+      )
     )
 
     const d2 = new DeliveryDispatcher(channel, config, txm, loggerFactory)
@@ -169,9 +178,18 @@ describe("DeliveryDispatcher (int)", () => {
 
   it("purgeTerminal remove sent/dead_letter com 30d+; preserva pending e terminais recentes", async () => {
     const old = new Date(Date.now() - 31 * 86_400_000)
-    const oldSent = await insertDelivery(pool, { status: "sent", createdAt: old })
-    const oldDead = await insertDelivery(pool, { status: "dead_letter", createdAt: old })
-    const oldPending = await insertDelivery(pool, { status: "pending", createdAt: old })
+    const oldSent = await insertDelivery(pool, {
+      status: "sent",
+      createdAt: old,
+    })
+    const oldDead = await insertDelivery(pool, {
+      status: "dead_letter",
+      createdAt: old,
+    })
+    const oldPending = await insertDelivery(pool, {
+      status: "pending",
+      createdAt: old,
+    })
     const newSent = await insertDelivery(pool, { status: "sent" })
 
     await dispatcher.purgeTerminal()

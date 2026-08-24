@@ -1,4 +1,6 @@
-export const NOTIFICATION_TEMPLATE_SOURCES = Symbol("NOTIFICATION_TEMPLATE_SOURCES")
+export const NOTIFICATION_TEMPLATE_SOURCES = Symbol(
+  "NOTIFICATION_TEMPLATE_SOURCES"
+)
 
 /** O que o `EmailChannel` e o renderer precisam saber pra despachar um tipo por e-mail. */
 export interface EmailTemplateBinding {

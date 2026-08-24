@@ -4,7 +4,10 @@ import { sql } from "drizzle-orm"
 import { TransactionManager } from "../../../../shared/kernel/transactional/transaction-manager"
 
 import type { DrizzleExecutor } from "../../../../shared/infra/database/drizzle.provider"
-import type { RefLabelReader, RefTarget } from "../../domain/ports/ref-label.reader"
+import type {
+  RefLabelReader,
+  RefTarget,
+} from "../../domain/ports/ref-label.reader"
 
 /**
  * Leitura display-only cruzando schemas de outros módulos (SELECT id+label).

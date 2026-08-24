@@ -82,8 +82,8 @@ describe("assertPermission", () => {
   })
 
   it("fora de um escopo de request nega, nunca passa", () => {
-    expect(() => { assertPermission("admin.users.trash.read"); }).toThrow(
-      ForbiddenError
-    )
+    expect(() => {
+      assertPermission("admin.users.trash.read")
+    }).toThrow(ForbiddenError)
   })
 })

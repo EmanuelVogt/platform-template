@@ -1,83 +1,88 @@
-import { ulid } from 'ulid';
+import { ulid } from "ulid"
 
-import { InvalidAccountStateError, InvalidBirthDateError } from '../errors';
+import { InvalidAccountStateError, InvalidBirthDateError } from "../errors"
 
-import type { AccessProfile } from '../access/permission.types';
+import type { AccessProfile } from "../access/permission.types"
 
-export type UserStatus = 'pending' | 'active';
+export type UserStatus = "pending" | "active"
 
 export interface CreateUserInput {
-  name: string;
-  email: string;
-  accessProfile: AccessProfile;
-  servesClients?: boolean;
-  createdByUserId?: string | null;
+  name: string
+  email: string
+  accessProfile: AccessProfile
+  servesClients?: boolean
+  createdByUserId?: string | null
 }
 
 export interface UserProps {
-  readonly id: string;
-  readonly name: string;
-  readonly email: string;
-  readonly emailVerified: boolean;
+  readonly id: string
+  readonly name: string
+  readonly email: string
+  readonly emailVerified: boolean
   // E-mail novo aguardando confirmação na troca self-service; null = sem troca pendente.
   // Enquanto não-null, `email` segue o antigo e `status` está 'pending'.
-  readonly pendingEmail: string | null;
+  readonly pendingEmail: string | null
   // Classificação fixa (não concede acesso — o guard checa user_permissions). Detalhe no ADR 0028.
-  readonly accessProfile: AccessProfile;
+  readonly accessProfile: AccessProfile
   // Atende cliente: entra nos seletores, nos mapas e na escala. Independente do
   // accessProfile — agendista e recepção também atendem (ADR 0082).
-  readonly servesClients: boolean;
-  readonly passwordHash: string | null;
-  readonly pepperVersion: number;
-  readonly status: UserStatus;
-  readonly failedLoginAttempts: number;
-  readonly lockedUntil: Date | null;
-  readonly lastResetRequestedAt: Date | null;
-  readonly lastVerificationRequestedAt: Date | null;
+  readonly servesClients: boolean
+  readonly passwordHash: string | null
+  readonly pepperVersion: number
+  readonly status: UserStatus
+  readonly failedLoginAttempts: number
+  readonly lockedUntil: Date | null
+  readonly lastResetRequestedAt: Date | null
+  readonly lastVerificationRequestedAt: Date | null
   // Cooldown do pedido de troca de e-mail (rate-limit por usuário).
-  readonly lastEmailChangeRequestedAt: Date | null;
+  readonly lastEmailChangeRequestedAt: Date | null
   // ISO 'YYYY-MM-DD'; null até a ativação (master/seed nunca passam pela tela).
-  readonly birthDate: string | null;
-  readonly avatarAttachmentId: string | null;
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
+  readonly birthDate: string | null
+  readonly avatarAttachmentId: string | null
+  readonly createdAt: Date
+  readonly updatedAt: Date
   // Soft delete: instante da exclusão lógica; null = ativo.
-  readonly deletedAt: Date | null;
+  readonly deletedAt: Date | null
   // userId do admin que criou a conta; null = seed/master.
-  readonly createdByUserId: string | null;
+  readonly createdByUserId: string | null
 }
 
 export interface CreateActiveUserInput {
-  name: string;
-  email: string;
-  passwordHash: string;
-  pepperVersion: number;
+  name: string
+  email: string
+  passwordHash: string
+  pepperVersion: number
 }
 
 export class User {
-  readonly props: UserProps;
+  readonly props: UserProps
 
   private constructor(props: UserProps) {
-    this.props = Object.freeze(props);
+    this.props = Object.freeze(props)
   }
 
   static fromProps(props: UserProps): User {
-    return new User(props);
+    return new User(props)
   }
 
-  static createActive({ name, email, passwordHash, pepperVersion }: CreateActiveUserInput): User {
-    const now = new Date();
+  static createActive({
+    name,
+    email,
+    passwordHash,
+    pepperVersion,
+  }: CreateActiveUserInput): User {
+    const now = new Date()
     return new User({
       id: ulid(),
       name,
       email: email.toLowerCase(),
       emailVerified: false,
       pendingEmail: null,
-      accessProfile: 'admin',
+      accessProfile: "admin",
       servesClients: false,
       passwordHash,
       pepperVersion,
-      status: 'active',
+      status: "active",
       failedLoginAttempts: 0,
       lockedUntil: null,
       lastResetRequestedAt: null,
@@ -89,7 +94,7 @@ export class User {
       updatedAt: now,
       deletedAt: null,
       createdByUserId: null,
-    });
+    })
   }
 
   static create({
@@ -99,7 +104,7 @@ export class User {
     servesClients,
     createdByUserId,
   }: CreateUserInput): User {
-    const now = new Date();
+    const now = new Date()
     return new User({
       id: ulid(),
       name,
@@ -110,7 +115,7 @@ export class User {
       servesClients: servesClients ?? false,
       passwordHash: null,
       pepperVersion: 1,
-      status: 'pending',
+      status: "pending",
       failedLoginAttempts: 0,
       lockedUntil: null,
       lastResetRequestedAt: null,
@@ -122,7 +127,7 @@ export class User {
       updatedAt: now,
       deletedAt: null,
       createdByUserId: createdByUserId ?? null,
-    });
+    })
   }
 
   /**
@@ -132,86 +137,101 @@ export class User {
    */
   activate(
     input: {
-      passwordHash: string;
-      name: string;
-      birthDate: string; // ISO 'YYYY-MM-DD'
-      avatarAttachmentId: string | null;
+      passwordHash: string
+      name: string
+      birthDate: string // ISO 'YYYY-MM-DD'
+      avatarAttachmentId: string | null
     },
-    now: Date,
+    now: Date
   ): User {
-    if (this.props.status !== 'pending') {
-      throw new InvalidAccountStateError();
+    if (this.props.status !== "pending") {
+      throw new InvalidAccountStateError()
     }
-    assertValidBirthDate(input.birthDate, now);
+    assertValidBirthDate(input.birthDate, now)
     return new User({
       ...this.props,
       passwordHash: input.passwordHash,
       name: input.name.trim(),
       birthDate: input.birthDate,
       avatarAttachmentId: input.avatarAttachmentId,
-      status: 'active',
+      status: "active",
       emailVerified: true,
       updatedAt: now,
-    });
+    })
   }
 
   /** true se a conta está bloqueada no instante `now` (borda `==` não conta). */
   isLocked(now: Date): boolean {
-    return this.props.lockedUntil !== null && this.props.lockedUntil.getTime() > now.getTime();
+    return (
+      this.props.lockedUntil !== null &&
+      this.props.lockedUntil.getTime() > now.getTime()
+    )
   }
 
   /** Ao atingir `threshold`, trava a conta até `now + durationSeconds`. */
-  registerFailedAttempt(now: Date, threshold: number, durationSeconds: number): User {
-    const failedLoginAttempts = this.props.failedLoginAttempts + 1;
+  registerFailedAttempt(
+    now: Date,
+    threshold: number,
+    durationSeconds: number
+  ): User {
+    const failedLoginAttempts = this.props.failedLoginAttempts + 1
     const lockedUntil =
       failedLoginAttempts >= threshold
         ? new Date(now.getTime() + durationSeconds * 1000)
-        : this.props.lockedUntil;
-    return new User({ ...this.props, failedLoginAttempts, lockedUntil });
+        : this.props.lockedUntil
+    return new User({ ...this.props, failedLoginAttempts, lockedUntil })
   }
 
   clearLockout(): User {
-    return new User({ ...this.props, failedLoginAttempts: 0, lockedUntil: null });
+    return new User({
+      ...this.props,
+      failedLoginAttempts: 0,
+      lockedUntil: null,
+    })
   }
 
   rehashPassword(passwordHash: string): User {
-    return new User({ ...this.props, passwordHash });
+    return new User({ ...this.props, passwordHash })
   }
 
   verifyEmail(): User {
-    return new User({ ...this.props, emailVerified: true });
+    return new User({ ...this.props, emailVerified: true })
   }
 
   markResetRequested(now: Date): User {
-    return new User({ ...this.props, lastResetRequestedAt: now });
+    return new User({ ...this.props, lastResetRequestedAt: now })
   }
 
   markVerificationRequested(now: Date): User {
-    return new User({ ...this.props, lastVerificationRequestedAt: now });
+    return new User({ ...this.props, lastVerificationRequestedAt: now })
   }
 
   /** Soft delete: marca a conta como excluída (exclusão lógica). Retorna nova instância. */
   delete(now: Date): User {
-    return new User({ ...this.props, deletedAt: now, updatedAt: now });
+    return new User({ ...this.props, deletedAt: now, updatedAt: now })
   }
 
   /** true se a conta foi excluída (soft delete). */
   isDeleted(): boolean {
-    return this.props.deletedAt !== null;
+    return this.props.deletedAt !== null
   }
 
   /** Desfaz o soft delete: exige conta excluída, senão lança. Retorna nova instância viva. */
   restore(): User {
     if (!this.isDeleted()) {
-      throw new InvalidAccountStateError();
+      throw new InvalidAccountStateError()
     }
-    return new User({ ...this.props, deletedAt: null });
+    return new User({ ...this.props, deletedAt: null })
   }
 
   /** Edição pelo admin: não toca e-mail, senha nem status da conta. */
   updateProfile(
-    input: { name: string; accessProfile: AccessProfile; servesClients: boolean },
-    now: Date,
+    input: {
+      name: string
+      accessProfile: AccessProfile
+      servesClients: boolean
+    },
+    now: Date
   ): User {
     return new User({
       ...this.props,
@@ -219,28 +239,35 @@ export class User {
       accessProfile: input.accessProfile,
       servesClients: input.servesClients,
       updatedAt: now,
-    });
+    })
   }
 
   /**
    * Edição self-service do próprio perfil: nome e data de nascimento. Não toca em
    * accessProfile/permissões (governança de admin) nem em e-mail (cadeia própria).
    */
-  updateOwnProfile(input: { name: string; birthDate?: string }, now: Date): User {
+  updateOwnProfile(
+    input: { name: string; birthDate?: string },
+    now: Date
+  ): User {
     if (input.birthDate !== undefined) {
-      assertValidBirthDate(input.birthDate, now);
+      assertValidBirthDate(input.birthDate, now)
     }
     return new User({
       ...this.props,
       name: input.name.trim(),
       birthDate: input.birthDate ?? this.props.birthDate,
       updatedAt: now,
-    });
+    })
   }
 
   /** Troca o avatar (id já resolvido/ownership checada no use case). Nova instância. */
   setAvatar(attachmentId: string, now: Date): User {
-    return new User({ ...this.props, avatarAttachmentId: attachmentId, updatedAt: now });
+    return new User({
+      ...this.props,
+      avatarAttachmentId: attachmentId,
+      updatedAt: now,
+    })
   }
 
   /**
@@ -253,7 +280,7 @@ export class User {
       ...this.props,
       lastEmailChangeRequestedAt: now,
       updatedAt: now,
-    });
+    })
   }
 
   /**
@@ -263,17 +290,17 @@ export class User {
    * conta 'active' — segunda solicitação durante uma troca em curso é barrada.
    */
   requestEmailChange(newEmail: string, now: Date): User {
-    if (this.props.status !== 'active') {
-      throw new InvalidAccountStateError();
+    if (this.props.status !== "active") {
+      throw new InvalidAccountStateError()
     }
     return new User({
       ...this.props,
-      status: 'pending',
+      status: "pending",
       emailVerified: false,
       pendingEmail: newEmail.toLowerCase(),
       lastEmailChangeRequestedAt: now,
       updatedAt: now,
-    });
+    })
   }
 
   /**
@@ -282,16 +309,16 @@ export class User {
    */
   confirmEmailChange(now: Date): User {
     if (this.props.pendingEmail === null) {
-      throw new InvalidAccountStateError();
+      throw new InvalidAccountStateError()
     }
     return new User({
       ...this.props,
       email: this.props.pendingEmail,
       pendingEmail: null,
-      status: 'active',
+      status: "active",
       emailVerified: true,
       updatedAt: now,
-    });
+    })
   }
 
   /**
@@ -300,46 +327,46 @@ export class User {
    */
   cancelEmailChange(now: Date): User {
     if (this.props.pendingEmail === null) {
-      throw new InvalidAccountStateError();
+      throw new InvalidAccountStateError()
     }
     return new User({
       ...this.props,
-      status: 'active',
+      status: "active",
       pendingEmail: null,
       updatedAt: now,
-    });
+    })
   }
 
   /** true se há troca de e-mail pendente de confirmação. */
   hasPendingEmailChange(): boolean {
-    return this.props.pendingEmail !== null;
+    return this.props.pendingEmail !== null
   }
 
   isMaster(): boolean {
-    return this.props.accessProfile === 'master';
+    return this.props.accessProfile === "master"
   }
 }
 
-const MAX_AGE_YEARS = 120;
+const MAX_AGE_YEARS = 120
 
 /** Valida nascimento ISO: data real, não-futura, idade ≤ 120. `birthDate` já vem
  *  com formato 'YYYY-MM-DD' garantido pelo boundary (Zod). */
 function assertValidBirthDate(birthDate: string, now: Date): void {
-  const [year, month, day] = birthDate.split('-').map(Number);
-  const parsed = new Date(`${birthDate}T00:00:00.000Z`);
+  const [year, month, day] = birthDate.split("-").map(Number)
+  const parsed = new Date(`${birthDate}T00:00:00.000Z`)
   if (
     Number.isNaN(parsed.getTime()) ||
     parsed.getUTCFullYear() !== year ||
     parsed.getUTCMonth() + 1 !== month ||
     parsed.getUTCDate() !== day
   ) {
-    throw new InvalidBirthDateError();
+    throw new InvalidBirthDateError()
   }
   if (parsed.getTime() > now.getTime()) {
-    throw new InvalidBirthDateError();
+    throw new InvalidBirthDateError()
   }
-  const maxAgeMs = MAX_AGE_YEARS * 365.25 * 24 * 60 * 60 * 1000;
+  const maxAgeMs = MAX_AGE_YEARS * 365.25 * 24 * 60 * 60 * 1000
   if (now.getTime() - parsed.getTime() > maxAgeMs) {
-    throw new InvalidBirthDateError();
+    throw new InvalidBirthDateError()
   }
 }

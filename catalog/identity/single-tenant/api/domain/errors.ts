@@ -1,6 +1,6 @@
-import { DomainError } from '../../../shared/kernel/errors/domain.error';
+import { DomainError } from "../../../shared/kernel/errors/domain.error"
 
-const TYPE_BASE = 'https://errors.example.com/identity';
+const TYPE_BASE = "https://errors.example.com/identity"
 
 /**
  * Falha de autenticação. UMA única classe para TODOS os caminhos de login
@@ -9,103 +9,103 @@ const TYPE_BASE = 'https://errors.example.com/identity';
  * caminhos distintos não podem virar types distintos, senão vaza enumeração.
  */
 export class InvalidCredentialsError extends DomainError {
-  readonly status = 401;
-  readonly type = `${TYPE_BASE}/invalid-credentials`;
+  readonly status = 401
+  readonly type = `${TYPE_BASE}/invalid-credentials`
 
   constructor() {
-    super('Credenciais inválidas');
+    super("Credenciais inválidas")
   }
 }
 
 /** Senha não atende à política (comprimento mínimo ou força). */
 export class WeakPasswordError extends DomainError {
-  readonly status = 422;
-  readonly type = `${TYPE_BASE}/weak-password`;
+  readonly status = 422
+  readonly type = `${TYPE_BASE}/weak-password`
 
   constructor(detail?: string) {
-    super('Senha fraca', detail);
+    super("Senha fraca", detail)
   }
 }
 
 /** Token de reset/verificação inválido, expirado ou já consumido. */
 export class InvalidResetTokenError extends DomainError {
-  readonly status = 400;
-  readonly type = `${TYPE_BASE}/invalid-reset-token`;
+  readonly status = 400
+  readonly type = `${TYPE_BASE}/invalid-reset-token`
 
   constructor() {
-    super('Token inválido ou expirado');
+    super("Token inválido ou expirado")
   }
 }
 
 /** Sessão não encontrada (ou não pertence ao dono — anti-IDOR). */
 export class SessionNotFoundError extends DomainError {
-  readonly status = 404;
-  readonly type = `${TYPE_BASE}/session-not-found`;
+  readonly status = 404
+  readonly type = `${TYPE_BASE}/session-not-found`
 
   constructor() {
-    super('Sessão não encontrada');
+    super("Sessão não encontrada")
   }
 }
 
 /** Usuário não encontrado (ou já excluído) — admin agindo sobre id inexistente. */
 export class UserNotFoundError extends DomainError {
-  readonly status = 404;
-  readonly type = `${TYPE_BASE}/user-not-found`;
+  readonly status = 404
+  readonly type = `${TYPE_BASE}/user-not-found`
 
   constructor() {
-    super('Usuário não encontrado');
+    super("Usuário não encontrado")
   }
 }
 
 /** Rate-limit excedido. Carrega o tempo de espera para o header Retry-After. */
 export class RateLimitedError extends DomainError {
-  readonly status = 429;
-  readonly type = `${TYPE_BASE}/rate-limited`;
-  override readonly retryAfterSeconds: number;
+  readonly status = 429
+  readonly type = `${TYPE_BASE}/rate-limited`
+  override readonly retryAfterSeconds: number
 
   constructor(retryAfterSeconds: number) {
-    super('Muitas tentativas. Tente novamente mais tarde.');
-    this.retryAfterSeconds = retryAfterSeconds;
+    super("Muitas tentativas. Tente novamente mais tarde.")
+    this.retryAfterSeconds = retryAfterSeconds
   }
 }
 
 /** Link de acesso inválido, expirado ou já consumido (na configuração de senha). */
 export class InvalidAccessLinkError extends DomainError {
-  readonly status = 400;
-  readonly type = `${TYPE_BASE}/invalid-access-link`;
+  readonly status = 400
+  readonly type = `${TYPE_BASE}/invalid-access-link`
 
   constructor() {
-    super('Link de acesso inválido ou expirado');
+    super("Link de acesso inválido ou expirado")
   }
 }
 
 /** E-mail já pertence a um usuário (active ou pending) — colisão na criação. */
 export class EmailAlreadyInUseError extends DomainError {
-  readonly status = 409;
-  readonly type = `${TYPE_BASE}/email-already-in-use`;
+  readonly status = 409
+  readonly type = `${TYPE_BASE}/email-already-in-use`
 
   constructor() {
-    super('Já existe um usuário com este e-mail');
+    super("Já existe um usuário com este e-mail")
   }
 }
 
 /** Purge exige alvo soft-deleted — não existe hard delete direto. */
 export class UserNotInTrashError extends DomainError {
-  readonly status = 409;
-  readonly type = `${TYPE_BASE}/user-not-in-trash`;
+  readonly status = 409
+  readonly type = `${TYPE_BASE}/user-not-in-trash`
 
   constructor() {
-    super('Usuário não está na lixeira');
+    super("Usuário não está na lixeira")
   }
 }
 
 /** Reenvio negado: link de acesso ainda válido ou usuário não está pendente. */
 export class AccessLinkNotResendableError extends DomainError {
-  readonly status = 409;
-  readonly type = `${TYPE_BASE}/access-link-not-resendable`;
+  readonly status = 409
+  readonly type = `${TYPE_BASE}/access-link-not-resendable`
 
   constructor(detail?: string) {
-    super('Link de acesso não pode ser reenviado', detail);
+    super("Link de acesso não pode ser reenviado", detail)
   }
 }
 
@@ -115,75 +115,75 @@ export class AccessLinkNotResendableError extends DomainError {
  * de perfil param, o resto da identidade continua funcionando.
  */
 export class ProfileImageStoreMissingError extends DomainError {
-  readonly status = 501;
-  readonly type = `${TYPE_BASE}/profile-image-store-missing`;
+  readonly status = 501
+  readonly type = `${TYPE_BASE}/profile-image-store-missing`
 
   constructor() {
     super(
-      'Imagem de perfil indisponível',
-      'Nenhum armazenamento de imagem de perfil está registrado.',
-    );
+      "Imagem de perfil indisponível",
+      "Nenhum armazenamento de imagem de perfil está registrado."
+    )
   }
 }
 
 /** Transição `setPassword` em usuário que não está pendente. */
 export class InvalidAccountStateError extends DomainError {
-  readonly status = 409;
-  readonly type = `${TYPE_BASE}/invalid-account-state`;
+  readonly status = 409
+  readonly type = `${TYPE_BASE}/invalid-account-state`
 
   constructor() {
-    super('Estado de conta inválido');
+    super("Estado de conta inválido")
   }
 }
 
 /** Data de nascimento inválida (futura, fora de faixa ou impossível). */
 export class InvalidBirthDateError extends DomainError {
-  readonly status = 422;
-  readonly type = `${TYPE_BASE}/invalid-birth-date`;
+  readonly status = 422
+  readonly type = `${TYPE_BASE}/invalid-birth-date`
 
   constructor() {
-    super('Data de nascimento inválida');
+    super("Data de nascimento inválida")
   }
 }
 
 /** Tentativa de encerrar o próprio dispositivo atual — logout é o caminho. */
 export class CannotRevokeCurrentDeviceError extends DomainError {
-  readonly status = 409;
-  readonly type = `${TYPE_BASE}/cannot-revoke-current-device`;
+  readonly status = 409
+  readonly type = `${TYPE_BASE}/cannot-revoke-current-device`
 
   constructor() {
-    super('Não é possível encerrar o dispositivo atual. Use o logout.');
+    super("Não é possível encerrar o dispositivo atual. Use o logout.")
   }
 }
 
 /** Set de permissões viola closure de requires ou o piso do perfil de acesso. */
 export class InvalidPermissionSetError extends DomainError {
-  readonly status = 422;
-  readonly type = `${TYPE_BASE}/invalid-permission-set`;
+  readonly status = 422
+  readonly type = `${TYPE_BASE}/invalid-permission-set`
 
   constructor(detail?: string) {
-    super('Conjunto de permissões inválido', detail);
+    super("Conjunto de permissões inválido", detail)
   }
 }
 
 /** Áreas/serviços do perfil Profissional inválidos: inexistentes, inativos ou
  *  serviço fora de uma área selecionada. */
 export class InvalidProfessionalScopeError extends DomainError {
-  readonly status = 422;
-  readonly type = `${TYPE_BASE}/invalid-professional-scope`;
+  readonly status = 422
+  readonly type = `${TYPE_BASE}/invalid-professional-scope`
 
   constructor(detail?: string) {
-    super('Áreas ou serviços de atuação inválidos', detail);
+    super("Áreas ou serviços de atuação inválidos", detail)
   }
 }
 
 /** Áreas de agendamento do perfil Agendamentos inválidas: ausentes, inexistentes ou inativas. */
 export class InvalidSchedulingAreasError extends DomainError {
-  readonly status = 422;
-  readonly type = `${TYPE_BASE}/invalid-scheduling-areas`;
+  readonly status = 422
+  readonly type = `${TYPE_BASE}/invalid-scheduling-areas`
 
   constructor(detail?: string) {
-    super('Áreas de agendamento inválidas', detail);
+    super("Áreas de agendamento inválidas", detail)
   }
 }
 
@@ -193,85 +193,88 @@ export class InvalidSchedulingAreasError extends DomainError {
  * deixaria cliente marcado com quem o sistema não reconhece mais como executor.
  */
 export class ProfessionalHasCommitmentsError extends DomainError {
-  readonly status = 409;
-  readonly type = `${TYPE_BASE}/professional-has-commitments`;
-  override readonly extensions: Record<string, unknown>;
+  readonly status = 409
+  readonly type = `${TYPE_BASE}/professional-has-commitments`
+  override readonly extensions: Record<string, unknown>
 
   constructor(commitments: readonly ProfessionalCommitmentOffender[]) {
     super(
-      'A pessoa ainda tem compromisso marcado',
-      'Remarque os atendimentos e conduções listados antes de tirá-la do atendimento a clientes.',
-    );
-    this.extensions = { commitments };
+      "A pessoa ainda tem compromisso marcado",
+      "Remarque os atendimentos e conduções listados antes de tirá-la do atendimento a clientes."
+    )
+    this.extensions = { commitments }
   }
 }
 
 export interface ProfessionalCommitmentOffender {
-  kind: 'service' | 'collective';
-  id: string;
-  name: string;
-  date: string;
-  startMinute: number;
-  endMinute: number;
+  kind: "service" | "collective"
+  id: string
+  name: string
+  date: string
+  startMinute: number
+  endMinute: number
 }
 
 /** Modelo de permissões não encontrado. */
 export class PermissionTemplateNotFoundError extends DomainError {
-  readonly status = 404;
-  readonly type = `${TYPE_BASE}/permission-template-not-found`;
+  readonly status = 404
+  readonly type = `${TYPE_BASE}/permission-template-not-found`
 
   constructor() {
-    super('Modelo de permissões não encontrado');
+    super("Modelo de permissões não encontrado")
   }
 }
 
 /** Nome de modelo já em uso (unique). */
 export class PermissionTemplateNameInUseError extends DomainError {
-  readonly status = 409;
-  readonly type = `${TYPE_BASE}/permission-template-name-in-use`;
+  readonly status = 409
+  readonly type = `${TYPE_BASE}/permission-template-name-in-use`
 
   constructor() {
-    super('Já existe um modelo de permissões com este nome');
+    super("Já existe um modelo de permissões com este nome")
   }
 }
 
 /** Novo e-mail informado na troca é igual ao atual — nada a fazer. */
 export class EmailUnchangedError extends DomainError {
-  readonly status = 422;
-  readonly type = `${TYPE_BASE}/email-unchanged`;
+  readonly status = 422
+  readonly type = `${TYPE_BASE}/email-unchanged`
 
   constructor() {
-    super('O novo e-mail é igual ao atual');
+    super("O novo e-mail é igual ao atual")
   }
 }
 
 /** Token de confirmação de troca de e-mail inválido, expirado ou já consumido. */
 export class InvalidEmailChangeTokenError extends DomainError {
-  readonly status = 400;
-  readonly type = `${TYPE_BASE}/invalid-email-change-token`;
+  readonly status = 400
+  readonly type = `${TYPE_BASE}/invalid-email-change-token`
 
   constructor() {
-    super('Link de confirmação inválido ou expirado');
+    super("Link de confirmação inválido ou expirado")
   }
 }
 
 /** Upload de avatar sem arquivo anexado. */
 export class AvatarFileRequiredError extends DomainError {
-  readonly status = 400;
-  readonly type = `${TYPE_BASE}/avatar-file-required`;
+  readonly status = 400
+  readonly type = `${TYPE_BASE}/avatar-file-required`
 
   constructor() {
-    super('Arquivo de avatar é obrigatório');
+    super("Arquivo de avatar é obrigatório")
   }
 }
 
 /** Ator tentou conceder permissão que ele próprio não possui (anti-escalada). */
 export class PermissionGrantNotAllowedError extends DomainError {
-  readonly status = 403;
-  readonly type = `${TYPE_BASE}/permission-grant-not-allowed`;
+  readonly status = 403
+  readonly type = `${TYPE_BASE}/permission-grant-not-allowed`
 
   constructor() {
-    super('Acesso negado', 'Não é possível conceder permissões que você não possui.');
+    super(
+      "Acesso negado",
+      "Não é possível conceder permissões que você não possui."
+    )
   }
 }
 
@@ -281,15 +284,15 @@ export class PermissionGrantNotAllowedError extends DomainError {
  * ilimitada, que é exatamente o que uma inundação de login procura.
  */
 export class PasswordHashingSaturatedError extends DomainError {
-  readonly status = 503;
-  readonly type = `${TYPE_BASE}/password-hashing-saturated`;
-  override readonly retryAfterSeconds = 2;
+  readonly status = 503
+  readonly type = `${TYPE_BASE}/password-hashing-saturated`
+  override readonly retryAfterSeconds = 2
 
   constructor() {
     super(
-      'Serviço temporariamente indisponível',
-      'Muitas verificações de senha em andamento. Tente novamente em instantes.',
-    );
+      "Serviço temporariamente indisponível",
+      "Muitas verificações de senha em andamento. Tente novamente em instantes."
+    )
   }
 }
 
@@ -299,14 +302,14 @@ export class PasswordHashingSaturatedError extends DomainError {
  * vazada" — o usuário não pode ser punido por uma queda do provedor.
  */
 export class BreachCheckUnavailableError extends DomainError {
-  readonly status = 503;
-  readonly type = `${TYPE_BASE}/breach-check-unavailable`;
-  override readonly retryAfterSeconds = 5;
+  readonly status = 503
+  readonly type = `${TYPE_BASE}/breach-check-unavailable`
+  override readonly retryAfterSeconds = 5
 
   constructor() {
     super(
-      'Serviço temporariamente indisponível',
-      'Não foi possível verificar se a senha foi vazada. Tente novamente em instantes.',
-    );
+      "Serviço temporariamente indisponível",
+      "Não foi possível verificar se a senha foi vazada. Tente novamente em instantes."
+    )
   }
 }

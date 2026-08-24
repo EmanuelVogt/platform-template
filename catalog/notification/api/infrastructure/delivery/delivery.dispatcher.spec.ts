@@ -14,7 +14,11 @@ describe("backoffMs", () => {
 describe("redactPayload", () => {
   it("redige o link (token) e preserva o resto", () => {
     expect(
-      redactPayload({ email: "a@b.com", link: "https://x/?token=raw", locale: "pt-BR" })
+      redactPayload({
+        email: "a@b.com",
+        link: "https://x/?token=raw",
+        locale: "pt-BR",
+      })
     ).toEqual({ email: "a@b.com", link: "[REDACTED]", locale: "pt-BR" })
   })
   it("payload sem link passa intacto", () => {
@@ -22,7 +26,11 @@ describe("redactPayload", () => {
   })
   it("redige token e link juntos, não só link", () => {
     expect(
-      redactPayload({ email: "a@b.com", link: "https://x/?token=raw", token: "raw-secret" })
+      redactPayload({
+        email: "a@b.com",
+        link: "https://x/?token=raw",
+        token: "raw-secret",
+      })
     ).toEqual({ email: "a@b.com", link: "[REDACTED]", token: "[REDACTED]" })
   })
 })

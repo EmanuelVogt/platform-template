@@ -14,7 +14,7 @@ export interface ProfessionalScope {
   assertValid(
     areaIds: readonly string[],
     serviceIds: readonly string[]
-  ): Promise<void>;
+  ): Promise<void>
 }
 
-export const PROFESSIONAL_SCOPE: unique symbol = Symbol('ProfessionalScope');
+export const PROFESSIONAL_SCOPE: unique symbol = Symbol("ProfessionalScope")

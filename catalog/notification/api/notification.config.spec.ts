@@ -25,11 +25,18 @@ describe("notificationConfig", () => {
   })
 
   it("DELIVERY_MAX_ATTEMPTS coage string e rejeita não-positivo", () => {
-    expect(parseNotificationConfig({ DELIVERY_MAX_ATTEMPTS: "3" }).DELIVERY_MAX_ATTEMPTS).toBe(3)
-    expect(() => parseNotificationConfig({ DELIVERY_MAX_ATTEMPTS: "0" })).toThrow()
+    expect(
+      parseNotificationConfig({ DELIVERY_MAX_ATTEMPTS: "3" })
+        .DELIVERY_MAX_ATTEMPTS
+    ).toBe(3)
+    expect(() =>
+      parseNotificationConfig({ DELIVERY_MAX_ATTEMPTS: "0" })
+    ).toThrow()
   })
 
   it("NODE_ENV=staging parseia (mesmo enum do kernel)", () => {
-    expect(parseNotificationConfig({ NODE_ENV: "staging" }).NODE_ENV).toBe("staging")
+    expect(parseNotificationConfig({ NODE_ENV: "staging" }).NODE_ENV).toBe(
+      "staging"
+    )
   })
 })

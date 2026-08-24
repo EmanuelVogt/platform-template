@@ -1,4 +1,10 @@
-import { Controller, ForbiddenException, Inject, Req, Sse } from "@nestjs/common"
+import {
+  Controller,
+  ForbiddenException,
+  Inject,
+  Req,
+  Sse,
+} from "@nestjs/common"
 import { ApiExcludeEndpoint, ApiTags } from "@nestjs/swagger"
 
 import { env } from "../../../../../shared/config/env"
@@ -16,7 +22,8 @@ import type { Observable } from "rxjs"
 @Controller("notifications")
 export class SseController {
   constructor(
-    @Inject(CONNECTION_REGISTRY) private readonly registry: ConnectionRegistryPort,
+    @Inject(CONNECTION_REGISTRY)
+    private readonly registry: ConnectionRegistryPort,
     private readonly ctx: RequestContext
   ) {}
 

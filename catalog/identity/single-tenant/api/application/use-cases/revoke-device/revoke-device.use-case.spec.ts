@@ -10,16 +10,16 @@ import type { DeviceRepository } from "../../../domain/ports/device.repository"
 
 const makeCtx = (deviceId: string | null) =>
   fakeRequestContext(() => ({
-      userId: "u-1",
-      sessionId: "s-1",
-      deviceId,
-      ip: null,
-      userAgent: null,
-      correlationId: "C",
-      traceId: null,
-      spanId: null,
-      locale: "pt-BR",
-    }))
+    userId: "u-1",
+    sessionId: "s-1",
+    deviceId,
+    ip: null,
+    userAgent: null,
+    correlationId: "C",
+    traceId: null,
+    spanId: null,
+    locale: "pt-BR",
+  }))
 
 const makeOutbox = () => ({ publish: vi.fn().mockResolvedValue(undefined) })
 
@@ -73,7 +73,9 @@ describe("RevokeDeviceUseCase", () => {
     const recordInTx = vi.fn()
     const outbox = makeOutbox()
     const uc = new RevokeDeviceUseCase(
-      { deleteById: vi.fn().mockResolvedValue(0) } as unknown as DeviceRepository,
+      {
+        deleteById: vi.fn().mockResolvedValue(0),
+      } as unknown as DeviceRepository,
       outbox as never,
       { recordInTx } as unknown as AuthEventRepository,
       makeCtx("d-1")

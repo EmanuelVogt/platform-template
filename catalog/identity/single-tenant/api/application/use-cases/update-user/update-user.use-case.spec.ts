@@ -65,8 +65,12 @@ function makeDeps(over: Record<string, any> = {}) {
     replaceProfessionalServices: vi.fn().mockResolvedValue(undefined),
     replaceSchedulingAreas: vi.fn().mockResolvedValue(undefined),
   }
-  const clock = over.clock ?? { now: () => new Date("2026-06-12T12:00:00.000Z") }
-  const ctx = over.ctx ?? fakeRequestContext(() => ({
+  const clock = over.clock ?? {
+    now: () => new Date("2026-06-12T12:00:00.000Z"),
+  }
+  const ctx =
+    over.ctx ??
+    fakeRequestContext(() => ({
       correlationId: "c1",
       locale: "pt-BR",
       userId: "u-admin",
@@ -223,7 +227,11 @@ describe("UpdateUserUseCase", () => {
         update: vi.fn(),
         replacePermissions: vi.fn(),
       },
-      ctx: fakeRequestContext(() => ({ correlationId: "c1", locale: "pt-BR", userId: "u-target" })),
+      ctx: fakeRequestContext(() => ({
+        correlationId: "c1",
+        locale: "pt-BR",
+        userId: "u-target",
+      })),
     })
     await expect(uc.execute(BASE_INPUT)).rejects.toThrow(ForbiddenError)
     expect(users.update).not.toHaveBeenCalled()
@@ -239,7 +247,11 @@ describe("UpdateUserUseCase", () => {
         update: vi.fn(),
         replacePermissions: vi.fn(),
       },
-      ctx: fakeRequestContext(() => ({ correlationId: "c1", locale: "pt-BR", userId: "u-target" })),
+      ctx: fakeRequestContext(() => ({
+        correlationId: "c1",
+        locale: "pt-BR",
+        userId: "u-target",
+      })),
     })
     await expect(
       uc.execute({
@@ -267,11 +279,11 @@ describe("UpdateUserUseCase", () => {
         replaceSchedulingAreas: vi.fn().mockResolvedValue(undefined),
       },
       ctx: fakeRequestContext(() => ({
-          correlationId: "c1",
-          locale: "pt-BR",
-          userId: "u-target",
-          access: { permissions: new Set<string>(), isMaster: true },
-        })),
+        correlationId: "c1",
+        locale: "pt-BR",
+        userId: "u-target",
+        access: { permissions: new Set<string>(), isMaster: true },
+      })),
     })
     await uc.execute(BASE_INPUT)
     expect(users.update).toHaveBeenCalledTimes(1)
@@ -363,7 +375,10 @@ describe("UpdateUserUseCase", () => {
       expect(
         (users.update.mock.calls[0]?.[0] as User).props.servesClients
       ).toBe(false)
-      expect(users.replaceProfessionalAreas).toHaveBeenCalledWith("u-target", [])
+      expect(users.replaceProfessionalAreas).toHaveBeenCalledWith(
+        "u-target",
+        []
+      )
     })
 
     it("quem já não atendia não consulta a agenda", async () => {

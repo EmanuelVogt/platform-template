@@ -17,9 +17,10 @@ import type { ListDevicesInput, ListDevicesOutput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class ListDevicesUseCase
-  implements UseCaseContract<ListDevicesInput, ListDevicesOutput>
-{
+export class ListDevicesUseCase implements UseCaseContract<
+  ListDevicesInput,
+  ListDevicesOutput
+> {
   constructor(
     @Inject(DEVICE_REPOSITORY) private readonly devices: DeviceRepository,
     private readonly ctx: RequestContext,

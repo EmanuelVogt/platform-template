@@ -7,11 +7,15 @@ describe("tag — central de tags (contrato para consumidores)", () => {
   it("expõe TagDirectoryFacade.findLiveTagIds(ids) e describeTags(ids)", () => {
     expect(typeof TagDirectoryFacade.prototype.findLiveTagIds).toBe("function")
     expect(
-      TagDirectoryFacade.prototype.findLiveTagIds.bind(TagDirectoryFacade.prototype),
+      TagDirectoryFacade.prototype.findLiveTagIds.bind(
+        TagDirectoryFacade.prototype
+      )
     ).toHaveLength(1)
     expect(typeof TagDirectoryFacade.prototype.describeTags).toBe("function")
     expect(
-      TagDirectoryFacade.prototype.describeTags.bind(TagDirectoryFacade.prototype),
+      TagDirectoryFacade.prototype.describeTags.bind(
+        TagDirectoryFacade.prototype
+      )
     ).toHaveLength(1)
   })
 

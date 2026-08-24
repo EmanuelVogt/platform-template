@@ -28,9 +28,7 @@ import type {
 } from "../../domain/ports/user.repository"
 
 @Injectable()
-export class DrizzleProfessionalAssignmentRepository
-  implements ProfessionalAssignmentRepository
-{
+export class DrizzleProfessionalAssignmentRepository implements ProfessionalAssignmentRepository {
   constructor(private readonly tx: TransactionManager) {}
 
   private get db(): DrizzleExecutor {

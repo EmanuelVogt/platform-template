@@ -19,11 +19,15 @@ describe("parseIdentityConfig", () => {
   })
 
   it("rejeita ARGON_MEMORY_KIB abaixo do floor OWASP (19456)", () => {
-    expect(() => parseIdentityConfig({ ...BASE, ARGON_MEMORY_KIB: "4096" })).toThrow()
+    expect(() =>
+      parseIdentityConfig({ ...BASE, ARGON_MEMORY_KIB: "4096" })
+    ).toThrow()
   })
 
   it("rejeita PASSWORD_PEPPER curto", () => {
-    expect(() => parseIdentityConfig({ ...BASE, PASSWORD_PEPPER: "curto" })).toThrow()
+    expect(() =>
+      parseIdentityConfig({ ...BASE, PASSWORD_PEPPER: "curto" })
+    ).toThrow()
   })
 
   it("exige WEB_ORIGIN (link de e-mail / CSRF)", () => {
@@ -42,27 +46,29 @@ describe("parseIdentityConfig", () => {
         ...BASE,
         SESSION_TOUCH_INTERVAL_SECONDS: "999999",
         SESSION_IDLE_TTL_SECONDS: "60",
-      }),
+      })
     ).toThrow()
   })
 
   it("rejeita COOKIE_SAMESITE=none sem CSRF_SECRET", () => {
     const { CSRF_SECRET: _omit, ...semCsrf } = BASE
-    expect(() => parseIdentityConfig({ ...semCsrf, COOKIE_SAMESITE: "none" })).toThrow()
+    expect(() =>
+      parseIdentityConfig({ ...semCsrf, COOKIE_SAMESITE: "none" })
+    ).toThrow()
   })
 
   it("coage REQUIRE_EMAIL_VERIFICATION de string para boolean", () => {
     expect(parseIdentityConfig(BASE).REQUIRE_EMAIL_VERIFICATION).toBe(false)
     expect(
       parseIdentityConfig({ ...BASE, REQUIRE_EMAIL_VERIFICATION: "true" })
-        .REQUIRE_EMAIL_VERIFICATION,
+        .REQUIRE_EMAIL_VERIFICATION
     ).toBe(true)
   })
 
   it("rejeita COOKIE_NAME __Host- com COOKIE_SECURE=false", () => {
-    expect(() => parseIdentityConfig({ ...BASE, COOKIE_SECURE: "false" })).toThrow(
-      /COOKIE_SECURE/,
-    )
+    expect(() =>
+      parseIdentityConfig({ ...BASE, COOKIE_SECURE: "false" })
+    ).toThrow(/COOKIE_SECURE/)
   })
 
   it("aceita COOKIE_SECURE=false com COOKIE_NAME/DEVICE_COOKIE_NAME sem prefixo", () => {
@@ -81,7 +87,7 @@ describe("parseIdentityConfig", () => {
         ...BASE,
         COOKIE_SECURE: "false",
         COOKIE_NAME: "rit_session",
-      }),
+      })
     ).toThrow(/COOKIE_SECURE/)
   })
 
@@ -89,20 +95,20 @@ describe("parseIdentityConfig", () => {
     expect(parseIdentityConfig(BASE).BREACH_CHECK_ENABLED).toBe(false)
     expect(
       parseIdentityConfig({ ...BASE, BREACH_CHECK_ENABLED: "true" })
-        .BREACH_CHECK_ENABLED,
+        .BREACH_CHECK_ENABLED
     ).toBe(true)
   })
 
   it("exige BREACH_CHECK_ENABLED: ausente falha nomeando a variável", () => {
     const { BREACH_CHECK_ENABLED: _omit, ...semEnabled } = BASE
     expect(() => parseIdentityConfig(semEnabled)).toThrow(
-      /BREACH_CHECK_ENABLED/,
+      /BREACH_CHECK_ENABLED/
     )
   })
 
   it("rejeita BREACH_CHECK_ENABLED com valor fora do literal", () => {
     expect(() =>
-      parseIdentityConfig({ ...BASE, BREACH_CHECK_ENABLED: "sim" }),
+      parseIdentityConfig({ ...BASE, BREACH_CHECK_ENABLED: "sim" })
     ).toThrow(/BREACH_CHECK_ENABLED/)
   })
 
@@ -127,10 +133,10 @@ describe("parseIdentityConfig", () => {
 
   it("rejeita limite de login zero ou negativo (desligaria o teto em silêncio)", () => {
     expect(() =>
-      parseIdentityConfig({ ...BASE, LOGIN_ACCOUNT_MAX_FAILURES: "0" }),
+      parseIdentityConfig({ ...BASE, LOGIN_ACCOUNT_MAX_FAILURES: "0" })
     ).toThrow(/LOGIN_ACCOUNT_MAX_FAILURES/)
     expect(() =>
-      parseIdentityConfig({ ...BASE, PASSWORD_HASH_MAX_IN_FLIGHT: "-1" }),
+      parseIdentityConfig({ ...BASE, PASSWORD_HASH_MAX_IN_FLIGHT: "-1" })
     ).toThrow(/PASSWORD_HASH_MAX_IN_FLIGHT/)
   })
 })

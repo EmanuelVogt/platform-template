@@ -35,7 +35,9 @@ function makeInMemoryStorage(): ObjectStoragePort {
     head: (key) => {
       const o = objects.get(key)
       return Promise.resolve(
-        o ? { contentType: o.contentType, sizeBytes: o.body.length, etag: "" } : null,
+        o
+          ? { contentType: o.contentType, sizeBytes: o.body.length, etag: "" }
+          : null
       )
     },
     delete: (key) => {
@@ -96,14 +98,16 @@ describe("UploadAttachmentUseCase — perfil de produto injetado (int)", () => {
     const txm = new TransactionManager(db, makeTestLogger().loggerFactory, ctx)
     repo = new DrizzleAttachmentRepository(txm)
     const accessLog = new DrizzleAttachmentAccessLogRepository(txm)
-    const profiles = buildUploadProfiles(parseAttachmentConfig({}), [SAMPLE_DOC_DEF])
+    const profiles = buildUploadProfiles(parseAttachmentConfig({}), [
+      SAMPLE_DOC_DEF,
+    ])
     uc = new UploadAttachmentUseCase(
       makeInMemoryStorage(),
       repo,
       accessLog,
       txm,
       ctx,
-      profiles,
+      profiles
     )
   })
 
@@ -123,12 +127,14 @@ describe("UploadAttachmentUseCase — perfil de produto injetado (int)", () => {
         originalFilename: "f.bin",
         profile: SAMPLE_DOC_PROFILE,
         ownerUserId: "u-1",
-      }),
+      })
     )
   }
 
   it("rejeita upload de 11 bytes contra o teto de 10 do perfil injetado", async () => {
-    await expect(run(Buffer.alloc(11))).rejects.toBeInstanceOf(PayloadTooLargeError)
+    await expect(run(Buffer.alloc(11))).rejects.toBeInstanceOf(
+      PayloadTooLargeError
+    )
   })
 
   it("aceita upload de 10 bytes e persiste com a visibility do perfil injetado", async () => {

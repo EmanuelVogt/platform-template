@@ -13,9 +13,15 @@ import { ACCESS_PROFILES } from "../../domain/access/permission.types"
 import { identitySchema } from "./identity.schema"
 
 /** Ciclo de vida da conta: 'pending' (criado, sem senha) → 'active' (configurou senha). */
-export const userStatus = identitySchema.enum("user_status", ["pending", "active"])
+export const userStatus = identitySchema.enum("user_status", [
+  "pending",
+  "active",
+])
 
-export const accessProfile = identitySchema.enum("access_profile", ACCESS_PROFILES)
+export const accessProfile = identitySchema.enum(
+  "access_profile",
+  ACCESS_PROFILES
+)
 
 export const users = identitySchema.table(
   "users",

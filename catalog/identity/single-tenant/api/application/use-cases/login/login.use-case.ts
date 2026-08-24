@@ -12,7 +12,10 @@ import { Transactional } from "../../../../../shared/kernel/transactional/transa
 import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
 import { NotificationRequested } from "../../../../notification/api/events/notification-requested.event"
 import { User } from "../../../domain/entities/user.entity"
-import { InvalidCredentialsError, RateLimitedError } from "../../../domain/errors"
+import {
+  InvalidCredentialsError,
+  RateLimitedError,
+} from "../../../domain/errors"
 import {
   AUTH_EVENT_REPOSITORY,
   type AuthEventRepository,
@@ -60,7 +63,7 @@ export class LoginUseCase
     private readonly ctx: RequestContext,
     @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig,
     private readonly outbox: OutboxPublisher,
-    private readonly createSession: CreateSessionService,
+    private readonly createSession: CreateSessionService
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -132,7 +135,7 @@ export class LoginUseCase
     ctx: RequestContextStore,
     email: string,
     retryAfterSeconds: number,
-    scope: "account" | "ip",
+    scope: "account" | "ip"
   ): Promise<void> {
     await this.authEvents.record(
       authEventOf(ctx, {
@@ -148,7 +151,7 @@ export class LoginUseCase
   private async recordFailure(
     user: User | null,
     email: string,
-    ctx: RequestContextStore,
+    ctx: RequestContextStore
   ): Promise<void> {
     await this.authEvents.record(
       authEventOf(ctx, {
@@ -164,16 +167,12 @@ export class LoginUseCase
     user: User,
     input: LoginInput,
     ctx: RequestContextStore,
-    now: Date,
+    now: Date
   ): Promise<LoginOutput> {
     // Snapshot de execute() é pré-tx; releitura com trava evita regravar
     // desligamento/desativação commitados no intervalo.
     const fresh = await this.users.findByIdForUpdate(user.props.id)
-    if (
-      !fresh ||
-      fresh.isDeleted() ||
-      fresh.props.status !== "active"
-    ) {
+    if (!fresh || fresh.isDeleted() || fresh.props.status !== "active") {
       throw new InvalidCredentialsError()
     }
 
@@ -193,7 +192,7 @@ export class LoginUseCase
     const session = await this.createSession.create(
       current,
       { deviceCookie: input.deviceCookie, rememberMe: input.rememberMe },
-      now,
+      now
     )
 
     await this.authEvents.recordInTx(
@@ -220,7 +219,10 @@ export class LoginUseCase
 
     // maxAgeSeconds é a fonte única do TTL do cookie — o controller não recalcula.
     return {
-      user: toUserView(current, await this.users.findPermissions(current.props.id)),
+      user: toUserView(
+        current,
+        await this.users.findPermissions(current.props.id)
+      ),
       sessionToken: session.sessionToken,
       maxAgeSeconds: session.maxAge,
       sessionId: session.sessionId,

@@ -28,7 +28,7 @@ function make(sameSite: "lax" | "none") {
   const controller = new ConfirmEmailChangeController(
     useCase as unknown as ConfirmEmailChangeUseCase,
     config,
-    csrf as unknown as Csrf,
+    csrf as unknown as Csrf
   )
   const res = { cookie: vi.fn() } as unknown as Response
   return { useCase, csrf, controller, res }
@@ -41,7 +41,10 @@ describe("ConfirmEmailChangeController", () => {
 
     const out = await controller.handle({ token: "tok" }, req, res)
 
-    expect(useCase.execute).toHaveBeenCalledWith({ token: "tok", deviceCookie: "dev-abc" })
+    expect(useCase.execute).toHaveBeenCalledWith({
+      token: "tok",
+      deviceCookie: "dev-abc",
+    })
     expect(csrf.sign).toHaveBeenCalledWith("s-1")
     expect(out).toEqual({ user: result.user })
   })
@@ -52,7 +55,10 @@ describe("ConfirmEmailChangeController", () => {
 
     await controller.handle({ token: "tok" }, req, res)
 
-    expect(useCase.execute).toHaveBeenCalledWith({ token: "tok", deviceCookie: null })
+    expect(useCase.execute).toHaveBeenCalledWith({
+      token: "tok",
+      deviceCookie: null,
+    })
     expect(csrf.sign).not.toHaveBeenCalled()
   })
 })

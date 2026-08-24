@@ -3,7 +3,11 @@ import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
-import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
+import {
+  createTestPool,
+  truncateIdentity,
+  truncateKernel,
+} from "../../../../test/setup/test-db"
 import { AppModule } from "../../../app.module"
 import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
@@ -26,7 +30,7 @@ const allowAll = {
 /** Extrai o valor de um cookie específico do header Set-Cookie. */
 function extractCookieValue(
   setCookie: string[] | string | undefined,
-  name: string,
+  name: string
 ): string | undefined {
   const arr =
     setCookie === undefined
@@ -88,10 +92,7 @@ describe("Logout — POST /v1/auth/logout (e2e)", () => {
       .send({ email: EMAIL, password: PASSWORD, rememberMe: false })
       .expect(200)
 
-    const value = extractCookieValue(
-      res.headers["set-cookie"],
-      SESSION_COOKIE,
-    )
+    const value = extractCookieValue(res.headers["set-cookie"], SESSION_COOKIE)
     if (!value) throw new Error("login não emitiu cookie de sessão")
     return value
   }

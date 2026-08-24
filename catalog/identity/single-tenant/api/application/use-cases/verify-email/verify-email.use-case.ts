@@ -28,9 +28,10 @@ import type { VerifyEmailInput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class VerifyEmailUseCase
-  implements UseCaseContract<VerifyEmailInput, void>
-{
+export class VerifyEmailUseCase implements UseCaseContract<
+  VerifyEmailInput,
+  void
+> {
   constructor(
     @Inject(VERIFICATION_TOKEN_REPOSITORY)
     private readonly verificationTokens: VerificationTokenRepository,
@@ -39,7 +40,7 @@ export class VerifyEmailUseCase
     @Inject(AUTH_EVENT_REPOSITORY)
     private readonly authEvents: AuthEventRepository,
     @Inject(CLOCK) private readonly clock: Clock,
-    private readonly ctx: RequestContext,
+    private readonly ctx: RequestContext
   ) {}
 
   @Transactional()
@@ -52,7 +53,7 @@ export class VerifyEmailUseCase
     const consumed = await this.verificationTokens.consumeByHash(
       tokenHash,
       "email_verify",
-      now,
+      now
     )
     if (!consumed) {
       throw new InvalidResetTokenError()
@@ -69,7 +70,7 @@ export class VerifyEmailUseCase
       authEventOf(store, {
         userId: consumed.userId,
         eventType: "email_verified",
-      }),
+      })
     )
   }
 }

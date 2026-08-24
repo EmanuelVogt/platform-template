@@ -12,11 +12,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "document",
-                "image",
-                "multi"
-              ]
+              "enum": ["document", "image", "multi"]
             }
           }
         ],
@@ -35,9 +31,7 @@
                     }
                   }
                 },
-                "required": [
-                  "file"
-                ]
+                "required": ["file"]
               }
             }
           }
@@ -54,9 +48,7 @@
             }
           }
         },
-        "tags": [
-          "Attachment"
-        ]
+        "tags": ["Attachment"]
       }
     },
     "/v1/attachments/{id}": {
@@ -78,9 +70,7 @@
             "description": ""
           }
         },
-        "tags": [
-          "Attachment"
-        ]
+        "tags": ["Attachment"]
       }
     }
   },
@@ -98,15 +88,11 @@
                   "type": "string"
                 }
               },
-              "required": [
-                "attachmentId"
-              ]
+              "required": ["attachmentId"]
             }
           }
         },
-        "required": [
-          "uploads"
-        ]
+        "required": ["uploads"]
       }
     }
   }

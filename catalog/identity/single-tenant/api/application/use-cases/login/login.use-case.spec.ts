@@ -2,13 +2,15 @@ import { describe, expect, it, vi } from "vitest"
 
 import { Device } from "../../../domain/entities/device.entity"
 import { User, type UserProps } from "../../../domain/entities/user.entity"
-import { InvalidCredentialsError, RateLimitedError } from "../../../domain/errors"
+import {
+  InvalidCredentialsError,
+  RateLimitedError,
+} from "../../../domain/errors"
 import { makeIdentityConfig } from "../../../identity.config.fixture"
 import { fakeRequestContext } from "../../request-context.fixture"
 import { CreateSessionService } from "../../services/create-session.service"
 
 import { LoginUseCase } from "./login.use-case"
-
 
 const DUMMY_HASH = "argon2-dummy"
 const ACCOUNT_KEY = "login:acct:ana@example.com"
@@ -21,13 +23,12 @@ function limiterDenying(denied: Record<string, number>) {
       Promise.resolve(
         key in denied
           ? { allowed: false, retryAfterSeconds: denied[key]! }
-          : { allowed: true, retryAfterSeconds: 0 },
-      ),
+          : { allowed: true, retryAfterSeconds: 0 }
+      )
     ),
     reset: vi.fn().mockResolvedValue(undefined),
   }
 }
-
 
 function makeUser(over: { props?: Partial<UserProps> } = {}): User {
   return User.fromProps({
@@ -87,8 +88,12 @@ function makeDeps(over: Record<string, any> = {}) {
     record: vi.fn().mockResolvedValue(undefined),
     recordInTx: vi.fn().mockResolvedValue(undefined),
   }
-  const clock = over.clock ?? { now: () => new Date("2026-05-30T00:00:00.000Z") }
-  const ctx = over.ctx ?? fakeRequestContext(() => ({
+  const clock = over.clock ?? {
+    now: () => new Date("2026-05-30T00:00:00.000Z"),
+  }
+  const ctx =
+    over.ctx ??
+    fakeRequestContext(() => ({
       ip: "1.2.3.4",
       userAgent: "jest",
       correlationId: "c1",
@@ -96,13 +101,21 @@ function makeDeps(over: Record<string, any> = {}) {
       userId: null,
       sessionId: null,
     }))
-  const outbox = over.outbox ?? { publish: vi.fn().mockResolvedValue(undefined) }
+  const outbox = over.outbox ?? {
+    publish: vi.fn().mockResolvedValue(undefined),
+  }
   const devices = over.devices ?? {
     findByUserAndCookieHash: vi.fn().mockResolvedValue(null),
     create: vi.fn().mockResolvedValue(undefined),
   }
   const config = makeIdentityConfig()
-  const createSession = new CreateSessionService(sessions, devices, tokens, config, ctx)
+  const createSession = new CreateSessionService(
+    sessions,
+    devices,
+    tokens,
+    config,
+    ctx
+  )
   const uc = new LoginUseCase(
     users,
     hasher,
@@ -113,12 +126,23 @@ function makeDeps(over: Record<string, any> = {}) {
     ctx,
     config,
     outbox,
-    createSession,
+    createSession
   )
   Reflect.set(uc, "dummyHash", DUMMY_HASH)
-  return { uc, users, sessions, devices, hasher, tokens, rateLimiter, authEvents, clock, ctx, outbox }
+  return {
+    uc,
+    users,
+    sessions,
+    devices,
+    hasher,
+    tokens,
+    rateLimiter,
+    authEvents,
+    clock,
+    ctx,
+    outbox,
+  }
 }
-
 
 describe("LoginUseCase", () => {
   it("credenciais válidas retornam user + sessionToken raw e criam sessão", async () => {
@@ -143,7 +167,7 @@ describe("LoginUseCase", () => {
     expect(t.authEvents.recordInTx).toHaveBeenCalledWith(
       expect.objectContaining({
         props: expect.objectContaining({ eventType: "login_success" }),
-      }),
+      })
     )
     expect(t.authEvents.record).not.toHaveBeenCalled()
   })
@@ -155,14 +179,14 @@ describe("LoginUseCase", () => {
         email: "ana@example.com",
         password: "x",
         rememberMe: false,
-      }),
+      })
     ).rejects.toBeInstanceOf(InvalidCredentialsError)
     expect(t.hasher.verify).not.toHaveBeenCalled()
     // rate_limited_burst persiste FORA da tx (record), nunca via recordInTx.
     expect(t.authEvents.record).toHaveBeenCalledWith(
       expect.objectContaining({
         props: expect.objectContaining({ eventType: "rate_limited_burst" }),
-      }),
+      })
     )
     expect(t.authEvents.recordInTx).not.toHaveBeenCalled()
   })
@@ -183,7 +207,7 @@ describe("LoginUseCase", () => {
         ACCOUNT_KEY,
         10,
         900,
-        { critical: true },
+        { critical: true }
       )
       expect(t.users.findByEmail).not.toHaveBeenCalled()
       expect(t.hasher.verify).not.toHaveBeenCalled()
@@ -194,16 +218,21 @@ describe("LoginUseCase", () => {
             userId: null,
             metadata: { retryAfterSeconds: 42, scope: "account" },
           }),
-        }),
+        })
       )
     })
 
     it("e-mail desconhecido é negado de forma idêntica ao existente", async () => {
-      const known = makeDeps({ rateLimiter: limiterDenying({ [ACCOUNT_KEY]: 42 }) })
+      const known = makeDeps({
+        rateLimiter: limiterDenying({ [ACCOUNT_KEY]: 42 }),
+      })
       const unknownKey = "login:acct:nao-existe@example.com"
       const unknown = makeDeps({
         rateLimiter: limiterDenying({ [unknownKey]: 42 }),
-        users: { findByEmail: vi.fn().mockResolvedValue(null), update: vi.fn() },
+        users: {
+          findByEmail: vi.fn().mockResolvedValue(null),
+          update: vi.fn(),
+        },
       })
 
       const errorOf = async (t: ReturnType<typeof makeDeps>, email: string) =>
@@ -221,7 +250,7 @@ describe("LoginUseCase", () => {
           })
 
       expect(await errorOf(unknown, "nao-existe@example.com")).toEqual(
-        await errorOf(known, "ana@example.com"),
+        await errorOf(known, "ana@example.com")
       )
       expect(unknown.users.findByEmail).not.toHaveBeenCalled()
     })
@@ -256,7 +285,11 @@ describe("LoginUseCase", () => {
         },
       })
       await expect(
-        t.uc.execute({ email: "ana@example.com", password: "wrong", rememberMe: false }),
+        t.uc.execute({
+          email: "ana@example.com",
+          password: "wrong",
+          rememberMe: false,
+        })
       ).rejects.toBeInstanceOf(InvalidCredentialsError)
       expect(t.rateLimiter.reset).not.toHaveBeenCalled()
     })
@@ -266,7 +299,11 @@ describe("LoginUseCase", () => {
         rateLimiter: limiterDenying({ [ACCOUNT_KEY]: 42, [IP_KEY]: 30 }),
       })
       await expect(
-        t.uc.execute({ email: "ana@example.com", password: "x", rememberMe: false }),
+        t.uc.execute({
+          email: "ana@example.com",
+          password: "x",
+          rememberMe: false,
+        })
       ).rejects.toMatchObject({ status: 429, retryAfterSeconds: 42 })
       expect(t.authEvents.record).toHaveBeenCalledTimes(1)
       expect(t.authEvents.record).toHaveBeenCalledWith(
@@ -274,7 +311,7 @@ describe("LoginUseCase", () => {
           props: expect.objectContaining({
             metadata: { retryAfterSeconds: 42, scope: "account" },
           }),
-        }),
+        })
       )
     })
 
@@ -300,14 +337,17 @@ describe("LoginUseCase", () => {
         email: "no@example.com",
         password: "x",
         rememberMe: false,
-      }),
+      })
     ).rejects.toBeInstanceOf(InvalidCredentialsError)
     expect(t.hasher.verify).toHaveBeenCalledWith("x", DUMMY_HASH)
   })
 
   it("conta com lockedUntil: senha correta entra e limpa o lockout", async () => {
     const locked = makeUser({
-      props: { lockedUntil: new Date("2026-05-30T01:00:00.000Z"), failedLoginAttempts: 5 },
+      props: {
+        lockedUntil: new Date("2026-05-30T01:00:00.000Z"),
+        failedLoginAttempts: 5,
+      },
     })
     const t = makeDeps({
       users: {
@@ -330,7 +370,7 @@ describe("LoginUseCase", () => {
           failedLoginAttempts: 0,
           lockedUntil: null,
         }),
-      }),
+      })
     )
   })
 
@@ -347,18 +387,18 @@ describe("LoginUseCase", () => {
         email: "ana@example.com",
         password: "wrong",
         rememberMe: false,
-      }),
+      })
     ).rejects.toBeInstanceOf(InvalidCredentialsError)
     expect(t.authEvents.record).toHaveBeenCalledWith(
       expect.objectContaining({
         props: expect.objectContaining({ eventType: "login_failed" }),
-      }),
+      })
     )
     expect(t.users.registerFailedAttempt).not.toHaveBeenCalled()
     expect(t.authEvents.record).not.toHaveBeenCalledWith(
       expect.objectContaining({
         props: expect.objectContaining({ eventType: "account_locked" }),
-      }),
+      })
     )
     expect(t.outbox.publish).not.toHaveBeenCalled()
     expect(t.users.update).not.toHaveBeenCalled()
@@ -368,13 +408,21 @@ describe("LoginUseCase", () => {
     const t = makeDeps({
       users: {
         findByEmail: vi.fn().mockResolvedValue(
-          User.create({ name: "Ana", email: "ana@x.test", accessProfile: "admin" }),
+          User.create({
+            name: "Ana",
+            email: "ana@x.test",
+            accessProfile: "admin",
+          })
         ),
         registerFailedAttempt: vi.fn().mockResolvedValue(null),
       },
     })
     await expect(
-      t.uc.execute({ email: "ana@x.test", password: "qualquer-senha", rememberMe: false }),
+      t.uc.execute({
+        email: "ana@x.test",
+        password: "qualquer-senha",
+        rememberMe: false,
+      })
     ).rejects.toBeInstanceOf(InvalidCredentialsError)
   })
 
@@ -411,7 +459,9 @@ describe("LoginUseCase", () => {
           create: vi.fn(),
         },
         tokens: {
-          generate: vi.fn().mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
+          generate: vi
+            .fn()
+            .mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
           hashOf: vi.fn().mockReturnValue("h"),
         },
       })
@@ -432,7 +482,9 @@ describe("LoginUseCase", () => {
     it("sem cookie (miss): gera token novo e cria device", async () => {
       const t = makeDeps({
         tokens: {
-          generate: vi.fn().mockReturnValue({ raw: "new-raw", hash: "new-hash" }),
+          generate: vi
+            .fn()
+            .mockReturnValue({ raw: "new-raw", hash: "new-hash" }),
           hashOf: vi.fn().mockReturnValue("email-hash"),
         },
       })
@@ -453,7 +505,9 @@ describe("LoginUseCase", () => {
           create: vi.fn().mockResolvedValue(undefined),
         },
         tokens: {
-          generate: vi.fn().mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
+          generate: vi
+            .fn()
+            .mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
           hashOf: vi.fn().mockReturnValue("shared-hash"),
         },
       })
@@ -466,7 +520,7 @@ describe("LoginUseCase", () => {
       expect(t.devices.create).toHaveBeenCalledWith(
         expect.objectContaining({
           props: expect.objectContaining({ cookieTokenHash: "shared-hash" }),
-        }),
+        })
       )
       expect(out.deviceCookie).toBe("shared-raw")
     })
@@ -486,7 +540,9 @@ describe("LoginUseCase", () => {
           create: vi.fn(),
         },
         tokens: {
-          generate: vi.fn().mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
+          generate: vi
+            .fn()
+            .mockReturnValue({ raw: "raw-sess", hash: "hash-sess" }),
           hashOf: vi.fn().mockReturnValue("h"),
         },
       })
@@ -498,9 +554,9 @@ describe("LoginUseCase", () => {
       })
       expect(t.sessions.deleteByDevice).toHaveBeenCalledWith("dev-1")
       // Revoga ANTES de criar a nova sessão — senão a recém-criada morreria junto.
-      expect(t.sessions.deleteByDevice.mock.invocationCallOrder[0]).toBeLessThan(
-        t.sessions.create.mock.invocationCallOrder[0] ?? 0,
-      )
+      expect(
+        t.sessions.deleteByDevice.mock.invocationCallOrder[0]
+      ).toBeLessThan(t.sessions.create.mock.invocationCallOrder[0] ?? 0)
     })
 
     it("device novo não revoga sessão nenhuma", async () => {
@@ -518,7 +574,11 @@ describe("LoginUseCase", () => {
   describe("produtor device_new_login", () => {
     it("login sem device cookie publica device_new_login", async () => {
       const t = makeDeps()
-      await t.uc.execute({ email: "ana@example.com", password: "ok", rememberMe: false })
+      await t.uc.execute({
+        email: "ana@example.com",
+        password: "ok",
+        rememberMe: false,
+      })
       expect(t.outbox.publish).toHaveBeenCalledWith(
         expect.objectContaining({
           eventName: "notification.requested",
@@ -531,7 +591,7 @@ describe("LoginUseCase", () => {
               at: expect.any(String),
             }),
           }),
-        }),
+        })
       )
     })
 

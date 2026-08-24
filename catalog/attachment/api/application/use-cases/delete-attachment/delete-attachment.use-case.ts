@@ -1,6 +1,9 @@
 import { Inject } from "@nestjs/common"
 
-import { OBJECT_STORAGE, type ObjectStoragePort } from "../../../../../shared/infra/storage/object-storage.port"
+import {
+  OBJECT_STORAGE,
+  type ObjectStoragePort,
+} from "../../../../../shared/infra/storage/object-storage.port"
 import { RequestContext } from "../../../../../shared/kernel/context/request-context"
 import { Traced } from "../../../../../shared/kernel/tracing/traced.decorator"
 import { TransactionManager } from "../../../../../shared/kernel/transactional/transaction-manager"
@@ -23,7 +26,7 @@ export class DeleteAttachmentUseCase {
     @Inject(ATTACHMENT_ACCESS_LOG_REPOSITORY)
     private readonly accessLog: AttachmentAccessLogRepository,
     private readonly txManager: TransactionManager,
-    private readonly ctx: RequestContext,
+    private readonly ctx: RequestContext
   ) {}
 
   @Transactional()
@@ -34,7 +37,9 @@ export class DeleteAttachmentUseCase {
 
     await this.repo.update(attachment.markDeleted())
     // IO externo nunca dentro da tx: delete no R2 só após commit.
-    this.txManager.onCommit(() => this.storage.delete(attachment.props.storageKey))
+    this.txManager.onCommit(() =>
+      this.storage.delete(attachment.props.storageKey)
+    )
 
     const store = this.ctx.get()
     await this.accessLog.recordInTx({

@@ -24,7 +24,7 @@ export class ValidateEmailChangeController {
   @ListQuery(validateEmailChangeQuerySchema)
   @ApiOkResponse({ type: EmailChangeInfoDto })
   async handle(
-    @Query() query: ValidateEmailChangeQueryDto,
+    @Query() query: ValidateEmailChangeQueryDto
   ): Promise<EmailChangeInfoDto> {
     return this.validate.execute({ token: query.token })
   }

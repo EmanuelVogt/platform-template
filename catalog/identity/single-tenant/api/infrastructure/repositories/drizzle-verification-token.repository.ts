@@ -12,9 +12,7 @@ import type {
 import type { VerificationTokenRepository } from "../../domain/ports/verification-token.repository"
 
 @Injectable()
-export class DrizzleVerificationTokenRepository
-  implements VerificationTokenRepository
-{
+export class DrizzleVerificationTokenRepository implements VerificationTokenRepository {
   constructor(private readonly tx: TransactionManager) {}
 
   private get db(): DrizzleExecutor {
@@ -64,7 +62,7 @@ export class DrizzleVerificationTokenRepository
   async findActiveByHash(
     hash: string,
     type: TokenType,
-    now: Date,
+    now: Date
   ): Promise<{ userId: string; expiresAt: Date } | null> {
     const rows = await this.db
       .select({
@@ -77,8 +75,8 @@ export class DrizzleVerificationTokenRepository
           eq(verificationTokens.tokenHash, hash),
           eq(verificationTokens.type, type),
           isNull(verificationTokens.consumedAt),
-          gt(verificationTokens.expiresAt, now),
-        ),
+          gt(verificationTokens.expiresAt, now)
+        )
       )
       .limit(1)
     const [row] = rows
@@ -88,7 +86,7 @@ export class DrizzleVerificationTokenRepository
 
   async findLatestForUser(
     userId: string,
-    type: TokenType,
+    type: TokenType
   ): Promise<{ expiresAt: Date; consumedAt: Date | null } | null> {
     const rows = await this.db
       .select({
@@ -99,8 +97,8 @@ export class DrizzleVerificationTokenRepository
       .where(
         and(
           eq(verificationTokens.userId, userId),
-          eq(verificationTokens.type, type),
-        ),
+          eq(verificationTokens.type, type)
+        )
       )
       .orderBy(desc(verificationTokens.createdAt))
       .limit(1)

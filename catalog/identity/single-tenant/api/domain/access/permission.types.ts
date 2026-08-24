@@ -19,7 +19,8 @@ export const {
 } = accessProfiles
 
 export type AccessProfile = (typeof ACCESS_PROFILES)[number]
-export type AssignableAccessProfile = (typeof ASSIGNABLE_ACCESS_PROFILES)[number]
+export type AssignableAccessProfile =
+  (typeof ASSIGNABLE_ACCESS_PROFILES)[number]
 
 export type PermissionDef = {
   readonly key: string

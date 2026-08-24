@@ -8,4 +8,5 @@ import type { UploadProfileDef } from "./upload-profile.types"
  * chave na rota genérica de upload; `false` mantém o perfil restrito ao fluxo
  * interno do produto.
  */
-export const PRODUCT_UPLOAD_PROFILES = [] as const satisfies readonly UploadProfileDef[]
+export const PRODUCT_UPLOAD_PROFILES =
+  [] as const satisfies readonly UploadProfileDef[]

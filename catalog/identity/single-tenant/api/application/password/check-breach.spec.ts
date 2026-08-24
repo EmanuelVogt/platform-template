@@ -6,7 +6,9 @@ import { checkBreach } from "./check-breach"
 
 import type { BreachCheck } from "../../domain/ports/breach-check"
 
-const breachReturning = (verdict: Awaited<ReturnType<BreachCheck["check"]>>) => ({
+const breachReturning = (
+  verdict: Awaited<ReturnType<BreachCheck["check"]>>
+) => ({
   check: vi.fn().mockResolvedValue(verdict),
 })
 
@@ -19,19 +21,19 @@ describe("checkBreach", () => {
 
     expect(error).toBeInstanceOf(WeakPasswordError)
     expect((error as WeakPasswordError).message).toContain(
-      "vazamentos conhecidos",
+      "vazamentos conhecidos"
     )
   })
 
   it("'clear' devolve 'clear' e não lança", async () => {
     await expect(checkBreach(breachReturning("clear"), "s")).resolves.toBe(
-      "clear",
+      "clear"
     )
   })
 
   it("'skipped' devolve 'skipped' — a lacuna sobe para o caller auditar", async () => {
     await expect(checkBreach(breachReturning("skipped"), "s")).resolves.toBe(
-      "skipped",
+      "skipped"
     )
   })
 

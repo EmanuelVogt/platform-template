@@ -3,7 +3,11 @@ import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
+import {
+  createTestPool,
+  truncateIdentity,
+  truncateKernel,
+} from "../../../../test/setup/test-db"
 import { AppModule } from "../../../app.module"
 import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
@@ -28,7 +32,7 @@ describe("Lixeira de usuários (e2e)", () => {
     await truncateIdentity(pool)
     await truncateKernel(pool)
     await pool.query(
-      "truncate table notification.notifications, notification.notification_deliveries",
+      "truncate table notification.notifications, notification.notification_deliveries"
     )
     await pool.end()
 
@@ -58,40 +62,59 @@ describe("Lixeira de usuários (e2e)", () => {
       name: "Master",
       password: "Senha-Master-Muito-Forte-2026!",
     })
-    await pool.query("UPDATE identity.users SET access_profile = 'master' WHERE id = $1", [masterId])
+    await pool.query(
+      "UPDATE identity.users SET access_profile = 'master' WHERE id = $1",
+      [masterId]
+    )
     const loginRes = await request(app.getHttpServer())
       .post("/v1/auth/login")
       .set("Origin", ORIGIN)
-      .send({ email: "master@example.com", password: "Senha-Master-Muito-Forte-2026!" })
+      .send({
+        email: "master@example.com",
+        password: "Senha-Master-Muito-Forte-2026!",
+      })
       .expect(200)
     const cookie = loginRes.headers["set-cookie"]
 
     // cria e localiza a Bia
     await request(app.getHttpServer())
       .post("/v1/admin/users")
-      .set("Origin", ORIGIN).set("Cookie", cookie!)
+      .set("Origin", ORIGIN)
+      .set("Cookie", cookie!)
       .set("Idempotency-Key", "trash-create-1")
-      .send({ name: "Bia", email: "bia@example.com", accessProfile: "admin", permissions: ["admin.users.read"] })
+      .send({
+        name: "Bia",
+        email: "bia@example.com",
+        accessProfile: "admin",
+        permissions: ["admin.users.read"],
+      })
       .expect(201)
     const listed = await request(app.getHttpServer())
-      .get("/v1/admin/users").query({ q: "bia" })
-      .set("Origin", ORIGIN).set("Cookie", cookie!)
+      .get("/v1/admin/users")
+      .query({ q: "bia" })
+      .set("Origin", ORIGIN)
+      .set("Cookie", cookie!)
       .expect(200)
     const biaId = listed.body.data[0].id as string
 
     // soft delete → some do default, aparece na lixeira com deletedAt
     await request(app.getHttpServer())
       .delete(`/v1/admin/users/${biaId}`)
-      .set("Origin", ORIGIN).set("Cookie", cookie!)
+      .set("Origin", ORIGIN)
+      .set("Cookie", cookie!)
       .expect(204)
     const normal = await request(app.getHttpServer())
-      .get("/v1/admin/users").query({ q: "bia" })
-      .set("Origin", ORIGIN).set("Cookie", cookie!)
+      .get("/v1/admin/users")
+      .query({ q: "bia" })
+      .set("Origin", ORIGIN)
+      .set("Cookie", cookie!)
       .expect(200)
     expect(normal.body.data).toHaveLength(0)
     const trash = await request(app.getHttpServer())
-      .get("/v1/admin/users").query({ q: "bia", deleted: "true" })
-      .set("Origin", ORIGIN).set("Cookie", cookie!)
+      .get("/v1/admin/users")
+      .query({ q: "bia", deleted: "true" })
+      .set("Origin", ORIGIN)
+      .set("Cookie", cookie!)
       .expect(200)
     expect(trash.body.data).toHaveLength(1)
     expect(trash.body.data[0].deletedAt).not.toBeNull()
@@ -100,29 +123,39 @@ describe("Lixeira de usuários (e2e)", () => {
     // ao chamador
     const conflict = await request(app.getHttpServer())
       .post("/v1/admin/users")
-      .set("Origin", ORIGIN).set("Cookie", cookie!)
+      .set("Origin", ORIGIN)
+      .set("Cookie", cookie!)
       .set("Idempotency-Key", "trash-create-2")
-      .send({ name: "Bia 2", email: "bia@example.com", accessProfile: "admin", permissions: ["admin.users.read"] })
+      .send({
+        name: "Bia 2",
+        email: "bia@example.com",
+        accessProfile: "admin",
+        permissions: ["admin.users.read"],
+      })
       .expect(409)
     expect(conflict.body.type).toMatch(/email-already-in-use$/)
 
     // restore → volta ao default
     const restored = await request(app.getHttpServer())
       .post("/v1/admin/users/restore")
-      .set("Origin", ORIGIN).set("Cookie", cookie!)
+      .set("Origin", ORIGIN)
+      .set("Cookie", cookie!)
       .send({ userIds: [biaId] })
       .expect(200)
     expect(restored.body).toEqual({ restored: 1 })
     const back = await request(app.getHttpServer())
-      .get("/v1/admin/users").query({ q: "bia" })
-      .set("Origin", ORIGIN).set("Cookie", cookie!)
+      .get("/v1/admin/users")
+      .query({ q: "bia" })
+      .set("Origin", ORIGIN)
+      .set("Cookie", cookie!)
       .expect(200)
     expect(back.body.data).toHaveLength(1)
 
     // purge de quem NÃO está na lixeira → 409
     const notInTrash = await request(app.getHttpServer())
       .post("/v1/admin/users/purge")
-      .set("Origin", ORIGIN).set("Cookie", cookie!)
+      .set("Origin", ORIGIN)
+      .set("Cookie", cookie!)
       .send({ userIds: [biaId] })
       .expect(409)
     expect(notInTrash.body.type).toMatch(/user-not-in-trash$/)
@@ -130,19 +163,27 @@ describe("Lixeira de usuários (e2e)", () => {
     // delete + purge → e-mail liberado
     await request(app.getHttpServer())
       .delete(`/v1/admin/users/${biaId}`)
-      .set("Origin", ORIGIN).set("Cookie", cookie!)
+      .set("Origin", ORIGIN)
+      .set("Cookie", cookie!)
       .expect(204)
     const purged = await request(app.getHttpServer())
       .post("/v1/admin/users/purge")
-      .set("Origin", ORIGIN).set("Cookie", cookie!)
+      .set("Origin", ORIGIN)
+      .set("Cookie", cookie!)
       .send({ userIds: [biaId] })
       .expect(200)
     expect(purged.body).toEqual({ purged: 1 })
     await request(app.getHttpServer())
       .post("/v1/admin/users")
-      .set("Origin", ORIGIN).set("Cookie", cookie!)
+      .set("Origin", ORIGIN)
+      .set("Cookie", cookie!)
       .set("Idempotency-Key", "trash-create-3")
-      .send({ name: "Bia Nova", email: "bia@example.com", accessProfile: "admin", permissions: ["admin.users.read"] })
+      .send({
+        name: "Bia Nova",
+        email: "bia@example.com",
+        accessProfile: "admin",
+        permissions: ["admin.users.read"],
+      })
       .expect(201)
 
     await pool.end()
@@ -157,7 +198,7 @@ describe("Lixeira de usuários (e2e)", () => {
     })
     await pool.query(
       "UPDATE identity.users SET access_profile = 'master' WHERE id = $1",
-      [masterId],
+      [masterId]
     )
     const victimId = await seedUser(app, pool, {
       email: "excluido@example.com",
@@ -188,7 +229,8 @@ describe("Lixeira de usuários (e2e)", () => {
     // antes da exclusão a sessão vale, inclusive em rota self-service
     await request(app.getHttpServer())
       .get("/v1/auth/devices")
-      .set("Origin", ORIGIN).set("Cookie", victimCookie!)
+      .set("Origin", ORIGIN)
+      .set("Cookie", victimCookie!)
       .expect(200)
 
     await request(app.getHttpServer())
@@ -204,11 +246,13 @@ describe("Lixeira de usuários (e2e)", () => {
     // proven in application/require-auth.spec.ts.
     await request(app.getHttpServer())
       .get("/v1/auth/devices")
-      .set("Origin", ORIGIN).set("Cookie", victimCookie!)
+      .set("Origin", ORIGIN)
+      .set("Cookie", victimCookie!)
       .expect(401)
     await request(app.getHttpServer())
       .get("/v1/admin/users")
-      .set("Origin", ORIGIN).set("Cookie", victimCookie!)
+      .set("Origin", ORIGIN)
+      .set("Cookie", victimCookie!)
       .expect(401)
   })
 
@@ -232,12 +276,15 @@ describe("Lixeira de usuários (e2e)", () => {
     const cookie = loginRes.headers["set-cookie"]
 
     await request(app.getHttpServer())
-      .get("/v1/admin/users").query({ deleted: "true" })
-      .set("Origin", ORIGIN).set("Cookie", cookie!)
+      .get("/v1/admin/users")
+      .query({ deleted: "true" })
+      .set("Origin", ORIGIN)
+      .set("Cookie", cookie!)
       .expect(403)
     await request(app.getHttpServer())
       .get("/v1/admin/users")
-      .set("Origin", ORIGIN).set("Cookie", cookie!)
+      .set("Origin", ORIGIN)
+      .set("Cookie", cookie!)
       .expect(200)
   })
 })

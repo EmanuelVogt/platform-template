@@ -31,19 +31,25 @@ describe("notificationCatalog", () => {
     }
     const { dataSchema } = notificationCatalog.access_link_sent
     expect(
-      dataSchema.safeParse({ ...base, link: "https://app.local/configurar-senha?token=raw" })
-        .success
+      dataSchema.safeParse({
+        ...base,
+        link: "https://app.local/configurar-senha?token=raw",
+      }).success
     ).toBe(true)
     expect(
-      dataSchema.safeParse({ ...base, link: "http://app.local/configurar-senha?token=raw" })
-        .success
+      dataSchema.safeParse({
+        ...base,
+        link: "http://app.local/configurar-senha?token=raw",
+      }).success
     ).toBe(true)
     expect(
       dataSchema.safeParse({ ...base, link: "javascript:alert(1)" }).success
     ).toBe(false)
     expect(
-      dataSchema.safeParse({ ...base, link: "data:text/html,<script>alert(1)</script>" })
-        .success
+      dataSchema.safeParse({
+        ...base,
+        link: "data:text/html,<script>alert(1)</script>",
+      }).success
     ).toBe(false)
   })
 

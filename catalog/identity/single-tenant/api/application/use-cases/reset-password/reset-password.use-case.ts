@@ -13,7 +13,10 @@ import {
   AUTH_EVENT_REPOSITORY,
   type AuthEventRepository,
 } from "../../../domain/ports/auth-event.repository"
-import { BREACH_CHECK, type BreachCheck } from "../../../domain/ports/breach-check"
+import {
+  BREACH_CHECK,
+  type BreachCheck,
+} from "../../../domain/ports/breach-check"
 import {
   PASSWORD_HASHER,
   type PasswordHasher,
@@ -46,9 +49,10 @@ import type { ResetPasswordInput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class ResetPasswordUseCase
-  implements UseCaseContract<ResetPasswordInput, void>
-{
+export class ResetPasswordUseCase implements UseCaseContract<
+  ResetPasswordInput,
+  void
+> {
   constructor(
     @Inject(VERIFICATION_TOKEN_REPOSITORY)
     private readonly verificationTokens: VerificationTokenRepository,
@@ -63,7 +67,7 @@ export class ResetPasswordUseCase
     private readonly authEvents: AuthEventRepository,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly ctx: RequestContext,
-    @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig,
+    @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig
   ) {}
 
   @Traced({ name: "identity.resetPassword" })
@@ -90,7 +94,7 @@ export class ResetPasswordUseCase
   @Transactional()
   private async executeInTx(
     input: ResetPasswordInput,
-    breachOutcome: BreachOutcome,
+    breachOutcome: BreachOutcome
   ): Promise<void> {
     const now = this.clock.now()
     const store = this.ctx.get()
@@ -101,7 +105,7 @@ export class ResetPasswordUseCase
     const consumed = await this.verificationTokens.consumeByHash(
       tokenHash,
       "password_reset",
-      now,
+      now
     )
     if (!consumed) {
       throw new InvalidResetTokenError()
@@ -112,13 +116,15 @@ export class ResetPasswordUseCase
       throw new InvalidResetTokenError()
     }
 
-    await this.users.update(user.rehashPassword(await this.hasher.hash(input.password)))
+    await this.users.update(
+      user.rehashPassword(await this.hasher.hash(input.password))
+    )
 
     // Reset (não-autenticado) invalida TODAS as sessões + tokens pendentes (§6).
     await this.sessions.deleteAllForUser(consumed.userId)
     await this.verificationTokens.invalidateAllForUser(
       consumed.userId,
-      "password_reset",
+      "password_reset"
     )
 
     // Só aqui o dono da senha é conhecido: a lacuna da consulta é atribuída a
@@ -129,7 +135,7 @@ export class ResetPasswordUseCase
           userId: consumed.userId,
           eventType: "breach_check_skipped",
           metadata: { mode: this.config.BREACH_CHECK_MODE },
-        }),
+        })
       )
     }
 
@@ -137,7 +143,7 @@ export class ResetPasswordUseCase
       authEventOf(store, {
         userId: consumed.userId,
         eventType: "password_reset_completed",
-      }),
+      })
     )
 
     await this.outbox.publish(
@@ -146,7 +152,7 @@ export class ResetPasswordUseCase
         type: "password_changed",
         locale: store.locale,
         data: { email: user.props.email, at: now.toISOString() },
-      }),
+      })
     )
   }
 }

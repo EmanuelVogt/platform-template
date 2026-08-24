@@ -43,10 +43,10 @@ function changedColumnsOf(row: AuditEntryReadRow): string[] {
  * e traduz FKs das changes para o nome do alvo (RefLabelReader, ver ADR 0047).
  */
 @UseCase()
-export class ListAuditEntriesUseCase
-  implements
-    UseCaseContract<ListAuditEntriesQuery, PaginatedResult<AuditEntryView>>
-{
+export class ListAuditEntriesUseCase implements UseCaseContract<
+  ListAuditEntriesQuery,
+  PaginatedResult<AuditEntryView>
+> {
   constructor(
     @Inject(AUDIT_REPOSITORY) private readonly repo: AuditRepository,
     private readonly users: UserDirectoryFacade,
@@ -86,9 +86,7 @@ export class ListAuditEntriesUseCase
     const { data, page } = await this.repo.list({ ...rest, tables })
     const actorIds = [
       ...new Set(
-        data
-          .map((r) => r.actorUserId)
-          .filter((id): id is string => id !== null)
+        data.map((r) => r.actorUserId).filter((id): id is string => id !== null)
       ),
     ]
     const names = await this.users.findNamesByIds(actorIds)

@@ -53,7 +53,10 @@ describe("GetPermissionTemplateUseCase", () => {
     const uc = new GetPermissionTemplateUseCase(templates as never)
     const out = await uc.execute({ id: "t-2" })
     expect(out.template.description).toBe("Acesso gerencial completo")
-    expect(out.template.permissions).toEqual(["admin.users.read", "admin.users.update"])
+    expect(out.template.permissions).toEqual([
+      "admin.users.read",
+      "admin.users.update",
+    ])
     expect(templates.findById).toHaveBeenCalledWith("t-2")
   })
 

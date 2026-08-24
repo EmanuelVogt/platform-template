@@ -3,7 +3,15 @@ import { Readable } from "node:stream"
 import { type INestApplication, VersioningType } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import request from "supertest"
-import { type Mock, afterAll, beforeAll, describe, expect, it, vi } from "vitest"
+import {
+  type Mock,
+  afterAll,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 
 import {
   createTestPool,
@@ -34,7 +42,7 @@ const allowAll = {
 // 1x1 PNG válido (assinatura 0x89 'PNG').
 const PNG_1PX = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
-  "base64",
+  "base64"
 )
 const HTML_BYTES = Buffer.from("<html><body>não é imagem</body></html>")
 
@@ -56,7 +64,11 @@ function makeInMemoryStorage(): ObjectStoragePort {
       return Promise.resolve(
         o === undefined
           ? null
-          : { contentType: o.contentType, sizeBytes: o.body.byteLength, etag: "" },
+          : {
+              contentType: o.contentType,
+              sizeBytes: o.body.byteLength,
+              etag: "",
+            }
       )
     },
     delete: (key) => {
@@ -100,7 +112,11 @@ describe("Attachment (e2e): upload em lote", () => {
   })
 
   async function loginNewUser(email: string): Promise<string[]> {
-    await seedUser(app, pool, { email, name: "Upload", password: "Senha-Att-Muito-Forte-2026!" })
+    await seedUser(app, pool, {
+      email,
+      name: "Upload",
+      password: "Senha-Att-Muito-Forte-2026!",
+    })
     const res = await request(app.getHttpServer())
       .post("/v1/auth/login")
       .set("Origin", ORIGIN)
@@ -117,7 +133,10 @@ describe("Attachment (e2e): upload em lote", () => {
       .query({ profile: "image" })
       .set("Origin", ORIGIN)
       .set("Cookie", cookies)
-      .attach("file", PNG_1PX, { filename: "avatar.png", contentType: "image/png" })
+      .attach("file", PNG_1PX, {
+        filename: "avatar.png",
+        contentType: "image/png",
+      })
       .expect(201)
 
     expect(res.body.uploads).toHaveLength(1)
@@ -135,7 +154,10 @@ describe("Attachment (e2e): upload em lote", () => {
       .query({ profile: "image" })
       .set("Origin", ORIGIN)
       .set("Cookie", cookies)
-      .attach("file", HTML_BYTES, { filename: "fake.png", contentType: "image/png" })
+      .attach("file", HTML_BYTES, {
+        filename: "fake.png",
+        contentType: "image/png",
+      })
       .expect(415)
 
     expect(res.body.type).toMatch(/\/unsupported-media-type$/)
@@ -151,7 +173,10 @@ describe("Attachment (e2e): upload em lote", () => {
       .query({ profile: "image" })
       .set("Origin", ORIGIN)
       .set("Cookie", cookies)
-      .attach("file", PNG_1PX, { filename: "swapped.png", contentType: "image/jpeg" })
+      .attach("file", PNG_1PX, {
+        filename: "swapped.png",
+        contentType: "image/jpeg",
+      })
       .expect(415)
 
     expect(res.body.type).toMatch(/\/unsupported-media-type$/)
@@ -161,7 +186,10 @@ describe("Attachment (e2e): upload em lote", () => {
     await request(app.getHttpServer())
       .post("/v1/attachments/uploads")
       .query({ profile: "image" })
-      .attach("file", PNG_1PX, { filename: "avatar.png", contentType: "image/png" })
+      .attach("file", PNG_1PX, {
+        filename: "avatar.png",
+        contentType: "image/png",
+      })
       .expect((res) => {
         if (res.status !== 401 && res.status !== 403) {
           throw new Error(`esperava 401 ou 403, veio ${String(res.status)}`)
@@ -173,9 +201,13 @@ describe("Attachment (e2e): upload em lote", () => {
 async function loginUser(
   app: INestApplication,
   pool: Pool,
-  email: string,
+  email: string
 ): Promise<string[]> {
-  await seedUser(app, pool, { email, name: "Upload", password: "Senha-Att-Muito-Forte-2026!" })
+  await seedUser(app, pool, {
+    email,
+    name: "Upload",
+    password: "Senha-Att-Muito-Forte-2026!",
+  })
   const res = await request(app.getHttpServer())
     .post("/v1/auth/login")
     .set("Origin", ORIGIN)
@@ -200,7 +232,7 @@ describe("Attachment (e2e): limite de requisições por IP (429)", () => {
 
     const base = makeInMemoryStorage()
     putStream = vi.fn((key: string, body: Readable, contentType: string) =>
-      base.putStream(key, body, contentType),
+      base.putStream(key, body, contentType)
     )
     const storage = { ...base, putStream } as unknown as ObjectStoragePort
 
@@ -231,7 +263,10 @@ describe("Attachment (e2e): limite de requisições por IP (429)", () => {
         .query({ profile: "image" })
         .set("Origin", ORIGIN)
         .set("Cookie", cookies)
-        .attach("file", PNG_1PX, { filename: `f${String(i)}.png`, contentType: "image/png" })
+        .attach("file", PNG_1PX, {
+          filename: `f${String(i)}.png`,
+          contentType: "image/png",
+        })
       lastStatus = res.status
       lastRetryAfter = res.headers["retry-after"]
     }
@@ -256,7 +291,7 @@ describe("Attachment (e2e): cota de bytes pendentes do dono (413)", () => {
 
     const base = makeInMemoryStorage()
     putStream = vi.fn((key: string, body: Readable, contentType: string) =>
-      base.putStream(key, body, contentType),
+      base.putStream(key, body, contentType)
     )
     const storage = { ...base, putStream } as unknown as ObjectStoragePort
 
@@ -283,7 +318,7 @@ describe("Attachment (e2e): cota de bytes pendentes do dono (413)", () => {
     const cookies = await loginUser(app, pool, email)
     const { rows } = await pool.query<{ id: string }>(
       "SELECT id FROM identity.users WHERE email = $1",
-      [email],
+      [email]
     )
     const ownerId = rows[0]!.id
 
@@ -294,7 +329,7 @@ describe("Attachment (e2e): cota de bytes pendentes do dono (413)", () => {
         `INSERT INTO attachment.attachments
            (id, storage_key, content_type, size_bytes, profile, owner_user_id, status)
          VALUES ($1, $2, 'image/png', 1100000000, 'image', $3, 'pending')`,
-        [`att-413-${String(i)}`, key, ownerId],
+        [`att-413-${String(i)}`, key, ownerId]
       )
     }
 
@@ -303,7 +338,10 @@ describe("Attachment (e2e): cota de bytes pendentes do dono (413)", () => {
       .query({ profile: "image" })
       .set("Origin", ORIGIN)
       .set("Cookie", cookies)
-      .attach("file", PNG_1PX, { filename: "over-quota.png", contentType: "image/png" })
+      .attach("file", PNG_1PX, {
+        filename: "over-quota.png",
+        contentType: "image/png",
+      })
       .expect(413)
 
     expect(res.body.type).toMatch(/\/pending-quota-exceeded$/)
@@ -325,10 +363,12 @@ describe("Attachment (e2e): limite de uploads em voo na instância (503)", () =>
 
     const base = makeInMemoryStorage()
     putStream = vi.fn((key: string, body: Readable, contentType: string) =>
-      base.putStream(key, body, contentType),
+      base.putStream(key, body, contentType)
     )
     const storage = { ...base, putStream } as unknown as ObjectStoragePort
-    gate = new UploadGate(parseAttachmentConfig({ ATTACHMENT_MAX_CONCURRENT_UPLOADS: "1" }))
+    gate = new UploadGate(
+      parseAttachmentConfig({ ATTACHMENT_MAX_CONCURRENT_UPLOADS: "1" })
+    )
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(RATE_LIMITER)
@@ -362,7 +402,10 @@ describe("Attachment (e2e): limite de uploads em voo na instância (503)", () =>
       .query({ profile: "image" })
       .set("Origin", ORIGIN)
       .set("Cookie", cookies)
-      .attach("file", PNG_1PX, { filename: "saturated.png", contentType: "image/png" })
+      .attach("file", PNG_1PX, {
+        filename: "saturated.png",
+        contentType: "image/png",
+      })
       .expect(503)
 
     expect(res.body.type).toMatch(/\/uploads-saturated$/)

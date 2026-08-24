@@ -10,9 +10,7 @@ import type { ListPermissionTemplatesOutput } from "../../../application/use-cas
 @ApiTags("Admin")
 @Controller("admin/permission-templates")
 export class ListPermissionTemplatesController {
-  constructor(
-    private readonly listTemplates: ListPermissionTemplatesUseCase
-  ) {}
+  constructor(private readonly listTemplates: ListPermissionTemplatesUseCase) {}
 
   @ApiOperation({ operationId: "listPermissionTemplates" })
   @ApiOkResponse({ type: ListPermissionTemplatesResponseDto })

@@ -49,7 +49,7 @@ describe("HandlebarsTemplateRenderer", () => {
 
   it("template desconhecido → throw com mensagem descritiva", () => {
     expect(() => renderer.render("inexistente", {})).toThrow(
-      "Template de e-mail desconhecido: inexistente",
+      "Template de e-mail desconhecido: inexistente"
     )
   })
 })

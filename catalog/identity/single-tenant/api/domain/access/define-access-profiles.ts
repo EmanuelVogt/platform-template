@@ -17,7 +17,7 @@ export type AccessProfileRegistry<K extends string, A extends string> = {
 }
 
 export function defineAccessProfiles<D extends readonly AccessProfileDef[]>(
-  defs: D,
+  defs: D
 ): AccessProfileRegistry<ProfileKey<D>, AssignableProfileKey<D>> {
   type Key = ProfileKey<D>
   type Assignable = AssignableProfileKey<D>

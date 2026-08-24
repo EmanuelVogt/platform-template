@@ -98,12 +98,18 @@ describe("ProfessionalDirectoryFacade (int)", () => {
     })
 
     it("retorna false para professional com status pending", async () => {
-      const id = await seedUser({ accessProfile: "professional", status: "pending" })
+      const id = await seedUser({
+        accessProfile: "professional",
+        status: "pending",
+      })
       expect(await facade.isActiveProfessional(id)).toBe(false)
     })
 
     it("retorna false para professional soft-deleted", async () => {
-      const id = await seedUser({ accessProfile: "professional", deletedAt: new Date() })
+      const id = await seedUser({
+        accessProfile: "professional",
+        deletedAt: new Date(),
+      })
       expect(await facade.isActiveProfessional(id)).toBe(false)
     })
 
@@ -117,7 +123,11 @@ describe("ProfessionalDirectoryFacade (int)", () => {
       await seedUser({ accessProfile: "professional", name: "Zara" })
       await seedUser({ accessProfile: "professional", name: "Ana" })
       await seedUser({ accessProfile: "admin", name: "Admin" })
-      await seedUser({ accessProfile: "professional", status: "pending", name: "Pending" })
+      await seedUser({
+        accessProfile: "professional",
+        status: "pending",
+        name: "Pending",
+      })
 
       const result = await facade.searchAssignable({ page: 1, pageSize: 20 })
       expect(result.data.map((p) => p.name)).toEqual(["Ana", "Zara"])
@@ -126,7 +136,11 @@ describe("ProfessionalDirectoryFacade (int)", () => {
 
     it("exclui professionals soft-deleted", async () => {
       await seedUser({ accessProfile: "professional", name: "Ativo" })
-      await seedUser({ accessProfile: "professional", name: "Deletado", deletedAt: new Date() })
+      await seedUser({
+        accessProfile: "professional",
+        name: "Deletado",
+        deletedAt: new Date(),
+      })
 
       const result = await facade.searchAssignable({ page: 1, pageSize: 20 })
       expect(result.data).toHaveLength(1)
@@ -134,7 +148,10 @@ describe("ProfessionalDirectoryFacade (int)", () => {
     })
 
     it("retorna email e avatarAttachmentId nos itens", async () => {
-      const id = await seedUser({ accessProfile: "professional", name: "Dr. Campos" })
+      const id = await seedUser({
+        accessProfile: "professional",
+        name: "Dr. Campos",
+      })
 
       const result = await facade.searchAssignable({ page: 1, pageSize: 20 })
       const item = result.data.find((p) => p.id === id)
@@ -147,16 +164,30 @@ describe("ProfessionalDirectoryFacade (int)", () => {
       await seedUser({ accessProfile: "professional", name: "Dr. House" })
       await seedUser({ accessProfile: "professional", name: "Dra. Grey" })
 
-      const result = await facade.searchAssignable({ page: 1, pageSize: 20, q: "house" })
+      const result = await facade.searchAssignable({
+        page: 1,
+        pageSize: 20,
+        q: "house",
+      })
       expect(result.data).toHaveLength(1)
       expect(result.data[0]?.name).toBe("Dr. House")
     })
 
     it("q filtra por email", async () => {
-      const id = await seedUser({ accessProfile: "professional", name: "Filtrado Por Email" })
-      await seedUser({ accessProfile: "professional", name: "Outro Professional" })
+      const id = await seedUser({
+        accessProfile: "professional",
+        name: "Filtrado Por Email",
+      })
+      await seedUser({
+        accessProfile: "professional",
+        name: "Outro Professional",
+      })
 
-      const result = await facade.searchAssignable({ page: 1, pageSize: 20, q: `${id}@` })
+      const result = await facade.searchAssignable({
+        page: 1,
+        pageSize: 20,
+        q: `${id}@`,
+      })
       expect(result.data).toHaveLength(1)
       expect(result.data[0]?.id).toBe(id)
     })
@@ -164,7 +195,10 @@ describe("ProfessionalDirectoryFacade (int)", () => {
 
   describe("findByIds", () => {
     it("mapeia ids → {id, name, email, avatarAttachmentId} filtrando só professionals ativos", async () => {
-      const profId = await seedUser({ accessProfile: "professional", name: "Dr. João" })
+      const profId = await seedUser({
+        accessProfile: "professional",
+        name: "Dr. João",
+      })
       const adminId = await seedUser({ accessProfile: "admin", name: "Admin" })
 
       const map = await facade.findByIds([profId, adminId])
@@ -179,8 +213,14 @@ describe("ProfessionalDirectoryFacade (int)", () => {
 
     it("exclui professionals inativos e deletados (órfãos)", async () => {
       const activeId = await seedUser({ accessProfile: "professional" })
-      const pendingId = await seedUser({ accessProfile: "professional", status: "pending" })
-      const deletedId = await seedUser({ accessProfile: "professional", deletedAt: new Date() })
+      const pendingId = await seedUser({
+        accessProfile: "professional",
+        status: "pending",
+      })
+      const deletedId = await seedUser({
+        accessProfile: "professional",
+        deletedAt: new Date(),
+      })
 
       const map = await facade.findByIds([activeId, pendingId, deletedId])
       expect(map.has(activeId)).toBe(true)
@@ -203,7 +243,11 @@ describe("ProfessionalDirectoryFacade (int)", () => {
     it("lista só profissional ativo e visível, ordenado por nome", async () => {
       await seedUser({ accessProfile: "professional", name: "Bruna" })
       await seedUser({ accessProfile: "professional", name: "Alice" })
-      await seedUser({ accessProfile: "professional", status: "pending", name: "Pendente" })
+      await seedUser({
+        accessProfile: "professional",
+        status: "pending",
+        name: "Pendente",
+      })
       await seedUser({ accessProfile: "admin", name: "Admin" })
       await seedUser({
         accessProfile: "professional",
@@ -216,7 +260,10 @@ describe("ProfessionalDirectoryFacade (int)", () => {
     })
 
     it("retorna email e avatarAttachmentId nos refs", async () => {
-      const id = await seedUser({ accessProfile: "professional", name: "Dr. Campos" })
+      const id = await seedUser({
+        accessProfile: "professional",
+        name: "Dr. Campos",
+      })
 
       const result = await facade.listActive()
       expect(result).toEqual([
@@ -232,8 +279,14 @@ describe("ProfessionalDirectoryFacade (int)", () => {
 
   describe("listActiveByArea", () => {
     it("lista só profissionais ativos vinculados à área, ordenados por nome", async () => {
-      const alice = await seedUser({ accessProfile: "professional", name: "Alice" })
-      const bruna = await seedUser({ accessProfile: "professional", name: "Bruna" })
+      const alice = await seedUser({
+        accessProfile: "professional",
+        name: "Alice",
+      })
+      const bruna = await seedUser({
+        accessProfile: "professional",
+        name: "Bruna",
+      })
       await seedUser({ accessProfile: "professional", name: "Carla" })
       await seedAreaLink(alice, "area-spa")
       await seedAreaLink(bruna, "area-spa")
@@ -244,7 +297,10 @@ describe("ProfessionalDirectoryFacade (int)", () => {
     })
 
     it("exclui inativos, deletados e quem não tem a área", async () => {
-      const active = await seedUser({ accessProfile: "professional", name: "Ativo" })
+      const active = await seedUser({
+        accessProfile: "professional",
+        name: "Ativo",
+      })
       const pending = await seedUser({
         accessProfile: "professional",
         status: "pending",
@@ -267,19 +323,19 @@ describe("ProfessionalDirectoryFacade (int)", () => {
   async function seedAreaLink(userId: string, areaId: string): Promise<void> {
     await pool.query(
       `INSERT INTO identity.user_professional_areas (user_id, area_id) VALUES ($1, $2)`,
-      [userId, areaId],
+      [userId, areaId]
     )
   }
 
   async function seedProfessionalService(
     userId: string,
     serviceId: string,
-    isDefault = false,
+    isDefault = false
   ): Promise<void> {
     await pool.query(
       `INSERT INTO identity.user_professional_services (user_id, service_id, is_default, created_at)
        VALUES ($1, $2, $3, now())`,
-      [userId, serviceId, isDefault],
+      [userId, serviceId, isDefault]
     )
   }
 
@@ -308,14 +364,17 @@ describe("ProfessionalDirectoryFacade (int)", () => {
         new Map([
           [professionalA, ["area-1", "area-2"]],
           [professionalB, ["area-2"]],
-        ]),
+        ])
       )
     })
   })
 
   describe("findActiveProfessionalIdsByServices", () => {
     it("retorna só o profissional ativo habilitado pro serviço", async () => {
-      const activeId = await seedUser({ accessProfile: "professional", name: "Ativo" })
+      const activeId = await seedUser({
+        accessProfile: "professional",
+        name: "Ativo",
+      })
       const pendingId = await seedUser({
         accessProfile: "professional",
         status: "pending",
@@ -329,12 +388,21 @@ describe("ProfessionalDirectoryFacade (int)", () => {
     })
 
     it("agrupa por serviceId quando vários serviços são consultados", async () => {
-      const profA = await seedUser({ accessProfile: "professional", name: "Prof A" })
-      const profB = await seedUser({ accessProfile: "professional", name: "Prof B" })
+      const profA = await seedUser({
+        accessProfile: "professional",
+        name: "Prof A",
+      })
+      const profB = await seedUser({
+        accessProfile: "professional",
+        name: "Prof B",
+      })
       await seedProfessionalService(profA, "svc-1")
       await seedProfessionalService(profB, "svc-2")
 
-      const map = await facade.findActiveProfessionalIdsByServices(["svc-1", "svc-2"])
+      const map = await facade.findActiveProfessionalIdsByServices([
+        "svc-1",
+        "svc-2",
+      ])
       expect(map.get("svc-1")).toEqual([profA])
       expect(map.get("svc-2")).toEqual([profB])
     })
@@ -368,7 +436,7 @@ describe("ProfessionalDirectoryFacade (int)", () => {
         expect.arrayContaining([
           { userId: pro, isDefault: true },
           { userId: outro, isDefault: false },
-        ]),
+        ])
       )
     })
 

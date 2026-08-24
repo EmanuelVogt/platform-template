@@ -26,15 +26,15 @@ export class CountingLimit extends Transform {
   override _transform(
     chunk: Buffer,
     _encoding: BufferEncoding,
-    done: (error?: Error) => void,
+    done: (error?: Error) => void
   ): void {
     this.counted += chunk.length
     if (this.counted > this.limitBytes) {
       this.over = true
       done(
         new UploadQuotaExceededError(
-          `O total não pode passar de ${formatMegabytes(this.limitBytes)}.`,
-        ),
+          `O total não pode passar de ${formatMegabytes(this.limitBytes)}.`
+        )
       )
       return
     }

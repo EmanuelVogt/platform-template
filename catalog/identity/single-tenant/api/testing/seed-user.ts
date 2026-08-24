@@ -26,7 +26,7 @@ type SeedUserOptions = {
 export async function seedUser(
   app: INestApplication,
   pool: Pool,
-  opts: SeedUserOptions,
+  opts: SeedUserOptions
 ): Promise<string> {
   const hasher = app.get<PasswordHasher>(PASSWORD_HASHER)
   const passwordHash = await hasher.hash(opts.password)
@@ -44,11 +44,11 @@ export async function seedUser(
       passwordHash,
       opts.accessProfile ?? "admin",
       opts.servesClients ?? opts.accessProfile === "professional",
-    ],
+    ]
   )
   const { rows } = await pool.query<{ id: string }>(
     "SELECT id FROM identity.users WHERE email = $1",
-    [email],
+    [email]
   )
   const id = rows[0]?.id
   if (!id) {
@@ -59,7 +59,7 @@ export async function seedUser(
       `INSERT INTO identity.user_permissions (user_id, permission)
        SELECT $1, unnest($2::text[])
        ON CONFLICT DO NOTHING`,
-      [id, opts.permissions],
+      [id, opts.permissions]
     )
   }
   return id

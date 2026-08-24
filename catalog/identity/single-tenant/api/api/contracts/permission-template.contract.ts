@@ -46,5 +46,9 @@ export class PermissionTemplateResponseDto extends createZodDto(
   permissionTemplateResponseSchema
 ) {}
 
-export type PermissionTemplateView = z.infer<typeof permissionTemplateViewSchema>
-export type PermissionTemplateBody = z.infer<typeof permissionTemplateBodySchema>
+export type PermissionTemplateView = z.infer<
+  typeof permissionTemplateViewSchema
+>
+export type PermissionTemplateBody = z.infer<
+  typeof permissionTemplateBodySchema
+>

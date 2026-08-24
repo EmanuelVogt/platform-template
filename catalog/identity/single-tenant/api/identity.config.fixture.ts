@@ -7,7 +7,7 @@ import type { IdentityConfig } from "./identity.config"
  * Mantém os use-cases desacoplados de `process.env` no unit test.
  */
 export function makeIdentityConfig(
-  over: Partial<IdentityConfig> = {},
+  over: Partial<IdentityConfig> = {}
 ): IdentityConfig {
   // BREACH_CHECK_ENABLED não tem default no schema; o fixture preenche o piso
   // para que um spec não precise conhecer o env inteiro, e o env vence.

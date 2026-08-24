@@ -31,9 +31,10 @@ import type { RequestPasswordResetInput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class RequestPasswordResetUseCase
-  implements UseCaseContract<RequestPasswordResetInput, void>
-{
+export class RequestPasswordResetUseCase implements UseCaseContract<
+  RequestPasswordResetInput,
+  void
+> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(VERIFICATION_TOKEN_REPOSITORY)
@@ -44,7 +45,7 @@ export class RequestPasswordResetUseCase
     private readonly authEvents: AuthEventRepository,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly ctx: RequestContext,
-    @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig,
+    @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig
   ) {}
 
   @Transactional()
@@ -74,12 +75,12 @@ export class RequestPasswordResetUseCase
     // Single active token: invalida pendentes antes de emitir o novo.
     await this.verificationTokens.invalidateAllForUser(
       user.props.id,
-      "password_reset",
+      "password_reset"
     )
 
     const { raw, hash } = this.tokens.generate()
     const expiresAt = new Date(
-      now.getTime() + this.config.RESET_TOKEN_TTL_SECONDS * 1000,
+      now.getTime() + this.config.RESET_TOKEN_TTL_SECONDS * 1000
     )
     await this.verificationTokens.create(
       VerificationToken.create({
@@ -87,7 +88,7 @@ export class RequestPasswordResetUseCase
         tokenHash: hash,
         type: "password_reset",
         expiresAt,
-      }),
+      })
     )
 
     await this.users.update(user.markResetRequested(now))
@@ -99,13 +100,13 @@ export class RequestPasswordResetUseCase
         type: "password_reset_requested",
         locale: store.locale,
         data: { email, link, tokenExpiresAt: expiresAt.toISOString() },
-      }),
+      })
     )
     await this.authEvents.recordInTx(
       authEventOf(store, {
         userId: user.props.id,
         eventType: "password_reset_requested",
-      }),
+      })
     )
   }
 }

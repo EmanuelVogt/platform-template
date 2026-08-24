@@ -52,13 +52,13 @@ export class CreateSessionService {
     @Inject(DEVICE_REPOSITORY) private readonly devices: DeviceRepository,
     @Inject(TOKEN_GENERATOR) private readonly tokens: TokenGenerator,
     @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig,
-    private readonly ctx: RequestContext,
+    private readonly ctx: RequestContext
   ) {}
 
   async create(
     user: User,
     input: CreateSessionInput,
-    now: Date,
+    now: Date
   ): Promise<SessionResult> {
     const ctx = this.ctx.get()
     const { raw, hash } = this.tokens.generate()
@@ -93,7 +93,7 @@ export class CreateSessionService {
     if (count > this.config.SESSION_MAX_PER_USER) {
       await this.sessions.deleteOldestOverCap(
         user.props.id,
-        this.config.SESSION_MAX_PER_USER,
+        this.config.SESSION_MAX_PER_USER
       )
     }
 
@@ -110,7 +110,7 @@ export class CreateSessionService {
   // Cookie NÃO é credencial — só agrupa sessões.
   private async resolveDevice(
     userId: string,
-    deviceCookie: string | null | undefined,
+    deviceCookie: string | null | undefined
   ): Promise<{ id: string; cookieOut: string; isNew: boolean }> {
     if (deviceCookie) {
       const hash = this.tokens.hashOf(deviceCookie)

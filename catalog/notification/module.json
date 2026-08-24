@@ -4,7 +4,10 @@
   "description": "Feed de notificações (listar, marcar lida/vista, arquivar, stream SSE) e entrega por e-mail via canal e mailer transport-only.",
   "kernelRange": ">=2.0.0 <3.0.0",
   "dependsOn": [],
-  "apiModule": { "export": "NotificationModule", "path": "modules/notification/notification.module" },
+  "apiModule": {
+    "export": "NotificationModule",
+    "path": "modules/notification/notification.module"
+  },
   "schemaExports": [
     "modules/notification/infrastructure/tables/notification.schema",
     "modules/notification/infrastructure/tables/notification.table",

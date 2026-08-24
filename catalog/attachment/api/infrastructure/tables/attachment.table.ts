@@ -19,8 +19,12 @@ export const attachments = attachmentSchema.table("attachments", {
   // id lógico de outro schema (identity.users) — sem FK física, mantém desacoplado.
   ownerUserId: text("owner_user_id"),
   status: attachmentStatus("status").notNull().default("ready"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 })
 
 export type AttachmentRow = typeof attachments.$inferSelect

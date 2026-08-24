@@ -34,22 +34,37 @@ describe("ResendMailer", () => {
         subject: "Configure seu acesso à plataforma",
         html: "<html>ok</html>",
       },
-      { idempotencyKey: "d1" },
+      { idempotencyKey: "d1" }
     )
   })
 
   it("sem idempotencyKey, chama o provider sem a option", async () => {
-    await mailer.send({ to: "ana@x.test", subject: "Assunto", html: "<html></html>" })
-    expect(send).toHaveBeenCalledWith(expect.objectContaining({ to: "ana@x.test" }), undefined)
+    await mailer.send({
+      to: "ana@x.test",
+      subject: "Assunto",
+      html: "<html></html>",
+    })
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "ana@x.test" }),
+      undefined
+    )
   })
 
   it("lança MailDeliveryError quando o provedor retorna erro", async () => {
     send.mockResolvedValueOnce({
       data: null,
-      error: { message: "The example.com domain is not verified", name: "validation_error", statusCode: 403 },
+      error: {
+        message: "The example.com domain is not verified",
+        name: "validation_error",
+        statusCode: 403,
+      },
     })
     await expect(
-      mailer.send({ to: "ana@x.test", subject: "Assunto", html: "<html></html>" }),
+      mailer.send({
+        to: "ana@x.test",
+        subject: "Assunto",
+        html: "<html></html>",
+      })
     ).rejects.toThrow("domain is not verified")
   })
 })

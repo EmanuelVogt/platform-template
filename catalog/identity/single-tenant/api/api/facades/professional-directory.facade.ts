@@ -24,7 +24,7 @@ export interface AssignableProfessional {
 @Injectable()
 export class ProfessionalDirectoryFacade {
   constructor(
-    @Inject(USER_REPOSITORY) private readonly users: UserRepository,
+    @Inject(USER_REPOSITORY) private readonly users: UserRepository
   ) {}
 
   isActiveProfessional(userId: string): Promise<boolean> {
@@ -32,13 +32,13 @@ export class ProfessionalDirectoryFacade {
   }
 
   searchAssignable(
-    input: SearchAssignableProfessionalsInput,
+    input: SearchAssignableProfessionalsInput
   ): Promise<PaginatedResult<AssignableProfessional>> {
     return this.users.searchAssignableProfessionals(input)
   }
 
   findByIds(
-    ids: readonly string[],
+    ids: readonly string[]
   ): Promise<Map<string, AssignableProfessional>> {
     return this.users.findProfessionalsByIds([...ids])
   }
@@ -52,19 +52,19 @@ export class ProfessionalDirectoryFacade {
   }
 
   findAreaIdsByProfessionalIds(
-    userIds: readonly string[],
+    userIds: readonly string[]
   ): Promise<Map<string, readonly string[]>> {
     return this.users.findProfessionalAreaIdsByUserIds([...userIds])
   }
 
   findActiveProfessionalIdsByServices(
-    serviceIds: readonly string[],
+    serviceIds: readonly string[]
   ): Promise<Map<string, string[]>> {
     return this.users.findActiveProfessionalIdsByServices([...serviceIds])
   }
 
   findActiveProfessionalLinksByServices(
-    serviceIds: readonly string[],
+    serviceIds: readonly string[]
   ): Promise<Map<string, AssignableProfessionalLink[]>> {
     return this.users.findActiveProfessionalLinksByServices([...serviceIds])
   }

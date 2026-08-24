@@ -37,7 +37,7 @@ export class AttachmentFacade {
     private readonly confirmUseCase: ConfirmUploadsUseCase,
     private readonly downloadUseCase: GetAttachmentForDownloadUseCase,
     @Inject(ATTACHMENT_REPOSITORY) private readonly repo: AttachmentRepository,
-    private readonly listAccessLogUseCase: ListAttachmentAccessLogUseCase,
+    private readonly listAccessLogUseCase: ListAttachmentAccessLogUseCase
   ) {}
 
   upload(input: UploadAttachmentInput): Promise<{ id: string }> {
@@ -50,7 +50,7 @@ export class AttachmentFacade {
 
   confirmUploads(
     ids: string[],
-    opts: { profile: UploadProfileName; ownerUserId: string },
+    opts: { profile: UploadProfileName; ownerUserId: string }
   ): Promise<void> {
     return this.confirmUseCase.execute({ ids, ...opts })
   }
@@ -89,7 +89,7 @@ export class AttachmentFacade {
             sizeBytes: a.props.sizeBytes,
             contentType: a.props.contentType,
           },
-        ]),
+        ])
     )
   }
 

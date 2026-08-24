@@ -49,7 +49,10 @@ export class EmptyUploadBatchError extends DomainError {
   readonly type = `${TYPE_BASE}/empty-upload-batch`
 
   constructor() {
-    super("Nenhum arquivo enviado", "Selecione ao menos um arquivo para enviar.")
+    super(
+      "Nenhum arquivo enviado",
+      "Selecione ao menos um arquivo para enviar."
+    )
   }
 }
 
@@ -59,7 +62,10 @@ export class InvalidMultipartRequestError extends DomainError {
   readonly type = `${TYPE_BASE}/invalid-multipart`
 
   constructor() {
-    super("Envio inválido", "Os arquivos precisam ser enviados como multipart/form-data.")
+    super(
+      "Envio inválido",
+      "Os arquivos precisam ser enviados como multipart/form-data."
+    )
   }
 }
 
@@ -91,7 +97,10 @@ export class UnexpectedMultipartFieldError extends DomainError {
   readonly type = `${TYPE_BASE}/unexpected-multipart-field`
 
   constructor() {
-    super("Campo de envio inesperado", "O único campo de arquivo aceito é `file`.")
+    super(
+      "Campo de envio inesperado",
+      "O único campo de arquivo aceito é `file`."
+    )
   }
 }
 

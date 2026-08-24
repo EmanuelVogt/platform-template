@@ -13,7 +13,9 @@ import { ConfirmUploadsUseCase } from "./confirm-uploads.use-case"
 
 const profiles = buildUploadProfiles(parseAttachmentConfig({}))
 
-function pending(overrides: Partial<{ sizeBytes: number; ownerUserId: string }> = {}) {
+function pending(
+  overrides: Partial<{ sizeBytes: number; ownerUserId: string }> = {}
+) {
   return Attachment.createPending({
     contentType: "application/pdf",
     sizeBytes: overrides.sizeBytes ?? 100,
@@ -24,7 +26,10 @@ function pending(overrides: Partial<{ sizeBytes: number; ownerUserId: string }> 
   })
 }
 
-function makeUseCase(stored: Attachment[], head: { sizeBytes: number; etag: string } | null) {
+function makeUseCase(
+  stored: Attachment[],
+  head: { sizeBytes: number; etag: string } | null
+) {
   const saved: Attachment[] = []
   const repo = {
     findByIds: vi.fn(async () => stored),
@@ -32,7 +37,13 @@ function makeUseCase(stored: Attachment[], head: { sizeBytes: number; etag: stri
   }
   const storage = {
     head: vi.fn(async () =>
-      head === null ? null : { contentType: "application/pdf", sizeBytes: head.sizeBytes, etag: head.etag },
+      head === null
+        ? null
+        : {
+            contentType: "application/pdf",
+            sizeBytes: head.sizeBytes,
+            etag: head.etag,
+          }
     ),
   }
   const tx = { run: (fn: () => Promise<void>) => fn() }
@@ -41,7 +52,7 @@ function makeUseCase(stored: Attachment[], head: { sizeBytes: number; etag: stri
       storage as never,
       repo as never,
       profiles,
-      tx as never,
+      tx as never
     ),
     saved,
     repo,
@@ -51,7 +62,10 @@ function makeUseCase(stored: Attachment[], head: { sizeBytes: number; etag: stri
 describe("ConfirmUploadsUseCase", () => {
   it("promove para ready com tamanho real e checksum do ETag", async () => {
     const attachment = pending({ sizeBytes: 100 })
-    const { useCase, saved } = makeUseCase([attachment], { sizeBytes: 90, etag: '"abc"' })
+    const { useCase, saved } = makeUseCase([attachment], {
+      sizeBytes: 90,
+      etag: '"abc"',
+    })
 
     await useCase.execute({
       ids: [attachment.props.id],
@@ -66,14 +80,17 @@ describe("ConfirmUploadsUseCase", () => {
 
   it("recusa anexo de outro usuário", async () => {
     const attachment = pending({ ownerUserId: "user-2" })
-    const { useCase } = makeUseCase([attachment], { sizeBytes: 90, etag: '"abc"' })
+    const { useCase } = makeUseCase([attachment], {
+      sizeBytes: 90,
+      etag: '"abc"',
+    })
 
     await expect(
       useCase.execute({
         ids: [attachment.props.id],
         profile: "multi",
         ownerUserId: "user-1",
-      }),
+      })
     ).rejects.toBeInstanceOf(UploadNotConfirmableError)
   })
 
@@ -85,7 +102,7 @@ describe("ConfirmUploadsUseCase", () => {
         ids: ["01JMISSING"],
         profile: "multi",
         ownerUserId: "user-1",
-      }),
+      })
     ).rejects.toBeInstanceOf(AttachmentNotFoundError)
   })
 
@@ -98,34 +115,40 @@ describe("ConfirmUploadsUseCase", () => {
         ids: [attachment.props.id],
         profile: "multi",
         ownerUserId: "user-1",
-      }),
+      })
     ).rejects.toBeInstanceOf(UploadNotConfirmableError)
   })
 
   it("recusa objeto maior que o declarado", async () => {
     const attachment = pending({ sizeBytes: 100 })
-    const { useCase } = makeUseCase([attachment], { sizeBytes: 101, etag: '"abc"' })
+    const { useCase } = makeUseCase([attachment], {
+      sizeBytes: 101,
+      etag: '"abc"',
+    })
 
     await expect(
       useCase.execute({
         ids: [attachment.props.id],
         profile: "multi",
         ownerUserId: "user-1",
-      }),
+      })
     ).rejects.toBeInstanceOf(UploadQuotaExceededError)
   })
 
   it("recusa soma real acima do teto mesmo com cada anexo aprovado no upload individual", async () => {
     const a = pending({ sizeBytes: 600_000_000 })
     const b = pending({ sizeBytes: 600_000_000 })
-    const { useCase } = makeUseCase([a, b], { sizeBytes: 600_000_000, etag: '"abc"' })
+    const { useCase } = makeUseCase([a, b], {
+      sizeBytes: 600_000_000,
+      etag: '"abc"',
+    })
 
     await expect(
       useCase.execute({
         ids: [a.props.id, b.props.id],
         profile: "multi",
         ownerUserId: "user-1",
-      }),
+      })
     ).rejects.toBeInstanceOf(UploadQuotaExceededError)
   })
 
@@ -137,7 +160,7 @@ describe("ConfirmUploadsUseCase", () => {
     const tooMany = Array.from({ length: 101 }, (_, i) => `id-${String(i)}`)
 
     await expect(
-      useCase.execute({ ids: tooMany, profile: "multi", ownerUserId: "user-1" }),
+      useCase.execute({ ids: tooMany, profile: "multi", ownerUserId: "user-1" })
     ).rejects.toBeInstanceOf(UploadQuotaExceededError)
 
     expect(repo.findByIds).not.toHaveBeenCalled()

@@ -3,7 +3,11 @@ import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
+import {
+  createTestPool,
+  truncateIdentity,
+  truncateKernel,
+} from "../../../../test/setup/test-db"
 import { AppModule } from "../../../app.module"
 import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
@@ -31,7 +35,7 @@ function linkFromHtml(html: string): string {
 
 async function waitFor(
   predicate: () => boolean,
-  timeoutMs = 4000,
+  timeoutMs = 4000
 ): Promise<void> {
   const start = Date.now()
   while (!predicate()) {
@@ -52,7 +56,7 @@ describe("Outbox → dispatcher → handler → mailer (e2e)", () => {
     await truncateIdentity(pool)
     await truncateKernel(pool)
     await pool.query(
-      "truncate table notification.notifications, notification.notification_deliveries",
+      "truncate table notification.notifications, notification.notification_deliveries"
     )
     await pool.end()
 
@@ -99,7 +103,7 @@ describe("Outbox → dispatcher → handler → mailer (e2e)", () => {
       payload: { payload: { link: string } }
     }>(
       "SELECT event_name, payload FROM _kernel.outbox WHERE aggregate_id = $1",
-      [userId],
+      [userId]
     )
     expect(outboxRows.rows).toHaveLength(1)
     expect(outboxRows.rows[0]?.event_name).toBe("notification.requested")
@@ -113,18 +117,20 @@ describe("Outbox → dispatcher → handler → mailer (e2e)", () => {
     const sentToEmail = mailer.sent.filter((message) => message.to === email)
     expect(sentToEmail).toHaveLength(1)
     expect(sentToEmail[0]?.subject).toBe("Redefinição de senha")
-    expect(linkFromHtml(sentToEmail[0]!.html)).toContain("/redefinir-senha?token=")
+    expect(linkFromHtml(sentToEmail[0]!.html)).toContain(
+      "/redefinir-senha?token="
+    )
 
     // A linha foi marcada published_at após a entrega.
     const published = await pool.query<{ published_at: Date | null }>(
       "SELECT published_at FROM _kernel.outbox WHERE aggregate_id = $1",
-      [userId],
+      [userId]
     )
     expect(published.rows[0]?.published_at).not.toBeNull()
 
     // O auth_event de sucesso foi gravado dentro da tx do negócio.
     const events = await pool.query<{ count: string }>(
-      "SELECT count(*)::text AS count FROM identity.auth_events WHERE event_type = 'password_reset_requested'",
+      "SELECT count(*)::text AS count FROM identity.auth_events WHERE event_type = 'password_reset_requested'"
     )
     expect(Number(events.rows[0]?.count)).toBeGreaterThanOrEqual(1)
 
@@ -132,7 +138,9 @@ describe("Outbox → dispatcher → handler → mailer (e2e)", () => {
     await dispatcher.poll()
     await app.get(DeliveryDispatcher).poll()
     await new Promise((resolve) => setTimeout(resolve, 100))
-    expect(mailer.sent.filter((message) => message.to === email)).toHaveLength(1)
+    expect(mailer.sent.filter((message) => message.to === email)).toHaveLength(
+      1
+    )
 
     await pool.end()
   })

@@ -1,11 +1,11 @@
 /** Compromisso que impede tirar a pessoa do atendimento a cliente. */
 export interface ProfessionalCommitment {
-  kind: 'service' | 'collective';
-  id: string;
-  name: string;
-  date: string;
-  startMinute: number;
-  endMinute: number;
+  kind: "service" | "collective"
+  id: string
+  name: string
+  date: string
+  startMinute: number
+  endMinute: number
 }
 
 /**
@@ -15,7 +15,9 @@ export interface ProfessionalCommitment {
  */
 export interface ProfessionalCommitments {
   /** Atendimentos e conduções de hoje em diante, ordenados por data e início. */
-  listFuture(userId: string): Promise<ProfessionalCommitment[]>;
+  listFuture(userId: string): Promise<ProfessionalCommitment[]>
 }
 
-export const PROFESSIONAL_COMMITMENTS: unique symbol = Symbol('ProfessionalCommitments');
+export const PROFESSIONAL_COMMITMENTS: unique symbol = Symbol(
+  "ProfessionalCommitments"
+)

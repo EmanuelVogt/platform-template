@@ -3,14 +3,20 @@ import { createHash } from "node:crypto"
 import { Inject } from "@nestjs/common"
 import { ulid } from "ulid"
 
-import { OBJECT_STORAGE, type ObjectStoragePort } from "../../../../../shared/infra/storage/object-storage.port"
+import {
+  OBJECT_STORAGE,
+  type ObjectStoragePort,
+} from "../../../../../shared/infra/storage/object-storage.port"
 import { RequestContext } from "../../../../../shared/kernel/context/request-context"
 import { Traced } from "../../../../../shared/kernel/tracing/traced.decorator"
 import { TransactionManager } from "../../../../../shared/kernel/transactional/transaction-manager"
 import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
 import { Attachment } from "../../../domain/attachment.entity"
 import { sniffImageContentType } from "../../../domain/content-type-sniff"
-import { PayloadTooLargeError, UnsupportedMediaTypeError } from "../../../domain/errors"
+import {
+  PayloadTooLargeError,
+  UnsupportedMediaTypeError,
+} from "../../../domain/errors"
 import {
   ATTACHMENT_ACCESS_LOG_REPOSITORY,
   type AttachmentAccessLogRepository,
@@ -35,7 +41,7 @@ export class UploadAttachmentUseCase {
     private readonly accessLog: AttachmentAccessLogRepository,
     private readonly txManager: TransactionManager,
     private readonly ctx: RequestContext,
-    @Inject(UPLOAD_PROFILES) private readonly profiles: UploadProfileCatalog,
+    @Inject(UPLOAD_PROFILES) private readonly profiles: UploadProfileCatalog
   ) {}
 
   @Traced({ name: "attachment.upload" })

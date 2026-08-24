@@ -15,7 +15,10 @@ import {
   AUTH_EVENT_REPOSITORY,
   type AuthEventRepository,
 } from "../../../domain/ports/auth-event.repository"
-import { BREACH_CHECK, type BreachCheck } from "../../../domain/ports/breach-check"
+import {
+  BREACH_CHECK,
+  type BreachCheck,
+} from "../../../domain/ports/breach-check"
 import {
   PASSWORD_HASHER,
   type PasswordHasher,
@@ -41,9 +44,10 @@ import type { ChangePasswordInput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class ChangePasswordUseCase
-  implements UseCaseContract<ChangePasswordInput, void>
-{
+export class ChangePasswordUseCase implements UseCaseContract<
+  ChangePasswordInput,
+  void
+> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(SESSION_REPOSITORY) private readonly sessions: SessionRepository,
@@ -55,7 +59,7 @@ export class ChangePasswordUseCase
     private readonly authEvents: AuthEventRepository,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly ctx: RequestContext,
-    @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig,
+    @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig
   ) {}
 
   @Traced({ name: "identity.changePassword" })
@@ -73,7 +77,7 @@ export class ChangePasswordUseCase
     }
     const currentOk = await this.hasher.verify(
       input.currentPassword,
-      user.props.passwordHash,
+      user.props.passwordHash
     )
     if (!currentOk) {
       throw new InvalidCredentialsError()
@@ -107,7 +111,7 @@ export class ChangePasswordUseCase
         userId,
         eventType: "breach_check_skipped",
         metadata: { mode: this.config.BREACH_CHECK_MODE },
-      }),
+      })
     )
   }
 
@@ -115,7 +119,7 @@ export class ChangePasswordUseCase
   private async applyChange(
     snapshot: User,
     newPasswordHash: string,
-    ctx: AuthedActor,
+    ctx: AuthedActor
   ): Promise<void> {
     // Releitura com trava: a senha conferida fora da tx precisa ainda ser a
     // vigente; conta desligada/desativada/travada no intervalo é recusada.
@@ -138,7 +142,7 @@ export class ChangePasswordUseCase
       authEventOf(this.ctx.get(), {
         userId: ctx.userId,
         eventType: "password_changed",
-      }),
+      })
     )
 
     await this.outbox.publish(
@@ -147,7 +151,7 @@ export class ChangePasswordUseCase
         type: "password_changed",
         locale: this.ctx.get().locale,
         data: { email: user.props.email, at: this.clock.now().toISOString() },
-      }),
+      })
     )
   }
 }

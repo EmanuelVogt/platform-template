@@ -36,7 +36,7 @@ function linkFromHtml(html: string): string {
 
 async function waitFor(
   predicate: () => boolean,
-  timeoutMs = 4000,
+  timeoutMs = 4000
 ): Promise<void> {
   const start = Date.now()
   while (!predicate()) {
@@ -89,9 +89,12 @@ describe("Ativação via access-link (e2e)", () => {
     })
     // Índice único permite UM master por banco — demove o anterior antes de promover.
     await pool.query(
-      "UPDATE identity.users SET access_profile = 'admin' WHERE access_profile = 'master'",
+      "UPDATE identity.users SET access_profile = 'admin' WHERE access_profile = 'master'"
     )
-    await pool.query("UPDATE identity.users SET access_profile = 'master' WHERE id = $1", [masterId])
+    await pool.query(
+      "UPDATE identity.users SET access_profile = 'master' WHERE id = $1",
+      [masterId]
+    )
     await pool.end()
 
     const loginRes = await request(app.getHttpServer())
@@ -107,7 +110,7 @@ describe("Ativação via access-link (e2e)", () => {
     masterCookie: string[],
     email: string,
     name: string,
-    idempotencyKey: string,
+    idempotencyKey: string
   ): Promise<string> {
     await request(app.getHttpServer())
       .post("/v1/admin/users")
@@ -129,14 +132,21 @@ describe("Ativação via access-link (e2e)", () => {
       mailer.sent.find((message) => message.to === email)
     await waitFor(() => sentTo() !== undefined)
 
-    const token = new URL(linkFromHtml(sentTo()!.html)).searchParams.get("token")
+    const token = new URL(linkFromHtml(sentTo()!.html)).searchParams.get(
+      "token"
+    )
     expect(token).toBeTruthy()
     return token!
   }
 
   it("ativa a conta (200 + cookie + sessão + birth_date) e mata o token", async () => {
     const masterCookie = await setupMaster("master-act1@example.com")
-    const token = await inviteUser(masterCookie, "ana-act@example.com", "Ana", "invite-ana-act")
+    const token = await inviteUser(
+      masterCookie,
+      "ana-act@example.com",
+      "Ana",
+      "invite-ana-act"
+    )
 
     // Pré-validação pública: retorna nome, e-mail e sem avatar.
     const info = await request(app.getHttpServer())
@@ -160,7 +170,10 @@ describe("Ativação via access-link (e2e)", () => {
         password: "Senha-Ana-Muito-Forte-2026!",
       })
       .expect(200)
-    expect(setRes.body.user).toMatchObject({ name: "Ana Maria", email: "ana-act@example.com" })
+    expect(setRes.body.user).toMatchObject({
+      name: "Ana Maria",
+      email: "ana-act@example.com",
+    })
     const anaCookie = setRes.headers["set-cookie"]
     expect(anaCookie).toBeDefined()
 
@@ -175,19 +188,21 @@ describe("Ativação via access-link (e2e)", () => {
     const { rows } = await pool.query<{
       status: string
       birth_date: string | Date | null
-    }>(
-      "SELECT status, birth_date FROM identity.users WHERE email = $1",
-      ["ana-act@example.com"],
-    )
+    }>("SELECT status, birth_date FROM identity.users WHERE email = $1", [
+      "ana-act@example.com",
+    ])
     expect(rows[0]?.status).toBe("active")
     // birth_date pode vir como Date (driver pg) ou string; normaliza pra string ISO.
     const bd = rows[0]?.birth_date
-    const bdStr = bd instanceof Date ? bd.toISOString().slice(0, 10) : String(bd).slice(0, 10)
+    const bdStr =
+      bd instanceof Date
+        ? bd.toISOString().slice(0, 10)
+        : String(bd).slice(0, 10)
     expect(bdStr).toBe("1990-05-20")
 
     const { rows: sessions } = await pool.query<{ count: string }>(
       "SELECT COUNT(*) AS count FROM identity.sessions s JOIN identity.users u ON u.id = s.user_id WHERE u.email = $1",
-      ["ana-act@example.com"],
+      ["ana-act@example.com"]
     )
     expect(Number(sessions[0]?.count)).toBe(1)
     await pool.end()
@@ -207,7 +222,12 @@ describe("Ativação via access-link (e2e)", () => {
 
   it("recusar convite invalida o token; user segue pending", async () => {
     const masterCookie = await setupMaster("master-act2@example.com")
-    const token = await inviteUser(masterCookie, "bia-act@example.com", "Bia", "invite-bia-act")
+    const token = await inviteUser(
+      masterCookie,
+      "bia-act@example.com",
+      "Bia",
+      "invite-bia-act"
+    )
 
     // Cancelar o access-link.
     await request(app.getHttpServer())
@@ -220,7 +240,7 @@ describe("Ativação via access-link (e2e)", () => {
     const pool = createTestPool()
     const { rows } = await pool.query<{ status: string }>(
       "SELECT status FROM identity.users WHERE email = $1",
-      ["bia-act@example.com"],
+      ["bia-act@example.com"]
     )
     expect(rows[0]?.status).toBe("pending")
     await pool.end()

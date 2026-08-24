@@ -11,10 +11,16 @@ function makeDeps(over: Record<string, any> = {}) {
   const verificationTokens = over.verificationTokens ?? {
     consumeByHash: vi.fn().mockResolvedValue({ userId: "u-1" }),
   }
-  const tokens = over.tokens ?? { hashOf: vi.fn().mockReturnValue("hash-of-raw") }
-  const authEvents = over.authEvents ?? { recordInTx: vi.fn().mockResolvedValue(undefined) }
+  const tokens = over.tokens ?? {
+    hashOf: vi.fn().mockReturnValue("hash-of-raw"),
+  }
+  const authEvents = over.authEvents ?? {
+    recordInTx: vi.fn().mockResolvedValue(undefined),
+  }
   const clock = over.clock ?? { now: () => NOW }
-  const ctx = over.ctx ?? fakeRequestContext(() => ({
+  const ctx =
+    over.ctx ??
+    fakeRequestContext(() => ({
       ip: "1.2.3.4",
       userAgent: "jest",
       correlationId: "c1",
@@ -24,7 +30,13 @@ function makeDeps(over: Record<string, any> = {}) {
       traceId: null,
       spanId: null,
     }))
-  const uc = new CancelAccessLinkUseCase(verificationTokens, tokens, authEvents, clock, ctx)
+  const uc = new CancelAccessLinkUseCase(
+    verificationTokens,
+    tokens,
+    authEvents,
+    clock,
+    ctx
+  )
   return { uc, verificationTokens, tokens, authEvents }
 }
 
@@ -36,12 +48,15 @@ describe("CancelAccessLinkUseCase", () => {
     expect(t.verificationTokens.consumeByHash).toHaveBeenCalledWith(
       "hash-of-raw",
       "access_link",
-      NOW,
+      NOW
     )
     expect(t.authEvents.recordInTx).toHaveBeenCalledWith(
       expect.objectContaining({
-        props: expect.objectContaining({ eventType: "access_link_cancelled", userId: "u-1" }),
-      }),
+        props: expect.objectContaining({
+          eventType: "access_link_cancelled",
+          userId: "u-1",
+        }),
+      })
     )
   })
 
@@ -49,15 +64,21 @@ describe("CancelAccessLinkUseCase", () => {
     const t = makeDeps({
       verificationTokens: { consumeByHash: vi.fn().mockResolvedValue(null) },
     })
-    await expect(t.uc.execute({ token: "raw" })).rejects.toBeInstanceOf(InvalidAccessLinkError)
+    await expect(t.uc.execute({ token: "raw" })).rejects.toBeInstanceOf(
+      InvalidAccessLinkError
+    )
     expect(t.authEvents.recordInTx).not.toHaveBeenCalled()
   })
 
   it("token inválido (consumeByHash undefined) lança InvalidAccessLinkError sem gravar evento", async () => {
     const t = makeDeps({
-      verificationTokens: { consumeByHash: vi.fn().mockResolvedValue(undefined) },
+      verificationTokens: {
+        consumeByHash: vi.fn().mockResolvedValue(undefined),
+      },
     })
-    await expect(t.uc.execute({ token: "raw" })).rejects.toBeInstanceOf(InvalidAccessLinkError)
+    await expect(t.uc.execute({ token: "raw" })).rejects.toBeInstanceOf(
+      InvalidAccessLinkError
+    )
     expect(t.authEvents.recordInTx).not.toHaveBeenCalled()
   })
 
@@ -70,7 +91,11 @@ describe("CancelAccessLinkUseCase", () => {
     })
     await t.uc.execute({ token: "my-raw-token" })
     expect(hashOf).toHaveBeenCalledWith("my-raw-token")
-    expect(consumeByHash).toHaveBeenCalledWith("hashed-token", "access_link", NOW)
+    expect(consumeByHash).toHaveBeenCalledWith(
+      "hashed-token",
+      "access_link",
+      NOW
+    )
   })
 
   it("registra evento com userId do token consumido", async () => {
@@ -82,8 +107,11 @@ describe("CancelAccessLinkUseCase", () => {
     await t.uc.execute({ token: "raw" })
     expect(t.authEvents.recordInTx).toHaveBeenCalledWith(
       expect.objectContaining({
-        props: expect.objectContaining({ eventType: "access_link_cancelled", userId: "u-specific" }),
-      }),
+        props: expect.objectContaining({
+          eventType: "access_link_cancelled",
+          userId: "u-specific",
+        }),
+      })
     )
   })
 })

@@ -22,7 +22,7 @@ async function main(): Promise<void> {
   const nodeEnv = process.env.NODE_ENV ?? "development"
   if (nodeEnv !== "development" && nodeEnv !== "test") {
     throw new Error(
-      `seed bloqueado em NODE_ENV=${nodeEnv}: credencial mestre fixa só roda em dev/test`,
+      `seed bloqueado em NODE_ENV=${nodeEnv}: credencial mestre fixa só roda em dev/test`
     )
   }
 
@@ -51,6 +51,8 @@ async function main(): Promise<void> {
 }
 
 void main().catch((err: unknown) => {
-  process.stderr.write(`[seed] falhou: ${err instanceof Error ? err.message : String(err)}\n`)
+  process.stderr.write(
+    `[seed] falhou: ${err instanceof Error ? err.message : String(err)}\n`
+  )
   process.exitCode = 1
 })

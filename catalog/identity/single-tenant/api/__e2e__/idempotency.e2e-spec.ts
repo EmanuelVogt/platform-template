@@ -3,7 +3,11 @@ import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { createTestPool, truncateIdentity, truncateKernel } from "../../../../test/setup/test-db"
+import {
+  createTestPool,
+  truncateIdentity,
+  truncateKernel,
+} from "../../../../test/setup/test-db"
 import { AppModule } from "../../../app.module"
 import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
@@ -55,7 +59,7 @@ describe("IdempotencyInterceptor (e2e)", () => {
     const pool = createTestPool()
     const { rows } = await pool.query(
       "SELECT 1 FROM _kernel.idempotency_keys WHERE endpoint = $1",
-      ["POST /v1/auth/forgot-password"],
+      ["POST /v1/auth/forgot-password"]
     )
     await pool.end()
     expect(rows).toHaveLength(0)
@@ -116,13 +120,13 @@ describe("IdempotencyInterceptor (e2e)", () => {
     const pool = createTestPool()
     const { rows } = await pool.query<{ response_body: unknown }>(
       "SELECT response_body FROM _kernel.idempotency_keys WHERE key = $1",
-      [key],
+      [key]
     )
     await pool.end()
 
     expect(rows).toHaveLength(1)
     expect(JSON.stringify(rows[0]?.response_body ?? null)).not.toContain(
-      "pii@example.com",
+      "pii@example.com"
     )
   })
 })

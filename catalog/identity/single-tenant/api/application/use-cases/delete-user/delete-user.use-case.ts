@@ -25,13 +25,17 @@ import type { DeleteUserInput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
 
 @UseCase()
-export class DeleteUserUseCase implements UseCaseContract<DeleteUserInput, void> {
+export class DeleteUserUseCase implements UseCaseContract<
+  DeleteUserInput,
+  void
+> {
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(SESSION_REPOSITORY) private readonly sessions: SessionRepository,
-    @Inject(AUTH_EVENT_REPOSITORY) private readonly authEvents: AuthEventRepository,
+    @Inject(AUTH_EVENT_REPOSITORY)
+    private readonly authEvents: AuthEventRepository,
     @Inject(CLOCK) private readonly clock: Clock,
-    private readonly ctx: RequestContext,
+    private readonly ctx: RequestContext
   ) {}
 
   @Transactional()
@@ -57,7 +61,7 @@ export class DeleteUserUseCase implements UseCaseContract<DeleteUserInput, void>
         userId: user.props.id,
         actorUserId: actorId,
         eventType: "user_deleted",
-      }),
+      })
     )
   }
 }

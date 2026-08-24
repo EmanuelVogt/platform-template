@@ -61,7 +61,27 @@ jobs:
       - run: pnpm turbo build --filter=web
       # TOOL-11: regenera o contrato e falha num diff sujo — este job não tem o
       # `if: needs.detect.outputs.template` de `gates`, então o step chega ao filho.
+      #
+      # O export monta o grafo Nest inteiro e o boot valida env de forma
+      # fail-fast, então sem estes placeholders o step morre antes de escrever a
+      # primeira linha de openapi.json. Nenhum deles abre conexão: o passo só lê
+      # metadata de decorator. A fonte da verdade é CONTRACT_ENV_DEFAULTS
+      # (scripts/platform/lib/child.mjs), que copier.yml não copia para o filho —
+      # daí a duplicação aqui, prendida por contract-env.test.mjs.
       - run: pnpm contract:check
+        env:
+          NODE_ENV: test
+          DATABASE_SSL: disable
+          TRUST_PROXY_HOPS: "0"
+          BREACH_CHECK_ENABLED: "false"
+          WEB_ORIGIN: http://localhost:3000
+          R2_ACCOUNT_ID: placeholder
+          R2_ACCESS_KEY_ID: placeholder
+          R2_SECRET_ACCESS_KEY: placeholder
+          R2_BUCKET: placeholder
+          R2_ENDPOINT: https://placeholder.r2.example.com
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+          REDIS_URL: redis://localhost:6379
 
   test-unit:
     name: Unit (api + web)

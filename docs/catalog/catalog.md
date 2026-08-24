@@ -84,7 +84,7 @@ To keep entries portable across child apps with different web stacks (Vite, Next
   commit's message must carry the trailer `Advisory: none — <reason>`; otherwise it fails
   (exit 1) with the rule printed. Two triggers, one module: the lefthook **commit-msg** hook in
   `lefthook-local.yml` (local commit, staged files) and the `gates` job of
-  `.github/workflows/catalog.yml`, which calls
+  `.github/workflows/ci.yml`, which calls
   `--range <base>..<head>` and judges **each commit of the PR by its own message** — a trailer
   in the last commit does not exempt the previous ones.
 - **`pnpm catalog:check [entry…]`** (`scripts/platform/catalog-check.mjs`) is not a git hook

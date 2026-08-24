@@ -59,6 +59,9 @@ jobs:
       - run: pnpm turbo lint typecheck
       - run: pnpm --filter api build:emit
       - run: pnpm turbo build --filter=web
+      # TOOL-11: regenera o contrato e falha num diff sujo — este job não tem o
+      # `if: needs.detect.outputs.template` de `gates`, então o step chega ao filho.
+      - run: pnpm contract:check
 
   test-unit:
     name: Unit (api + web)

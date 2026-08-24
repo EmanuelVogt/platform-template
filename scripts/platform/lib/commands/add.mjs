@@ -88,19 +88,22 @@ function runRollback({
     return EXIT_CODES.OK
   }
 
-  for (const fileName of entry.migrations ?? []) {
-    const migrationPath = path.join(childLayout(cwd).migrationsDir, fileName)
-    if (existsSync(migrationPath)) rmSync(migrationPath)
-  }
-
-  let entries = []
+  let entries
   try {
     const catalog = resolveCatalog(options["catalog-ref"], {
       copierAnswersPath: childLayout(cwd).copierAnswersPath,
     })
     entries = buildRegistryEntries(catalog.root, lock.modules, new Map(), name)
-  } catch {
-    entries = []
+  } catch (err) {
+    process.stderr.write(
+      `catálogo inacessível — revert abortado, registro preservado: ${err.message}\n`
+    )
+    return EXIT_CODES.CATALOG_UNREACHABLE
+  }
+
+  for (const fileName of entry.migrations ?? []) {
+    const migrationPath = path.join(childLayout(cwd).migrationsDir, fileName)
+    if (existsSync(migrationPath)) rmSync(migrationPath)
   }
 
   applyRollback({

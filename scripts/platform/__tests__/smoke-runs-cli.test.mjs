@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
+import { run as cliRun } from "../cli.mjs"
 import { EXIT_CODES } from "../lib/exit-codes.mjs"
 import { runTemplateSmoke } from "../../template-smoke.mjs"
 
@@ -60,7 +61,7 @@ function runGreenSmoke(run, childDir) {
   })
 }
 
-test("runTemplateSmoke invoca pnpm platform status e pnpm platform list dentro do próprio child renderizado", async () => {
+test("runTemplateSmoke invoca pnpm platform status e pnpm platform module list dentro do próprio child renderizado", async () => {
   const childDir = "/tmp/template-smoke-test-cli-ok"
   const run = stubRun(greenOverrides())
 
@@ -71,12 +72,41 @@ test("runTemplateSmoke invoca pnpm platform status e pnpm platform list dentro d
     (c) => c.command === "pnpm" && c.args.join(" ") === "platform status"
   )
   const listCall = run.calls.find(
-    (c) => c.command === "pnpm" && c.args.join(" ") === "platform list"
+    (c) => c.command === "pnpm" && c.args.join(" ") === "platform module list"
   )
   assert.ok(statusCall, "esperava uma chamada a pnpm platform status")
-  assert.ok(listCall, "esperava uma chamada a pnpm platform list")
+  assert.ok(listCall, "esperava uma chamada a pnpm platform module list")
   assert.equal(statusCall.options.cwd, childDir)
   assert.equal(listCall.options.cwd, childDir)
+})
+
+test("os argumentos que checkPlatformCli usa são de fato comandos registrados por scripts/platform/cli.mjs — um comando que o child não registra não pode voltar verde", async () => {
+  const childDir = "/tmp/template-smoke-test-cli-registry"
+  const run = stubRun(greenOverrides())
+
+  await runGreenSmoke(run, childDir)
+
+  const platformCalls = run.calls.filter(
+    (c) => c.command === "pnpm" && c.args[0] === "platform"
+  )
+  assert.ok(
+    platformCalls.length >= 2,
+    "esperava pelo menos duas chamadas a pnpm platform (status e module list)"
+  )
+
+  // Diretório que não existe: só prova o registro do comando em cli.mjs, sem
+  // depender de fixtures — todo acesso a arquivo em status/list é opcional
+  // (existsSync guarda cada leitura) e cai nos defaults quando o caminho falta.
+  const unrenderedCwd = "/tmp/template-smoke-test-cli-registry-not-rendered"
+  for (const call of platformCalls) {
+    const argv = call.args.slice(1) // remove o "platform" do script do package.json
+    const exitCode = await cliRun(argv, { cwd: unrenderedCwd })
+    assert.notEqual(
+      exitCode,
+      EXIT_CODES.USAGE_ERROR,
+      `cli.mjs não registra "${argv.join(" ")}" — checkPlatformCli invocaria um comando inexistente no child`
+    )
+  }
 })
 
 test("uma reintrodução deliberada do import excluído (a CLI crasha no child) deixa o smoke vermelho", async () => {
@@ -97,7 +127,7 @@ test("uma reintrodução deliberada do import excluído (a CLI crasha no child) 
 
   assert.equal(code, EXIT_CODES.TEST_FAILURE)
   const listCall = run.calls.find(
-    (c) => c.command === "pnpm" && c.args.join(" ") === "platform list"
+    (c) => c.command === "pnpm" && c.args.join(" ") === "platform module list"
   )
   assert.equal(
     listCall,

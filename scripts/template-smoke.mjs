@@ -54,9 +54,10 @@ export function planSteps() {
   ]
 }
 
-// pnpm platform status/list rodam de verdade dentro do próprio child renderizado (CLI-03):
-// se algum caminho excluído por copier.yml voltar a ser importado (CLI-01/CLI-02), a CLI
-// quebra em tempo de import aqui, não só no teste unitário do guard.
+// pnpm platform status/module list rodam de verdade dentro do próprio child renderizado
+// (CLI-03): se algum caminho excluído por copier.yml voltar a ser importado (CLI-01/CLI-02),
+// a CLI quebra em tempo de import aqui, não só no teste unitário do guard.
+// "list" só existe como subcomando de "module" (scripts/platform/cli.mjs:56) — nunca top-level.
 function checkPlatformCli({ childDir, run, log }) {
   const statusResult = run("pnpm", ["platform", "status"], { cwd: childDir })
   if (statusResult.status !== 0) {
@@ -65,10 +66,12 @@ function checkPlatformCli({ childDir, run, log }) {
     )
     return EXIT_CODES.TEST_FAILURE
   }
-  const listResult = run("pnpm", ["platform", "list"], { cwd: childDir })
+  const listResult = run("pnpm", ["platform", "module", "list"], {
+    cwd: childDir,
+  })
   if (listResult.status !== 0) {
     log(
-      `template:smoke — "pnpm platform list" falhou no child (código ${listResult.status})`
+      `template:smoke — "pnpm platform module list" falhou no child (código ${listResult.status})`
     )
     return EXIT_CODES.TEST_FAILURE
   }

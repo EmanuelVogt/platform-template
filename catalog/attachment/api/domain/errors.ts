@@ -2,13 +2,36 @@ import { DomainError } from "../../../shared/kernel/errors/domain.error"
 
 const TYPE_BASE = "https://errors.example.com/attachment"
 
+/** Tabela única de mensagens do entry attachment — hoje reproduz as strings anteriores. */
+const MESSAGES = {
+  notFound: "Arquivo não encontrado",
+  unsupportedMediaType: "Tipo de arquivo não suportado",
+  payloadTooLarge: "Arquivo muito grande",
+  uploadQuotaExceeded: "Limite de anexos excedido",
+  emptyUploadBatchTitle: "Nenhum arquivo enviado",
+  emptyUploadBatchDetail: "Selecione ao menos um arquivo para enviar.",
+  invalidMultipartRequestTitle: "Envio inválido",
+  invalidMultipartRequestDetail:
+    "Os arquivos precisam ser enviados como multipart/form-data.",
+  uploadsSaturatedTitle: "Muitos envios simultâneos",
+  uploadsSaturatedDetail: "Tente novamente em alguns segundos.",
+  pendingQuotaExceeded: "Cota de envios pendentes excedida",
+  unexpectedMultipartFieldTitle: "Campo de envio inesperado",
+  unexpectedMultipartFieldDetail: "O único campo de arquivo aceito é `file`.",
+  uploadInterruptedTitle: "Envio interrompido",
+  uploadInterruptedDetail: "A conexão caiu antes de o envio terminar.",
+  uploadNotConfirmable: "Anexo inválido para este envio",
+} as const
+
+export { MESSAGES as ATTACHMENT_MESSAGES }
+
 /** Attachment inexistente OU acesso negado — mesmo status/type (anti-enumeração). */
 export class AttachmentNotFoundError extends DomainError {
   readonly status = 404
   readonly type = `${TYPE_BASE}/not-found`
 
   constructor() {
-    super("Arquivo não encontrado")
+    super(MESSAGES.notFound)
   }
 }
 
@@ -18,7 +41,7 @@ export class UnsupportedMediaTypeError extends DomainError {
   readonly type = `${TYPE_BASE}/unsupported-media-type`
 
   constructor() {
-    super("Tipo de arquivo não suportado")
+    super(MESSAGES.unsupportedMediaType)
   }
 }
 
@@ -28,7 +51,7 @@ export class PayloadTooLargeError extends DomainError {
   readonly type = `${TYPE_BASE}/payload-too-large`
 
   constructor(detail?: string) {
-    super("Arquivo muito grande", detail)
+    super(MESSAGES.payloadTooLarge, detail)
   }
 }
 
@@ -38,7 +61,7 @@ export class UploadQuotaExceededError extends DomainError {
   readonly type = `${TYPE_BASE}/upload-quota-exceeded`
 
   constructor(detail: string) {
-    super("Limite de anexos excedido", detail)
+    super(MESSAGES.uploadQuotaExceeded, detail)
   }
 }
 
@@ -49,10 +72,7 @@ export class EmptyUploadBatchError extends DomainError {
   readonly type = `${TYPE_BASE}/empty-upload-batch`
 
   constructor() {
-    super(
-      "Nenhum arquivo enviado",
-      "Selecione ao menos um arquivo para enviar."
-    )
+    super(MESSAGES.emptyUploadBatchTitle, MESSAGES.emptyUploadBatchDetail)
   }
 }
 
@@ -63,8 +83,8 @@ export class InvalidMultipartRequestError extends DomainError {
 
   constructor() {
     super(
-      "Envio inválido",
-      "Os arquivos precisam ser enviados como multipart/form-data."
+      MESSAGES.invalidMultipartRequestTitle,
+      MESSAGES.invalidMultipartRequestDetail
     )
   }
 }
@@ -76,7 +96,7 @@ export class UploadsSaturatedError extends DomainError {
   override readonly retryAfterSeconds = 2
 
   constructor() {
-    super("Muitos envios simultâneos", "Tente novamente em alguns segundos.")
+    super(MESSAGES.uploadsSaturatedTitle, MESSAGES.uploadsSaturatedDetail)
   }
 }
 
@@ -86,7 +106,7 @@ export class PendingQuotaExceededError extends DomainError {
   readonly type = `${TYPE_BASE}/pending-quota-exceeded`
 
   constructor(detail: string) {
-    super("Cota de envios pendentes excedida", detail)
+    super(MESSAGES.pendingQuotaExceeded, detail)
   }
 }
 
@@ -98,8 +118,8 @@ export class UnexpectedMultipartFieldError extends DomainError {
 
   constructor() {
     super(
-      "Campo de envio inesperado",
-      "O único campo de arquivo aceito é `file`."
+      MESSAGES.unexpectedMultipartFieldTitle,
+      MESSAGES.unexpectedMultipartFieldDetail
     )
   }
 }
@@ -110,7 +130,7 @@ export class UploadInterruptedError extends DomainError {
   readonly type = `${TYPE_BASE}/upload-interrupted`
 
   constructor() {
-    super("Envio interrompido", "A conexão caiu antes de o envio terminar.")
+    super(MESSAGES.uploadInterruptedTitle, MESSAGES.uploadInterruptedDetail)
   }
 }
 
@@ -121,6 +141,6 @@ export class UploadNotConfirmableError extends DomainError {
   readonly type = `${TYPE_BASE}/upload-not-confirmable`
 
   constructor() {
-    super("Anexo inválido para este envio")
+    super(MESSAGES.uploadNotConfirmable)
   }
 }

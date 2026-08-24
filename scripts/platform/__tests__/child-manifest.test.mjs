@@ -8,6 +8,7 @@ import { parse } from "yaml"
 const TEMPLATE_ONLY_SCRIPTS = [
   "catalog:check",
   "catalog:lint",
+  "catalog:test",
   "catalog:typecheck",
   "template:smoke",
   "test:scripts",

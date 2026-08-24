@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { ActivityAreaResolver } from "./activity-area-resolver"
+import { ActivityAreaResolver, UNMAPPED_AREA } from "./activity-area-resolver"
 import { AuditRegistry } from "./audit-registry"
 
 describe("ActivityAreaResolver", () => {
@@ -54,5 +54,9 @@ describe("ActivityAreaResolver", () => {
       expect(seen ?? area.label).toBe(area.label)
       byKey.set(area.key, area.label)
     }
+  })
+
+  it("UNMAPPED_AREA vem da tabela de mensagens do entry, inalterada por padrão", () => {
+    expect(UNMAPPED_AREA).toEqual({ key: "other", label: "Outros" })
   })
 })

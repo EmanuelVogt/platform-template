@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { env } from "../../../../shared/config/env"
+
 import type { NOTIFICATION_TYPES } from "../../api/events/notification-requested.event"
 
 export type NotificationCategory =
@@ -40,13 +42,54 @@ export { entry as defineCatalogEntry }
 
 const isoDate = z.iso.datetime()
 
+// Fuso único do entry — evita duplicar o literal entre este catálogo e os
+// templates de e-mail (base-template-sources.ts). Vira config quando o kernel
+// expuser um fuso do produto (APP_TIMEZONE, T53); hoje reproduz o valor atual.
+const NOTIFICATION_TIMEZONE = "America/Sao_Paulo"
+
 function formatDateTime(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
+  return new Intl.DateTimeFormat(env().DEFAULT_LOCALE, {
     dateStyle: "short",
     timeStyle: "short",
-    timeZone: "America/Sao_Paulo",
+    timeZone: NOTIFICATION_TIMEZONE,
   }).format(new Date(iso))
 }
+
+export { NOTIFICATION_TIMEZONE, formatDateTime }
+
+/**
+ * Tabela única de mensagens do entry notification — assuntos de e-mail e
+ * título/corpo in-app. Ponto único de swap por locale; hoje reproduz
+ * exatamente as strings anteriores.
+ */
+const NOTIFICATION_MESSAGES = {
+  subjects: {
+    access_link_sent: "Configure seu acesso à plataforma",
+    email_verification: "Verifique seu e-mail",
+    password_reset_requested: "Redefinição de senha",
+    account_lockout: "Conta bloqueada temporariamente",
+    password_changed: "Sua senha foi alterada",
+    device_new_login: "Novo acesso à sua conta",
+    email_change_requested: "Confirme seu novo e-mail",
+    email_change_notice: "Solicitação de troca de e-mail",
+  },
+  inApp: {
+    passwordChangedTitle: "Senha alterada",
+    passwordChangedBody: (at: string) =>
+      `Sua senha foi alterada em ${at}. Se não foi você, fale com um administrador.`,
+    deviceNewLoginTitle: "Novo dispositivo acessou sua conta",
+    deviceNewLoginBody: (at: string, deviceLabel: string) =>
+      `Login em ${at} a partir de ${deviceLabel}.`,
+    deviceRevokedTitle: "Dispositivo desconectado",
+    deviceRevokedBody:
+      "Um dispositivo foi desconectado da sua conta e as sessões dele foram encerradas.",
+    passwordSetTitle: "Conta ativada",
+    passwordSetBody: (userName: string) =>
+      `${userName} configurou a senha e ativou a conta.`,
+  },
+} as const
+
+export { NOTIFICATION_MESSAGES }
 
 export const accessLinkSentData = z.object({
   email: z.email(),
@@ -115,8 +158,10 @@ export const notificationCatalog: Record<
     dataSchema: passwordChangedData,
     metadata: (d) => ({ at: d.at }),
     renderInApp: (d) => ({
-      title: "Senha alterada",
-      body: `Sua senha foi alterada em ${formatDateTime(d.at)}. Se não foi você, fale com um administrador.`,
+      title: NOTIFICATION_MESSAGES.inApp.passwordChangedTitle,
+      body: NOTIFICATION_MESSAGES.inApp.passwordChangedBody(
+        formatDateTime(d.at)
+      ),
       actions: [],
     }),
   }),
@@ -126,8 +171,11 @@ export const notificationCatalog: Record<
     dataSchema: deviceNewLoginData,
     metadata: (d) => ({ deviceLabel: d.deviceLabel, ip: d.ip, at: d.at }),
     renderInApp: (d) => ({
-      title: "Novo dispositivo acessou sua conta",
-      body: `Login em ${formatDateTime(d.at)} a partir de ${d.deviceLabel}.`,
+      title: NOTIFICATION_MESSAGES.inApp.deviceNewLoginTitle,
+      body: NOTIFICATION_MESSAGES.inApp.deviceNewLoginBody(
+        formatDateTime(d.at),
+        d.deviceLabel
+      ),
       actions: [],
     }),
   }),
@@ -137,8 +185,8 @@ export const notificationCatalog: Record<
     dataSchema: deviceRevokedData,
     metadata: (d) => ({ deviceId: d.deviceId }),
     renderInApp: () => ({
-      title: "Dispositivo desconectado",
-      body: "Um dispositivo foi desconectado da sua conta e as sessões dele foram encerradas.",
+      title: NOTIFICATION_MESSAGES.inApp.deviceRevokedTitle,
+      body: NOTIFICATION_MESSAGES.inApp.deviceRevokedBody,
       actions: [],
     }),
   }),
@@ -148,8 +196,8 @@ export const notificationCatalog: Record<
     dataSchema: passwordSetData,
     metadata: (d) => ({ userName: d.userName }),
     renderInApp: (d) => ({
-      title: "Conta ativada",
-      body: `${d.userName} configurou a senha e ativou a conta.`,
+      title: NOTIFICATION_MESSAGES.inApp.passwordSetTitle,
+      body: NOTIFICATION_MESSAGES.inApp.passwordSetBody(d.userName),
       actions: [],
     }),
   }),

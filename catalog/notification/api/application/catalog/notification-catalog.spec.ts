@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest"
 
 import { NOTIFICATION_TYPES } from "../../api/events/notification-requested.event"
 
-import { notificationCatalog } from "./notification-catalog"
+import {
+  NOTIFICATION_MESSAGES,
+  formatDateTime,
+  notificationCatalog,
+} from "./notification-catalog"
 
 describe("notificationCatalog", () => {
   it("cobre todos os tipos do contrato do kernel", () => {
@@ -123,5 +127,18 @@ describe("notificationCatalog", () => {
     )
     expect(rendered?.title).toBe("Dispositivo desconectado")
     expect(rendered?.body).not.toContain("d1")
+  })
+
+  it("NOTIFICATION_MESSAGES expõe a tabela única de assuntos, inalterada por padrão", () => {
+    expect(NOTIFICATION_MESSAGES.subjects.password_reset_requested).toBe(
+      "Redefinição de senha"
+    )
+    expect(NOTIFICATION_MESSAGES.inApp.passwordChangedTitle).toBe(
+      "Senha alterada"
+    )
+  })
+
+  it("formatDateTime lê o locale do kernel (DEFAULT_LOCALE) e reproduz a formatação de hoje por padrão", () => {
+    expect(formatDateTime("2026-06-10T18:30:00.000Z")).toBe("10/06/2026, 15:30")
   })
 })

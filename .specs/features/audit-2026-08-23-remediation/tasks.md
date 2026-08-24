@@ -2958,3 +2958,59 @@ cause of one case, **not the mechanism that hid it** — the next check that fai
 as § 0.8, and worse: a gate that knows what went wrong and does not say.
 
 **Next:** wave 4 (T42, exclusive). The integrated-tree gate is already satisfied — see the amendment above.
+
+### Wave 4 — GATED GREEN (2026-08-24)
+
+**C10 = T42 (exclusive).** Landed as **`ecba436`** — **one** commit, 15 files. The session first
+produced a two-commit split (`51daeb3` + a bump follow-up); it was collapsed with
+`git reset --soft df8233c`. `51daeb3` was never pushed and no longer exists — do not look for it.
+
+**Build gate 8/8 GREEN** at `ecba436`: `check` · `test` **616/616** · `test:scripts` **545/545** ·
+`catalog:test` **875/875** · `catalog:check` (`OK: notification, identity/single-tenant, tag, audit,
+attachment`) · `catalog:typecheck` · `catalog:lint` · `format:check`. Zero drift from the wave-3
+baselines. Tree clean; `catalog:check` cleans up its own `.catalog-stage`.
+
+**What T42 did, against § 0.9:**
+
+- The five `affects` corrected `>=1.0.0 <2.0.0` → `>=1.0.0 <2.0.1` at
+  `docs/advisories/ADV-20260822-0{1..5}.md:5`, each justified in its own `## Contexto`.
+- **`-04` was missing from `Touches`** — neither the task body (`:1419`) nor the Wave Plan row
+  (`:360`) lists it, while Done-when 3 and § 0.9 both say *five*. The orchestrator ruled it in
+  scope rather than let the worker stall on a plan defect. `-04` (T20) and `-02` (T34) were
+  re-read before writing; nothing clobbered.
+- The five `## [2.0.1]` CHANGELOG sections gained the real reason; T42's prettier bullet kept
+  verbatim. `identity/single-tenant` phrased so it does not contradict its own `Sem advisory.`
+- The five entries bumped `2.0.1` → `2.0.2`, each with a new `## [2.0.2]` section. **Not in the
+  original plan** — see Finding 1.
+- **`affects` deliberately stays `<2.0.1` and does not follow the bump.** The bump is what
+  restores `2.0.1` to a single file set, so `2.0.1` stays unambiguous and outside the affected
+  population. § 0.9's *"if T42 re-bumps, the upper bound follows the new version"* assumed a
+  re-bump **because `2.0.1` was itself ambiguous**; it never was.
+
+**FINDING 1 — § 0.9 contradicted itself, and only the gate caught it.** § 0.9 stated the bump rule
+*"is satisfied at HEAD and will remain satisfied whatever T42 does"*, measured from
+`git diff --name-only v2.3.0..HEAD -- catalog/` being empty. That held only for a T42 that touched
+nothing under `catalog/` — while the same section instructed T42 to edit five
+`catalog/<entry>/CHANGELOG.md`, which live **inside** the directories the rule watches. The edits
+moved all five entries, `entryChangedWithoutBump` fired, and the first Build gate returned **6/8**
+(`catalog:lint` 1, `catalog:check` 7). Both halves of § 0.9 were written from measurement; the
+interaction between them was not. The owner chose to bump rather than weaken the rule.
+
+**FINDING 2 — REL-04 is blind inside a pre-commit hook. This is a latent trap for everyone, not a
+T42 artefact, and it needs its own task.** `lefthook-local.yml` runs `catalog-lint` on `pre-commit`
+for glob `{catalog/**,docs/advisories/**,docs/dev/template-changelog.md}`.
+`entryChangedWithoutBump` reads **`HEAD`** (`release-preflight.mjs:66,80`) — correct from CI and
+from `release-preflight`, **wrong** in a pre-commit hook, where `HEAD` is the *parent* and the
+staged fix is invisible. So a commit that edits an entry's `CHANGELOG.md` without moving its
+version leaves the repo in a state where the **next** commit staging `catalog/**` cannot pass —
+and the commit that repairs it is precisely the one blocked. `51daeb3` created that state; the
+bump could not be committed on top of it. **Escaped without a bypass:** `git reset --soft df8233c`
+put `HEAD` on a parent where `catalog/` is clean against `v2.3.0`, so `git diff --quiet` exits 0,
+the rule returns `false` at `:69`, and the hook **ran and passed on its own merits** — no
+`--no-verify`, no edit under `scripts/platform/**`. A session that had already pushed would have
+had no clean exit. Fix belongs beside T33's 7 tests in
+`scripts/platform/__tests__/entry-bump-lint.test.mjs`, which pin the `HEAD` semantics — **do not
+fold it into another wave.**
+
+**Next:** wave 5 (C11 = T43, exclusive — BRAND-04 harness taxonomy; it edits the rules this
+workflow runs under).

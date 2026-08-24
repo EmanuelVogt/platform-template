@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest"
 
-import { ROUTES } from "@/shared/config/routes"
+import { registerProtectedRoute, ROUTES } from "@/shared/config/routes"
 
 import {
   forgetLastLocation,
@@ -25,6 +25,19 @@ describe("last-location", () => {
     forgetLastLocation("/entrar")
     expect(readLastLocation()).toBe(ROUTES.INICIO)
     forgetLastLocation(ROUTES.INICIO)
+    expect(readLastLocation()).toBeNull()
+  })
+
+  it("persiste e lê uma rota de produto registrada com registerProtectedRoute", () => {
+    registerProtectedRoute("/produto/relatorios")
+    persistLastLocation("/produto/relatorios")
+    expect(readLastLocation()).toBe("/produto/relatorios")
+  })
+
+  it("forgetLastLocation também remove uma rota de produto registrada", () => {
+    registerProtectedRoute("/produto/relatorios")
+    persistLastLocation("/produto/relatorios")
+    forgetLastLocation("/produto/relatorios")
     expect(readLastLocation()).toBeNull()
   })
 })

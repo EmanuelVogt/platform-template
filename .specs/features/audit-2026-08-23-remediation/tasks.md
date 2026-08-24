@@ -116,6 +116,82 @@ at `:37` (not `:41`). T41 works from the disk, not from those numbers.
 allowlist of *deletions*, so leaving the key out of it is exactly what ships it to the child. C7
 therefore never touches `copier.yml`; C9 owns it.
 
+### 0.6 The AD-019 blocker on T39/T40 — adjudicated mid-wave (2026-08-24)
+
+C8 stopped at T39 with its work code-complete, green and staged: the `commit-msg` hook refused
+the commit with `advisory obrigatório ausente para: attachment, audit, identity/single-tenant,
+notification, tag`. The handoff framed two remedies — pull T42 forward, or add an advisory task.
+**Both are wrong, and the hook's source says why.**
+
+**The hook, read at `scripts/platform/advisory-required.mjs`:**
+
+| Line | Fact |
+| --- | --- |
+| `:11-12` | `CODE_PATH_RE` = `^catalog\/((?:[^/]+\/)??[^/]+)\/(api\|web\|migrations\|parity)\/`. Only code under those four dirs trips it — `catalog/*/module.json` and `CHANGELOG.md` do **not** |
+| `:25-42` | Every touched entry must appear in `coveredModules`, built from the `module` frontmatter of the advisories **staged in this same commit** |
+| `:61-89` | Staged advisories are read with `git show :<file>` — the **index**. An advisory sitting on disk, or landed in an earlier commit, is invisible to the check |
+| `:14` | The only opt-out is the trailer `/^Advisory: none — .+$/m` |
+| `docs/advisories/README.md:43-45` | Documents the rule as watching `catalog/**` paths; `module: kernel` advisories are never demanded by it |
+
+**Why pulling T42 forward cannot work.** T42 stages `module.json`, `CHANGELOG.md` and four
+`ADV-20260822-0*` files — no `catalog/**/api/**` path, so T42's own commit never trips the hook,
+and because the check reads the **index of the commit being made** (`:61-89`), a T42 commit that
+landed *earlier* covers nothing for T39. There is no ordering of the current plan that unblocks
+T39, which is what C8 reported. Pulling T42 forward buys exactly nothing.
+
+**Why a new advisory would be a false advisory.** `kind` is closed to `bug | security | breaking`
+(`docs/advisories/README.md:14`). T39 is a refactor whose own AC is *"every shipped string is
+byte-identical at the `pt-BR` default"*; T40's is *"no behaviour change — the contract's shape is
+untouched"*. There is no defect, so there is nothing for `detect` to probe, nothing for `fix` to
+link and no `parity` spec to name — three required fields with no honest value. Worse, the file
+would be **immutable in the child** (`README.md:1-6`) and would fire in every child's session
+start through `.claude/hooks/pending-advisories.mjs`, demanding a fix that does not exist. An
+advisory channel that cries wolf stops being read.
+
+**Ruling: T39 and T40 commit with the hook's own documented opt-out**, `Advisory: none — <reason>`,
+the reason stating that strings are byte-identical at the `pt-BR` default. This is not a bypass —
+a bypass is `--no-verify`, and that stays forbidden. It is the branch the hook implements at `:14`
+and the repo already uses for exactly this class of change:
+
+- `06f35fb style(catalog): format the entries with the repaired prettier config` → `Advisory: none — mechanical formatting, no behaviour change`
+- `abd2caf docs(notification): stop citing a stylesheet that does not exist` → `Advisory: none — comment only, no behaviour change`
+- `c9803f8 chore(catalog): bump the five entries the format pass rewrote` → same trailer
+
+**T42 is unchanged and still owns the ledger.** It keeps its wave-4 exclusive slot, and delivery of
+T39/T40 to children rides its five version bumps and CHANGELOG entries — the catalog's normal
+channel. The advisory channel stays reserved for defects, which is the only thing that makes it
+worth a child's attention.
+
+### 0.7 T40s real sites, verified on disk at HEAD `dfd9076` (the plans citations are wrong)
+
+T40 inherited four bad coordinates. A worker copying them verbatim would have edited nothing and
+reported "not mine" — the silent failure wave 2 earned its dispatch rules on. Corrected here.
+
+| Plan said | On disk | Effect |
+| --- | --- | --- |
+| `Touches` names `.../use-cases/update-user.use-case.ts` | the file is `.../use-cases/**update-user/**update-user.use-case.ts` (nested dir) | **path corrected in T40 and in C8s union above** — the old path matches nothing |
+| `user.repository.ts:138,142` hold "motor de agendamento" twice | `:138` and `:142` carry no such text; the two real hits are **`:161` and `:168`** | Done-when bullet 1 retargeted |
+| `Where`: `identity.contract.ts:44,142,179,196` | `:44` and `:142` are right (both comments); **`:179` is `name,`**, no hit; `:196` is the `updateUserSchema` opener — the real hits near it are **`:205`/`:206`** | `Where` is indicative only; work from this table |
+
+**The finding that actually scopes T40: only ONE vocabulary-bearing identifier exists, and it is
+contract-shaped.** `schedulingAreaIds` appears in three exported Zod schemas in
+`identity.contract.ts` — `userListItemSchema:143`, `createUserSchema:189`, `updateUserSchema:206` —
+each flowing into `openapi.json`. Load-bearing alongside it: the port method
+`user.repository.ts:116` `replaceSchedulingAreas(`, and `ResolvedUserAccess.schedulingAreaIds`
+(`access-policy.ts:50,89`). T40s own AC is *"no behaviour change — the contracts shape is
+untouched"*, so **none of these may be renamed**. That is not a limitation to work around: T70
+(IDENT-01, `v3.0.0`) deletes these fields outright, and the release boundary separating them is by
+construction, as T40s own note says.
+
+**T40 is therefore comment/JSDoc rewording ONLY**, at exactly these sites:
+`identity.contract.ts:44,142,188,205` · `user.repository.ts:18,115,150,154,161,168` ·
+`update-user/update-user.use-case.ts:119,123,124,125` · `access-policy.ts:99,134`.
+Zero runtime effect, zero contract effect, zero deletions. Any diff touching an identifier is out
+of scope — **stop and report instead**.
+
+Verified with the same sweep: none of the four files imports another catalog entry (RULE C holds);
+every import resolves to `shared/kernel/**` or within `catalog/identity/single-tenant/`.
+
 ---
 
 ## Test Coverage Matrix
@@ -185,7 +261,7 @@ wave, and the major's waves start only after the minor's Verifier passes and the
 | 2 | C5 | T23 → T24 → T25 → T26 → T27 | `apps/web/index.html`, `apps/web/public/`, `apps/web/nginx.conf`, `apps/web/src/app/router/shell.tsx`, `apps/web/src/main.tsx`, `apps/web/src/app/providers/app-providers.tsx`, `apps/web/src/shared/config/routes.ts`, `apps/web/src/shared/lib/last-location.ts`, `apps/web/src/shared/lib/auth-redirect.ts`, `apps/web/src/app/config/zod-locale.ts`, `apps/web/src/app/router/route-pending.tsx`, `apps/web/src/pages/not-found/ui/not-found-page.tsx`, `apps/web/src/pages/error/ui/error-page.tsx`, `apps/web/src/app/router/shell.test.tsx`, `apps/web/src/shared/config/routes.test.ts`, `apps/web/src/shared/lib/last-location.test.ts`, `catalog/identity/single-tenant/README.md` | web locale + route/guard seams · gate: **full-unit** (`apps/web/src/shared/**` is kernel surface) |
 | 2 | C6 | T28 → T29 → T30 → T31 → T32 | `apps/api/src/shared/kernel/errors/problem-details.filter.ts`, `apps/api/src/shared/kernel/errors/problem-details.filter.spec.ts`, `apps/api/src/shared/kernel/errors/domain.error.ts`, `apps/api/src/shared/kernel/i18n/`, `apps/api/src/main.ts`, `apps/api/src/bootstrap.product.ts`, `apps/api/src/shared/kernel/context/request-context.ts`, `apps/api/src/shared/kernel/context/request-context.spec.ts`, `apps/api/src/shared/kernel/context/request-context.middleware.ts`, `apps/api/src/shared/infra/database/application-pool.int-spec.ts`, `docs/dev/template.md`, `apps/api/test/bootstrap-product.e2e-spec.ts` | API kernel locale + boot/tenant seams · gate: **full-unit** (kernel) |
 | 3 | C7 | T33 → T34 → T35 → T36 | `scripts/platform/lib/lint.mjs`, `scripts/platform/catalog-lint.mjs`, `scripts/platform/release-preflight.mjs`, `docs/advisories/ADV-20260822-02.md`, `.github/workflows/ci.yml`, `package.json`, `docs/arch/back.md`, `scripts/platform/__tests__/entry-bump-lint.test.mjs`, `scripts/platform/__tests__/advisory-path-scope.test.mjs`, `scripts/platform/__tests__/contract-check-ci.test.mjs` | catalog version gate + contract drift gate · gate: scoped (§ 0.5) |
-| 3 | C8 | T37 → T38 → T39 → T40 | `docs/code-quality.md`, `docs/agents/communication.md`, `docs/agents/issue-tracker.md.jinja`, `AGENTS.md.jinja`, `docs/arch/front.md`, `docs/adr/README.md`, `docs/advisories/README.md`, `docs/test/testing.md`, `catalog/identity/single-tenant/api/api/contracts/identity.contract.ts`, `catalog/identity/single-tenant/api/application/access-policy.ts`, `catalog/identity/single-tenant/api/domain/ports/user.repository.ts`, `catalog/identity/single-tenant/api/application/use-cases/update-user.use-case.ts`, `catalog/identity/single-tenant/api/domain/errors.ts`, `catalog/notification/api/application/templates/base-template-sources.ts`, `catalog/notification/api/application/catalog/notification-catalog.ts`, `catalog/notification/api/infrastructure/mailer/templates/layout.hbs`, `catalog/audit/api/application/services/activity-area-resolver.ts`, `catalog/tag/api/domain/errors.ts`, `catalog/attachment/api/domain/errors.ts` | locale single source + per-entry message tables · gate: **full-unit** (catalog entries) |
+| 3 | C8 | T37 → T38 → T39 → T40 | `docs/code-quality.md`, `docs/agents/communication.md`, `docs/agents/issue-tracker.md.jinja`, `AGENTS.md.jinja`, `docs/arch/front.md`, `docs/adr/README.md`, `docs/advisories/README.md`, `docs/test/testing.md`, `catalog/identity/single-tenant/api/api/contracts/identity.contract.ts`, `catalog/identity/single-tenant/api/application/access-policy.ts`, `catalog/identity/single-tenant/api/domain/ports/user.repository.ts`, `catalog/identity/single-tenant/api/application/use-cases/update-user/update-user.use-case.ts`, `catalog/identity/single-tenant/api/domain/errors.ts`, `catalog/notification/api/application/templates/base-template-sources.ts`, `catalog/notification/api/application/catalog/notification-catalog.ts`, `catalog/notification/api/infrastructure/mailer/templates/layout.hbs`, `catalog/audit/api/application/services/activity-area-resolver.ts`, `catalog/tag/api/domain/errors.ts`, `catalog/attachment/api/domain/errors.ts` | locale single source + per-entry message tables · gate: **full-unit** (catalog entries) |
 | 3 | C9 | T41 | `copier.yml`, `.github/workflows/feedback-triage.yml`, `scripts/platform/__tests__/copier-questions.test.mjs` | `copier.yml` wiring task — one owner for a file four requirements edit · gate: scoped |
 | 4 (exclusive) | C10 | T42 | `catalog/identity/single-tenant/module.json`, `catalog/attachment/module.json`, `catalog/audit/module.json`, `catalog/notification/module.json`, `catalog/tag/module.json`, `catalog/identity/single-tenant/CHANGELOG.md`, `catalog/attachment/CHANGELOG.md`, `catalog/audit/CHANGELOG.md`, `catalog/notification/CHANGELOG.md`, `catalog/tag/CHANGELOG.md`, `docs/advisories/ADV-20260822-01.md`, `docs/advisories/ADV-20260822-02.md`, `docs/advisories/ADV-20260822-03.md`, `docs/advisories/ADV-20260822-05.md` | five entry bumps + `affects` corrections — alone · gate: full-unit |
 | 5 (exclusive) | C11 | T43 | `.agents/skills/tlc-spec-driven/SKILL.md`, `.agents/skills/tlc-spec-driven/references/validate.md`, `.agents/skills/tlc-spec-driven/references/sub-agents.md`, `.agents/skills/tlc-spec-driven/references/cards/orchestrator.md`, `.agents/skills/repo-discovery/SKILL.md`, `.claude/agents/spec-verifier.md`, `.claude/hooks/subagent-model-required.mjs`, `docs/agents/harness.md`, `scripts/platform/__tests__/harness-taxonomy.test.mjs` | BRAND-04 — **edits the rules this workflow runs under**; alone, last · gate: scoped |
@@ -196,7 +272,7 @@ wave, and the major's waves start only after the minor's Verifier passes and the
 | 9 (exclusive) | C16 | T57 | `openapi.json`, `packages/api-client/src/` | contract regen after the cookie rename — alone · gate: full-unit |
 | 10 | C17 | T58 → T59 → T60 → T61 → T62 → T63 | `catalog/professional/` | new `professional` entry (AD-035) · gate: **full-unit** |
 | 10 | C18 | T64 → T65 → T66 | `catalog/audit/api/domain/base-audit-registrations.ts`, `catalog/audit/api/domain/audit-coverage.ts`, `catalog/audit/api/testing/reattach-identity-tables.ts`, `catalog/audit/api/__e2e__/audit.e2e-spec.ts`, `docs/advisories/ADV-20260824-01.md`, `docs/advisories/ADV-20260824-02.md` | audit entry + the two `breaking` advisories · gate: scoped |
-| 11 | C19 | T67 → T68 → T69 → T70 → T71 → T72 | `catalog/identity/single-tenant/api/domain/entities/user.entity.ts`, `catalog/identity/single-tenant/api/domain/ports/user.repository.ts`, `catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-user.repository.ts`, `catalog/identity/single-tenant/api/identity.module.ts`, `catalog/identity/single-tenant/api/infrastructure/professional/`, `catalog/identity/single-tenant/api/api/contracts/identity.contract.ts`, `catalog/identity/single-tenant/api/domain/access/access-profile.types.ts`, `catalog/identity/single-tenant/api/domain/permissions/permission.types.ts`, `catalog/identity/single-tenant/api/infrastructure/tables/user.table.ts`, `catalog/identity/single-tenant/api/testing/seed-user.ts`, `catalog/identity/single-tenant/api/application/use-cases/create-user/`, `catalog/identity/single-tenant/api/application/use-cases/update-user.use-case.ts`, `catalog/identity/single-tenant/module.json`, `catalog/identity/single-tenant/migrations/custom/04_audit_attach_hook.sql`, `apps/api/test/setup/test-db.ts` | identity slimming · gate: **full-unit** |
+| 11 | C19 | T67 → T68 → T69 → T70 → T71 → T72 | `catalog/identity/single-tenant/api/domain/entities/user.entity.ts`, `catalog/identity/single-tenant/api/domain/ports/user.repository.ts`, `catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-user.repository.ts`, `catalog/identity/single-tenant/api/identity.module.ts`, `catalog/identity/single-tenant/api/infrastructure/professional/`, `catalog/identity/single-tenant/api/api/contracts/identity.contract.ts`, `catalog/identity/single-tenant/api/domain/access/access-profile.types.ts`, `catalog/identity/single-tenant/api/domain/permissions/permission.types.ts`, `catalog/identity/single-tenant/api/infrastructure/tables/user.table.ts`, `catalog/identity/single-tenant/api/testing/seed-user.ts`, `catalog/identity/single-tenant/api/application/use-cases/create-user/`, `catalog/identity/single-tenant/api/application/use-cases/update-user/update-user.use-case.ts`, `catalog/identity/single-tenant/module.json`, `catalog/identity/single-tenant/migrations/custom/04_audit_attach_hook.sql`, `apps/api/test/setup/test-db.ts` | identity slimming · gate: **full-unit** |
 | 11 | C20 | T73 → T74 → T75 | `scripts/platform/migrations/v3.0.0.mjs`, `scripts/platform/lib/commands/template.mjs`, `scripts/platform/__tests__/migration-v3.test.mjs` | executable child migration (AD-034) · gate: scoped |
 | 12 (exclusive) | C21 | T76 | `openapi.json`, `packages/api-client/src/`, `catalog/identity/single-tenant/parity/`, `catalog/professional/parity/` | contract regen + parity re-snapshot — alone · gate: full-unit |
 | 13 | C22 | T77 → T78 | `catalog/professional/README.md`, `catalog/professional/CHANGELOG.md`, `.specs/STATE.md`, `scripts/platform/__tests__/catalog-check-professional.test.mjs` | IDENT-02 proof + AD-035 record · gate: scoped |
@@ -1168,7 +1244,7 @@ steps** (AD-034). Anything that would force a child decision belongs to `v3.0.0`
 
 **What**: Rename the "Agendamentos"/"Recepção" vocabulary in identity's contract, policy, port and use case, and in the fixture names, without changing behaviour.
 **Where**: `catalog/identity/single-tenant/api/api/contracts/identity.contract.ts:44,142,179,196`
-**Touches**: `catalog/identity/single-tenant/api/api/contracts/identity.contract.ts`, `catalog/identity/single-tenant/api/application/access-policy.ts`, `catalog/identity/single-tenant/api/domain/ports/user.repository.ts`, `catalog/identity/single-tenant/api/application/use-cases/update-user.use-case.ts`
+**Touches**: `catalog/identity/single-tenant/api/api/contracts/identity.contract.ts`, `catalog/identity/single-tenant/api/application/access-policy.ts`, `catalog/identity/single-tenant/api/domain/ports/user.repository.ts`, `catalog/identity/single-tenant/api/application/use-cases/update-user/update-user.use-case.ts`
 **Depends on**: T39
 **Exclusive**: no
 **Reuses**: the exclusion list from T16 so `preservar`/`reservado` are not swept
@@ -1809,7 +1885,7 @@ Each ships its half of the idempotent `scripts/platform/migrations/v3.0.0.mjs` (
 
 **What**: The decisive edit — the fields move **out** of `User`, so identity stops calling into the slice and the identity/professional cycle never forms.
 **Where**: `catalog/identity/single-tenant/api/domain/entities/user.entity.ts`
-**Touches**: `catalog/identity/single-tenant/api/domain/entities/user.entity.ts`, `catalog/identity/single-tenant/api/application/use-cases/create-user/`, `catalog/identity/single-tenant/api/application/use-cases/update-user.use-case.ts`
+**Touches**: `catalog/identity/single-tenant/api/domain/entities/user.entity.ts`, `catalog/identity/single-tenant/api/application/use-cases/create-user/`, `catalog/identity/single-tenant/api/application/use-cases/update-user/update-user.use-case.ts`
 **Depends on**: T63, T66
 **Exclusive**: no
 **Reuses**: the ledger's site list — `:13,29,40,77,86,99,110,119,137,145,150,213,220,229-236,325-329`, including `activate()`, `updateOwnProfile()`, `assertValidBirthDate()`

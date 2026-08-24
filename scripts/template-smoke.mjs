@@ -23,10 +23,25 @@ import {
 const EXPECTED_SCHEMAS = ["_kernel", "drizzle"]
 const ALLOWED_EXTRA_SCHEMAS = ["public"]
 const HEALTH_PORT = "3222"
+const STDERR_PREVIEW_LINES = 10
 
 let activeCleanup = null
 
 onInterrupt(() => activeCleanup)
+
+// Um passo que morre imprimindo só "(código N)" é um passo mudo: foi assim que
+// `pnpm platform list` falhou sem explicação até d06a1a3. O idioma já existia
+// neste arquivo para o stderr do servidor em checkHealth; agora vale para todo
+// call site de run(). O guard em __tests__/template-smoke-stderr.test.mjs
+// quebra se um passo novo voltar a descartar o stderr.
+export function formatStderr(stderr, source = "child") {
+  const preview = (stderr ?? "")
+    .trim()
+    .split("\n")
+    .slice(0, STDERR_PREVIEW_LINES)
+    .join("\n")
+  return preview ? ` — stderr do ${source}:\n${preview}` : ""
+}
 
 export function parseArgs(argv) {
   return {
@@ -69,7 +84,7 @@ function checkPlatformCli({ childDir, run, log }) {
   const statusResult = run("pnpm", ["platform", "status"], { cwd: childDir })
   if (statusResult.status !== 0) {
     log(
-      `template:smoke — "pnpm platform status" falhou no child (código ${statusResult.status})`
+      `template:smoke — "pnpm platform status" falhou no child (código ${statusResult.status})${formatStderr(statusResult.stderr)}`
     )
     return EXIT_CODES.TEST_FAILURE
   }
@@ -78,7 +93,7 @@ function checkPlatformCli({ childDir, run, log }) {
   })
   if (listResult.status !== 0) {
     log(
-      `template:smoke — "pnpm platform module list" falhou no child (código ${listResult.status})`
+      `template:smoke — "pnpm platform module list" falhou no child (código ${listResult.status})${formatStderr(listResult.stderr)}`
     )
     return EXIT_CODES.TEST_FAILURE
   }
@@ -119,7 +134,7 @@ function checkFormatCheck({ childDir, run, log }) {
   const result = run("pnpm", ["format:check"], { cwd: childDir })
   if (result.status !== 0) {
     log(
-      `template:smoke — "pnpm format:check" falhou no child (código ${result.status})`
+      `template:smoke — "pnpm format:check" falhou no child (código ${result.status})${formatStderr(result.stderr)}`
     )
     return EXIT_CODES.TEST_FAILURE
   }
@@ -230,6 +245,7 @@ function startContainer({ run, image, args = [] }) {
   return {
     containerId: result.status === 0 ? result.stdout.trim() : null,
     status: result.status,
+    stderr: result.stderr ?? "",
   }
 }
 
@@ -239,18 +255,21 @@ function getMappedPort({ run, containerId, containerPort }) {
     containerId,
     `${containerPort}/tcp`,
   ])
-  return portResult.stdout.trim().split("\n")[0]?.split(":").pop() || null
+  return {
+    port: portResult.stdout.trim().split("\n")[0]?.split(":").pop() || null,
+    stderr: portResult.stderr ?? "",
+  }
 }
 
 async function startPostgres({ run, sleep, log }) {
-  const { containerId, status } = startContainer({
+  const { containerId, status, stderr } = startContainer({
     run,
     image: "postgres:16-alpine",
     args: ["-e", "POSTGRES_PASSWORD=postgres", "-e", "POSTGRES_DB=smoke"],
   })
   if (status !== 0) {
     log(
-      `template:smoke — não consegui subir um Postgres efêmero via docker (código ${status}); verifique se o daemon está rodando`
+      `template:smoke — não consegui subir um Postgres efêmero via docker (código ${status}); verifique se o daemon está rodando${formatStderr(stderr, "docker")}`
     )
     return null
   }
@@ -262,10 +281,14 @@ async function startPostgres({ run, sleep, log }) {
     run("docker", ["stop", containerId])
     return null
   }
-  const mappedPort = getMappedPort({ run, containerId, containerPort: 5432 })
+  const { port: mappedPort, stderr: portStderr } = getMappedPort({
+    run,
+    containerId,
+    containerPort: 5432,
+  })
   if (!mappedPort) {
     log(
-      "template:smoke — não consegui descobrir a porta publicada do Postgres efêmero"
+      `template:smoke — não consegui descobrir a porta publicada do Postgres efêmero${formatStderr(portStderr, "docker")}`
     )
     run("docker", ["stop", containerId])
     return null
@@ -277,13 +300,13 @@ async function startPostgres({ run, sleep, log }) {
 }
 
 async function startRedis({ run, sleep, log }) {
-  const { containerId, status } = startContainer({
+  const { containerId, status, stderr } = startContainer({
     run,
     image: "redis:7-alpine",
   })
   if (status !== 0) {
     log(
-      `template:smoke — não consegui subir um Redis efêmero via docker (código ${status}); verifique se o daemon está rodando`
+      `template:smoke — não consegui subir um Redis efêmero via docker (código ${status}); verifique se o daemon está rodando${formatStderr(stderr, "docker")}`
     )
     return null
   }
@@ -295,10 +318,14 @@ async function startRedis({ run, sleep, log }) {
     run("docker", ["stop", containerId])
     return null
   }
-  const mappedPort = getMappedPort({ run, containerId, containerPort: 6379 })
+  const { port: mappedPort, stderr: portStderr } = getMappedPort({
+    run,
+    containerId,
+    containerPort: 6379,
+  })
   if (!mappedPort) {
     log(
-      "template:smoke — não consegui descobrir a porta publicada do Redis efêmero"
+      `template:smoke — não consegui descobrir a porta publicada do Redis efêmero${formatStderr(portStderr, "docker")}`
     )
     run("docker", ["stop", containerId])
     return null
@@ -319,7 +346,7 @@ function checkMigrateAndSchema({
   })
   if (migrateResult.status !== 0) {
     log(
-      `template:smoke — "pnpm --filter api run db:migrate" falhou no child (código ${migrateResult.status})`
+      `template:smoke — "pnpm --filter api run db:migrate" falhou no child (código ${migrateResult.status})${formatStderr(migrateResult.stderr)}`
     )
     return EXIT_CODES.MIGRATION_FAILURE
   }
@@ -337,7 +364,7 @@ function checkMigrateAndSchema({
   ])
   if (schemaResult.status !== 0) {
     log(
-      `template:smoke — não consegui consultar os schemas do Postgres efêmero (código ${schemaResult.status})`
+      `template:smoke — não consegui consultar os schemas do Postgres efêmero (código ${schemaResult.status})${formatStderr(schemaResult.stderr, "docker")}`
     )
     return EXIT_CODES.CATALOG_UNREACHABLE
   }
@@ -367,7 +394,7 @@ async function checkHealth({
   })
   if (buildResult.status !== 0) {
     log(
-      `template:smoke — "pnpm --filter api run build" falhou no child (código ${buildResult.status})`
+      `template:smoke — "pnpm --filter api run build" falhou no child (código ${buildResult.status})${formatStderr(buildResult.stderr)}`
     )
     return EXIT_CODES.TEST_FAILURE
   }
@@ -395,8 +422,7 @@ async function checkHealth({
       sleep,
     })
     if (!healthy) {
-      const firstLines = stderrOutput.trim().split("\n").slice(0, 10).join("\n")
-      const detail = firstLines ? ` — stderr do child:\n${firstLines}` : ""
+      const detail = formatStderr(stderrOutput)
       log(
         `template:smoke — GET /health não respondeu 200 a tempo no child${detail}`
       )
@@ -424,7 +450,7 @@ function checkRuleC({ childDir, run, log }) {
   )
   if (result.status !== 0) {
     log(
-      `template:smoke — RULE C (module-boundaries.spec.ts) falhou no child (código ${result.status})`
+      `template:smoke — RULE C (module-boundaries.spec.ts) falhou no child (código ${result.status})${formatStderr(result.stderr)}`
     )
     return EXIT_CODES.TEST_FAILURE
   }
@@ -467,7 +493,7 @@ export async function runTemplateSmoke({
     })
     if (renderResult.status !== 0) {
       log(
-        `template:smoke — falha ao renderizar o child (copier saiu com código ${renderResult.status})`
+        `template:smoke — falha ao renderizar o child (copier saiu com código ${renderResult.status})${formatStderr(renderResult.stderr, "copier")}`
       )
       return EXIT_CODES.CATALOG_UNREACHABLE
     }
@@ -476,7 +502,7 @@ export async function runTemplateSmoke({
     const installResult = installChildFn({ cwd: childDir, run })
     if (installResult.status !== 0) {
       log(
-        `template:smoke — falha ao instalar dependências do child (pnpm install saiu com código ${installResult.status})`
+        `template:smoke — falha ao instalar dependências do child (pnpm install saiu com código ${installResult.status})${formatStderr(installResult.stderr)}`
       )
       return EXIT_CODES.CATALOG_UNREACHABLE
     }
@@ -505,7 +531,7 @@ export async function runTemplateSmoke({
     const gate = runGates(run, { cwd: childDir })
     if (!gate.ok) {
       log(
-        `template:smoke — "${gate.step}" falhou no child (código ${gate.result.status})`
+        `template:smoke — "${gate.step}" falhou no child (código ${gate.result.status})${formatStderr(gate.result.stderr)}`
       )
       return EXIT_CODES.TEST_FAILURE
     }

@@ -4,12 +4,25 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 [semver](https://semver.org/lang/pt-BR/). Toda versão que leva código lista os advisories
 (`docs/advisories/ADV-*.md`) que carrega.
 
+## [2.0.2]
+
+### Changed
+
+- Sem mudança de código. Corrige o `affects` de `ADV-20260822-01` para
+  `>=1.0.0 <2.0.1` e registra por que `2.0.1` é o primeiro endereço inequívoco.
+  A versão sobe porque REL-04 exige que qualquer mudança no diretório da entrada
+  desde a tag anterior mova a versão — inclusive uma mudança apenas de changelog.
+
 ## [2.0.1]
 
 ### Changed
 
 - Reformatação mecânica pelo `prettier` (config reparada em `prettier-format-gate`). Sem
   mudança de comportamento, versão de dependência ou conteúdo do manifesto. Sem advisory.
+- Não carrega remediação nova, mas passa a ser o limite superior do `affects` de
+  `ADV-20260822-01` (CAT-01): antes dela, `2.0.0` desta entrada endereçava duas árvores de
+  código diferentes — uma sob a tag do template `v2.0.0`, outra sob `v2.1.0` (183 arquivos
+  divergem entre elas em `catalog/`). `2.0.1` é a primeira versão com endereço inequívoco.
 
 ## [2.0.0]
 

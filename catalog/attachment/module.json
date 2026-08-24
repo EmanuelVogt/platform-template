@@ -1,6 +1,6 @@
 {
   "name": "attachment",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Upload, download e log de acesso de anexos, com perfis de upload genéricos (avatar, access-link-avatar, document, image, multi).",
   "kernelRange": ">=2.0.0 <3.0.0",
   "dependsOn": [

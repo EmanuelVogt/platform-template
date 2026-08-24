@@ -1,7 +1,13 @@
+import { spawnSync } from "node:child_process"
+import { appendFileSync } from "node:fs"
+import { EXIT_CODES } from "./exit-codes.mjs"
+import { isMain } from "./is-main.mjs"
+
 // Mesmo padrão numérico de `STABLE_TAG` em template-version.mjs — a versão
 // aceita aqui precisa ser exatamente a que aquela função aceitaria como tag.
 const MARKER_SUBJECT = /^chore\(release\): v(\d+)\.(\d+)\.(\d+)$/
 const MARKER_PREFIX = "chore(release):"
+const ZERO_SHA = "0000000000000000000000000000000000000000"
 
 export function parseMarkerSubject(subject) {
   const match = MARKER_SUBJECT.exec(subject)
@@ -59,4 +65,74 @@ export function decideRelease({ headSubject, subjects, changedFiles }) {
   }
 
   return { action: "release", version: parsedHead.version }
+}
+
+function defaultExec(command, args, options = {}) {
+  const result = spawnSync(command, args, { encoding: "utf8", ...options })
+  return { status: result.status ?? 1, stdout: result.stdout ?? "" }
+}
+
+function subjectsInRange({ exec, repoRoot, range }) {
+  const result = exec("git", ["log", "--format=%s", range], { cwd: repoRoot })
+  if (result.status !== 0) return undefined
+  return result.stdout.split("\n").filter(Boolean)
+}
+
+// `before` some (primeiro push de um branch) ou mentiroso (force-push) —
+// nesses casos o range direto não é resolvível; cai para HEAD~1..HEAD, que
+// nunca falha o release por um range que não dá pra calcular (MARK-08 risk).
+function resolveSubjects({ exec, repoRoot, before, sha }) {
+  if (before !== ZERO_SHA) {
+    const primary = subjectsInRange({
+      exec,
+      repoRoot,
+      range: `${before}..${sha}`,
+    })
+    if (primary !== undefined) return primary
+  }
+  return subjectsInRange({ exec, repoRoot, range: "HEAD~1..HEAD" }) ?? []
+}
+
+export function decideFromGit({
+  exec = defaultExec,
+  repoRoot = process.cwd(),
+  before = process.env.MARKER_BEFORE_SHA ?? ZERO_SHA,
+  sha = process.env.GITHUB_SHA ?? "HEAD",
+} = {}) {
+  const headSubject = exec("git", ["log", "-1", "--format=%s"], {
+    cwd: repoRoot,
+  }).stdout.trim()
+  const subjects = resolveSubjects({ exec, repoRoot, before, sha })
+  const changedFiles = exec(
+    "git",
+    ["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"],
+    { cwd: repoRoot }
+  )
+    .stdout.split("\n")
+    .filter(Boolean)
+  return decideRelease({ headSubject, subjects, changedFiles })
+}
+
+export function writeGithubOutput(
+  decision,
+  outputPath = process.env.GITHUB_OUTPUT
+) {
+  if (!outputPath) return
+  const version = decision.action === "release" ? decision.version : ""
+  appendFileSync(
+    outputPath,
+    `release=${decision.action === "release"}\nversion=${version}\n`
+  )
+}
+
+if (isMain(import.meta.url, process.argv[1])) {
+  if (process.argv[2] === "--decide") {
+    const decision = decideFromGit()
+    writeGithubOutput(decision)
+    if (decision.action === "fail") {
+      process.stderr.write(`release-marker — ${decision.reason}\n`)
+      process.exit(EXIT_CODES.USAGE_ERROR)
+    }
+    process.exit(EXIT_CODES.OK)
+  }
 }

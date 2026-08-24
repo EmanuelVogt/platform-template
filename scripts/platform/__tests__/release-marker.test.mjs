@@ -1,10 +1,44 @@
 import assert from "node:assert/strict"
+import { mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
 import { test } from "node:test"
 import {
+  decideFromGit,
   decideRelease,
   isMarkerSubject,
   parseMarkerSubject,
+  writeGithubOutput,
 } from "../lib/release-marker.mjs"
+
+const ZERO_SHA = "0000000000000000000000000000000000000000"
+
+// Roteia por sub-comando git; cada teste passa só as respostas que usa.
+function gitRouter({
+  headSubject = "chore(release): v2.4.0",
+  rangeCalls = {},
+  changedFiles = [],
+} = {}) {
+  return (command, args) => {
+    const joined = args.join(" ")
+    if (joined === "log -1 --format=%s") {
+      return { status: 0, stdout: `${headSubject}\n` }
+    }
+    if (joined.startsWith("log --format=%s ")) {
+      const range = joined.slice("log --format=%s ".length)
+      const response = rangeCalls[range]
+      if (!response) throw new Error(`unexpected range: ${range}`)
+      return response
+    }
+    if (joined.startsWith("diff-tree")) {
+      return {
+        status: 0,
+        stdout: changedFiles.length ? `${changedFiles.join("\n")}\n` : "",
+      }
+    }
+    throw new Error(`unexpected git call: ${command} ${joined}`)
+  }
+}
 
 test("parseMarkerSubject aceita chore(release): v2.4.0", () => {
   assert.deepEqual(parseMarkerSubject("chore(release): v2.4.0"), {
@@ -128,4 +162,92 @@ test("MARK-08: decideRelease falha quando o marcador do head altera arquivos, no
   })
   assert.equal(result.action, "fail")
   assert.match(result.reason, /2 arquivo/)
+})
+
+test("decideFromGit: action release quando o head é um marcador válido e vazio", () => {
+  const exec = gitRouter({
+    headSubject: "chore(release): v2.4.0",
+    rangeCalls: {
+      "abc..def": { status: 0, stdout: "chore(release): v2.4.0\n" },
+    },
+    changedFiles: [],
+  })
+  const decision = decideFromGit({ exec, before: "abc", sha: "def" })
+  assert.deepEqual(decision, { action: "release", version: "2.4.0" })
+})
+
+test("decideFromGit: action skip quando nenhum subject é marcador", () => {
+  const exec = gitRouter({
+    headSubject: "feat: something",
+    rangeCalls: {
+      "abc..def": { status: 0, stdout: "feat: something\n" },
+    },
+  })
+  const decision = decideFromGit({ exec, before: "abc", sha: "def" })
+  assert.deepEqual(decision, { action: "skip" })
+})
+
+test("decideFromGit: action fail quando o head é um marcador malformado", () => {
+  const exec = gitRouter({
+    headSubject: "chore(release): 2.4.0",
+    rangeCalls: {
+      "abc..def": { status: 0, stdout: "chore(release): 2.4.0\n" },
+    },
+  })
+  const decision = decideFromGit({ exec, before: "abc", sha: "def" })
+  assert.equal(decision.action, "fail")
+  assert.match(decision.reason, /chore\(release\): vX\.Y\.Z/)
+})
+
+test("decideFromGit: before all-zeros (primeiro push) cai direto para HEAD~1..HEAD", () => {
+  const exec = gitRouter({
+    headSubject: "chore(release): v2.4.0",
+    rangeCalls: {
+      "HEAD~1..HEAD": { status: 0, stdout: "chore(release): v2.4.0\n" },
+    },
+  })
+  const decision = decideFromGit({ exec, before: ZERO_SHA, sha: "def" })
+  assert.deepEqual(decision, { action: "release", version: "2.4.0" })
+})
+
+test("decideFromGit: range git log com status != 0 cai para HEAD~1..HEAD", () => {
+  const exec = gitRouter({
+    headSubject: "chore(release): v2.4.0",
+    rangeCalls: {
+      "abc..def": { status: 128, stdout: "" },
+      "HEAD~1..HEAD": { status: 0, stdout: "chore(release): v2.4.0\n" },
+    },
+  })
+  const decision = decideFromGit({ exec, before: "abc", sha: "def" })
+  assert.deepEqual(decision, { action: "release", version: "2.4.0" })
+})
+
+function withTempOutputFile(run) {
+  const dir = mkdtempSync(path.join(tmpdir(), "release-marker-output-"))
+  const outputPath = path.join(dir, "github-output")
+  try {
+    return run(outputPath)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+}
+
+test("writeGithubOutput: $GITHUB_OUTPUT ausente não lança", () => {
+  assert.doesNotThrow(() =>
+    writeGithubOutput({ action: "release", version: "2.4.0" }, undefined)
+  )
+})
+
+test("writeGithubOutput: release grava release=true e version=<x.y.z>", () => {
+  withTempOutputFile((outputPath) => {
+    writeGithubOutput({ action: "release", version: "2.4.0" }, outputPath)
+    assert.equal(readFileSync(outputPath, "utf8"), "release=true\nversion=2.4.0\n")
+  })
+})
+
+test("writeGithubOutput: skip grava release=false e version vazio", () => {
+  withTempOutputFile((outputPath) => {
+    writeGithubOutput({ action: "skip" }, outputPath)
+    assert.equal(readFileSync(outputPath, "utf8"), "release=false\nversion=\n")
+  })
 })

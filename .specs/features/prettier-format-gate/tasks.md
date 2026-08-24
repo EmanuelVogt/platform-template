@@ -10,8 +10,27 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 **Spec**: `.specs/features/prettier-format-gate/spec.md`
 **Design**: skipped (Medium scope, no architectural decision — the seam questions were resolved in the spec's Assumptions table, owner-confirmed 2026-08-23)
-**Status**: Draft
-**Blocked until**: `v2.3.0` is tagged (spec Assumptions, owner-confirmed)
+**Status**: Amended 2026-08-23 — Execute pending serialization
+
+**Blocked until**: nothing on the tag. The `v2.3.0` gate is **lifted by owner decision, 2026-08-23**:
+the feature ships *inside* `v2.3.0` instead of behind it. The spec's original rationale — "a repo-wide
+mechanical diff inside the `template-update-contract` Verifier's range would drown its audit" — is
+spent: that feature closed with Verifier PASS round 2, 33/33 ACs. The owner was shown the cost and
+reaffirmed. Consequence, accepted: `release-preflight.mjs:47-55` (`entryChangedWithoutBump`) refuses a
+release when a catalog entry's tree changed since the previous tag without a `module.json` bump, and
+T8 changes all five entry trees — so **T12 is added** to bump them. Every child will see five modules
+"behind" for a purely cosmetic change; that is the price of putting the reformat in this tag.
+
+**Dispatch precondition (not a task).** `audit-2026-08-23-remediation` is executing in this same
+checkout — 14 waves, wave 1 live as of `92b4120`. T7/T8 rewrite the whole tree, so no wave of either
+feature is safe against them, and a worktree does not help: a whole-tree mechanical reformat conflicts
+on merge with every file the sibling touched. The two MUST serialize and **this feature goes first** —
+that feature's `tasks.md:2353` records RUN-04 as `satisfied-by-sibling` and "asserts only that
+`pnpm format:check` is green at its HEAD", so its Verifier cannot pass until this one lands. Known
+file collisions with it, all in its later waves: root `package.json` (its T33–T36, wave 3), the five
+`module.json` + `CHANGELOG.md` (its T42, wave 4, exclusive), `lefthook-local.yml` (flagged at its
+`tasks.md:93`). The double bump is correct, not a conflict: `2.0.0` -> `2.0.1` here for `v2.3.0`, then
+its T42 bumps again for `v2.4.0`.
 
 ---
 
@@ -52,14 +71,14 @@ Waves run in order (barrier + Build gate between them). Clusters inside a wave r
 | 1 | C1 | T1 → T2 → T3 → T4 → T5 | `.prettierrc`, `.vscode/settings.json`, `catalog/notification/api/infrastructure/mailer/email-theme.ts`, `package.json`, `.prettierignore`, `scripts/platform/__tests__/prettier-config.test.mjs` | purge the ghost + make prettier runnable · gate: scoped |
 | 2 (exclusive) | C2 | T6 | `package.json`, `pnpm-lock.yaml` | lockfile · gate: scoped |
 | 3 (exclusive) | C3 | T7 | everything the checked set matches **outside** `catalog/**` | mechanical reformat · gate: scoped + `format:check` |
-| 4 (exclusive) | C4 | T8 | `catalog/**` | mechanical reformat, advisory trailer · gate: scoped + `format:check` |
+| 4 (exclusive) | C4 | T8 → T12 | `catalog/**`, incl. the 5 `module.json` + their 5 `CHANGELOG.md` | mechanical reformat, then the version bumps it forces · advisory trailer on both commits · gate: scoped + `format:check` + `catalog:lint` |
 | 5 | C5 | T9 → T10 → T11 | `lefthook-local.yml`, `.github/workflows/format.yml`, `copier.yml`, `scripts/platform/__tests__/copier-delivery.test.mjs`, `scripts/template-smoke.mjs`, `docs/dev/template-changelog.md`, `docs/agents/harness.md` | arm the gate, last · gate: scoped + `format:check` |
 
 ```
 Wave 1:  [C1: T1 → T2 → T3 → T4 → T5]
 Wave 2:  [C2: T6]   (exclusive)
 Wave 3:  [C3: T7]   (exclusive)
-Wave 4:  [C4: T8]   (exclusive)
+Wave 4:  [C4: T8 → T12]   (exclusive)
 Wave 5:  [C5: T9 → T10 → T11]
 ```
 
@@ -85,7 +104,12 @@ Wave 5:  [C5: T9 → T10 → T11]
 
 - [ ] `.prettierrc` keeps `endOfLine`, `semi`, `singleQuote`, `tabWidth`, `trailingComma`, `printWidth` at their current values — no formatting rule changes in this task
 - [ ] `plugins`, `tailwindStylesheet` and `tailwindFunctions` are gone
-- [ ] `npx prettier --check package.json` exits without a plugin-load or ENOENT error
+- [ ] `npx prettier --check apps/api/drizzle.config.ts` exits without a plugin-load or ENOENT error.
+      **Do not probe with `package.json`** — measured 2026-08-23, it already exits 0 at HEAD, because
+      JSON carries no Tailwind classes for the plugin to sort; it cannot discriminate fixed from broken.
+      The real fault is `ENOENT ... packages/ui/src/styles/globals.css` raised by `loadTailwindCSS` on
+      every *parsed source* file: 231 in `apps/**/*.ts`, 24 `.tsx`, 15 in `packages/**`, 571 in
+      `catalog/**`; `pnpm format:check` ends with `Error occurred when checking code style in 854 files`
 
 **Tests**: none · **Gate**: quick
 **Commit**: `fix(format): drop the tailwind plugin .prettierrc could never load`
@@ -153,7 +177,12 @@ Wave 5:  [C5: T9 → T10 → T11]
 
 - [ ] The glob covers `ts`, `tsx`, `mts`, `mjs`, `cjs`, `js`, `jsx`, `json`, `yml`, `yaml`, `css`
 - [ ] `md` is **absent** from the glob (owner-confirmed: prettier reflows prose and fights `docs-stay-lean.mjs`)
-- [ ] `.prettierignore` additionally excludes `.worktrees/`, `openapi.json` (regenerated by `pnpm contract`), `packages/api-client/generated/` and `*.jinja` (prettier infers no parser for Jinja)
+- [ ] `.prettierignore` additionally excludes `.worktrees/`, `openapi.json` (regenerated by `pnpm contract`),
+      `packages/api-client/generated/` and `*.jinja` (prettier infers no parser for Jinja)
+- [ ] `.prettierignore` also excludes **`.specs/`**. Markdown is already out of the glob, but `json` is in
+      it and `.specs/lessons.json` is machine-owned — "canonical lessons state", rendered by
+      `scripts/lessons.py`, with `LESSONS.md` marked do-not-hand-edit. Reformatting it churns a file no
+      human owns. Found 2026-08-23 by the peer session specifying `release-marker-commit`
 - [ ] `pnpm format:check` runs to completion and reports differences instead of throwing
 
 **Tests**: none · **Gate**: quick
@@ -256,6 +285,42 @@ Wave 5:  [C5: T9 → T10 → T11]
 
 ---
 
+### T12: Bump the five catalog manifests the reformat forces
+
+**What**: T8 rewrites every entry's tree, which trips `entryChangedWithoutBump`
+(`release-preflight.mjs:47-55`) and makes `v2.3.0` untaggable. Bump each entry's `module.json`
+`version` by a patch and open the matching `CHANGELOG.md` heading — `lintChangelogVersion`
+(`lib/lint.mjs:56-58`) requires a `## [<version>]` heading equal to the manifest's version, so the
+manifest alone leaves `catalog:lint` red.
+**Where**: the five manifests and their changelogs
+**Touches**: `catalog/attachment/module.json`, `catalog/audit/module.json`,
+`catalog/notification/module.json`, `catalog/tag/module.json`,
+`catalog/identity/single-tenant/module.json` (the `identity` entry has **no** top-level manifest — its
+manifest lives in the variant subdir), plus the `CHANGELOG.md` beside each of the five
+**Depends on**: T8
+**Exclusive**: **yes** — shares wave 4 with T8 only, one worker owns `catalog/**` across both
+**Reuses**: the existing `## [x.y.z]` heading shape in each entry's `CHANGELOG.md`
+**Requirement**: FMT-06
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+
+- [ ] All five go `2.0.0` -> `2.0.1` (patch: the change is whitespace, nothing else)
+- [ ] Each of the five `CHANGELOG.md` gains a `## [2.0.1]` heading whose body says the change is
+      mechanical formatting only, with no behaviour change
+- [ ] `pnpm catalog:lint` and `pnpm catalog:typecheck` pass
+- [ ] The commit carries the literal trailer `Advisory: none — mechanical formatting, no behaviour change`.
+      The regex is `/^Advisory: none — .+$/m` (`scripts/platform/advisory-required.mjs:12`) and the dash
+      is an **em dash** (U+2014) — a hyphen does not match. No file under `docs/advisories/` is needed:
+      the trailer alone satisfies the gate (`advisory-required.mjs:23-33`)
+- [ ] No `dependsOn`, `kernelRange` or any other manifest field changes — `version` only
+
+**Tests**: none · **Gate**: build
+**Commit**: `chore(catalog): bump the five entries the format pass rewrote`
+
+---
+
 ### T9: Arm the pre-commit gate (template-only)
 
 **What**: A `pre-commit` job in `lefthook-local.yml` that checks the staged files of covered extensions. `lefthook-local.yml` is already in `copier.yml` `_exclude`, so no child inherits it — which is exactly the confirmed constraint.
@@ -270,7 +335,12 @@ Wave 5:  [C5: T9 → T10 → T11]
 
 **Done when**:
 
-- [ ] Staging a deliberately unformatted file of a covered extension makes the commit fail (or the file get formatted), demonstrated once and recorded in the Execution Record
+- [ ] The job **formats and re-stages** (`prettier --write` + `git add`) rather than failing the commit.
+      The spec's AC allows either ("SHALL fail or fix it"); fix is chosen because
+      `audit-2026-08-23-remediation` is running workers in this same checkout for 13 more waves, and a
+      failing commit hook would surface to them as an error with no context. Auto-fix is invisible to them
+- [ ] Staging a deliberately unformatted file of a covered extension leaves it formatted in the commit,
+      demonstrated once and recorded in the Execution Record
 - [ ] A commit of only ignored or uncovered files is unaffected
 - [ ] The existing `catalog-lint` and `advisory-required` jobs still fire
 
@@ -307,7 +377,7 @@ Wave 5:  [C5: T9 → T10 → T11]
 
 ### T11: Record the change for the template and its children
 
-**What**: The changelog entry for the tag that carries this, plus the `docs/agents/harness.md` line if the pre-commit gate warrants one; state that a child inherits a working config and no enforcement, and how a child opts in.
+**What**: A new numbered item **inside the existing `## v2.3.0` section** (it currently ends at item 6, "No dev server left hanging"), plus the `docs/agents/harness.md` line if the pre-commit gate warrants one; state that a child inherits a working config and no enforcement, and how a child opts in.
 **Where**: `docs/dev/template-changelog.md`, `docs/agents/harness.md`
 **Touches**: `docs/dev/template-changelog.md`, `docs/agents/harness.md`
 **Depends on**: T10
@@ -319,7 +389,13 @@ Wave 5:  [C5: T9 → T10 → T11]
 
 **Done when**:
 
-- [ ] `### Child migration steps` says **None** — a non-major ships zero manual steps (AD-034), and this feature deliberately ships no enforcement to the child
+- [ ] The entry is **item 7 inside `## v2.3.0`** — do NOT open a new `## vX.Y.Z` heading.
+      `release-preflight.mjs:72-75` keys on the *latest* changelog section, so a heading above `v2.3.0`
+      would make it permanently untaggable; and `v2.4.0` is owned by `audit-2026-08-23-remediation` (its T48)
+- [ ] The existing `### Child migration steps` of `v2.3.0` stays the literal `None — copier update is enough.`
+      — a non-major ships zero manual steps (AD-034), and this feature deliberately ships no enforcement
+      to the child. Do not append to it
+- [ ] The item records the five `module.json` bumps of T12 and states they carry no behaviour change
 - [ ] The entry names what a child gains (a `.prettierrc` that loads) and what it does not (a gate), with the one-line opt-in
 - [ ] The addition respects the `docs-stay-lean` growth cap on both files
 - [ ] `pnpm catalog:lint` passes (it runs on changelog edits)
@@ -344,6 +420,7 @@ Wave 5:  [C5: T9 → T10 → T11]
 | T9 | 1 hook job | ✅ Granular |
 | T10 | 1 workflow + its delivery assertion | ⚠️ OK — cohesive |
 | T11 | 2 docs, one entry | ⚠️ OK — cohesive |
+| T12 | 5 manifests + 5 changelogs, one mechanical concept | ⚠️ OK — cohesive |
 
 ## Diagram-Definition Cross-Check
 
@@ -360,6 +437,7 @@ Wave 5:  [C5: T9 → T10 → T11]
 | T9 | T8 | wave 5, T8 in wave 4 | ✅ Match |
 | T10 | T9 | wave 5, after T9 in C5 | ✅ Match |
 | T11 | T10 | wave 5, after T10 in C5 | ✅ Match |
+| T12 | T8 | wave 4, after T8 in C4 | ✅ Match |
 
 ## Wave/Cluster Cross-Check
 
@@ -368,7 +446,7 @@ Wave 5:  [C5: T9 → T10 → T11]
 | 1 | C1 | T1 → T2 → T3 → T4 → T5 | `.prettierrc`, `.vscode/settings.json`, `catalog/notification/api/infrastructure/mailer/email-theme.ts`, `package.json`, `.prettierignore`, `scripts/platform/__tests__/prettier-config.test.mjs` | none | none — sole cluster | n/a | ✅ |
 | 2 | C2 | T6 | `package.json`, `pnpm-lock.yaml` | none — T1/T4 in wave 1 | none — sole cluster | yes | ✅ |
 | 3 | C3 | T7 | tree minus `catalog/**` | none — T6 in wave 2 | none — sole cluster | yes | ✅ |
-| 4 | C4 | T8 | `catalog/**` | none — T7 in wave 3 | none — sole cluster | yes | ✅ |
+| 4 | C4 | T8 → T12 | `catalog/**` incl. the 5 manifests + changelogs | none — T7 in wave 3 | none — sole cluster | yes | ✅ |
 | 5 | C5 | T9 → T10 → T11 | `lefthook-local.yml`, `.github/workflows/format.yml`, `copier.yml`, `scripts/platform/__tests__/copier-delivery.test.mjs`, `scripts/template-smoke.mjs`, `docs/dev/template-changelog.md`, `docs/agents/harness.md` | none — T8 in wave 4 | none — sole cluster | n/a | ✅ |
 
 `package.json` is owned by C1 in wave 1 and by C2 in wave 2 — sequential waves, never concurrent, so it is not a race. T7's union contains the files of C1 and C5 by construction; all three sit in different waves.
@@ -388,6 +466,7 @@ Wave 5:  [C5: T9 → T10 → T11]
 | T9 | Hook configuration | none | none | ✅ OK |
 | T10 | Copier delivery surface | unit | unit | ✅ OK |
 | T11 | Docs/changelog | none | none | ✅ OK |
+| T12 | Catalog manifests | none | none | ✅ OK |
 
 ---
 

@@ -88,6 +88,8 @@ jobs:
       R2_ENDPOINT: https://placeholder.r2.example.com
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -122,3 +124,18 @@ jobs:
           MESSAGE="$(node scripts/platform/release-preflight.mjs --message "$VERSION")"
           git tag -a "v$VERSION" -m "$MESSAGE"
           git push origin "v$VERSION"
+
+      # --verify-tag: sem ele `gh release create` cria a tag que faltar, o que
+      # abriria um segundo caminho de tagueamento ao lado do step acima
+      # (AD-034: a tag é ato único do job `tag`).
+      - name: Publish the GitHub Release
+        env:
+          VERSION: ${{ needs.marker.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/platform/release-preflight.mjs --notes "$VERSION" \
+            > "$RUNNER_TEMP/release-notes.md"
+          gh release create "v$VERSION" \
+            --title "v$VERSION" \
+            --notes-file "$RUNNER_TEMP/release-notes.md" \
+            --verify-tag

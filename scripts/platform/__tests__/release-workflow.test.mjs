@@ -84,6 +84,45 @@ test("tag é o único job com permissions.contents write", () => {
   assert.deepEqual(jobsWithWrite, ["tag"])
 })
 
+function releaseStep() {
+  const { jobs } = readWorkflow()
+  return jobs.tag.steps.find(
+    (step) => step.run && /gh release create/.test(step.run)
+  )
+}
+
+test("o job tag publica o GitHub Release depois que a tag existe no remoto", () => {
+  const { jobs } = readWorkflow()
+  const runs = jobs.tag.steps.map((step) => step.run).filter(Boolean)
+  const pushIndex = runs.findIndex((run) =>
+    /git push origin "v\$VERSION"/.test(run)
+  )
+  const releaseIndex = runs.findIndex((run) => /gh release create/.test(run))
+  assert.ok(pushIndex >= 0, "o step que empurra a tag sumiu")
+  assert.ok(releaseIndex >= 0, "nenhum step cria o GitHub Release")
+  assert.ok(
+    pushIndex < releaseIndex,
+    "o Release precisa vir depois da tag — senão --verify-tag falha por construção"
+  )
+})
+
+test("as notas do Release saem da seção do changelog, não de texto solto no YAML", () => {
+  const step = releaseStep()
+  assert.match(step.run, /release-preflight\.mjs --notes "\$VERSION"/)
+  assert.match(step.run, /--notes-file/)
+})
+
+// Sem --verify-tag, `gh release create` cria a tag que faltar: um segundo
+// caminho de tagueamento ao lado do step anterior, que AD-034 fecha.
+test("o Release nunca cria uma tag: --verify-tag", () => {
+  assert.match(releaseStep().run, /--verify-tag/)
+})
+
+test("o step do Release recebe GH_TOKEN — sem ele o gh falha só em runtime", () => {
+  const step = releaseStep()
+  assert.ok(step.env?.GH_TOKEN, "GH_TOKEN não está no env do step")
+})
+
 test("verify roda o release-preflight (com a versão do marker) antes de qualquer passo de gate", () => {
   const { jobs } = readWorkflow()
   const runs = jobs.verify.steps.map((step) => step.run).filter(Boolean)

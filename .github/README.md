@@ -207,7 +207,7 @@ Whoever evolves the template (rather than a product) reads [`TEMPLATE.md`](/TEMP
 pnpm template:smoke                 # renders a kernel-only product and runs check + tests
 pnpm catalog:check [entry…]         # catalog pre-tag gate: installs each entry and tests it
 pnpm platform release               # compose the marker commit
-git push origin main                # cut the tag from the marker
+git push origin main                # cut the tag and publish the GitHub Release
 pnpm platform release --push        # both at once; the tag is still the CI's act
 ```
 

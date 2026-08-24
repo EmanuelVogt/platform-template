@@ -4,7 +4,11 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { EXIT_CODES } from "../lib/exit-codes.mjs"
-import { preflightMessage, runPreflight } from "../release-preflight.mjs"
+import {
+  preflightMessage,
+  releaseNotes,
+  runPreflight,
+} from "../release-preflight.mjs"
 
 const CHANGELOG = [
   "# Changelog",
@@ -208,6 +212,41 @@ test("preflightMessage prints exactly the section's first paragraph", () => {
       preflightMessage({ version: "2.1.0", repoRoot: dir }),
       "Adds a widget, fixed on the child by re-running the affected command."
     )
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("releaseNotes returns the whole section, migration steps included", () => {
+  const dir = buildFixtureRepo()
+  try {
+    const notes = releaseNotes({ version: "2.1.0", repoRoot: dir })
+    assert.match(notes, /Adds a widget/)
+    assert.match(notes, /### Child migration steps/)
+    assert.match(notes, /`pnpm install` picks up the new dependency\./)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("releaseNotes stops at the next version heading — no older section leaks into the Release", () => {
+  const dir = buildFixtureRepo()
+  try {
+    const notes = releaseNotes({ version: "2.1.0", repoRoot: dir })
+    assert.doesNotMatch(notes, /## v2\.0\.0/)
+    assert.doesNotMatch(notes, /Previous stable\./)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("releaseNotes is strictly wider than the annotated tag message", () => {
+  const dir = buildFixtureRepo()
+  try {
+    const notes = releaseNotes({ version: "2.1.0", repoRoot: dir })
+    const message = preflightMessage({ version: "2.1.0", repoRoot: dir })
+    assert.ok(notes.includes(message))
+    assert.ok(notes.length > message.length)
   } finally {
     cleanup(dir)
   }

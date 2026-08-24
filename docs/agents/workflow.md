@@ -142,4 +142,4 @@ The rule above stands unchanged in this repository: an agent never pushes `main`
 In the template, the command composes the empty marker commit `chore(release): vX.Y.Z` and stops;
 the push is what cuts the tag. `--push` does both, and an agent may run it there when the owner
 asks for the release. The tag itself is never local: `release.yml` cuts it after the full gate, so
-a tag that exists was green.
+a tag that exists was green; the same job publishes the GitHub Release from the changelog section.

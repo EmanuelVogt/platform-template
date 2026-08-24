@@ -146,13 +146,24 @@ export function preflightMessage({ version, repoRoot = process.cwd() } = {}) {
   return sectionFirstParagraph(section)
 }
 
+// Usado por `release.yml` para as notas do GitHub Release. Não é um duplicado
+// de `preflightMessage`: a tag anotada leva só o primeiro parágrafo, o Release
+// leva a seção inteira — inclusive "### Child migration steps".
+export function releaseNotes({ version, repoRoot = process.cwd() } = {}) {
+  return readChangelogSection(changelogPathFor(repoRoot), version)
+}
+
 if (isMain(import.meta.url, process.argv[1])) {
   const argv = process.argv.slice(2)
   const messageIndex = argv.indexOf("--message")
+  const notesIndex = argv.indexOf("--notes")
   if (messageIndex !== -1) {
     process.stdout.write(
       `${preflightMessage({ version: argv[messageIndex + 1] })}\n`
     )
+    process.exit(EXIT_CODES.OK)
+  } else if (notesIndex !== -1) {
+    process.stdout.write(`${releaseNotes({ version: argv[notesIndex + 1] })}\n`)
     process.exit(EXIT_CODES.OK)
   } else {
     const exitCode = await runPreflight({ version: argv[0] })

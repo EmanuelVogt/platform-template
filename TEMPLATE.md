@@ -29,8 +29,9 @@ copier copy --trust gh:EmanuelVogt/platform-template ./my-product
 Every change products should receive becomes a semver tag. Run `pnpm platform release`, review
 the empty marker commit `chore(release): vX.Y.Z`, and push it; the push cuts the tag. Add `--push`
 to do both in one command, skipping the review step. Either way the tag itself is cut by
-`release.yml` after the full gate — never locally. The product updates with `copier update`
-(see `docs/dev/template.md`).
+`release.yml` after the full gate — never locally — and the same job publishes the GitHub
+Release, taking that version's changelog section as its notes. The product updates with
+`copier update` (see `docs/dev/template.md`).
 
 ## Testing the template
 

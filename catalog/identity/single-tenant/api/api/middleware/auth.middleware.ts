@@ -18,6 +18,7 @@ import { IDENTITY_CONFIG } from "../../identity.config"
 import { clearSessionCookie } from "../guards/cookie"
 
 import type { Clock } from "../../../../shared/kernel/clock/clock"
+import type { IdentityAccess } from "../../application/identity-context"
 import type { Session } from "../../domain/entities/session.entity"
 import type { SessionRepository } from "../../domain/ports/session.repository"
 import type { TokenGenerator } from "../../domain/ports/token-generator"
@@ -99,14 +100,41 @@ export class AuthMiddleware implements NestMiddleware {
       return
     }
 
-    this.publish(req, session)
-    await this.loadAccess(session.props.userId)
+    // Acesso ANTES de publicar o ator: usuário excluído (ou sumido) não publica
+    // nada, então nenhuma rota autenticada o enxerga — antes ele seguia com
+    // ator e sem permissões, o que deixava passar toda rota self-service.
+    const access = await this.loadAccess(session.props.userId)
+    if (access === null) {
+      clearSessionCookie(res, this.cfg)
+      next()
+      return
+    }
 
+    this.publish(req, session, access)
+    await this.touchIfDue(session, now)
+    next()
+  }
+
+  /**
+   * Um UPDATE por request transformava toda leitura em escrita. A sessão só é
+   * tocada quando `now − lastSeenAt` alcança SESSION_TOUCH_INTERVAL_SECONDS; a
+   * mesma fronteira vai no WHERE do repositório, para dois requests
+   * concorrentes não gravarem duas vezes.
+   */
+  private async touchIfDue(session: Session, now: Date): Promise<void> {
+    const touchBefore = new Date(
+      now.getTime() - this.cfg.SESSION_TOUCH_INTERVAL_SECONDS * 1000
+    )
+    if (session.props.lastSeenAt > touchBefore) return
     const nextExpiresAt = new Date(
       now.getTime() + this.cfg.SESSION_IDLE_TTL_SECONDS * 1000
     )
-    await this.sessions.touch(session.props.id, now, nextExpiresAt)
-    next()
+    await this.sessions.touch(
+      session.props.id,
+      now,
+      nextExpiresAt,
+      touchBefore
+    )
   }
 
   private async lookup(tokenHash: string): Promise<Session | null> {
@@ -119,7 +147,11 @@ export class AuthMiddleware implements NestMiddleware {
     }
   }
 
-  private publish(req: Request, session: Session): void {
+  private publish(
+    req: Request,
+    session: Session,
+    access: IdentityAccess
+  ): void {
     const { tenantId } = this.ctx.get()
     this.ctx.setActor({
       id: session.props.userId,
@@ -130,6 +162,7 @@ export class AuthMiddleware implements NestMiddleware {
       sessionId: session.props.id,
       deviceId: session.props.deviceId,
     })
+    this.ctx.setExtension(IDENTITY_ACCESS, access)
 
     // Espelho no request: @CurrentUser e o CsrfGuard não leem o ALS.
     const authed = req as AuthedRequest
@@ -139,16 +172,15 @@ export class AuthMiddleware implements NestMiddleware {
   }
 
   /**
-   * Usuário sumido ou excluído deixa o request COM ator e SEM permissões — é o
-   * que faz a rota de permissão responder 403 (e não 401) para sessão viva de
-   * usuário excluído, igual ao PermissionsGuard que este seam substitui.
+   * Usuário sumido ou excluído devolve `null`: a sessão continua viva na tabela,
+   * mas não vira identidade nenhuma no request.
    */
-  private async loadAccess(userId: string): Promise<void> {
+  private async loadAccess(userId: string): Promise<IdentityAccess | null> {
     const found = await this.users.findByIdWithPermissions(userId)
-    if (!found || found.user.isDeleted()) return
-    this.ctx.setExtension(IDENTITY_ACCESS, {
+    if (!found || found.user.isDeleted()) return null
+    return {
       permissions: new Set(found.permissions),
       isMaster: found.user.isMaster(),
-    })
+    }
   }
 }

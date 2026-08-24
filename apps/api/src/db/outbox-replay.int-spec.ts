@@ -63,14 +63,17 @@ describe("outbox-replay (integração)", () => {
     expect(rows[0]?.attempts).toBe(0)
   })
 
-  it("replayByEventId reinsere do dead quando não está no outbox", async () => {
+  // O dead letter já nasce redigido (REM-16): o replay o reinsere como está, sem
+  // ressuscitar segredo nenhum. Evento portador de segredo não se replaya — o
+  // fluxo dono reemite (novo link, novo token).
+  it("replayByEventId reinsere do dead preservando a redaction", async () => {
     await db.insert(outboxDead).values({
       eventId: "d-1",
       eventName: "x.event",
       eventVersion: 1,
       aggregateId: "a",
       aggregateType: "t",
-      payload: envelope("d-1"),
+      payload: { ...envelope("d-1"), payload: { link: "[REDACTED]" } },
       correlationId: "c",
       occurredAt: new Date(),
       attempts: 8,
@@ -82,6 +85,10 @@ describe("outbox-replay (integração)", () => {
     const live = await db.select().from(outbox).where(eq(outbox.eventId, "d-1"))
     expect(live).toHaveLength(1)
     expect(live[0]?.publishedAt).toBeNull()
+    expect(live[0]?.payload).toEqual({
+      ...envelope("d-1"),
+      payload: { link: "[REDACTED]" },
+    })
     const dead = await db
       .select()
       .from(outboxDead)

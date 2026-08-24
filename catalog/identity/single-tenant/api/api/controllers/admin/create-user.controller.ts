@@ -3,9 +3,9 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger"
 
 import { RequirePermission } from "../../../../../shared/kernel/access/decorators"
 import { Idempotent } from "../../../../../shared/kernel/idempotency/idempotent.decorator"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 import { CreateUserUseCase } from "../../../application/use-cases/create-user/create-user.use-case"
 import { CreateUserDto } from "../../contracts/identity.contract"
-import { RateLimit } from "../../guards/rate-limit.guard"
 
 @ApiTags("Admin")
 @Controller("admin/users")

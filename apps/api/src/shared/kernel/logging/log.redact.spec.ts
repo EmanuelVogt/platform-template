@@ -158,3 +158,55 @@ describe("redactValue (corpo de request/response no log)", () => {
     expect(SENSITIVE_FIELDS).toEqual(expect.arrayContaining(["password", "token", "email"]))
   })
 })
+
+describe("redactValue — chave sensível como substring (REM-20)", () => {
+  it.each([
+    "newPassword",
+    "currentPassword",
+    "newEmail",
+    "pendingEmail",
+  ])("redige %s", (key) => {
+    expect(redactValue({ [key]: "valor-cru" })).toEqual({ [key]: "[REDACTED]" })
+  })
+
+  it("redige hashes que carregam o fragmento no nome", () => {
+    expect(
+      redactValue({ passwordHash: "h1", tokenHash: "h2", cookieTokenHash: "h3" })
+    ).toEqual({
+      passwordHash: "[REDACTED]",
+      tokenHash: "[REDACTED]",
+      cookieTokenHash: "[REDACTED]",
+    })
+  })
+
+  it("deixa passar recipientId e description (ip casa exato, não por substring)", () => {
+    expect(
+      redactValue({ recipientId: "user-1", description: "pedido aprovado" })
+    ).toEqual({ recipientId: "user-1", description: "pedido aprovado" })
+  })
+
+  it("redige ip, ip_address e ipAddress por igualdade exata", () => {
+    expect(
+      redactValue({ ip: "203.0.113.1", ip_address: "203.0.113.2", ipAddress: "203.0.113.3" })
+    ).toEqual({
+      ip: "[REDACTED]",
+      ip_address: "[REDACTED]",
+      ipAddress: "[REDACTED]",
+    })
+  })
+})
+
+describe("redactConfig — variantes literais do pino (REM-20)", () => {
+  it.each([
+    "newPassword",
+    "currentPassword",
+    "newEmail",
+    "pendingEmail",
+    "passwordHash",
+    "tokenHash",
+    "cookieTokenHash",
+  ])("cobre %s no topo e a 1 nível", (field) => {
+    expect(redactConfig.paths).toContain(field)
+    expect(redactConfig.paths).toContain(`*.${field}`)
+  })
+})

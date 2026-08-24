@@ -23,15 +23,11 @@ function migrationsDir(child) {
   return childLayout(child).migrationsDir;
 }
 
-function nextJournalIndex(child) {
+function journalEntries(child) {
   const journalPath = path.join(migrationsDir(child), "meta/_journal.json");
-  if (!existsSync(journalPath)) return 0;
+  if (!existsSync(journalPath)) return [];
   const journal = JSON.parse(readFileSync(journalPath, "utf8"));
-  return (journal.entries ?? []).length;
-}
-
-function paddedIndex(idx) {
-  return String(idx).padStart(4, "0");
+  return journal.entries ?? [];
 }
 
 function slugFromCustomMigration(fileName) {
@@ -50,28 +46,24 @@ export function generateForModule(child, manifest, { catalogEntryRoot, run = def
 
   runStep(run, "check", ["--filter", "api", "exec", "drizzle-kit", "check"], options);
 
-  const startIdx = nextJournalIndex(child);
+  // Os nomes NUNCA são calculados a partir de índices previstos: uma entrada sem diff
+  // de schema não gera baseline nem consome índice, e qualquer conta a partir daí erra
+  // o alvo de todos os customs seguintes (issue #11 — SQL de segurança gravado fora do
+  // journal, stub vazio dentro). A fonte da verdade é o que o drizzle registrou no journal.
   const baselineName = `${manifest.name}_baseline`;
+  let seenEntries = journalEntries(child).length;
   runStep(
     run,
     "generate:baseline",
     ["--filter", "api", "exec", "drizzle-kit", "generate", "--name", baselineName],
     options,
   );
-  const generated = [`${paddedIndex(startIdx)}_${baselineName}.sql`];
+  const afterBaseline = journalEntries(child);
+  const generated = afterBaseline.slice(seenEntries).map((entry) => `${entry.tag}.sql`);
+  seenEntries = afterBaseline.length;
 
   const customMigrations = manifest.customMigrations ?? [];
-  customMigrations.forEach((fileName, i) => {
-    const slug = slugFromCustomMigration(fileName);
-    const customName = `${manifest.name}_${slug}`;
-    runStep(
-      run,
-      `generate:custom:${fileName}`,
-      ["--filter", "api", "exec", "drizzle-kit", "generate", "--custom", "--name", customName],
-      options,
-    );
-
-    const generatedFileName = `${paddedIndex(startIdx + 1 + i)}_${customName}.sql`;
+  for (const fileName of customMigrations) {
     const sourcePath = path.join(catalogEntryRoot, "migrations/custom", fileName);
     let shippedSql;
     try {
@@ -82,11 +74,29 @@ export function generateForModule(child, manifest, { catalogEntryRoot, run = def
         `SQL custom não encontrado em ${sourcePath}: ${err.message}`,
       );
     }
-    const destPath = path.join(migrationsDir(child), generatedFileName);
+
+    const customName = `${manifest.name}_${slugFromCustomMigration(fileName)}`;
+    runStep(
+      run,
+      `generate:custom:${fileName}`,
+      ["--filter", "api", "exec", "drizzle-kit", "generate", "--custom", "--name", customName],
+      options,
+    );
+
+    const created = journalEntries(child).slice(seenEntries);
+    if (created.length !== 1) {
+      throw new MigrationFailureError(
+        `custom:${fileName}`,
+        `drizzle-kit generate --custom deveria registrar exatamente 1 entrada no journal, registrou ${created.length}`,
+      );
+    }
+    seenEntries += 1;
+
+    const destPath = path.join(migrationsDir(child), `${created[0].tag}.sql`);
     mkdirSync(path.dirname(destPath), { recursive: true });
     writeFileSync(destPath, shippedSql, "utf8");
-    generated.push(generatedFileName);
-  });
+    generated.push(`${created[0].tag}.sql`);
+  }
 
   runStep(run, "journal", ["--filter", "api", "run", "db:check:journal"], options);
 

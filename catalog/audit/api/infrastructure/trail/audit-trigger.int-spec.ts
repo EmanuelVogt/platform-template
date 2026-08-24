@@ -29,12 +29,11 @@ describe("audit trigger (int)", () => {
   beforeAll(async () => {
     pool = createTestPool()
     db = createTestDb(pool)
-    // SPEC_DEVIATION: reanexa as tabelas do identity ao trigger.
-    // Reason: `catalog:check audit` instala identity antes de audit
-    // (dependsOn), e a migration custom de identity que chama `audit.attach`
-    // roda antes de `audit.attach` existir — sai sem anexar nada (guard
-    // documentado nela mesma). Simula o passo manual que um produto real
-    // reaplicaria depois de instalar audit (idempotente).
+    // Reexecuta o passo de instalação do audit (`audit.attach_module_hooks()`),
+    // idempotente: a instalação já anexou as tabelas do identity com as listas
+    // de redação declaradas em `04_audit_attach_hook.sql`, mas o `afterAll` das
+    // outras suítes de audit desanexa os triggers e o banco do `test:db` é
+    // compartilhado entre arquivos.
     await reattachIdentityTables(pool)
   })
 
@@ -69,6 +68,15 @@ describe("audit trigger (int)", () => {
       `INSERT INTO identity.permission_templates (id, name, created_at, updated_at)
        VALUES ($1, $2, now(), now())`,
       [id, name]
+    )
+  }
+
+  // FK das tabelas de credencial (sessions/devices/verification_tokens) — dono
+  // precisa existir antes de exercitar a redação dos hashes (REM-40).
+  async function insertUser(id: string): Promise<void> {
+    await pool.query(
+      "INSERT INTO identity.users (id, name, email, password_hash) VALUES ($1, $2, $3, $4)",
+      [id, "Fulano", `${id}@test.local`, "hash-secreto-real"]
     )
   }
 
@@ -143,6 +151,57 @@ describe("audit trigger (int)", () => {
     const row = rows[0]
     expect((row!.row_new as { password_hash: string }).password_hash).toBe("[REDACTED]")
     expect((row!.row_new as { email: string }).email).toBe(`${id}@test.local`)
+  })
+
+  it("redaction: identity.sessions.token_hash vira [REDACTED] na trilha", async () => {
+    const userId = ulid()
+    await insertUser(userId)
+    const sessionId = ulid()
+    await pool.query(
+      `INSERT INTO identity.sessions (id, user_id, token_hash, expires_at)
+       VALUES ($1, $2, $3, now() + interval '1 day')`,
+      [sessionId, userId, "token-secreto-real"]
+    )
+
+    const rows = await auditRows("sessions")
+    expect(rows).toHaveLength(1)
+    const row = rows[0]
+    expect((row!.row_new as { token_hash: string }).token_hash).toBe("[REDACTED]")
+    expect((row!.row_new as { user_id: string }).user_id).toBe(userId)
+  })
+
+  it("redaction: identity.devices.cookie_token_hash vira [REDACTED] na trilha", async () => {
+    const userId = ulid()
+    await insertUser(userId)
+    const deviceId = ulid()
+    await pool.query(
+      `INSERT INTO identity.devices (id, user_id, cookie_token_hash)
+       VALUES ($1, $2, $3)`,
+      [deviceId, userId, "cookie-secreto-real"]
+    )
+
+    const rows = await auditRows("devices")
+    expect(rows).toHaveLength(1)
+    const row = rows[0]
+    expect((row!.row_new as { cookie_token_hash: string }).cookie_token_hash).toBe("[REDACTED]")
+    expect((row!.row_new as { user_id: string }).user_id).toBe(userId)
+  })
+
+  it("redaction: identity.verification_tokens.token_hash vira [REDACTED] na trilha", async () => {
+    const userId = ulid()
+    await insertUser(userId)
+    const tokenId = ulid()
+    await pool.query(
+      `INSERT INTO identity.verification_tokens (id, user_id, type, token_hash, expires_at)
+       VALUES ($1, $2, 'email_verify', $3, now() + interval '1 day')`,
+      [tokenId, userId, "token-secreto-real"]
+    )
+
+    const rows = await auditRows("verification_tokens")
+    expect(rows).toHaveLength(1)
+    const row = rows[0]
+    expect((row!.row_new as { token_hash: string }).token_hash).toBe("[REDACTED]")
+    expect((row!.row_new as { user_id: string }).user_id).toBe(userId)
   })
 
   it("PK composta: entity_id junta os valores das colunas de PK com ':'", async () => {

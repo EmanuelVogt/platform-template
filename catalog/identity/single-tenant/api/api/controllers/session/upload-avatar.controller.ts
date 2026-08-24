@@ -16,10 +16,10 @@ import {
 } from "@nestjs/swagger"
 
 import { SelfService } from "../../../../../shared/kernel/access/decorators"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 import { UploadAvatarUseCase } from "../../../application/use-cases/upload-avatar/upload-avatar.use-case"
 import { AvatarFileRequiredError } from "../../../domain/errors"
 import { AvatarUploadResponseDto } from "../../contracts/identity.contract"
-import { RateLimit } from "../../guards/rate-limit.guard"
 
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 
@@ -43,7 +43,9 @@ export class UploadAvatarController {
   @RateLimit({ limit: 10, windowSeconds: 60 })
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(
-    FileInterceptor("file", { limits: { fileSize: MAX_UPLOAD_BYTES } }),
+    FileInterceptor("file", {
+      limits: { fileSize: MAX_UPLOAD_BYTES, fields: 0 },
+    }),
   )
   async handle(
     @UploadedFile() file: Express.Multer.File | undefined,

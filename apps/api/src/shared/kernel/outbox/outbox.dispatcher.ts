@@ -9,12 +9,14 @@ import { Interval } from "@nestjs/schedule"
 import { SpanStatusCode, trace } from "@opentelemetry/api"
 import { and, asc, eq, inArray, isNotNull, isNull, lt, lte, sql } from "drizzle-orm"
 
+import { env } from "../../config/env"
 import { DedicatedClientFactory } from "../../infra/database/dedicated-client.factory"
 import { DRIZZLE, type DrizzleDb } from "../../infra/database/drizzle.provider"
 import { ManagedDedicatedClient } from "../../infra/database/managed-dedicated-client"
 import { buildEventContextStore } from "../context/event-context"
 import { RequestContext } from "../context/request-context"
 import { type AppLogger, LoggerFactory } from "../logging/logger.factory"
+import { redactSensitive } from "../redaction/sensitive-keys"
 import { MaintenanceJob } from "../scheduling/maintenance-job.decorator"
 import { remoteSpanContextFromTraceparent } from "../tracing/event-trace-propagation"
 import { TransactionManager } from "../transactional/transaction-manager"
@@ -100,6 +102,19 @@ export class OutboxDispatcher implements OnModuleInit, OnApplicationShutdown {
       .where(and(isNotNull(outbox.publishedAt), lt(outbox.publishedAt, cutoff)))
       .returning({ eventId: outbox.eventId })
     this.log.info("outbox.purge", { removed: deleted.length })
+  }
+
+  @MaintenanceJob("outbox-dead.purge")
+  async purgeDeadLetters(): Promise<void> {
+    const cutoff = new Date(
+      Date.now() - env().OUTBOX_DEAD_RETENTION_DAYS * 86_400_000
+    )
+    const deleted = await this.txm
+      .getExecutor()
+      .delete(outboxDead)
+      .where(lt(outboxDead.deadLetteredAt, cutoff))
+      .returning({ eventId: outboxDead.eventId })
+    this.log.info("outbox-dead.purge", { removed: deleted.length })
   }
 
   // Conexão dedicada pode cair (restart do Postgres, blip de rede): o
@@ -210,9 +225,16 @@ export class OutboxDispatcher implements OnModuleInit, OnApplicationShutdown {
     }
     try {
       await this.emitWithinTrace(envelope)
+      // Publicada, a linha vira arquivo: nenhum segredo do envelope pode
+      // sobreviver nela. Sem match, `payload` fica fora do SET — a linha
+      // intocada não é reescrita.
+      const redacted = redactSensitive(row.payload)
       await this.db
         .update(outbox)
-        .set({ publishedAt: new Date() })
+        .set({
+          publishedAt: new Date(),
+          ...(redacted.changed && { payload: redacted.value }),
+        })
         .where(eq(outbox.eventId, row.eventId))
       this.log.info("outbox.dispatched", {
         eventId: row.eventId,
@@ -266,7 +288,9 @@ export class OutboxDispatcher implements OnModuleInit, OnApplicationShutdown {
           eventVersion: row.eventVersion,
           aggregateId: row.aggregateId,
           aggregateType: row.aggregateType,
-          payload: row.payload,
+          // Dead letter é o arquivo mais longevo da fila: o envelope inteiro é
+          // varrido (o payload de domínio aninha em payload.payload).
+          payload: redactSensitive(row.payload).value,
           correlationId: row.correlationId,
           causationId: row.causationId,
           tenantId: row.tenantId,

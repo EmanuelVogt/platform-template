@@ -52,6 +52,7 @@ describe('AuthEvent.create', () => {
       'email_changed',
       'breach_check_skipped',
       'admin_action',
+      'rate_limiter_degraded',
     ] as const;
     for (const eventType of types) {
       const event = AuthEvent.create({
@@ -68,6 +69,26 @@ describe('AuthEvent.create', () => {
       });
       expect(event.props.eventType).toBe(eventType);
     }
+  });
+});
+
+describe('AuthEvent — evento de sistema', () => {
+  it('rate_limiter_degraded aceita userId null (não tem dono)', () => {
+    const event = AuthEvent.create({
+      userId: null,
+      actorUserId: null,
+      eventType: 'rate_limiter_degraded',
+      emailHash: null,
+      ip: null,
+      userAgent: null,
+      correlationId: 'corr-3',
+      traceId: null,
+      spanId: null,
+      metadata: { since: '2026-08-22T10:00:00.000Z' },
+    });
+    expect(event.props.eventType).toBe('rate_limiter_degraded');
+    expect(event.props.userId).toBeNull();
+    expect(event.props.metadata).toEqual({ since: '2026-08-22T10:00:00.000Z' });
   });
 });
 

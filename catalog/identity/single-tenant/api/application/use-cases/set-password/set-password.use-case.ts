@@ -11,7 +11,7 @@ import { Traced } from "../../../../../shared/kernel/tracing/traced.decorator"
 import { Transactional } from "../../../../../shared/kernel/transactional/transactional.decorator"
 import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
 import { NotificationRequested } from "../../../../notification/api/events/notification-requested.event"
-import { InvalidAccessLinkError, WeakPasswordError } from "../../../domain/errors"
+import { InvalidAccessLinkError } from "../../../domain/errors"
 import { validatePasswordPolicy } from "../../../domain/password-policy"
 import {
   AUTH_EVENT_REPOSITORY,
@@ -29,6 +29,7 @@ import {
 } from "../../../domain/ports/verification-token.repository"
 import { IDENTITY_CONFIG, type IdentityConfig } from "../../../identity.config"
 import { authEventOf } from "../../auth-event.factory"
+import { type BreachOutcome, checkBreach } from "../../password/check-breach"
 import { CreateSessionService } from "../../services/create-session.service"
 import { toUserView } from "../../views"
 
@@ -63,7 +64,7 @@ export class SetPasswordUseCase
   async execute(input: SetPasswordInput): Promise<SetPasswordOutput> {
     // Validação de senha é pré-condição pura: FORA da tx, antes de queimar o
     // token (senha fraca não consome o link). Igual ao reset.
-    await this.validateNewPassword(input.password)
+    const breachOutcome = await this.validateNewPassword(input.password)
 
     // Resolve o user pelo token SEM consumir, p/ checar status (pending) e
     // resolver o avatar (ownership) antes de abrir a tx.
@@ -89,19 +90,19 @@ export class SetPasswordUseCase
       user.props.avatarAttachmentId,
     )
 
-    return this.activateInTx(input, avatarAttachmentId)
+    return this.activateInTx(input, avatarAttachmentId, breachOutcome)
   }
 
-  private async validateNewPassword(password: string): Promise<void> {
+  // BREACH_CHECK_ENABLED decide SE consulta; BREACH_CHECK_MODE decide só o que
+  // fazer quando a consulta falha — quem aplica o modo é o adapter.
+  private async validateNewPassword(password: string): Promise<BreachOutcome> {
     validatePasswordPolicy({
       minZxcvbnScore: this.config.PASSWORD_MIN_ZXCVBN_SCORE,
       zxcvbnScore: this.strength.score(password),
     })
-    if (this.config.BREACH_CHECK_MODE === "fail_closed") {
-      if (await this.breach.isBreached(password)) {
-        throw new WeakPasswordError("Esta senha apareceu em vazamentos conhecidos.")
-      }
-    }
+    return this.config.BREACH_CHECK_ENABLED
+      ? checkBreach(this.breach, password)
+      : "clear"
   }
 
   /**
@@ -131,6 +132,7 @@ export class SetPasswordUseCase
   private async activateInTx(
     input: SetPasswordInput,
     avatarAttachmentId: string | null,
+    breachOutcome: BreachOutcome,
   ): Promise<SetPasswordOutput> {
     const now = this.clock.now()
     const store = this.ctx.get()
@@ -166,6 +168,18 @@ export class SetPasswordUseCase
       { deviceCookie: input.deviceCookie, rememberMe: false },
       now,
     )
+
+    // Só aqui o dono da senha é conhecido: a lacuna da consulta é atribuída a
+    // quem de fato definiu a senha sem verificação.
+    if (breachOutcome === "skipped") {
+      await this.authEvents.recordInTx(
+        authEventOf(store, {
+          userId: consumed.userId,
+          eventType: "breach_check_skipped",
+          metadata: { mode: this.config.BREACH_CHECK_MODE },
+        }),
+      )
+    }
 
     await this.authEvents.recordInTx(
       authEventOf(store, { userId: consumed.userId, eventType: "password_set" }),

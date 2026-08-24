@@ -82,9 +82,9 @@ describe("ChangePasswordUseCase — breach fora da tx (R17)", () => {
   it("o breach-check roda com isInTransaction() === false", async () => {
     let inTxDuringBreach: boolean | null = null
     const breach = {
-      isBreached: () => {
+      check: () => {
         inTxDuringBreach = txm.isInTransaction()
-        return Promise.resolve(false)
+        return Promise.resolve("clear" as const)
       },
     }
     const users = {
@@ -98,7 +98,10 @@ describe("ChangePasswordUseCase — breach fora da tx (R17)", () => {
       hash: () => Promise.resolve("argon2-new"),
     }
     const strength = { score: () => 4 }
-    const authEvents = { recordInTx: vi.fn().mockResolvedValue(undefined) }
+    const authEvents = {
+      record: vi.fn().mockResolvedValue(undefined),
+      recordInTx: vi.fn().mockResolvedValue(undefined),
+    }
     const outbox = { publish: vi.fn().mockResolvedValue(undefined) }
     const clock = { now: () => new Date("2026-06-10T12:00:00.000Z") }
 
@@ -116,6 +119,7 @@ describe("ChangePasswordUseCase — breach fora da tx (R17)", () => {
         WEB_ORIGIN: "http://localhost:5173",
         PASSWORD_PEPPER: "x".repeat(32),
         CSRF_SECRET: "y".repeat(32),
+        BREACH_CHECK_ENABLED: "true",
         BREACH_CHECK_MODE: "fail_closed",
         COOKIE_SECURE: "false",
         COOKIE_NAME: "rit_session",
@@ -141,6 +145,68 @@ describe("ChangePasswordUseCase — breach fora da tx (R17)", () => {
             email: "ana@example.com",
             at: "2026-06-10T12:00:00.000Z",
           }),
+        }),
+      }),
+    )
+  })
+
+  it("fail_open + consulta indisponível: a troca commita e o skip é auditado", async () => {
+    const users = {
+      findById: vi.fn().mockResolvedValue(makeUser()),
+      findByIdForUpdate: vi.fn().mockResolvedValue(makeUser()),
+      update: vi.fn().mockResolvedValue(undefined),
+    }
+    const sessions = { deleteOthers: vi.fn().mockResolvedValue(undefined) }
+    const hasher = {
+      verify: () => Promise.resolve(true),
+      hash: () => Promise.resolve("argon2-new"),
+    }
+    const authEvents = {
+      record: vi.fn().mockResolvedValue(undefined),
+      recordInTx: vi.fn().mockResolvedValue(undefined),
+    }
+    let inTxDuringSkipRecord: boolean | null = null
+    authEvents.record.mockImplementation(() => {
+      inTxDuringSkipRecord = txm.isInTransaction()
+      return Promise.resolve(undefined)
+    })
+
+    const uc = new ChangePasswordUseCase(
+      users as never,
+      sessions as never,
+      hasher as never,
+      { score: () => 4 },
+      { check: () => Promise.resolve("skipped" as const) },
+      { publish: vi.fn().mockResolvedValue(undefined) } as never,
+      authEvents as never,
+      { now: () => new Date("2026-06-10T12:00:00.000Z") },
+      ctx,
+      parseIdentityConfig({
+        WEB_ORIGIN: "http://localhost:5173",
+        PASSWORD_PEPPER: "x".repeat(32),
+        CSRF_SECRET: "y".repeat(32),
+        BREACH_CHECK_ENABLED: "true",
+        BREACH_CHECK_MODE: "fail_open",
+        COOKIE_SECURE: "false",
+        COOKIE_NAME: "rit_session",
+        DEVICE_COOKIE_NAME: "rit_device",
+      }),
+    )
+
+    await ctx.run(authedStore(), () =>
+      uc.execute({ currentPassword: "atual", newPassword: "nova-senha-forte-1" })
+    )
+
+    expect(users.update).toHaveBeenCalledTimes(1)
+    // O skip é gravado FORA da tx (record, não recordInTx): a lacuna sobrevive
+    // a um rollback posterior da troca.
+    expect(inTxDuringSkipRecord).toBe(false)
+    expect(authEvents.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        props: expect.objectContaining({
+          userId: "u-1",
+          eventType: "breach_check_skipped",
+          metadata: { mode: "fail_open" },
         }),
       }),
     )

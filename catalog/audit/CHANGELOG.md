@@ -41,14 +41,24 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   já documentada em `attachment.module.ts`). Import removido; `UserDirectoryFacade` já chega
   pelo export global do `IdentityModule.forRoot()` montado na raiz, sem precisar de import
   explícito.
-- `identity/migrations/custom/02_audit_attach.sql` roda antes de `audit.attach` existir num
-  `catalog:check audit` (identity é instalado antes, por `dependsOn`) — sai sem anexar nada
-  (guard documentado no próprio arquivo, que já orienta reaplicar o passo depois de instalar
-  audit). `api/testing/reattach-identity-tables.ts` (novo) simula essa reaplicação idempotente
-  nos testes de audit que dependem do trigger em tabelas do identity — e desfaz com
-  `detachIdentityTables` no `afterAll` de cada um, porque o trigger é DDL permanente que vaza
-  para outras suítes do worker compartilhado (achado: latência extra do trigger derrubava
-  timeouts de e2e do identity sem relação nenhuma com auditoria).
+- Nenhum módulo conseguia anexar as próprias tabelas à trilha num filho recém-gerado: quem tem
+  tabela auditável é `dependsOn` desta entrada, logo instala **antes** dela, e a chamada de
+  `audit.attach` na migração do módulo caía no guard "entrada audit ausente" — o filho nascia sem
+  trilha nenhuma, inclusive sem as colunas de hash redigidas do identity (auditoria de segurança
+  2026-08-22, ADV-20260822-04). Nova migração `02_attach_module_hooks.sql`: a função
+  `audit.attach_module_hooks()` procura, em todo schema instalado, o hook `<schema>.attach_audit()`
+  (sem argumentos, idempotente, com a lista das tabelas e colunas redigidas **do módulo**) e o
+  executa no fim da instalação do audit. A entrada segue sem conhecer quem é auditado — conhece só
+  o nome do hook. `api/testing/reattach-identity-tables.ts` deixa de copiar a lista do identity e
+  passa a chamar `audit.attach_module_hooks()`, o mesmo passo que a migração executa; o
+  `detachIdentityTables` do `afterAll` continua, porque o trigger é DDL permanente que vaza para
+  outras suítes do worker compartilhado (achado: latência extra do trigger derrubava timeouts de
+  e2e do identity sem relação nenhuma com auditoria).
+- `listAuditEntriesQuerySchema` (`audit.contract.ts`): `from`/`to` eram `z.string().min(1)`,
+  aceitando qualquer texto e estourando `new Date(invalid)` num `Invalid Date` que a query
+  Drizzle devolvia como **500** em vez de 400; passam a `z.iso.datetime()`. `txId` ganha teto
+  explícito (`z.coerce.number().int().max(Number.MAX_SAFE_INTEGER)`), fechando o coerce sem
+  limite superior (auditoria de segurança 2026-08-22, ADV-20260822-04).
 
 ## [1.0.0]
 

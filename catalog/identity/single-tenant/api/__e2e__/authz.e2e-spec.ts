@@ -8,8 +8,8 @@ import { AppModule } from "../../../app.module"
 import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
 import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
+import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
 import { MAILER } from "../../notification/domain/ports/mailer"
-import { RATE_LIMITER } from "../domain/ports/rate-limiter"
 import { fakeMailer } from "../testing/fake-mailer"
 import { seedUser } from "../testing/seed-user"
 
@@ -20,6 +20,7 @@ const PASSWORD = "Senha-Muito-Forte-AuthZ-2026!"
 
 const allowAll = {
   consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
+  reset: () => Promise.resolve(),
 }
 
 describe("authz — AuthMiddleware + AccessGuard + validações (e2e)", () => {
@@ -310,6 +311,29 @@ describe("authz — AuthMiddleware + AccessGuard + validações (e2e)", () => {
     )
     expect(edited.name).toBe("Poder Renomeado")
     expect(edited.permissions).toEqual(["admin.tags.read"])
+  })
+
+  it("ator restrito não REVOGA do alvo chave que não possui (403)", async () => {
+    const res = await request(app.getHttpServer())
+      .put(`/v1/admin/users/${powerfulId}`)
+      .set("Origin", ORIGIN)
+      .set("Cookie", creatorCookie)
+      .send({
+        name: "Poder Renomeado",
+        accessProfile: "admin",
+        permissions: [],
+      })
+      .expect(403)
+    expect(res.body.type).toMatch(/\/permission-grant-not-allowed$/)
+
+    const after = await request(app.getHttpServer())
+      .get("/v1/admin/users")
+      .set("Cookie", masterCookie)
+      .expect(200)
+    const untouched = after.body.data.find(
+      (u: { email: string }) => u.email === "authz-power@example.com"
+    )
+    expect(untouched.permissions).toEqual(["admin.tags.read"])
   })
 
   it("GET /v1/auth/session devolve accessProfile e permissions", async () => {

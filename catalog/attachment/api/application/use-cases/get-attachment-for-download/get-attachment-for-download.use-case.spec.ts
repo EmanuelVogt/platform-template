@@ -29,7 +29,8 @@ function makeDeps(userId: string | null) {
     findByIds: vi.fn(),
     saveMany: vi.fn(),
     findPendingOlderThan: vi.fn(),
-    deleteByIds: vi.fn(),
+    deletePendingByIds: vi.fn(),
+    sumPendingBytesByOwner: vi.fn(),
   }
   const log = {
     record: vi.fn(),
@@ -46,13 +47,25 @@ function makeDeps(userId: string | null) {
 }
 
 describe("GetAttachmentForDownloadUseCase", () => {
-  it("permitido: retorna stream+meta e loga allowed", async () => {
-    const { uc, repo, log } = makeDeps("u-9")
+  it("permitido: retorna meta e loga allowed sem abrir o stream", async () => {
+    const { uc, repo, log, storage } = makeDeps("u-9")
     repo.findById.mockResolvedValue(entity("authenticated", "u-1"))
     const out = await uc.execute({ id: "a-1" })
     expect(out.contentType).toBe("image/png")
     expect(out.checksum).toBe("sum")
     expect(log.record).toHaveBeenCalledWith(expect.objectContaining({ action: "download", outcome: "allowed" }))
+    expect(storage.getStream).not.toHaveBeenCalled()
+  })
+
+  it("openStream: abre o storage adapter exatamente uma vez, sob demanda", async () => {
+    const { uc, repo, storage } = makeDeps("u-9")
+    repo.findById.mockResolvedValue(entity("authenticated", "u-1"))
+    const out = await uc.execute({ id: "a-1" })
+    expect(storage.getStream).not.toHaveBeenCalled()
+    const stream = await out.openStream()
+    expect(stream).toBe("STREAM")
+    expect(storage.getStream).toHaveBeenCalledTimes(1)
+    expect(storage.getStream).toHaveBeenCalledWith("attachments/a-1")
   })
 
   it("negado: loga denied e lança NotFound (anti-vazamento)", async () => {

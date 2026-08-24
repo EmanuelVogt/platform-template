@@ -1,0 +1,2011 @@
+# Security Audit Remediation Tasks
+
+**Design**: `.specs/features/security-audit-remediation/design.md`
+**Spec**: `.specs/features/security-audit-remediation/spec.md` (REM-01..51; REM-48..51 = the Jest → Vitest port added 2026-08-22, design § H)
+**Touches audit**: `.specs/features/security-audit-remediation/touches-audit.md` (§ 3 of this file, authored separately on 2026-08-22)
+**Status**: Draft
+
+## Execution Protocol (MANDATORY -- do not skip)
+
+Implement these tasks with the `tlc-spec-driven` skill: **activate it by name and follow its Execute flow and Critical Rules.** Do not search for skill files by filesystem path. The skill is the source of truth for the full flow (per-task cycle, sub-agent delegation, adequacy review, Verifier, discrimination sensor).
+
+**If the skill cannot be activated, STOP and tell the user — do not proceed without it.**
+
+**Checkout**: `.worktrees/security-audit-remediation`, branch `feat/security-audit-remediation` off `main`. Never edit `.worktrees/vitest-migration/` (stale mirror of `catalog/**`). **Never run a command or edit a file in the primary checkout** `/Users/emanuelvogt/Developer/platform-template` — every path is under the worktree (a wave-2 worker strayed once; see the execution record).
+
+**Runner switch (2026-08-22)**: waves 1–2 are Jest (the tree the worktree had). Wave 3 (C12, T59–T62) merges the Vitest-only `main` in and ports the feature's specs. **From T59 on, the Jest commands in this file are void** — use § *Gate Check Commands — after T59 (Vitest)*; task bodies T51–T58 already carry the Vitest commands.
+
+**Advisory commit protocol**: the first commit of each entry cluster stages `docs/advisories/ADV-20260822-NN.md` with the code; every later commit touching the same entry carries the trailer `Advisory: none — covered by ADV-20260822-NN (security-audit-remediation)` (`advisory-required.mjs:8`).
+
+---
+
+## Test Coverage Matrix
+
+> Generated from codebase, project guidelines, and spec — confirm before Execute. Guidelines found: `docs/test/testing.md`, `AGENTS.md.jinja:20,41,62-63`, `docs/code-quality.md:124-129`, `apps/api/jest` config trio (`package.json:test/test:int/test:e2e`, `test/jest-integration.json`, `test/jest-e2e.json`), `docs/arch/back.md`.
+
+| Code Layer | Required Test Type | Coverage Expectation | Location Pattern | Run Command |
+| --- | --- | --- | --- | --- |
+| Kernel domain / pure util (rate limiters, in-flight gate, redaction, content-disposition, listing schema, `shouldMountDocs`) | unit | All branches; 1:1 to spec ACs; every listed edge case | `apps/api/src/shared/**/*.spec.ts` | `pnpm --filter api test -- <path>` |
+| Kernel config / env schema | unit | One case per required, refused and defaulted variable | `apps/api/src/shared/config/*.spec.ts` | `pnpm --filter api test -- shared/config` |
+| Kernel infra with IO (Redis limiter, outbox, idempotency, storage adapter, repositories) | integration | Key paths + error handling; no DB mocks | `apps/api/src/**/*.int-spec.ts` | `pnpm --filter api test:int -- <path>` |
+| Kernel HTTP surface (helmet/CORS/trust proxy/docs mount) | e2e | Happy + edge + error | `apps/api/test/*.e2e-spec.ts` | `pnpm --filter api test:e2e -- <path>` |
+| Entry domain / application (use cases, policies, entities, guards) | unit | All branches; 1:1 to spec ACs; every listed edge case | `catalog/<entry>/api/**/*.spec.ts` | `pnpm --filter api test -- modules/<entry>` **in a staged child** |
+| Entry infrastructure (repositories, adapters) | integration | Key query paths + error paths | `catalog/<entry>/api/**/*.int-spec.ts` | staged child → `pnpm --filter api test:int -- <path>` |
+| Entry routes | e2e | Every route in scope: happy + edge + error | `catalog/<entry>/api/__e2e__/*.e2e-spec.ts` | staged child → `pnpm --filter api test:e2e -- <path>` |
+| Entry parity (frozen surface) | unit (parity spec) | Re-frozen after any contract change | `catalog/<entry>/parity/*.parity.spec.ts` | staged child → `pnpm --filter api test -- parity` |
+| Platform scripts (lint rules, entrypoint, child env defaults) | node:test | New rule + one regression case | `scripts/platform/__tests__/*.test.mjs` | `pnpm test:scripts` |
+| Entry boot seed (`api/seeds/*.ts`) — idempotent script, no importable surface | none | Proven by the entrypoint script test (T16) and the `testing/**`-import lint rule (T17) | `catalog/<entry>/api/seeds/*.ts` | gate only |
+| Custom SQL migration | none | Filename/registration check via `pnpm test:scripts`; effect proven by the owning entry's int-spec at the Final gate | `catalog/<entry>/migrations/custom/*.sql` | gate only |
+| Import-path rewrite with no behaviour change | unit | The moved spec keeps its cases; the port-shape spec asserts the new token | co-located with the moved code | `pnpm --filter api test -- <path>` |
+| Manifests / CHANGELOG / advisories / READMEs / docs | none | Gate only (`pnpm catalog:lint`) | — | gate only |
+| CI workflows / build output | none — probe | REM-26 and REM-47 probes in `spec.md` | — | probe only |
+
+**Staged-child constraint (hard, from `touches-audit.md` § *Gate constraint*).** The template never runs an entry's `int-spec` or `__e2e__`: `apps/api/test/jest-e2e.json` roots are `test`/`src` only, and `runGates` (`scripts/platform/lib/child.mjs:70-76`) runs `pnpm check` + unit `pnpm test` on the staged child. Every entry integration/e2e proof therefore runs inside a staged child produced by `pnpm catalog:typecheck` (`scripts/platform/catalog-stage.mjs`) with `--keep`, then the runner command above **inside the staged tree**. Task gates that need this say `Gate: full (staged child)` explicitly.
+
+## Gate Check Commands
+
+> Generated from codebase — confirm before Execute.
+
+| Gate Level | When to Use | Command |
+| --- | --- | --- |
+| Quick | After a task whose proofs are unit specs only | `pnpm --filter api test -- <path scoped to the task's Touches>` |
+| Full | After a task with integration or e2e proofs (kernel) | `pnpm --filter api test -- <path>` **+** `pnpm --filter api test:int -- <path>` and/or `pnpm --filter api test:e2e -- <path>`, each path-filtered to the spec files the task created or touched |
+| Full (staged child) | After a task with integration or e2e proofs **in a catalog entry** | `pnpm --filter api test -- modules/<entry>` (template tree, unit only) **then** `pnpm catalog:typecheck --keep` and, inside the staged child, `pnpm --filter api test:int -- <path>` / `pnpm --filter api test:e2e -- <path>` |
+| Build | Once per wave, orchestrator only, through the runner | `pnpm --filter api typecheck` + `pnpm --filter api lint` + unit tests scoped to the union of the wave's `Touches`. **`full-unit` variant** = `pnpm --filter api typecheck && pnpm --filter api lint && pnpm --filter api test`. Any wave touching a module file, a facade or a cross-module import additionally names `src/modules/module-boundaries.spec.ts` and `src/modules/architecture.spec.ts` explicitly. Never integration/e2e. |
+| Final | Once per feature, Verifier only | `pnpm --filter api build` + `pnpm check` + `pnpm --filter api test` + `pnpm --filter api test:int` + `pnpm --filter api test:e2e` + `pnpm test:scripts` + `pnpm catalog:lint` + `pnpm catalog:check` + `pnpm template:smoke` + `cd apps/api && pnpm audit --prod --audit-level=high`, plus the REM-26 and REM-47 probes from `spec.md` |
+
+**Suite-cost rule (hard):** the complete e2e/integration suite and the full unit suite run exactly ONCE per feature, at the Final gate. Per-task gates stay path-filtered; the Build gate runs once per wave, never inside a worker.
+
+### Gate Check Commands — after T59 (Vitest)
+
+> Source: root `package.json:19-32` on `main` at `278dde0`; design § H. Applies to T60 onwards, waves 4–6 and the Verifier. `apps/api` has no `test*` script; `globals: false`.
+
+| Gate Level | When to Use | Command |
+| --- | --- | --- |
+| Quick | unit specs only | `pnpm vitest run --project api <path>` (one or more files/dirs); `pnpm test` for the whole unit suite |
+| Full (kernel) | kernel int/e2e proofs | `pnpm test:int` / `pnpm test:e2e` (whole project — Vitest's `--project` selection; add `<path>` to narrow); Docker up (Testcontainers via `apps/api/test/setup/global-setup.ts`) |
+| Full (entry) | any catalog entry unit/int/e2e proof | `pnpm catalog:check` — renders a child, `module add` each entry, runs `pnpm check && pnpm test && pnpm test:db` inside it; Docker up. `pnpm catalog:typecheck --keep` is `tsc` only — no test runs in `.catalog-stage` |
+| Build | once per wave, runner only | `pnpm check` (turbo lint + typecheck) + `pnpm test` + `src/modules/module-boundaries.spec.ts` named explicitly + `pnpm catalog:typecheck`; `full-unit` = the same (unit suite is already whole) |
+| Final | Verifier only | `pnpm --filter api build` + `pnpm check` + `pnpm test` + `pnpm test:int` + `pnpm test:e2e` + `pnpm test:coverage` (floors) + `pnpm test:scripts` + `pnpm catalog:lint` + `pnpm catalog:check` + `pnpm template:smoke` + `cd apps/api && pnpm audit --prod --audit-level=high`, plus the REM-26, REM-47 and REM-48 probes |
+
+**Staged-child constraint — superseded after T59**: the Jest-era "staged child" proof path above (`pnpm catalog:typecheck --keep` + jest in the stage) was only ever partial (wave 2 found the stage has no entry migrations → `schema "identity" does not exist`). On Vitest the entry proof is `pnpm catalog:check`, full stop.
+
+---
+
+## Wave Plan
+
+Waves run in order (barrier + Build gate between them). Clusters inside a wave run **in parallel**, one worker each; tasks inside a cluster run in the listed order. Wave 2 holds five clusters: four dispatch immediately, C8 is the FIFO tail (`serial-ok: FIFO tail`), one gate at the end. **Wave 3 (C12, added 2026-08-22) is the Jest → Vitest port** — exclusive, every file in play; the former waves 3/4/5 are now 4/5/6.
+
+| Wave | Cluster | Tasks (in order) | Files (union of Touches) | Notes |
+| --- | --- | --- | --- | --- |
+| 1 | C1 | T1 → T2 → T3 → T4 → T5 → T6 → T7 | `apps/api/src/shared/kernel/rate-limit/**`, `apps/api/src/shared/kernel/errors/too-many-requests.error.ts`, `apps/api/src/shared/kernel/errors/too-many-requests.error.spec.ts`, `apps/api/src/shared/kernel/collections/in-flight-gate.ts`, `apps/api/src/shared/kernel/collections/in-flight-gate.spec.ts`, `apps/api/src/shared/infra/rate-limit/**`, `catalog/identity/single-tenant/api/domain/ports/rate-limiter.ts`, `catalog/identity/single-tenant/api/domain/ports/ports.spec.ts`, `catalog/identity/single-tenant/api/domain/errors.ts`, `catalog/identity/single-tenant/api/domain/errors.spec.ts`, `catalog/identity/single-tenant/api/infrastructure/rate-limit/**`, `catalog/identity/single-tenant/api/api/guards/rate-limit.guard.ts`, `catalog/identity/single-tenant/api/api/guards/rate-limit.guard.spec.ts`, `catalog/identity/single-tenant/api/testing/allow-all-rate-limiter.ts`, `catalog/identity/single-tenant/api/identity.module.ts`, `catalog/identity/single-tenant/api/application/use-cases/login/login.use-case.ts`, `catalog/identity/single-tenant/api/__e2e__/**`, `catalog/attachment/api/__e2e__/**`, `catalog/audit/api/__e2e__/**`, `catalog/tag/api/__e2e__/**` | kernel rate-limit seam + identity error catalog · gate: full-unit (kernel shared code + module wiring) |
+| 1 | C2 | T8 → T9 → T10 → T11 → T12 | `apps/api/src/shared/config/env.ts`, `apps/api/src/shared/config/env.spec.ts`, `apps/api/src/shared/infra/database/connection-config.ts`, `apps/api/src/shared/infra/database/connection-config.spec.ts`, `apps/api/src/shared/infra/redis/redis.provider.ts`, `apps/api/src/shared/infra/redis/redis.provider.spec.ts`, `apps/api/src/docs/docs.ts`, `apps/api/src/docs/docs.spec.ts`, `apps/api/src/main.ts`, `apps/api/test/setup/unit-env.ts`, `apps/api/test/setup/int-env.ts`, `apps/api/test/setup/e2e-env.ts`, `apps/api/test/security-bootstrap.e2e-spec.ts`, `scripts/platform/lib/child.mjs`, `apps/api/.env.example`, `docker-compose.yml`, `apps/api/src/shared/kernel/redaction/sensitive-keys.ts`, `apps/api/src/shared/kernel/redaction/sensitive-keys.spec.ts` | fail-closed config + shared sensitive-key module · gate: full-unit (env read by every spec) |
+| 1 | C3 | T13 → T14 → T15 → T16 → T17 → T18 | `apps/api/nest-cli.json`, `apps/api/tsconfig.build.json`, `apps/api/Dockerfile`, `apps/api/docker-entrypoint.sh`, `apps/api/docker-entrypoint.dev.sh`, `apps/api/package.json`, `catalog/identity/single-tenant/api/seeds/bootstrap.ts`, `catalog/identity/single-tenant/api/testing/seeds/bootstrap-master.ts`, `catalog/identity/single-tenant/api/testing/seeds/master-user.seed.ts`, `scripts/platform/lib/lint.mjs`, `scripts/platform/catalog-lint.mjs`, `scripts/platform/catalog-check.mjs`, `scripts/platform/__tests__/lint.test.mjs`, `scripts/platform/__tests__/docker-entrypoint.test.mjs`, `.github/workflows/ci.yml`, `.github/workflows/catalog.yml`, `.github/workflows/feedback-triage.yml`, `apps/api/src/openapi/openapi-config.ts` | production image contract + catalog lint + CI · gate: scoped (build/scripts/CI only) |
+| 2 | C4 | T19 → T20 → T21 → T22 → T23 | `apps/api/src/shared/kernel/logging/log.redact.ts`, `apps/api/src/shared/kernel/logging/log.redact.spec.ts`, `apps/api/src/shared/kernel/logging/logger.factory.ts`, `apps/api/src/shared/kernel/outbox/outbox.dispatcher.ts`, `apps/api/src/shared/kernel/outbox/outbox.int-spec.ts`, `apps/api/src/db/outbox-replay.int-spec.ts`, `apps/api/src/shared/kernel/scheduling/maintenance-registry.ts`, `apps/api/src/shared/kernel/scheduling/maintenance-registry.spec.ts`, `apps/api/src/shared/kernel/idempotency/idempotency.interceptor.ts`, `apps/api/src/shared/kernel/idempotency/idempotency.interceptor.spec.ts`, `apps/api/src/shared/kernel/listing/listing-query.schema.ts`, `apps/api/src/shared/kernel/listing/listing-query.schema.spec.ts` | kernel redaction consumers, outbox, cheap kernel batch · gate: full-unit |
+| 2 | C5 | T24 → T25 → T26 → T27 → T28 → T29 → T30 | `catalog/identity/single-tenant/api/application/use-cases/login/**`, `catalog/identity/single-tenant/api/application/rate-limiter-outage.listener.ts`, `catalog/identity/single-tenant/api/application/rate-limiter-outage.listener.spec.ts`, `catalog/identity/single-tenant/api/application/password/**`, `catalog/identity/single-tenant/api/application/use-cases/set-password/**`, `catalog/identity/single-tenant/api/application/use-cases/change-password/**`, `catalog/identity/single-tenant/api/application/use-cases/reset-password/**`, `catalog/identity/single-tenant/api/infrastructure/hashing/**`, `catalog/identity/single-tenant/api/infrastructure/password/**`, `catalog/identity/single-tenant/api/domain/ports/breach-check.ts`, `catalog/identity/single-tenant/api/domain/entities/auth-event.entity.ts`, `catalog/identity/single-tenant/api/domain/entities/auth-event.entity.spec.ts`, `catalog/identity/single-tenant/api/infrastructure/tables/auth-event.table.ts`, `catalog/identity/single-tenant/api/api/controllers/auth/login.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/auth/forgot-password.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/auth/reset-password.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/auth/verify-email.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/auth/validate-access-link.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/auth/cancel-access-link.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/auth/set-password.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/session/resend-verification.controller.ts`, `catalog/identity/single-tenant/api/domain/ports/breach-check.ts`, `catalog/identity/single-tenant/api/domain/ports/ports.spec.ts`, `catalog/identity/single-tenant/api/identity.config.ts`, `catalog/identity/single-tenant/api/identity.config.spec.ts`, `catalog/identity/single-tenant/api/identity.config.fixture.ts`, `catalog/identity/single-tenant/api/identity.module.ts`, `catalog/identity/single-tenant/api/__e2e__/auth-login.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/auth-anti-enum.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/auth-rate-limit.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/auth-csrf-none.e2e-spec.ts`, `catalog/identity/single-tenant/parity/csrf.parity.spec.ts`, `catalog/identity/single-tenant/parity/route-access.parity.spec.ts` | identity login hardening · gate: full-unit (identity module wiring) |
+| 2 | C6 | T31 → T32 → T33 → T34 → T35 → T36 → T37 → T38 | `catalog/identity/single-tenant/api/application/assert-permission.ts`, `catalog/identity/single-tenant/api/application/assert-permission.spec.ts`, `catalog/identity/single-tenant/api/application/access-policy.ts`, `catalog/identity/single-tenant/api/application/access-policy.spec.ts`, `catalog/identity/single-tenant/api/application/require-auth.ts`, `catalog/identity/single-tenant/api/application/require-auth.spec.ts`, `catalog/identity/single-tenant/api/application/use-cases/list-users/**`, `catalog/identity/single-tenant/api/application/use-cases/update-user/**`, `catalog/identity/single-tenant/api/application/use-cases/create-user/**`, `catalog/identity/single-tenant/api/application/use-cases/request-email-change/**`, `catalog/identity/single-tenant/api/api/middleware/auth.middleware.ts`, `catalog/identity/single-tenant/api/api/middleware/auth.middleware.spec.ts`, `catalog/identity/single-tenant/api/api/contracts/identity.contract.ts`, `catalog/identity/single-tenant/api/api/contracts/identity.contract.spec.ts`, `catalog/identity/single-tenant/api/api/controllers/admin/list-users.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/admin/delete-user.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/admin/resend-access-link.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/device/revoke-device.controller.ts`, `catalog/identity/single-tenant/api/domain/errors.ts`, `catalog/identity/single-tenant/api/domain/entities/user.entity.ts`, `catalog/identity/single-tenant/api/domain/entities/user.entity.spec.ts`, `catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-session.repository.ts`, `catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-session.repository.int-spec.ts`, `catalog/identity/single-tenant/api/domain/ports/session.repository.ts`, `catalog/identity/single-tenant/migrations/custom/03_audit_redact_token_hashes.sql`, `catalog/identity/single-tenant/parity/access-policy.parity.spec.ts`, `catalog/identity/single-tenant/api/__e2e__/authz.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/user-trash.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/devices.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/create-user-flow.e2e-spec.ts`, `catalog/tag/api/application/use-cases/list-tags/**`, `catalog/tag/api/api/controllers/tags/list-tags.controller.ts`, `catalog/tag/api/__e2e__/tags.e2e-spec.ts` | identity authz/input/session + tag trash · gate: full-unit |
+| 2 | C7 | T39 → T40 → T41 → T42 → T43 → T44 → T45 → T46 | `catalog/attachment/api/application/use-cases/get-attachment-for-download/**`, `catalog/attachment/api/application/use-cases/upload-attachment/**`, `catalog/attachment/api/application/use-cases/upload-attachments-batch/**`, `catalog/attachment/api/application/use-cases/confirm-uploads/**`, `catalog/attachment/api/application/use-cases/delete-attachment/delete-attachment.use-case.spec.ts`, `catalog/attachment/api/application/jobs/purge-pending-attachments.job.ts`, `catalog/attachment/api/application/jobs/purge-pending-attachments.job.spec.ts`, `catalog/attachment/api/api/facades/attachment.facade.ts`, `catalog/attachment/api/api/controllers/download-attachment.controller.ts`, `catalog/attachment/api/api/controllers/upload-attachments.controller.ts`, `catalog/attachment/api/api/controllers/multipart-files.ts`, `catalog/attachment/api/api/controllers/multipart-files.spec.ts`, `catalog/attachment/api/domain/content-type-sniff.ts`, `catalog/attachment/api/domain/content-type-sniff.spec.ts`, `catalog/attachment/api/domain/errors.ts`, `catalog/attachment/api/domain/ports/attachment.repository.ts`, `catalog/attachment/api/infrastructure/repositories/drizzle-attachment.repository.ts`, `catalog/attachment/api/infrastructure/repositories/drizzle-attachment.repository.int-spec.ts`, `catalog/attachment/api/attachment.config.ts`, `catalog/attachment/api/attachment.config.spec.ts`, `catalog/attachment/api/attachment.module.ts`, `catalog/attachment/api/__e2e__/attachment-download.e2e-spec.ts`, `catalog/attachment/api/__e2e__/attachment-upload.e2e-spec.ts`, `apps/api/src/shared/kernel/http/content-disposition.ts`, `apps/api/src/shared/kernel/http/content-disposition.spec.ts`, `apps/api/src/shared/infra/storage/r2-storage.adapter.ts`, `apps/api/src/shared/infra/storage/r2-storage.adapter.spec.ts`, `apps/api/src/shared/infra/storage/storage.config.ts`, `apps/api/src/shared/infra/storage/storage.config.spec.ts`, `apps/api/src/shared/infra/storage/storage.module.ts`, `apps/api/src/shared/infra/storage/object-storage.port.ts` | attachment vertical + kernel storage/HTTP helpers · gate: full-unit |
+| 2 | C8 | T47 → T48 → T49 → T50 | `catalog/notification/api/application/catalog/notification-catalog.ts`, `catalog/notification/api/application/catalog/notification-catalog.spec.ts`, `catalog/notification/api/api/controllers/stream/sse.controller.ts`, `catalog/notification/api/api/controllers/stream/sse.controller.spec.ts`, `catalog/notification/api/notification.config.ts`, `catalog/notification/api/notification.config.spec.ts`, `catalog/notification/api/infrastructure/delivery/delivery.dispatcher.ts`, `catalog/notification/api/infrastructure/delivery/delivery.dispatcher.spec.ts`, `catalog/audit/api/api/contracts/audit.contract.ts`, `catalog/audit/api/api/contracts/audit.contract.spec.ts` | notification + audit input hardening · `serial-ok: FIFO tail` · gate: full-unit |
+| 3 (exclusive) | C12 | T59 → T60 → T61 → T62 | **every file** — `git merge main` (349 files on the `main` side, 74 in conflict), then every spec file the feature authored (85: `apps/api/src/**/*.{spec,int-spec}.ts`, `apps/api/test/*.e2e-spec.ts`, `catalog/**/*.{spec,int-spec,e2e-spec}.ts`), `apps/api/test/setup/{unit,int,e2e}-env.ts`, `apps/api/package.json`, `apps/api/tsconfig.build.json`, `.github/workflows/ci.yml`, `scripts/platform/catalog-check.mjs`, `scripts/platform/lib/child.mjs` | Jest → Vitest port (design § H) — alone · gate: Vitest Build (`pnpm check` + `pnpm test` + `module-boundaries.spec.ts` + `catalog:typecheck`) |
+| 4 (exclusive) | C9 | T51 | `apps/api/package.json`, `package.json`, `pnpm-lock.yaml`, `catalog/identity/single-tenant/api/api/controllers/session/upload-avatar.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/auth/upload-access-link-avatar.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/session/upload-avatar.controller.spec.ts` | dependency bumps + `pnpm.overrides` + audit gate — lockfile, alone · gate: full-unit |
+| 5 (exclusive) | C10 | T52 | `openapi.json`, `packages/api-client/**`, `catalog/identity/single-tenant/parity/contract.parity.spec.ts`, `catalog/identity/single-tenant/web/core/session.types.ts`, `catalog/identity/single-tenant/web/core/route-access.ts` | contract regen + parity re-freeze — alone · gate: full-unit |
+| 6 | C11 | T53 → T54 → T55 → T56 → T57 → T58 | `catalog/identity/single-tenant/module.json`, `catalog/identity/single-tenant/CHANGELOG.md`, `catalog/identity/single-tenant/README.md`, `catalog/attachment/module.json`, `catalog/attachment/CHANGELOG.md`, `catalog/attachment/README.md`, `catalog/notification/module.json`, `catalog/notification/CHANGELOG.md`, `catalog/notification/README.md`, `catalog/audit/module.json`, `catalog/audit/CHANGELOG.md`, `catalog/audit/README.md`, `catalog/tag/module.json`, `catalog/tag/CHANGELOG.md`, `catalog/tag/README.md`, `docs/advisories/ADV-20260822-01.md`, `docs/advisories/ADV-20260822-02.md`, `docs/advisories/ADV-20260822-03.md`, `docs/advisories/ADV-20260822-04.md`, `docs/advisories/ADV-20260822-05.md`, `docs/dev/template-changelog.md`, `docs/dev/deploy.md.jinja`, `docs/dev/local-environment.md` | release plumbing: versions, advisories, docs · gate: scoped (docs/manifests → typecheck + lint + `pnpm catalog:lint`) |
+
+```
+Wave 1:  [C1: T1→T7]  ∥ [C2: T8→T12]  ∥ [C3: T13→T18]
+Wave 2:  [C4: T19→T23] ∥ [C5: T24→T30] ∥ [C6: T31→T38] ∥ [C7: T39→T46] ∥ [C8: T47→T50 — FIFO tail]
+Wave 3:  [C12: T59→T62] (exclusive — merge main + Jest→Vitest port; last Jest run is wave 2's gate)
+Wave 4:  [C9: T51]   (exclusive — lockfile)
+Wave 5:  [C10: T52]  (exclusive — contract regen)
+Wave 6:  [C11: T53→T58]
+```
+
+**Kernel tag**: `v2.0.0` (user decision, 2026-08-22 — required env vars break every child's boot). All five entries bump `kernelRange` to `">=2.0.0 <3.0.0"` in T53–T56.
+
+---
+
+## Task Breakdown
+
+> Every task's `Tools` are `MCP: NONE · Skill: NONE` unless the task says otherwise — this feature is in-repo TypeScript, SQL and shell.
+
+### T1: Kernel rate-limit port, 429 error and in-flight gate
+
+**What**: Create the kernel rate-limit port, the `TooManyRequestsError` domain error and the shared `InFlightGate` primitive — the three seams B and D both hang from.
+**Where**: `apps/api/src/shared/kernel/rate-limit/rate-limiter.port.ts`
+**Touches**: `apps/api/src/shared/kernel/rate-limit/rate-limiter.port.ts`, `apps/api/src/shared/kernel/errors/too-many-requests.error.ts`, `apps/api/src/shared/kernel/errors/too-many-requests.error.spec.ts`, `apps/api/src/shared/kernel/collections/in-flight-gate.ts`, `apps/api/src/shared/kernel/collections/in-flight-gate.spec.ts`
+**Depends on**: None
+**Exclusive**: no
+**Reuses**: `apps/api/src/shared/kernel/errors/` (`DomainError.retryAfterSeconds`, `PoolSaturatedError:6-14` is the 503 shape); `apps/api/src/shared/kernel/collections/set-equal.ts` (file layout precedent)
+**Requirement**: REM-04, REM-05, REM-14
+
+**Done when**:
+
+- [ ] `RateLimiter` interface with `consume(key, limit, windowSeconds, opts?: { critical?: boolean })` and `reset(key)`; `RATE_LIMITER` symbol; `RateLimitResult`, `RateLimitOptions`, `RateLimitConfig` exported exactly as `design.md` § *Data Models*
+- [ ] `TooManyRequestsError` extends the kernel `DomainError`, status 429, carries `retryAfterSeconds`; spec asserts the `problem-details.filter.ts:118-138` contract fields
+- [ ] `InFlightGate(max)` exposes `tryAcquire(): (() => void) | null` and `inFlight`; releasing twice does not double-decrement; spec covers acquire-to-capacity, refusal at capacity, release-and-reacquire, double-release
+- [ ] Gate check passes: `pnpm --filter api test -- shared/kernel/errors shared/kernel/collections`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `feat(kernel): add rate-limit port, 429 error and in-flight gate`
+
+---
+
+### T2: `InMemoryRateLimiter` sliding window
+
+**What**: Per-instance sliding-window limiter used as the critical-key fallback when Redis is unreachable.
+**Where**: `apps/api/src/shared/kernel/rate-limit/in-memory-rate-limiter.ts`
+**Touches**: `apps/api/src/shared/kernel/rate-limit/in-memory-rate-limiter.ts`, `apps/api/src/shared/kernel/rate-limit/in-memory-rate-limiter.spec.ts`
+**Depends on**: T1
+**Exclusive**: no
+**Reuses**: Lua window semantics of `catalog/identity/single-tenant/api/infrastructure/rate-limit/lua-scripts.ts` (same limit/window arithmetic, in JS)
+**Requirement**: REM-04
+
+**Done when**:
+
+- [ ] `Map<key, number[]>` pruned on every call; `consume` returns `{ allowed, retryAfterSeconds }` with the same arithmetic as the Lua script; `reset(key)` and `clear()` implemented
+- [ ] Bounded at 50 000 keys, evicting the oldest-touched key — an outage cannot be turned into a memory attack; spec proves the bound
+- [ ] Clock is injectable; spec drives time deterministically (no real timers)
+- [ ] Spec covers: allow under limit, deny on the (limit+1)th, window slide re-allows, `reset` clears one key, `clear` clears all, eviction at the bound
+- [ ] Gate check passes: `pnpm --filter api test -- shared/kernel/rate-limit`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `feat(kernel): add in-memory sliding-window rate limiter`
+
+---
+
+### T3: Move the Redis limiter into `shared/infra/rate-limit/`
+
+**What**: Move `RedisRateLimiter` + `lua-scripts` from identity into the kernel infra layer, drop the fail-open branch and add `reset`.
+**Where**: `apps/api/src/shared/infra/rate-limit/redis-rate-limiter.ts`
+**Touches**: `apps/api/src/shared/infra/rate-limit/redis-rate-limiter.ts`, `apps/api/src/shared/infra/rate-limit/lua-scripts.ts`, `apps/api/src/shared/infra/rate-limit/redis-rate-limiter.int-spec.ts`, `catalog/identity/single-tenant/api/infrastructure/rate-limit/redis-rate-limiter.ts`, `catalog/identity/single-tenant/api/infrastructure/rate-limit/lua-scripts.ts`, `catalog/identity/single-tenant/api/infrastructure/rate-limit/redis-rate-limiter.int-spec.ts`
+**Depends on**: T1
+**Exclusive**: no
+**Reuses**: the moved files verbatim — the Lua script is unchanged
+**Requirement**: REM-04
+
+**Done when**:
+
+- [ ] The three identity files are deleted and recreated under `apps/api/src/shared/infra/rate-limit/`, implementing the T1 port
+- [ ] The fail-open branch (old `redis-rate-limiter.ts:52-59`) is gone: a Redis error **propagates** — the composite decides the policy, not the adapter
+- [ ] `reset(key)` issues `DEL ratelimit:<key>`
+- [ ] The moved int-spec passes unchanged in substance, plus a new case: Redis error propagates instead of allowing, and one for `reset`
+- [ ] Gate check passes: `pnpm --filter api test:int -- shared/infra/rate-limit`
+
+**Tests**: integration
+**Gate**: full
+**Commit**: `refactor(kernel): move redis rate limiter to shared/infra and let errors propagate`
+
+---
+
+### T4: `ResilientRateLimiter` composite
+
+**What**: Compose Redis + in-memory with the per-call `critical` policy and the degraded/recovered outage signal.
+**Where**: `apps/api/src/shared/kernel/rate-limit/resilient-rate-limiter.ts`
+**Touches**: `apps/api/src/shared/kernel/rate-limit/resilient-rate-limiter.ts`, `apps/api/src/shared/kernel/rate-limit/resilient-rate-limiter.spec.ts`
+**Depends on**: T2, T3
+**Exclusive**: no
+**Reuses**: `EventEmitter2` as wired in `apps/api/src/shared/kernel/outbox/outbox.dispatcher.ts:241`
+**Requirement**: REM-04
+
+**Done when**:
+
+- [ ] Primary error + `critical: true` → the in-memory fallback enforces the same limit/window; primary error + non-critical → `{ allowed: true, retryAfterSeconds: 0 }`
+- [ ] First error after a healthy period logs one `warn` and emits `rate-limiter.degraded` with `{ since, error }`; a second error while degraded emits nothing
+- [ ] First success after degraded calls `fallback.clear()` and emits `rate-limiter.recovered` — spec proves the edge case "Redis returns → fallback state discarded, no double-count"
+- [ ] `reset` mirrors `consume` (same critical/fallback policy)
+- [ ] Gate check passes: `pnpm --filter api test -- shared/kernel/rate-limit`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `feat(kernel): add resilient rate limiter with critical-key fallback`
+
+---
+
+### T5: Move `@RateLimit` and `RateLimitGuard` into the kernel
+
+**What**: Move the decorator and guard class to the kernel and add a `@Global()` `RateLimitModule` providing `RATE_LIMITER` as the composite.
+**Where**: `apps/api/src/shared/kernel/rate-limit/rate-limit.guard.ts`
+**Touches**: `apps/api/src/shared/kernel/rate-limit/rate-limit.decorator.ts`, `apps/api/src/shared/kernel/rate-limit/rate-limit.guard.ts`, `apps/api/src/shared/kernel/rate-limit/rate-limit.guard.spec.ts`, `apps/api/src/shared/kernel/rate-limit/rate-limit.module.ts`, `catalog/identity/single-tenant/api/api/guards/rate-limit.guard.ts`, `catalog/identity/single-tenant/api/api/guards/rate-limit.guard.spec.ts`
+**Depends on**: T4
+**Exclusive**: no
+**Reuses**: `catalog/identity/single-tenant/api/api/guards/rate-limit.guard.ts:36-65` (moved); `apps/api/src/shared/infra/storage/storage.module.ts:9-14` (`@Global()` module precedent)
+**Requirement**: REM-06, REM-14
+
+**Done when**:
+
+- [ ] Metadata key `"kernel:rateLimit"` carries `{ limit, windowSeconds, critical? }`; the key format stays `ip:${req.ip}:${routeKey}`
+- [ ] Denial throws the T1 `TooManyRequestsError` (not a bare `HttpException`), so `Retry-After` comes from the problem-details filter
+- [ ] `RateLimitModule` is `@Global()`, imports `RedisModule`, provides and exports `RATE_LIMITER` = `ResilientRateLimiter(Redis, InMemory)`; **the kernel does not register the guard as `APP_GUARD`**
+- [ ] The identity guard + its spec are deleted; the moved spec keeps its in-file `@RateLimit` cases and gains one asserting `critical` reaches `consume`
+- [ ] Gate check passes: `pnpm --filter api test -- shared/kernel/rate-limit`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `refactor(kernel): move rate-limit decorator and guard to the kernel`
+
+---
+
+### T6: Re-point every rate-limiter importer
+
+**What**: Mechanical import rewrite — every production file, spec and e2e that imports the identity `RATE_LIMITER` token or the identity guard now imports the kernel ones.
+**Where**: `catalog/identity/single-tenant/api/domain/ports/rate-limiter.ts` (delete)
+**Touches**: `catalog/identity/single-tenant/api/domain/ports/rate-limiter.ts`, `catalog/identity/single-tenant/api/domain/ports/ports.spec.ts`, `catalog/identity/single-tenant/api/identity.module.ts`, `catalog/identity/single-tenant/api/application/use-cases/login/login.use-case.ts`, `catalog/identity/single-tenant/api/testing/allow-all-rate-limiter.ts`, `catalog/identity/single-tenant/api/__e2e__/notifications-inapp.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/notifications-sse.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/access-catalog.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/auth-login.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/notifications-email.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/verify-email.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/user-trash.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/create-user-flow.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/access-link-activation.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/access-history.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/auth-outbox-email.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/auth-logout.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/idempotency.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/auth-csrf-none.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/authz.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/notifications-feed.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/auth-anti-enum.e2e-spec.ts`, `catalog/attachment/api/__e2e__/attachment-delete.e2e-spec.ts`, `catalog/attachment/api/__e2e__/attachment-download.e2e-spec.ts`, `catalog/audit/api/__e2e__/audit-product-extension.e2e-spec.ts`, `catalog/audit/api/__e2e__/audit.e2e-spec.ts`, `catalog/tag/api/__e2e__/tags.e2e-spec.ts`, `catalog/identity/single-tenant/api/api/controllers/**` (the 27 `@RateLimit` importers — added at wave 1, blocked-by-ownership #1), `catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-auth-event.repository.int-spec.ts`
+**Depends on**: T5
+**Exclusive**: no
+**Reuses**: import paths only — no behaviour change
+**Requirement**: REM-04, REM-06
+
+**Done when**:
+
+- [ ] `catalog/identity/single-tenant/api/domain/ports/rate-limiter.ts` is deleted; `ports.spec.ts` asserts the kernel token instead
+- [ ] `identity.module.ts` no longer provides `RATE_LIMITER` (the `@Global()` `RateLimitModule` does); the `RedisRateLimiter` import is gone
+- [ ] `allow-all-rate-limiter.ts` implements the kernel port (including `reset`) and stays in `testing/`
+- [ ] All 22 e2e `overrideProvider(RATE_LIMITER)` sites and the 5 cross-entry e2e imports point at `apps/api/src/shared/kernel/rate-limit/rate-limiter.port` — no file still imports `identity/domain/ports/rate-limiter`
+- [ ] Gate check passes: `pnpm --filter api typecheck` and `pnpm --filter api test -- modules/identity`
+
+**Tests**: unit (`ports.spec.ts` re-pointed at the kernel token; behaviour proven by the moved specs of T3/T5)
+**Gate**: quick
+**Commit**: `refactor(identity): point rate-limiter consumers at the kernel port`
+
+---
+
+### T7: Identity error catalog additions
+
+**What**: Add the three new identity domain errors the login and authz clusters will throw, so neither W2 cluster has to own `domain/errors.ts` concurrently.
+**Where**: `catalog/identity/single-tenant/api/domain/errors.ts`
+**Touches**: `catalog/identity/single-tenant/api/domain/errors.ts`, `catalog/identity/single-tenant/api/domain/errors.spec.ts`
+**Depends on**: T1
+**Exclusive**: no
+**Reuses**: `catalog/identity/single-tenant/api/domain/errors.ts:60-69` (`RateLimitedError`, the 429 + `retryAfterSeconds` shape)
+**Requirement**: REM-05, REM-07, REM-18
+
+**Done when**:
+
+- [ ] `PasswordHashingSaturatedError` — 503, `retryAfterSeconds: 2`
+- [ ] `BreachCheckUnavailableError` — 503, `retryAfterSeconds: 5`
+- [ ] `PermissionGrantNotAllowedError` — 403, problem `type` `permission-grant-not-allowed`
+- [ ] `EmailBelongsToDeletedUserError` is **left in place** — it is removed in T37, the only task that owns its producer and its e2e assertion
+- [ ] Spec asserts status, `type` and `retryAfterSeconds` for each new error
+- [ ] Gate check passes: `pnpm --filter api test -- modules/identity/domain`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `feat(identity): add saturation, breach-check and grant-delta domain errors`
+
+---
+
+### T8: `env.ts` fails closed
+
+**What**: Remove every insecure default from the kernel env schema, add the four new variables and refuse plaintext Redis in production.
+**Where**: `apps/api/src/shared/config/env.ts`
+**Touches**: `apps/api/src/shared/config/env.ts`, `apps/api/src/shared/config/env.spec.ts`
+**Depends on**: None
+**Exclusive**: no
+**Reuses**: `apps/api/src/shared/config/env.ts:1-87` (existing zod schema and `BASE` spec fixture at `env.spec.ts:3-7`)
+**Requirement**: REM-21, REM-22, REM-24, REM-30
+
+**Done when**:
+
+- [ ] `NODE_ENV` and `DATABASE_SSL` lose their defaults — an unset value fails with a Zod issue naming the variable
+- [ ] `TRUST_PROXY_HOPS` defaults to `0`
+- [ ] New: `DATABASE_SSL_CA` (optional PEM, `\n` unescaped), `REDIS_ALLOW_PLAINTEXT` (default `false`), `DOCS_ENABLED` (default `false`), `OUTBOX_DEAD_RETENTION_DAYS` (default `30`)
+- [ ] `superRefine`: `NODE_ENV=production` + `REDIS_URL` starting `redis://` + `REDIS_ALLOW_PLAINTEXT` not `true` → issue on `REDIS_URL`
+- [ ] `nodeEnvSchema` is exported (T49 reuses it) and accepts `development | test | staging | production`
+- [ ] `env.spec.ts` has one case per rule above, including `DOCS_ENABLED=true` in production being accepted and `rediss://` in production needing no opt-in
+- [ ] Gate check passes: `pnpm --filter api test -- shared/config`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `feat(kernel)!: require NODE_ENV and DATABASE_SSL, refuse plaintext redis in production`
+
+---
+
+### T9: Database CA trust and Redis command timeout
+
+**What**: Honour `DATABASE_SSL_CA` with `rejectUnauthorized: true`, and stop a half-open Redis socket from hanging the login path.
+**Where**: `apps/api/src/shared/infra/database/connection-config.ts`
+**Touches**: `apps/api/src/shared/infra/database/connection-config.ts`, `apps/api/src/shared/infra/database/connection-config.spec.ts`, `apps/api/src/shared/infra/redis/redis.provider.ts`, `apps/api/src/shared/infra/redis/redis.provider.spec.ts`
+**Depends on**: T8
+**Exclusive**: no
+**Reuses**: `connection-config.ts:14-15`, `connection-config.spec.ts:36-46` (ssl on/off cases); `redis.provider.ts:20-26`
+**Requirement**: REM-23, REM-04
+
+**Done when**:
+
+- [ ] `ssl` is `{ rejectUnauthorized: true, ...(ca && { ca }) }` when `DATABASE_SSL=require`, `false` otherwise; spec covers require-without-CA, require-with-CA, disable
+- [ ] `redis.provider.ts` sets `commandTimeout: 2000` — a black-holed Redis surfaces as an error the resilient limiter can act on instead of an open wait
+- [ ] `redis.provider.spec.ts` is created (the provider had no spec) and asserts the timeout option and that the plaintext/TLS URL is passed through untouched
+- [ ] Gate check passes: `pnpm --filter api test -- shared/infra/database shared/infra/redis`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `feat(kernel): trust DATABASE_SSL_CA and bound redis command time`
+
+---
+
+### T10: `/docs` off in production unless opted in
+
+**What**: Gate the Scalar docs mount behind `DOCS_ENABLED` in production, proven by a pure predicate because `/docs` cannot boot under Jest.
+**Where**: `apps/api/src/docs/docs.ts`
+**Touches**: `apps/api/src/docs/docs.ts`, `apps/api/src/docs/docs.spec.ts`, `apps/api/src/main.ts`
+**Depends on**: T8
+**Exclusive**: no
+**Reuses**: `apps/api/src/main.ts:54` (`mountDocs` call site); `apps/api/test/openapi-contract.e2e-spec.ts:8-10` records why `/docs` cannot run under Jest (Scalar is ESM)
+**Requirement**: REM-25
+
+**Done when**:
+
+- [ ] `shouldMountDocs(env): boolean` is exported and pure — `true` unless `NODE_ENV === "production" && DOCS_ENABLED !== true`
+- [ ] `main.ts` calls `mountDocs` only when `shouldMountDocs(env())`; unmounted means Nest answers 404
+- [ ] `docs.spec.ts` covers the four combinations of `NODE_ENV` production/non-production × `DOCS_ENABLED` true/unset
+- [ ] Gate check passes: `pnpm --filter api test -- src/docs`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `feat(kernel): gate /docs behind DOCS_ENABLED in production`
+
+---
+
+### T11: Harness and template env fixtures follow the new contract
+
+**What**: Give every test setup, the child harness and the env templates explicit values for the variables that just became required, so `catalog:check` / `template:smoke` / the suites still boot.
+**Where**: `scripts/platform/lib/child.mjs`
+**Touches**: `apps/api/test/setup/unit-env.ts`, `apps/api/test/setup/int-env.ts`, `apps/api/test/setup/e2e-env.ts`, `apps/api/test/security-bootstrap.e2e-spec.ts`, `scripts/platform/lib/child.mjs`, `apps/api/.env.example`, `docker-compose.yml`
+**Depends on**: T8
+**Exclusive**: no
+**Reuses**: `scripts/platform/lib/child.mjs:14-21` (`CHILD_ENV_DEFAULTS`), `:25-29` (`CONTRACT_ENV_DEFAULTS`)
+**Requirement**: REM-21, REM-24
+
+**Done when**:
+
+- [ ] The three Jest setups export `NODE_ENV`, `DATABASE_SSL=disable` and `BREACH_CHECK_ENABLED=false` (the last is inert until T30 requires it, and prevents a W2 breakage)
+- [ ] `CHILD_ENV_DEFAULTS` and `CONTRACT_ENV_DEFAULTS` gain `NODE_ENV`, `DATABASE_SSL`, `TRUST_PROXY_HOPS`, `BREACH_CHECK_ENABLED`
+- [ ] `apps/api/.env.example:4,13,36,38,42` and `docker-compose.yml:59-64` list every new and now-required variable with a safe local value
+- [ ] `security-bootstrap.e2e-spec.ts` gains a case proving `TRUST_PROXY_HOPS` unset ⇒ `req.ip` is the socket address and `X-Forwarded-For` is ignored
+- [ ] Gate check passes: `pnpm --filter api test:e2e -- test/security-bootstrap` and `pnpm test:scripts`
+
+**Tests**: e2e
+**Gate**: full
+**Commit**: `chore(kernel): give harness and templates explicit values for the required env`
+
+---
+
+### T12: Shared sensitive-key module
+
+**What**: One kernel home for the sensitive-key vocabulary, consumed by the log redactor, the outbox and the notification delivery redactor.
+**Where**: `apps/api/src/shared/kernel/redaction/sensitive-keys.ts`
+**Touches**: `apps/api/src/shared/kernel/redaction/sensitive-keys.ts`, `apps/api/src/shared/kernel/redaction/sensitive-keys.spec.ts`
+**Depends on**: None
+**Exclusive**: no
+**Reuses**: `apps/api/src/shared/kernel/logging/log.redact.ts:6-73` (predicate shape being generalised)
+**Requirement**: REM-20, REM-16
+
+**Done when**:
+
+- [ ] `SENSITIVE_KEY_FRAGMENTS = ["password", "token", "secret", "authorization", "cookie", "link"]`; `isSensitiveKey(key, fragments?)` is a case-insensitive substring match
+- [ ] `redactSensitive<T>(value, fragments?): { value: T; changed: boolean }` recurses through plain objects and arrays, replaces matching leaves with `"[REDACTED]"`, and returns **the same reference with `changed: false`** when nothing matched
+- [ ] Spec covers: nested payload envelope (`payload.payload.link`), array of objects, no-match identity, `newPassword`/`currentPassword`/`newEmail`/`pendingEmail` matched by substring, and the non-match guard list (`recipientId`, `description`, `linkedId` is documented as an accepted over-match)
+- [ ] Gate check passes: `pnpm --filter api test -- shared/kernel/redaction`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `feat(kernel): add shared sensitive-key redaction module`
+
+---
+
+### T13: Keep the test harness out of `dist/`
+
+**What**: Exclude `testing/`, `__e2e__/` and `parity/` from the emitted build while keeping them importable by specs.
+**Where**: `apps/api/nest-cli.json`
+**Touches**: `apps/api/nest-cli.json`, `apps/api/tsconfig.build.json`
+**Depends on**: None
+**Exclusive**: no
+**Reuses**: `apps/api/nest-cli.json:14-19` (existing `ignore` list of test-suffix globs)
+**Requirement**: REM-26
+
+**Done when**:
+
+- [ ] `ignore` gains `**/testing/**`, `**/__e2e__/**`, `**/parity/**`, `**/__parity__/**`; `tsconfig.build.json` `exclude` mirrors them
+- [ ] Specs still import from `testing/**` — only emission changes (AD-023 stays intact)
+- [ ] The REM-26 probe passes: `pnpm --filter api build && ! find apps/api/dist \( -path '*/testing/*' -o -path '*/__e2e__/*' -o -path '*/parity/*' \) -print | grep .`
+- [ ] If the swc builder ignores directory globs, the task switches to per-directory `exclude` in `tsconfig.build.json` and records what worked in the commit body (design § *Spike results*, verify-at-task-time item a)
+- [ ] Gate check passes: `pnpm --filter api build` plus the probe above
+
+**Tests**: none — probe (REM-26)
+**Gate**: full
+**Commit**: `build(api): exclude test harness directories from the emitted bundle`
+
+---
+
+### T14: Identity boot seed as production code
+
+**What**: Move the master bootstrap out of `testing/` into `api/seeds/bootstrap.ts`, the convention the entrypoint globs for (AD-031).
+**Where**: `catalog/identity/single-tenant/api/seeds/bootstrap.ts`
+**Touches**: `catalog/identity/single-tenant/api/seeds/bootstrap.ts`, `catalog/identity/single-tenant/api/testing/seeds/bootstrap-master.ts`
+**Depends on**: None
+**Exclusive**: no
+**Reuses**: `catalog/identity/single-tenant/api/testing/seeds/bootstrap-master.ts:1-97` (body moved verbatim — idempotent, reads `MASTER_EMAIL`/`MASTER_PASSWORD`)
+**Requirement**: REM-27, REM-29
+
+**Done when**:
+
+- [ ] `api/seeds/bootstrap.ts` exists as production code, imports nothing from `testing/**`, and stays idempotent (re-running with the same master e-mail changes nothing)
+- [ ] `testing/seeds/bootstrap-master.ts` is deleted; no production file imports it
+- [ ] Running it without `MASTER_EMAIL`/`MASTER_PASSWORD` exits 0 without writing
+- [ ] Gate check passes: `pnpm --filter api typecheck` and `pnpm --filter api test -- modules/identity`
+
+**Tests**: none — the seed's behaviour is proven by the entrypoint script test (T16) and the REM-29 lint rule (T17)
+**Gate**: quick
+**Commit**: `refactor(identity): move the master bootstrap seed to api/seeds`
+
+---
+
+### T15: Dev seed carries no literal password
+
+**What**: The development seed reads `SEED_MASTER_PASSWORD` or generates one and prints it once — no credential in the repo or the image.
+**Where**: `catalog/identity/single-tenant/api/testing/seeds/master-user.seed.ts`
+**Touches**: `catalog/identity/single-tenant/api/testing/seeds/master-user.seed.ts`
+**Depends on**: T14
+**Exclusive**: no
+**Reuses**: `master-user.seed.ts:11-12` (the literal being removed); `node:crypto` `randomBytes`
+**Requirement**: REM-28
+
+**Done when**:
+
+- [ ] No password literal remains in the file; the value comes from `SEED_MASTER_PASSWORD` or `crypto.randomBytes`
+- [ ] A generated password is printed exactly once, to stdout, with a line saying it is not stored
+- [ ] Gate check passes: `pnpm --filter api typecheck`
+
+**Tests**: none — dev-only harness file; covered by the T17 lint rule and by inspection in the Verifier's probe
+**Gate**: quick
+**Commit**: `fix(identity): stop shipping a literal password in the dev seed`
+
+---
+
+### T16: Entrypoint runs every module boot seed
+
+**What**: Replace the entrypoint's dead `bootstrap-master` path with a glob over `dist/modules/*/seeds/bootstrap.js`, and delete the `legacy-import` step.
+**Where**: `apps/api/docker-entrypoint.sh`
+**Touches**: `apps/api/docker-entrypoint.sh`, `apps/api/docker-entrypoint.dev.sh`, `apps/api/Dockerfile`, `apps/api/package.json`, `scripts/platform/__tests__/docker-entrypoint.test.mjs`
+**Depends on**: T14
+**Exclusive**: no
+**Reuses**: `docker-entrypoint.sh:15-18,24-27` (blocks being replaced/removed); `scripts/platform/__tests__/lint.test.mjs` (node:test style)
+**Requirement**: REM-27
+
+**Done when**:
+
+- [ ] With both `MASTER_EMAIL` and `MASTER_PASSWORD` set, the script runs `for f in "${DIST_DIR:-dist}"/modules/*/seeds/bootstrap.js; do [ -e "$f" ] && node "$f"; done` and then starts the server
+- [ ] With either variable absent, boot proceeds and no seed runs
+- [ ] The `legacy-import` block is deleted; `apps/api/package.json:16` `db:bootstrap` no longer points at the removed `src/seeds/bootstrap-master.ts`
+- [ ] `scripts/platform/__tests__/docker-entrypoint.test.mjs` spawns the entrypoint with `DIST_DIR` pointing at a stub tree and a stub `node` first on `PATH`, asserting the exact invoked paths in both branches (seeds present / absent) and that a glob with no match does not fail the boot
+- [ ] Gate check passes: `pnpm test:scripts`
+
+**Tests**: node:test (platform scripts)
+**Gate**: full
+**Commit**: `fix(api): run every module boot seed from the entrypoint`
+
+---
+
+### T17: Catalog lint refuses `testing/**` imports from production code
+
+**What**: New lint rule plus the missing wiring — `catalog-check` never actually ran the lint.
+**Where**: `scripts/platform/lib/lint.mjs`
+**Touches**: `scripts/platform/lib/lint.mjs`, `scripts/platform/catalog-lint.mjs`, `scripts/platform/catalog-check.mjs`, `scripts/platform/__tests__/lint.test.mjs`
+**Depends on**: T14
+**Exclusive**: no
+**Reuses**: `scripts/platform/catalog-lint.mjs:36-71` (`lintEntry()` orchestration), `scripts/platform/lib/lint.mjs:40,52,59,74,84,95` (existing rule signatures)
+**Requirement**: REM-29
+
+**Done when**:
+
+- [ ] `lintProductionTestingImports(entryDir)` flags any `api/**/*.ts` that is neither a test file (`.spec` / `.int-spec` / `.e2e-spec` / `.parity.spec` / `.fixture`) nor under `testing/`, `__e2e__/`, `parity/`, and imports a specifier containing `/testing/`
+- [ ] The rule is called from `catalog-lint.mjs` `lintEntry()`, and `catalog-check.mjs` runs the lint before its other checks (it previously only named `pnpm catalog:lint` in an error message at `:124`)
+- [ ] `lint.test.mjs` covers: a violating production file fails, a spec importing `testing/` passes, a file under `testing/` passes, and a clean entry passes
+- [ ] Gate check passes: `pnpm test:scripts` and `pnpm catalog:lint`
+
+**Tests**: node:test (platform scripts)
+**Gate**: full
+**Commit**: `feat(platform): fail catalog lint on testing imports from production code`
+
+---
+
+### T18: Pin CI actions, declare permissions, attribute CSRF
+
+**What**: Supply-chain hygiene in the workflows plus the one-line OpenAPI description fix.
+**Where**: `.github/workflows/ci.yml`
+**Touches**: `.github/workflows/ci.yml`, `.github/workflows/catalog.yml`, `.github/workflows/feedback-triage.yml`, `apps/api/src/openapi/openapi-config.ts`
+**Depends on**: None
+**Exclusive**: no
+**Reuses**: `.github/workflows/feedback-triage.yml:13` (the `permissions:` block precedent)
+**Requirement**: REM-47
+
+**Done when**:
+
+- [ ] `actions/checkout`, `pnpm/action-setup`, `actions/setup-node` and `anthropics/claude-code-action` are pinned as `@<40-char sha> # vX.Y.Z` in all three workflows
+- [ ] `ci.yml` and `catalog.yml` declare a top-level `permissions:` block (`contents: read` unless a job needs more)
+- [ ] `openapi-config.ts:28-29` attributes CSRF protection to the identity entry rather than the kernel
+- [ ] The REM-47 probe is empty on both halves: `grep -En "uses: .*@v[0-9]" .github/workflows/*.yml | grep -v '#'` and `grep -L "^permissions:" .github/workflows/*.yml`
+- [ ] Gate check passes: `pnpm --filter api typecheck` plus the probe above
+
+**Tests**: none — probe (REM-47)
+**Gate**: quick
+**Commit**: `ci: pin third-party actions to SHAs and declare workflow permissions`
+
+---
+
+### T19: Log redactor uses the shared substring matcher
+
+**What**: Swap the exact-match key list for the shared fragment matcher plus a logging-only PII list, and extend the pino paths.
+**Where**: `apps/api/src/shared/kernel/logging/log.redact.ts`
+**Touches**: `apps/api/src/shared/kernel/logging/log.redact.ts`, `apps/api/src/shared/kernel/logging/log.redact.spec.ts`, `apps/api/src/shared/kernel/logging/logger.factory.ts`
+**Depends on**: T12
+**Exclusive**: no
+**Reuses**: `log.redact.ts:6-73` (`redactValue`/`redactConfig`, API kept); `logger.factory.ts:7,20` (pino `redact`)
+**Requirement**: REM-20
+
+**Done when**:
+
+- [ ] `redactValue` uses `isSensitiveKey(k, LOG_FRAGMENTS) || LOG_EXACT.has(k)` with `LOG_FRAGMENTS = [...SENSITIVE_KEY_FRAGMENTS, "email", "cpf", "phone", "creditcard", "useragent", "user_agent", "set-cookie"]` and `LOG_EXACT = {ip, ip_address, ipaddress}` — `ip` stays exact so `recipientId` survives
+- [ ] `redactConfig.paths` gains `newPassword`, `currentPassword`, `newEmail`, `pendingEmail`, `passwordHash`, `tokenHash`, `cookieTokenHash`
+- [ ] Spec proves each of the four keys named in the spec AC is redacted, and lists the allowed-through keys (`recipientId`, `description`) as explicit non-match cases
+- [ ] Gate check passes: `pnpm --filter api test -- shared/kernel/logging`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `fix(kernel): redact sensitive log keys by substring`
+
+---
+
+### T20: Outbox redacts on publish and on dead-letter
+
+**What**: No token survives at rest in `outbox` or `outbox_dead` once a row leaves the pending state.
+**Where**: `apps/api/src/shared/kernel/outbox/outbox.dispatcher.ts`
+**Touches**: `apps/api/src/shared/kernel/outbox/outbox.dispatcher.ts`, `apps/api/src/shared/kernel/outbox/outbox.int-spec.ts`, `apps/api/src/db/outbox-replay.int-spec.ts`
+**Depends on**: T12
+**Exclusive**: no
+**Reuses**: `outbox.dispatcher.ts:213-216` (`markPublished`), `:258-285` (dead-letter insert); `outbox.int-spec.ts:212,260,410,441,477`
+**Requirement**: REM-16
+
+**Done when**:
+
+- [ ] `markPublished` writes `set({ publishedAt, ...(changed && { payload }) })` — an untouched payload is not rewritten (spec edge case)
+- [ ] The dead-letter insert stores `redactSensitive(row.payload).value`; the whole envelope is scanned, so a domain payload nested under `payload.payload` is covered
+- [ ] `outbox.int-spec.ts` gains: publish a `NotificationRequested` carrying a `link`, run the dispatcher, read the row → `"[REDACTED]"`; and a no-redacted-key payload is byte-identical after publish
+- [ ] `outbox-replay.int-spec.ts:66-87` is updated to assert the redacted payload and carries a comment that a secret-bearing dead letter is re-issued by the owning flow, never replayed (design § *Risks*)
+- [ ] Gate check passes: `pnpm --filter api test:int -- shared/kernel/outbox src/db/outbox-replay`
+
+**Tests**: integration
+**Gate**: full
+**Commit**: `fix(kernel): redact sensitive keys when an outbox row is published or dead-lettered`
+
+---
+
+### T21: `outbox-dead.purge` maintenance job
+
+**What**: Dead letters stop accumulating forever.
+**Where**: `apps/api/src/shared/kernel/outbox/outbox.dispatcher.ts`
+**Touches**: `apps/api/src/shared/kernel/scheduling/maintenance-registry.ts`, `apps/api/src/shared/kernel/scheduling/maintenance-registry.spec.ts`, `apps/api/src/shared/kernel/outbox/outbox.dispatcher.ts`, `apps/api/src/shared/kernel/outbox/outbox.int-spec.ts`
+**Depends on**: T20
+**Exclusive**: no
+**Reuses**: `maintenance-registry.ts:85-92`, `maintenance-job.decorator.ts:16`, `outbox.dispatcher.ts:94-103` (`purgePublished`, the body this one sits beside)
+**Requirement**: REM-17
+
+**Done when**:
+
+- [ ] `@MaintenanceJob("outbox-dead.purge") purgeDeadLetters()` deletes `_kernel.outbox_dead` rows older than `OUTBOX_DEAD_RETENTION_DAYS` (from T8)
+- [ ] Registered in `KERNEL_MAINTENANCE_JOBS` with `{ cron: "45 3 * * *", lockId: 3 }`
+- [ ] `maintenance-registry.spec.ts:74-83` is extended to expect the third job; the existing no-duplicate-`lockId` assertion at `:88-97` still passes
+- [ ] `outbox.int-spec.ts` gains a case: a dead letter older than the retention is deleted, a newer one survives
+- [ ] Gate check passes: `pnpm --filter api test -- shared/kernel/scheduling` and `pnpm --filter api test:int -- shared/kernel/outbox`
+
+**Tests**: unit + integration
+**Gate**: full
+**Commit**: `feat(kernel): purge outbox dead letters on a retention window`
+
+---
+
+### T22: Idempotency key format and anonymous scope
+
+**What**: Reject malformed idempotency keys and stop anonymous callers sharing one bucket.
+**Where**: `apps/api/src/shared/kernel/idempotency/idempotency.interceptor.ts`
+**Touches**: `apps/api/src/shared/kernel/idempotency/idempotency.interceptor.ts`, `apps/api/src/shared/kernel/idempotency/idempotency.interceptor.spec.ts`
+**Depends on**: None
+**Exclusive**: no
+**Reuses**: `idempotency.interceptor.ts:81,102`; `idempotency.interceptor.spec.ts:66-95`
+**Requirement**: REM-32
+
+**Done when**:
+
+- [ ] A key not matching `^[A-Za-z0-9_-]{1,200}$` produces 400 before any store lookup
+- [ ] An anonymous request scopes the key with `ip:<req.ip>`; an authenticated one keeps its current scope
+- [ ] Spec covers: valid key passes, 201-char key rejected, key with `/` rejected, two anonymous callers from different IPs do not collide, same IP does collide
+- [ ] Gate check passes: `pnpm --filter api test -- shared/kernel/idempotency`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `fix(kernel): validate idempotency keys and scope anonymous ones by IP`
+
+---
+
+### T23: Bound the listing `page` parameter
+
+**What**: A deep-page request stops being a cheap way to make the database sort the world.
+**Where**: `apps/api/src/shared/kernel/listing/listing-query.schema.ts`
+**Touches**: `apps/api/src/shared/kernel/listing/listing-query.schema.ts`, `apps/api/src/shared/kernel/listing/listing-query.schema.spec.ts`
+**Depends on**: None
+**Exclusive**: no
+**Reuses**: `listing-query.schema.ts:13`; `listing-query.schema.spec.ts:18,34,40`
+**Requirement**: REM-33
+
+**Done when**:
+
+- [ ] `page` is `.max(10_000)`; `page=10001` yields 400 and `page=10000` passes
+- [ ] Gate check passes: `pnpm --filter api test -- shared/kernel/listing`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `fix(kernel): cap the listing page parameter at 10000`
+
+---
+
+### T24: Per-account login bucket
+
+**What**: Throttle login by e-mail, before the user lookup, so distributed brute force and enumeration both fail.
+**Where**: `catalog/identity/single-tenant/api/application/use-cases/login/login.use-case.ts`
+**Touches**: `catalog/identity/single-tenant/api/application/use-cases/login/login.use-case.ts`, `catalog/identity/single-tenant/api/application/use-cases/login/login.use-case.spec.ts`, `catalog/identity/single-tenant/api/__e2e__/auth-login.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/auth-anti-enum.e2e-spec.ts`
+**Depends on**: T6, T7
+**Exclusive**: no
+**Reuses**: `login.use-case.ts:41-42,76-131` (existing per-IP burst and dummy verify); `domain/errors.ts:60-69` (`RateLimitedError`); `auth-event.factory.ts:19-35`
+**Requirement**: REM-01, REM-02, REM-03
+
+**Done when**:
+
+- [ ] Order is: ① `consume("login:acct:<normalised email>", LOGIN_ACCOUNT_MAX_FAILURES, LOGIN_ACCOUNT_WINDOW_SECONDS, { critical: true })` **before the user lookup** ② existing per-IP burst `login:<ip>:<email>` now `critical: true` ③ lookup + verify ④ on success `reset(acctKey)`
+- [ ] Denial records a `rate_limited_burst` auth event with `metadata.scope = "account"` and throws `RateLimitedError(retryAfter)` — no `hasher.verify` call happens (spec asserts the hasher fake was not called)
+- [ ] The account key uses the same normalised e-mail the repository queries with
+- [ ] Unit spec: 11th failure denied, unknown e-mail denied identically (same error type, same body, dummy verify still on the pre-denial path), success clears the bucket, both buckets denying returns the **account** 429 (edge case)
+- [ ] `auth-login.e2e-spec.ts` drives 11 failing logins from two different IPs and asserts 429 + `Retry-After` on the 11th; `auth-anti-enum.e2e-spec.ts` asserts the unknown-e-mail response is byte-identical to the existing-e-mail one
+- [ ] Gate check passes: `pnpm --filter api test -- modules/identity/application/use-cases/login`; e2e in a staged child
+- [ ] Test count: existing login specs still pass, none deleted
+
+**Tests**: unit + e2e
+**Gate**: full (staged child)
+**Commit**: `feat(identity): throttle login per account before the user lookup`
+
+---
+
+### T25: `BoundedPasswordHasher`
+
+**What**: Cap concurrent argon2 work so an unauthenticated flood cannot stall the libuv pool.
+**Where**: `catalog/identity/single-tenant/api/infrastructure/hashing/bounded-password-hasher.ts`
+**Touches**: `catalog/identity/single-tenant/api/infrastructure/hashing/bounded-password-hasher.ts`, `catalog/identity/single-tenant/api/infrastructure/hashing/bounded-password-hasher.spec.ts`, `catalog/identity/single-tenant/api/identity.module.ts`
+**Depends on**: T1, T7
+**Exclusive**: no
+**Reuses**: `domain/ports/password-hasher.ts:1-7`; `identity.module.ts:117-128` (the `PASSWORD_HASHER` factory); `InFlightGate` from T1
+**Requirement**: REM-05
+
+**Done when**:
+
+- [ ] `BoundedPasswordHasher` decorates `PasswordHasher` with `InFlightGate(PASSWORD_HASH_MAX_IN_FLIGHT)`; `hash` and `verify` throw `PasswordHashingSaturatedError` **before** delegating when the gate is full; `needsRehash` passes through ungated
+- [ ] The permit is released in a `finally`, including when the inner hasher throws
+- [ ] The dummy verify for unknown e-mails goes through the same gate
+- [ ] Wired in the `PASSWORD_HASHER` factory so every consumer is bounded
+- [ ] Spec: 8 pending promises → the 9th call throws 503 with `retryAfterSeconds: 2` and the inner hasher was never called; a resolved permit lets the next call through
+- [ ] Gate check passes: `pnpm --filter api test -- modules/identity/infrastructure/hashing`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `feat(identity): bound concurrent password hashing`
+
+---
+
+### T26: Rate-limiter outage is recorded as an auth event
+
+**What**: The kernel signals degradation; identity turns it into exactly one auditable event per outage.
+**Where**: `catalog/identity/single-tenant/api/application/rate-limiter-outage.listener.ts`
+**Touches**: `catalog/identity/single-tenant/api/application/rate-limiter-outage.listener.ts`, `catalog/identity/single-tenant/api/application/rate-limiter-outage.listener.spec.ts`, `catalog/identity/single-tenant/api/domain/entities/auth-event.entity.ts`, `catalog/identity/single-tenant/api/domain/entities/auth-event.entity.spec.ts`, `catalog/identity/single-tenant/api/infrastructure/tables/auth-event.table.ts`, `catalog/identity/single-tenant/api/identity.module.ts`
+**Depends on**: T4, T6
+**Exclusive**: no
+**Reuses**: `auth-event.entity.ts:3-30` (union), `auth-event.table.ts:6,24,40` (`pgEnum`, nullable `user_id`); `@OnEvent` usage elsewhere in the entry
+**Requirement**: REM-04
+
+**Done when**:
+
+- [ ] `rate_limiter_degraded` is added to the auth-event union and the `pgEnum`
+- [ ] It is **not** added to `ACCESS_HISTORY_EVENT_TYPES` (`list-access-history/types.ts:12-26`) — it is a system event with a null `userId`, and keeping it out leaves `identity.contract.ts` untouched by this cluster
+- [ ] `@OnEvent("rate-limiter.degraded")` records one event with `userId: null` and `metadata: { since }`; the listener is registered in `identity.module.ts`
+- [ ] Spec: one event per outage (two degraded emissions in one outage still record once, because the composite only emits on the transition)
+- [ ] Gate check passes: `pnpm --filter api test -- modules/identity/application modules/identity/domain/entities`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `feat(identity): record a rate-limiter outage as an auth event`
+
+---
+
+### T27: Breach-check verdict port and adapters
+
+**What**: Replace the boolean port with a three-state verdict and give HIBP a hard 2 s abort.
+**Where**: `catalog/identity/single-tenant/api/domain/ports/breach-check.ts`
+**Touches**: `catalog/identity/single-tenant/api/domain/ports/breach-check.ts`, `catalog/identity/single-tenant/api/domain/ports/ports.spec.ts`, `catalog/identity/single-tenant/api/infrastructure/password/hibp-breach-check.ts`, `catalog/identity/single-tenant/api/infrastructure/password/noop-breach-check.ts`, `catalog/identity/single-tenant/api/infrastructure/password/breach-check.spec.ts`, `catalog/identity/single-tenant/api/identity.module.ts`
+**Depends on**: T7
+**Exclusive**: no
+**Reuses**: `hibp-breach-check.ts:22-37` (the current lookup); `identity.module.ts:132-139` (the `BREACH_CHECK` factory); Node 22 `AbortSignal.timeout`
+**Requirement**: REM-07
+
+**Done when**:
+
+- [ ] Port is `check(password): Promise<"clear" | "breached" | "skipped">`; the stale doc comment claiming it throws is gone
+- [ ] `HibpBreachCheck` calls `fetch(url, { signal: AbortSignal.timeout(2000) })`; on error or non-2xx it returns `"skipped"` under `fail_open` and throws `BreachCheckUnavailableError` under `fail_closed`
+- [ ] `NoopBreachCheck` returns `"clear"`
+- [ ] Spec: breached hash → `"breached"`; clean hash → `"clear"`; network error under each mode; a lookup exceeding 2 s aborts and is treated as an error (not as "clear")
+- [ ] Gate check passes: `pnpm --filter api test -- modules/identity/infrastructure/password modules/identity/domain/ports`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `feat(identity): give the breach check a verdict port and a 2s abort`
+
+---
+
+### T28: Password flows always consult the breach check
+
+**What**: `BREACH_CHECK_ENABLED` decides whether HIBP is queried; `BREACH_CHECK_MODE` only decides what happens when the lookup fails.
+**Where**: `catalog/identity/single-tenant/api/application/password/check-breach.ts`
+**Touches**: `catalog/identity/single-tenant/api/application/password/check-breach.ts`, `catalog/identity/single-tenant/api/application/password/check-breach.spec.ts`, `catalog/identity/single-tenant/api/application/use-cases/set-password/set-password.use-case.ts`, `catalog/identity/single-tenant/api/application/use-cases/set-password/set-password.use-case.spec.ts`, `catalog/identity/single-tenant/api/application/use-cases/change-password/change-password.use-case.ts`, `catalog/identity/single-tenant/api/application/use-cases/change-password/change-password.use-case.spec.ts`, `catalog/identity/single-tenant/api/application/use-cases/change-password/change-password.use-case.int-spec.ts`, `catalog/identity/single-tenant/api/application/use-cases/reset-password/reset-password.use-case.ts`, `catalog/identity/single-tenant/api/application/use-cases/reset-password/reset-password.use-case.spec.ts`, `catalog/identity/single-tenant/api/application/use-cases/reset-password/reset-password.use-case.int-spec.ts`
+**Depends on**: T27
+**Exclusive**: no
+**Reuses**: `set-password.use-case.ts:100-104`, `change-password.use-case.ts:97-103`, `reset-password.use-case.ts:82-88` (the `if (MODE === "fail_closed")` wrappers being removed)
+**Requirement**: REM-07
+
+**Done when**:
+
+- [ ] `check-breach.ts` takes the port verdict, throws the existing breached error on `"breached"`, and returns `"skipped"` so the caller can record it
+- [ ] All three use cases drop the mode wrapper and call the helper whenever `BREACH_CHECK_ENABLED` is true, regardless of `BREACH_CHECK_MODE`
+- [ ] Each records `breach_check_skipped` with `metadata.mode = "fail_open"` and its own `userId` when the verdict is `"skipped"`
+- [ ] Specs (unit + the two int-specs) prove: enabled + `fail_open` + lookup failure → flow continues **and** the event is recorded; enabled + `fail_closed` + failure → 503; disabled → no lookup at all; breached → the existing error
+- [ ] Gate check passes: `pnpm --filter api test -- modules/identity/application/use-cases`; int-specs in a staged child
+- [ ] Test count: the three use-case specs keep every existing case
+
+**Tests**: unit + integration
+**Gate**: full (staged child)
+**Commit**: `fix(identity): query the breach check whenever it is enabled`
+
+---
+
+### T29: Guard order and critical rate-limit keys
+
+**What**: CSRF runs before the rate limiter (a bad `Origin` must not spend a bucket), and the unauthenticated auth routes are marked `critical`.
+**Where**: `catalog/identity/single-tenant/api/identity.module.ts`
+**Touches**: `catalog/identity/single-tenant/api/identity.module.ts`, `catalog/identity/single-tenant/api/api/controllers/auth/login.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/auth/forgot-password.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/auth/reset-password.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/auth/verify-email.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/auth/validate-access-link.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/auth/cancel-access-link.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/auth/set-password.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/session/resend-verification.controller.ts`, `catalog/identity/single-tenant/api/__e2e__/auth-csrf-none.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/auth-rate-limit.e2e-spec.ts`, `catalog/identity/single-tenant/parity/csrf.parity.spec.ts`, `catalog/identity/single-tenant/parity/route-access.parity.spec.ts`
+**Depends on**: T6
+**Exclusive**: no
+**Reuses**: `identity.module.ts:257-262` (the two `APP_GUARD` entries)
+**Requirement**: REM-06
+
+**Done when**:
+
+- [ ] `APP_GUARD` order is `CsrfGuard` then the kernel `RateLimitGuard`
+- [ ] `critical: true` is set on `login`, `forgot-password`, `reset-password`, `resend-verification`, `verify-email`, `set-password` and the `access-link/*` routes; the remaining 19 decorator sites keep their current metadata
+- [ ] An identity spec resolves the guard list from the Nest container and asserts the order (the design's mitigation for "`APP_GUARD` order is implicit")
+- [ ] `auth-csrf-none.e2e-spec.ts` proves a bad `Origin` returns 403 **and leaves the bucket untouched** (a following valid request from the same IP is not throttled)
+- [ ] `csrf.parity.spec.ts` / `route-access.parity.spec.ts` are checked for pinned guard wiring and updated if they pin it
+- [ ] Gate check passes: `pnpm --filter api test -- modules/identity`; e2e + parity in a staged child
+
+**Tests**: unit + e2e
+**Gate**: full (staged child)
+**Commit**: `fix(identity): run the CSRF guard before the rate limiter`
+
+---
+
+### T30: Identity configuration for the new limits
+
+**What**: Declare the login/hashing knobs and make `BREACH_CHECK_ENABLED` required.
+**Where**: `catalog/identity/single-tenant/api/identity.config.ts`
+**Touches**: `catalog/identity/single-tenant/api/identity.config.ts`, `catalog/identity/single-tenant/api/identity.config.spec.ts`, `catalog/identity/single-tenant/api/identity.config.fixture.ts`
+**Depends on**: T24, T25, T27
+**Exclusive**: no
+**Reuses**: `identity.config.ts:66,68` (breach-check keys); `identity.config.fixture.ts:1-13`
+**Requirement**: REM-21
+
+**Done when**:
+
+- [ ] `LOGIN_ACCOUNT_MAX_FAILURES` (10), `LOGIN_ACCOUNT_WINDOW_SECONDS` (900), `PASSWORD_HASH_MAX_IN_FLIGHT` (8) are declared with coercion and defaults
+- [ ] `BREACH_CHECK_ENABLED` loses its default — unset fails with a Zod issue naming it
+- [ ] `identity.config.fixture.ts` supplies `BREACH_CHECK_ENABLED` so every spec deriving from it still boots
+- [ ] `identity.config.spec.ts` covers defaults, coercion of the three new numbers, and the required-variable failure
+- [ ] Gate check passes: `pnpm --filter api test -- modules/identity`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `feat(identity)!: require BREACH_CHECK_ENABLED and declare the login limits`
+
+---
+
+### T31: Imperative permission check helper
+
+**What**: The entry has no way to assert a permission inside a use case — enforcement today is only the `@RequirePermission` decorator. This creates the missing helper.
+**Where**: `catalog/identity/single-tenant/api/application/assert-permission.ts`
+**Touches**: `catalog/identity/single-tenant/api/application/assert-permission.ts`, `catalog/identity/single-tenant/api/application/assert-permission.spec.ts`
+**Depends on**: T7
+**Exclusive**: no
+**Reuses**: `apps/api/src/shared/kernel/access/decorators.ts:40` and `access.guard.ts:26` (the permission vocabulary); the ALS accessor identity already uses for `IDENTITY_ACCESS`
+**Requirement**: REM-31
+
+**Done when**:
+
+- [ ] `assertPermission(key: string): void` reads `IDENTITY_ACCESS` from the ALS and throws the entry's `ForbiddenError` when the actor lacks the key; master is exempt on the same rule the guard uses
+- [ ] Throws (never silently passes) when no access context is present — a use case called outside a request must not read as authorised
+- [ ] Spec: actor holds the key → passes; lacks it → 403; master → passes; no ALS context → throws
+- [ ] Gate check passes: `pnpm --filter api test -- modules/identity/application`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `feat(identity): add an imperative permission assertion helper`
+
+---
+
+### T32: Trash listings require the trash permission
+
+**What**: `?deleted=true` stops being a free upgrade from read to trash-read, in both identity and tag.
+**Where**: `catalog/identity/single-tenant/api/application/use-cases/list-users/list-users.use-case.ts`
+**Touches**: `catalog/identity/single-tenant/api/application/use-cases/list-users/list-users.use-case.ts`, `catalog/identity/single-tenant/api/application/use-cases/list-users/list-users.use-case.spec.ts`, `catalog/identity/single-tenant/api/api/controllers/admin/list-users.controller.ts`, `catalog/tag/api/application/use-cases/list-tags/list-tags.use-case.ts`, `catalog/tag/api/application/use-cases/list-tags/list-tags.use-case.spec.ts`, `catalog/tag/api/api/controllers/tags/list-tags.controller.ts`, `catalog/tag/api/__e2e__/tags.e2e-spec.ts`, `catalog/identity/single-tenant/api/__e2e__/user-trash.e2e-spec.ts`
+**Depends on**: T31
+**Exclusive**: no
+**Reuses**: T31's `assertPermission`; `catalog/identity/single-tenant/api/domain/permissions/catalog/admin.catalog.ts:28,110` (where both trash keys live — tag has no catalog of its own); `list-users.use-case.ts:16` (the stale `MasterGuard` comment to delete)
+**Requirement**: REM-31
+
+**Done when**:
+
+- [ ] `if (query.deleted) assertPermission(actor, "admin.users.trash.read")` in `list-users`, and `"admin.tags.trash.read"` in `list-tags`
+- [ ] `tag` reaches the helper along its declared `dependsOn: identity` — verify the manifest before importing; if the dependency is absent, STOP and report rather than adding a cross-entry import
+- [ ] The stale `MasterGuard` comment is removed
+- [ ] Unit specs: `deleted=true` without the key → 403; with the key → passes; `deleted=false` never asserts
+- [ ] `user-trash.e2e-spec.ts` and `tags.e2e-spec.ts` each gain a 403 case for a user holding only the plain read permission
+- [ ] Gate check passes: `pnpm --filter api test -- modules/identity modules/tag`; e2e in a staged child
+
+**Tests**: unit + e2e
+**Gate**: full (staged child)
+**Commit**: `fix(identity,tag): require the trash permission for deleted listings`
+
+---
+
+### T33: Permission grant delta
+
+**What**: An admin can no longer grant or revoke a permission they do not hold themselves.
+**Where**: `catalog/identity/single-tenant/api/application/access-policy.ts`
+**Touches**: `catalog/identity/single-tenant/api/application/access-policy.ts`, `catalog/identity/single-tenant/api/application/access-policy.spec.ts`, `catalog/identity/single-tenant/parity/access-policy.parity.spec.ts`, `catalog/identity/single-tenant/api/application/use-cases/update-user/update-user.use-case.ts`, `catalog/identity/single-tenant/api/application/use-cases/update-user/update-user.use-case.spec.ts`, `catalog/identity/single-tenant/api/application/use-cases/create-user/create-user.use-case.ts`, `catalog/identity/single-tenant/api/application/use-cases/create-user/create-user.use-case.spec.ts`, `catalog/identity/single-tenant/api/__e2e__/authz.e2e-spec.ts`
+**Depends on**: T7
+**Exclusive**: no
+**Reuses**: `access-policy.ts:58` (`assertCanGrant`, called only from create-user/update-user); `access-policy.spec.ts:97,275,284,293,304,314,322` (the removal cases that currently pass wrongly); `PermissionGrantNotAllowedError` from T7
+**Requirement**: REM-18
+
+**Done when**:
+
+- [ ] `assertCanGrant` compares the **symmetric difference** of the target's current and requested permission sets; every key in that difference must be held by the actor; master is exempt
+- [ ] Revocation is covered, not only granting — the audit's actual finding
+- [ ] 403 carries `type` `permission-grant-not-allowed`
+- [ ] Unit spec: grant of an unheld key → 403; revoke of an unheld key → 403; grant of a held key → passes; no change → passes; master does anything; the parity spec is updated to the new rule
+- [ ] `authz.e2e-spec.ts:190-304` gains a `PUT /admin/users/:id` case revoking a key the actor does not hold → 403
+- [ ] Gate check passes: `pnpm --filter api test -- modules/identity/application`; e2e + parity in a staged child
+
+**Tests**: unit + e2e
+**Gate**: full (staged child)
+**Commit**: `fix(identity): bound permission edits by the actor's own grants`
+
+---
+
+### T34: Self-edit scope guard
+
+**What**: An actor editing their own user cannot widen their own scope fields.
+**Where**: `catalog/identity/single-tenant/api/application/use-cases/update-user/update-user.use-case.ts`
+**Touches**: `catalog/identity/single-tenant/api/application/use-cases/update-user/update-user.use-case.ts`, `catalog/identity/single-tenant/api/application/use-cases/update-user/update-user.use-case.spec.ts`, `catalog/identity/single-tenant/api/__e2e__/authz.e2e-spec.ts`
+**Depends on**: T33
+**Exclusive**: no
+**Reuses**: the existing self-edit error and guard in the same use case
+**Requirement**: REM-19
+
+**Done when**:
+
+- [ ] Changing `servesClients`, `areaIds`, `serviceIds` or `schedulingAreaIds` on one's own user returns 403 with the existing self-edit error type
+- [ ] Master is exempt (edge case in the spec)
+- [ ] Unit spec: one case per field, plus an unchanged-value no-op that must still pass
+- [ ] Gate check passes: `pnpm --filter api test -- modules/identity/application/use-cases/update-user`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `fix(identity): refuse self-edits that widen the actor's own scope`
+
+---
+
+### T35: Contract input bounds and params DTOs
+
+**What**: Length caps, duplicate rejection and validated path params across the identity contract.
+**Where**: `catalog/identity/single-tenant/api/api/contracts/identity.contract.ts`
+**Touches**: `catalog/identity/single-tenant/api/api/contracts/identity.contract.ts`, `catalog/identity/single-tenant/api/api/contracts/identity.contract.spec.ts`, `catalog/identity/single-tenant/api/api/controllers/admin/delete-user.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/admin/resend-access-link.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/device/revoke-device.controller.ts`, `catalog/identity/single-tenant/api/__e2e__/devices.e2e-spec.ts`
+**Depends on**: None
+**Exclusive**: no
+**Reuses**: `identity.contract.ts:16,22-24,31-32,49,59,64` (the schemas gaining bounds); `list-users.controller.ts:39-41` (the `createZodDto` idiom)
+**Requirement**: REM-34, REM-35, REM-36
+
+**Done when**:
+
+- [ ] `email.max(254)`, `token.max(128)`, `name.max(200)` at every declaration site listed in `touches-audit.md` § *Contract / params*
+- [ ] `IdParamDto = createZodDto(z.object({ id: z.string().min(1).max(64) }))` is exported and used by `delete-user`, `resend-access-link` and `revoke-device` via `@Param()`
+- [ ] Permission, area, service and scheduling-area id arrays reject duplicates (`.refine(noDuplicates)`) with 400
+- [ ] `identity.contract.spec.ts` gains a case per bound (at-limit passes, over-limit 400) and per duplicate array
+- [ ] `devices.e2e-spec.ts:122,142` proves an over-long `id` is 400 rather than reaching the repository
+- [ ] The contract change is **not** regenerated here — T52 owns `openapi.json` and the api-client
+- [ ] Gate check passes: `pnpm --filter api test -- modules/identity/api/contracts`; e2e in a staged child
+
+**Tests**: unit + e2e
+**Gate**: full (staged child)
+**Commit**: `fix(identity): bound contract inputs and validate path params`
+
+---
+
+### T36: Deleted users lose their session; session touch is throttled
+
+**What**: A soft-deleted user with a live cookie is refused, and a session write stops happening on every request.
+**Where**: `catalog/identity/single-tenant/api/api/middleware/auth.middleware.ts`
+**Touches**: `catalog/identity/single-tenant/api/api/middleware/auth.middleware.ts`, `catalog/identity/single-tenant/api/api/middleware/auth.middleware.spec.ts`, `catalog/identity/single-tenant/api/application/require-auth.ts`, `catalog/identity/single-tenant/api/application/require-auth.spec.ts`, `catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-session.repository.ts`, `catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-session.repository.int-spec.ts`, `catalog/identity/single-tenant/api/domain/ports/session.repository.ts`, `catalog/identity/single-tenant/api/__e2e__/user-trash.e2e-spec.ts`
+**Depends on**: None
+**Exclusive**: no
+**Reuses**: `auth.middleware.ts:102-152` (actor publication), `:108` (the unconditional touch); `require-auth.ts:20-31`; `identity.config.ts:34` (`SESSION_TOUCH_INTERVAL_SECONDS`, already declared)
+**Requirement**: REM-43, REM-45
+
+**Done when**:
+
+- [ ] Access is loaded **before** the actor is published; a soft-deleted user publishes nothing, so `requireAuth` throws 403 on every authenticated route
+- [ ] `touch` is issued only when `now − lastSeenAt ≥ SESSION_TOUCH_INTERVAL_SECONDS`; below the interval no `UPDATE` is issued
+- [ ] `require-auth.spec.ts` is created (the file had no spec): present actor passes, absent actor throws 403
+- [ ] `auth.middleware.spec.ts:265` is extended for the deleted-user path; the repository int-spec gains a `touch` case proving the write is skipped under the interval and issued above it
+- [ ] `user-trash.e2e-spec.ts` proves a soft-deleted user's live session gets 403
+- [ ] Gate check passes: `pnpm --filter api test -- modules/identity`; int + e2e in a staged child
+
+**Tests**: unit + integration + e2e
+**Gate**: full (staged child)
+**Commit**: `fix(identity): refuse deleted users and throttle session touches`
+
+---
+
+### T37: Email-change cooldown and a single 409 type
+
+**What**: The rejected-address branches stop leaking whether an address belongs to a deleted user, and stop bypassing the cooldown.
+**Where**: `catalog/identity/single-tenant/api/application/use-cases/request-email-change/request-email-change.use-case.ts`
+**Touches**: `catalog/identity/single-tenant/api/application/use-cases/request-email-change/request-email-change.use-case.ts`, `catalog/identity/single-tenant/api/application/use-cases/request-email-change/request-email-change.use-case.spec.ts`, `catalog/identity/single-tenant/api/application/use-cases/request-email-change/email-change-flow.int-spec.ts`, `catalog/identity/single-tenant/api/domain/errors.ts`, `catalog/identity/single-tenant/api/domain/entities/user.entity.ts`, `catalog/identity/single-tenant/api/domain/entities/user.entity.spec.ts`, `catalog/identity/single-tenant/api/__e2e__/user-trash.e2e-spec.ts`
+**Depends on**: None
+**Exclusive**: no
+**Reuses**: `request-email-change.use-case.ts:99-107,144`; `user.entity.ts:252` (`recordEmailChangeAttempt`); `domain/errors.ts:85,93-98`
+**Requirement**: REM-44
+
+**Done when**:
+
+- [ ] Both the in-use and the deleted-owner branches persist `lastEmailChangeRequestedAt` before throwing
+- [ ] Both throw `EmailAlreadyInUseError` — the 409 `type` is identical for the two cases
+- [ ] `EmailBelongsToDeletedUserError` is deleted from `domain/errors.ts` (no in-repo consumer remains; the removal is listed in ADV-20260822-01 by T53)
+- [ ] `user-trash.e2e-spec.ts:104` no longer asserts `/email-belongs-to-deleted-user$/` and asserts `email-already-in-use` instead
+- [ ] Unit + int specs prove the cooldown is recorded on both rejected branches, so a caller cannot probe addresses for free
+- [ ] Gate check passes: `pnpm --filter api test -- modules/identity`; int + e2e in a staged child
+
+**Tests**: unit + integration + e2e
+**Gate**: full (staged child)
+**Commit**: `fix(identity): record the cooldown and unify the email-change conflict type`
+
+---
+
+### T38: Redact token hashes from the audit trail
+
+**What**: The audit triggers stop copying session, device and verification token hashes into the trail.
+**Where**: `catalog/identity/single-tenant/migrations/custom/03_audit_redact_token_hashes.sql`
+**Touches**: `catalog/identity/single-tenant/migrations/custom/03_audit_redact_token_hashes.sql`
+**Depends on**: None
+**Exclusive**: no
+**Reuses**: `catalog/audit/migrations/custom/01_audit_trail_capture.sql:162-176` (`audit.attach` is idempotent — `DROP TRIGGER IF EXISTS`); `catalog/identity/single-tenant/migrations/custom/02_audit_attach.sql:14` (the guard idiom)
+**Requirement**: REM-40
+
+**Done when**:
+
+- [ ] The file re-attaches with redact lists: `sessions` → `{token_hash}`, `devices` → `{cookie_token_hash}`, `verification_tokens` → `{token_hash}`
+- [ ] It is guarded exactly like `02_audit_attach.sql:14`, so a child without the audit entry is a no-op rather than an error
+- [ ] Re-running the migration is idempotent
+- [ ] `module.json.customMigrations` registration is **not** done here — T53 owns the manifest
+- [ ] Gate check passes: `pnpm test:scripts` (the filename check at `scripts/platform/__tests__/catalog-custom-migrations.test.mjs:57-68`)
+
+**Tests**: none — SQL migration; proven by the audit repository int-spec run in the staged child at the Final gate
+**Gate**: quick
+**Commit**: `fix(identity): redact token hashes from the audit trail`
+
+---
+
+### T39: Download opens its stream lazily
+
+**What**: `DownloadResult` stops carrying an open stream, so nothing is opened before the controller has decided whether it will send a body.
+**Where**: `catalog/attachment/api/application/use-cases/get-attachment-for-download/get-attachment-for-download.use-case.ts`
+**Touches**: `catalog/attachment/api/application/use-cases/get-attachment-for-download/get-attachment-for-download.use-case.ts`, `catalog/attachment/api/application/use-cases/get-attachment-for-download/get-attachment-for-download.use-case.spec.ts`, `catalog/attachment/api/api/facades/attachment.facade.ts`, `catalog/attachment/api/application/use-cases/delete-attachment/delete-attachment.use-case.spec.ts`
+**Depends on**: None
+**Exclusive**: no
+**Reuses**: `get-attachment-for-download.use-case.ts:21-28,48-79` (the access-log write at `:69` stays where it is); `attachment.facade.ts:6,7,22,38` (re-exports the type — a public entry surface)
+**Requirement**: REM-11
+
+**Done when**:
+
+- [ ] `DownloadResult` drops `stream` and gains `openStream(): Promise<NodeJS.ReadableStream>`; nothing opens inside `execute`
+- [ ] The facade re-export follows; the shape change is recorded for ADV-20260822-02 (T54)
+- [ ] The object-literal repository fakes in the sibling specs listed in `touches-audit.md` § *Repository* are updated so they still satisfy the port
+- [ ] Spec: `execute` resolves without calling the storage adapter; calling `openStream()` calls it exactly once
+- [ ] Gate check passes: `pnpm --filter api test -- modules/attachment/application`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `refactor(attachment)!: open the download stream lazily`
+
+---
+
+### T40: Download responds safely and never leaks a socket
+
+**What**: The four download defects in one controller pass — inline allowlist, `nosniff`, 304 before opening, and `pipeline` ownership of the body.
+**Where**: `catalog/attachment/api/api/controllers/download-attachment.controller.ts`
+**Touches**: `catalog/attachment/api/api/controllers/download-attachment.controller.ts`, `catalog/attachment/api/__e2e__/attachment-download.e2e-spec.ts`
+**Depends on**: T39
+**Exclusive**: no
+**Reuses**: `download-attachment.controller.ts:46-76`; `attachment-download.e2e-spec.ts:40` (`makeInMemoryStorage()`), header assertions at `:234,267,295`; `node:stream/promises` `pipeline`
+**Requirement**: REM-09, REM-10, REM-11, REM-12
+
+**Done when**:
+
+- [ ] The ETag/304 branch returns **before** `openStream()` is called
+- [ ] `inline` is decided by `INLINE_CONTENT_TYPES = {"image/jpeg","image/png","image/webp"}` against the **stored** `content_type` — the profile is no longer consulted, so a `legacy` row with `image/png` is still inline and a `legacy` row with `text/html` is not
+- [ ] Non-inline responses carry `application/octet-stream` + `Content-Disposition: attachment`; `X-Content-Type-Options: nosniff` is set on every response
+- [ ] The body is sent with `await pipeline(await result.openStream(), res)`: a client abort destroys the source and frees the socket; a source error after headers destroys the response and logs at `error` without killing the process; a source error before headers reaches the problem-details filter
+- [ ] `attachment-download.e2e-spec.ts` covers: a seeded `ready` row with `content_type: text/html` → octet-stream attachment; a `legacy` png → inline; a mid-body abort → the fake storage records the stream as destroyed; 50 `If-None-Match` requests against a storage fake with `maxSockets: 2` → the 51st still succeeds
+- [ ] Gate check passes: `pnpm --filter api test -- modules/attachment`; e2e in a staged child
+
+**Tests**: e2e
+**Gate**: full (staged child)
+**Commit**: `fix(attachment): serve downloads safely and release storage sockets`
+
+---
+
+### T41: Storage client carries explicit timeouts
+
+**What**: The S3/R2 client stops relying on defaults that never time out.
+**Where**: `apps/api/src/shared/infra/storage/r2-storage.adapter.ts`
+**Touches**: `apps/api/src/shared/infra/storage/r2-storage.adapter.ts`, `apps/api/src/shared/infra/storage/r2-storage.adapter.spec.ts`, `apps/api/src/shared/infra/storage/storage.config.ts`, `apps/api/src/shared/infra/storage/storage.config.spec.ts`, `apps/api/src/shared/infra/storage/storage.module.ts`, `apps/api/src/shared/infra/storage/object-storage.port.ts`
+**Depends on**: None
+**Exclusive**: no
+**Reuses**: `r2-storage.adapter.ts:20-28`; `storage.config.ts:4-10`; `storage.module.ts:9-14`; verified in design § *Spike results*: `NodeHttpHandlerOptions` is accepted as a plain object and `send(cmd, { abortSignal })` exists
+**Requirement**: REM-13
+
+**Done when**:
+
+- [ ] `requestHandler: { requestTimeout: STORAGE_REQUEST_TIMEOUT_MS, connectionTimeout: 5000, httpsAgent: new https.Agent({ keepAlive: true, maxSockets: STORAGE_MAX_SOCKETS }) }` — no new dependency
+- [ ] `head`, `put`, `putStream` and `delete` pass `{ abortSignal: AbortSignal.timeout(...) }`; **`getStream` does not** (a long download must not be cut at 30 s; the socket-level `requestTimeout` covers a stalled peer) — the reason is a comment in the file
+- [ ] SDK `TimeoutError`/`AbortError` map to the kernel `StorageUnavailableError` (503, `retryAfterSeconds: 5`)
+- [ ] `storage.config.ts` gains `STORAGE_REQUEST_TIMEOUT_MS` (30 000) and `STORAGE_MAX_SOCKETS` (50) with spec cases for defaults and coercion
+- [ ] Adapter spec: the handler options reach the client constructor; a timeout on a non-stream op surfaces as 503; `getStream` is called without an abort signal
+- [ ] Gate check passes: `pnpm --filter api test -- shared/infra/storage`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `fix(kernel): give the storage client explicit request and socket timeouts`
+
+---
+
+### T42: RFC 5987 `Content-Disposition`
+
+**What**: Filenames stop being able to break out of the header.
+**Where**: `apps/api/src/shared/kernel/http/content-disposition.ts`
+**Touches**: `apps/api/src/shared/kernel/http/content-disposition.ts`, `apps/api/src/shared/kernel/http/content-disposition.spec.ts`
+**Depends on**: None
+**Exclusive**: no
+**Reuses**: `content-disposition.ts:6-10`
+**Requirement**: REM-42
+
+**Done when**:
+
+- [ ] Output is `attachment; filename="<ascii fallback>"; filename*=UTF-8''<rfc5987>` — the ASCII `filename=` precedes `filename*`
+- [ ] The rfc5987 encoding is `encodeURIComponent` plus percent-encoding of `'`, `(`, `)` and `*`
+- [ ] The ASCII fallback strips non-ASCII characters and `"`
+- [ ] Spec: plain ASCII name, name with accents, name with `"`, name with `'()*`, empty name
+- [ ] Gate check passes: `pnpm --filter api test -- shared/kernel/http`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `fix(kernel): percent-encode filenames in Content-Disposition`
+
+---
+
+### T43: busboy runs with profile-derived limits
+
+**What**: Multipart parsing gets bounds and rejects foreign parts instead of trusting the client.
+**Where**: `catalog/attachment/api/api/controllers/multipart-files.ts`
+**Touches**: `catalog/attachment/api/api/controllers/multipart-files.ts`, `catalog/attachment/api/api/controllers/multipart-files.spec.ts`, `catalog/attachment/api/domain/errors.ts`
+**Depends on**: None
+**Exclusive**: no
+**Reuses**: `multipart-files.ts:9-17,59-73`; `multipart-files.spec.ts:5,70,92,147,164,189,218`; busboy `^1.6.0` limit events
+**Requirement**: REM-15
+
+**Done when**:
+
+- [ ] `readMultipartFiles(req, res, fieldName, limits)` passes `{ fileSize: profile.maxBytes, files: profile.maxFiles, parts: profile.maxFiles, fields: 0 }` to busboy
+- [ ] `file.on("limit")`, `filesLimit` and `partsLimit` end the request with `PayloadTooLargeError` (413); `fieldsLimit` ends it with 400
+- [ ] A part whose field name is not `file` is destroyed and the request rejected with 400 `UnexpectedMultipartFieldError`
+- [ ] The generator rejects on its next `yield` after a limit event, so the use case's existing `catch` discards every stored object
+- [ ] Spec: over-size file, too many files, too many parts, a field part, a foreign file field, and a clean batch that still succeeds
+- [ ] Gate check passes: `pnpm --filter api test -- modules/attachment/api`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `fix(attachment): bound multipart parsing and reject foreign parts`
+
+---
+
+### T44: Batch uploads sniff every part
+
+**What**: The stored-XSS path closes — an `accept: "image"` profile now proves each part is really an image.
+**Where**: `catalog/attachment/api/domain/content-type-sniff.ts`
+**Touches**: `catalog/attachment/api/domain/content-type-sniff.ts`, `catalog/attachment/api/domain/content-type-sniff.spec.ts`, `catalog/attachment/api/application/use-cases/upload-attachments-batch/upload-attachments-batch.use-case.ts`, `catalog/attachment/api/application/use-cases/upload-attachments-batch/upload-attachments-batch.use-case.spec.ts`, `catalog/attachment/api/application/use-cases/upload-attachment/upload-attachment.use-case.ts`, `catalog/attachment/api/application/use-cases/upload-attachment/upload-attachment.use-case.spec.ts`, `catalog/attachment/api/application/use-cases/upload-attachment/upload-attachment.use-case.int-spec.ts`, `catalog/attachment/api/__e2e__/attachment-upload.e2e-spec.ts`
+**Depends on**: T43
+**Exclusive**: no
+**Reuses**: `content-type-sniff.ts:7` (`sniffImageContentType`); `upload-attachments-batch.use-case.ts:52-109,117-121,137` (the discard loop and the single `insertMany` already give the "nothing persisted" edge for free); the 415 error the single-file path already throws
+**Requirement**: REM-08
+
+**Done when**:
+
+- [ ] `sniffImageStream(stream)` peeks 16 bytes with `readable` + `read(n)` and `unshift`s them back — never `for await`, which would destroy a busboy stream on `break`
+- [ ] For `profile.accept === "image"` every part is sniffed; a `null` sniff or a sniff differing from the declared type rejects the **whole batch** with 415
+- [ ] The **sniffed** type is persisted, not the declared one
+- [ ] Spec/int-spec: a 2-chunk PNG uploads with the stored checksum intact (proving `unshift` did not truncate); `text/html` bytes declared as `image/png` → 415; a batch mixing one valid image and one spoofed part persists nothing and discards every stored object
+- [ ] `attachment-upload.e2e-spec.ts` is created (no upload e2e exists today) and drives the 415 case end to end
+- [ ] Gate check passes: `pnpm --filter api test -- modules/attachment`; int + e2e in a staged child
+
+**Tests**: unit + integration + e2e
+**Gate**: full (staged child)
+**Commit**: `fix(attachment): sniff every part of an image batch upload`
+
+---
+
+### T45: Upload quota, concurrency gate and rate limit
+
+**What**: Three cheap bounds in front of the body so an authenticated user cannot exhaust storage or RSS.
+**Where**: `catalog/attachment/api/api/controllers/upload-attachments.controller.ts`
+**Touches**: `catalog/attachment/api/api/controllers/upload-attachments.controller.ts`, `catalog/attachment/api/api/controllers/download-attachment.controller.ts`, `catalog/attachment/api/domain/ports/attachment.repository.ts`, `catalog/attachment/api/infrastructure/repositories/drizzle-attachment.repository.ts`, `catalog/attachment/api/infrastructure/repositories/drizzle-attachment.repository.int-spec.ts`, `catalog/attachment/api/attachment.config.ts`, `catalog/attachment/api/attachment.config.spec.ts`, `catalog/attachment/api/attachment.module.ts`, `catalog/attachment/api/domain/errors.ts`
+**Depends on**: T40, T43
+**Exclusive**: no
+**Reuses**: kernel `@RateLimit` (T5) and `InFlightGate` (T1); `attachment.repository.ts:3-15`; `attachment.module.ts:49-64` (the `@Module` has **no `imports:` key** — none is needed, `RateLimitModule` is `@Global()`); `upload-attachments.controller.ts:32,57-61`
+**Requirement**: REM-14
+
+**Done when**:
+
+- [ ] `@RateLimit({ limit: 20, windowSeconds: 60 })` on `POST /attachments/uploads` and `@RateLimit({ limit: 300, windowSeconds: 60 })` on `GET /attachments/:id`
+- [ ] New port + repository method `sumPendingBytesByOwner(ownerId)` (`SUM(size_bytes) … status = 'pending'`) with an int-spec case
+- [ ] Handler order is guard → `UploadGate` → quota → busboy, all **before the body is read**: gate full → 503 `UploadsSaturatedError` (`retryAfterSeconds: 2`, released in `finally`); `pending + (Content-Length ?? 0) > ATTACHMENT_PENDING_QUOTA_BYTES` → 413 `PendingQuotaExceededError`
+- [ ] `attachment.config.ts` gains `ATTACHMENT_PENDING_QUOTA_BYTES` (2 GiB) and `ATTACHMENT_MAX_CONCURRENT_UPLOADS` (16); `attachment.config.spec.ts:4,12,19` extended
+- [ ] `UploadGate` is provided in `attachment.module.ts` after the existing providers
+- [ ] Gate check passes: `pnpm --filter api test -- modules/attachment`; int-spec in a staged child
+
+**Tests**: unit + integration
+**Gate**: full (staged child)
+**Commit**: `feat(attachment): bound uploads by rate, owner quota and concurrency`
+
+---
+
+### T46: Purge and confirm are bounded
+
+**What**: Two one-line correctness bounds on the attachment lifecycle jobs.
+**Where**: `catalog/attachment/api/application/jobs/purge-pending-attachments.job.ts`
+**Touches**: `catalog/attachment/api/application/jobs/purge-pending-attachments.job.ts`, `catalog/attachment/api/application/jobs/purge-pending-attachments.job.spec.ts`, `catalog/attachment/api/application/use-cases/confirm-uploads/confirm-uploads.use-case.ts`, `catalog/attachment/api/application/use-cases/confirm-uploads/confirm-uploads.use-case.spec.ts`
+**Depends on**: T45
+**Exclusive**: no
+**Reuses**: `purge-pending-attachments.job.ts:63`; `confirm-uploads.use-case.ts:42-44`
+**Requirement**: REM-41
+
+**Done when**:
+
+- [ ] The purge deletes through `deletePendingByIds(ids)`, whose SQL carries `AND status = 'pending'` — a row that turned `ready` between selection and deletion survives
+- [ ] `confirmUploads` rejects when `ids.length` exceeds the maximum `maxFiles` across route profiles, **before** `findByIds`
+- [ ] Specs cover both bounds plus the unchanged happy paths
+- [ ] Gate check passes: `pnpm --filter api test -- modules/attachment/application`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `fix(attachment): bound the pending purge and the confirm batch`
+
+---
+
+### T47: Notification catalog links must be http(s)
+
+**What**: A template link can no longer carry a `javascript:` or `data:` URL into an e-mail.
+**Where**: `catalog/notification/api/application/catalog/notification-catalog.ts`
+**Touches**: `catalog/notification/api/application/catalog/notification-catalog.ts`, `catalog/notification/api/application/catalog/notification-catalog.spec.ts`
+**Depends on**: None
+**Exclusive**: no
+**Reuses**: `notification-catalog.ts:51,56,61,77`; `notification-catalog.spec.ts:12-38`
+**Requirement**: REM-38
+
+**Done when**:
+
+- [ ] Every `link` field is `z.url({ protocol: /^https?$/ })`
+- [ ] Spec: an `https` link passes, an `http` link passes, `javascript:` and `data:` fail validation
+- [ ] The five identity link producers named in `touches-audit.md` § *Notification* are checked against the new refine; any fixture producing a non-http(s) link is fixed in this task
+- [ ] Gate check passes: `pnpm --filter api test -- modules/notification modules/identity`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `fix(notification): require http(s) links in the catalog`
+
+---
+
+### T48: SSE stream checks its `Origin`
+
+**What**: A cross-origin page can no longer open the notification stream.
+**Where**: `catalog/notification/api/api/controllers/stream/sse.controller.ts`
+**Touches**: `catalog/notification/api/api/controllers/stream/sse.controller.ts`, `catalog/notification/api/api/controllers/stream/sse.controller.spec.ts`
+**Depends on**: None
+**Exclusive**: no
+**Reuses**: `sse.controller.ts:26-34`; the kernel `env().WEB_ORIGIN`
+**Requirement**: REM-46
+
+**Done when**:
+
+- [ ] A request whose `Origin` is present and differs from `WEB_ORIGIN` gets 403; an absent `Origin` keeps today's behaviour (same-origin and non-browser clients)
+- [ ] Spec: matching origin passes, mismatched origin 403, absent origin passes
+- [ ] Gate check passes: `pnpm --filter api test -- modules/notification/api`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `fix(notification): reject foreign origins on the SSE stream`
+
+---
+
+### T49: Notification config and delivery redaction align with the kernel
+
+**What**: One `NODE_ENV` enum across kernel and entry, and one redaction implementation.
+**Where**: `catalog/notification/api/notification.config.ts`
+**Touches**: `catalog/notification/api/notification.config.ts`, `catalog/notification/api/notification.config.spec.ts`, `catalog/notification/api/infrastructure/delivery/delivery.dispatcher.ts`, `catalog/notification/api/infrastructure/delivery/delivery.dispatcher.spec.ts`
+**Depends on**: T8, T12
+**Exclusive**: no
+**Reuses**: `notification.config.ts:6`; `delivery.dispatcher.ts:47-51` (`redactPayload`, which today redacts only `link`)
+**Requirement**: REM-30, REM-20
+
+**Done when**:
+
+- [ ] `notification.config.ts` imports the kernel `nodeEnvSchema`, so `NODE_ENV=staging` parses instead of failing
+- [ ] `redactPayload` delegates to `redactSensitive`, so tokens and secrets are covered, not only `link`
+- [ ] Specs: `staging` accepted; a delivery payload with `token` and `link` comes back fully redacted; a payload with neither is unchanged
+- [ ] Gate check passes: `pnpm --filter api test -- modules/notification`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `fix(notification): share the kernel NODE_ENV enum and redaction list`
+
+---
+
+### T50: Audit query bounds
+
+**What**: Audit filters stop accepting values the database has to reject.
+**Where**: `catalog/audit/api/api/contracts/audit.contract.ts`
+**Touches**: `catalog/audit/api/api/contracts/audit.contract.ts`, `catalog/audit/api/api/contracts/audit.contract.spec.ts`
+**Depends on**: None
+**Exclusive**: no
+**Reuses**: `audit.contract.ts:19-20`; `createZodDto` idiom
+**Requirement**: REM-37
+
+**Done when**:
+
+- [ ] `from` and `to` are `z.iso.datetime()`; `txId` is capped at `Number.MAX_SAFE_INTEGER`
+- [ ] `audit.contract.spec.ts` is created (the contract had no spec): valid ISO passes, `2026-13-01` 400, a bare date 400, `txId` above the cap 400, at the cap passes
+- [ ] The contract change is **not** regenerated here — T52 owns `openapi.json`
+- [ ] Gate check passes: `pnpm --filter api test -- modules/audit`
+
+**Tests**: unit
+**Gate**: quick
+**Commit**: `fix(audit): validate the from/to and txId query bounds`
+
+---
+
+### T51: Dependency bumps and a clean production audit
+
+**What**: Raise `multer`, add the transitive overrides and bound the avatar interceptors, until `pnpm audit --prod --audit-level=high` exits 0.
+**Where**: `apps/api/package.json`
+**Touches**: `apps/api/package.json`, `package.json`, `pnpm-lock.yaml`, `catalog/identity/single-tenant/api/api/controllers/session/upload-avatar.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/auth/upload-access-link-avatar.controller.ts`, `catalog/identity/single-tenant/api/api/controllers/session/upload-avatar.controller.spec.ts`
+**Depends on**: T45, T62 (Vitest tree — the lockfile already carries the Vitest deps)
+**Exclusive**: **yes** — lockfile and root manifest
+**Reuses**: `apps/api/package.json:64` (`multer ^2.1.1`), `:86` (`@types/multer ^2.1.0`); root `package.json` has no `pnpm.overrides` block yet
+**Requirement**: REM-39
+
+**Done when**:
+
+- [ ] `multer` resolves to ≥ 2.2.0 (and `@types/multer` follows)
+- [ ] `limits: { fields: 0 }` is set on both `FileInterceptor` configurations (`upload-avatar.controller.ts:47`, `upload-access-link-avatar.controller.ts:55`)
+- [ ] Remaining transitive high advisories are pinned through a root `pnpm.overrides` block, each entry carrying a one-line comment naming the advisory it closes
+- [ ] `packages/api-client`'s browser-side `axios` advisories are **not** touched (spec Out of Scope)
+- [ ] Gate check passes: `cd apps/api && pnpm audit --prod --audit-level=high` exits 0, `pnpm install --frozen-lockfile` exits 0, and `pnpm vitest run --project api catalog/identity/single-tenant/api/api/controllers/session` (Vitest — see § *Gate Check Commands — after T59*)
+- [ ] Test count: the avatar controller and use-case specs still pass
+
+**Tests**: unit
+**Gate**: full
+**Commit**: `chore(deps): raise multer and pin the high-severity transitives`
+
+---
+
+### T52: Contract regeneration and parity re-freeze
+
+**What**: Regenerate the OpenAPI document and the typed client for the contract changes of T35 and T50, then re-freeze the parity specs.
+**Where**: `openapi.json`
+**Touches**: `openapi.json`, `packages/api-client/**`, `catalog/identity/single-tenant/parity/contract.parity.spec.ts`, `catalog/identity/single-tenant/web/core/session.types.ts`, `catalog/identity/single-tenant/web/core/route-access.ts`
+**Depends on**: T35, T50, T62 (Vitest tree)
+**Exclusive**: **yes** — regenerates the contract and the generated client
+**Reuses**: root `pnpm contract` (`pnpm --filter api contract && pnpm --filter @platform/api-client generate`); `contract.parity.spec.ts:26` (34-operation freeze), `:33` (openapi field parity)
+**Requirement**: REM-34, REM-35, REM-36, REM-37
+
+**Done when**:
+
+- [ ] `pnpm contract` runs clean and the regenerated `openapi.json` carries the new maxima, the params DTOs and the audit datetime formats
+- [ ] `contract.parity.spec.ts` is updated: the operation count is unchanged (no route added or removed) and the field parity assertions match the regenerated document
+- [ ] The two web consumers still typecheck against the regenerated client
+- [ ] No behavioural edit rides along — this task regenerates and re-freezes only
+- [ ] `contract.parity.spec.ts` was the one known red left by T61 (`pnpm catalog:check`); after this task `pnpm catalog:check` is fully green
+- [ ] Gate check passes: `pnpm check`, `pnpm test` and `pnpm catalog:check` (Vitest — see § *Gate Check Commands — after T59*)
+
+**Tests**: unit (parity)
+**Gate**: full
+**Commit**: `chore(contract): regenerate openapi and client for the input bounds`
+
+---
+
+> **Version fold (T53–T57, decided at wave 6 dispatch — spec § Open questions, design § G)**: `vitest-migration` already moved every entry to `2.0.0` (unreleased) with `ADV-20260821-01..05`. Default = **fold**: the `version` lines below are already satisfied, the changelog items go into the existing `## [2.0.0]` section, `ADV-20260822-NN` is added beside the Vitest advisory, `kernelRange` moves to `">=2.0.0 <3.0.0"`. If the user picks "bump again", the orchestrator rewrites the version lines (identity 3.0.0, attachment/notification 2.1.0, audit/tag 2.0.1) before dispatching C11.
+
+### T53: Identity 2.0.0 — manifest, changelog, advisory
+
+**What**: Ship the identity entry as a breaking release with its advisory.
+**Where**: `catalog/identity/single-tenant/module.json`
+**Touches**: `catalog/identity/single-tenant/module.json`, `catalog/identity/single-tenant/CHANGELOG.md`, `catalog/identity/single-tenant/README.md`, `docs/advisories/ADV-20260822-01.md`
+**Depends on**: T30, T38, T51, T52
+**Exclusive**: no
+**Reuses**: `docs/advisories/README.md` (body language and structure); required frontmatter keys `id, kind, module, affects, severity, detect, fix, parity` (`scripts/platform/lib/frontmatter.mjs:5`)
+**Requirement**: Goal 3
+
+**Done when**:
+
+- [ ] `version` → `2.0.0`; `kernelRange` → `">=2.0.0 <3.0.0"`; `env` gains `LOGIN_ACCOUNT_MAX_FAILURES`, `LOGIN_ACCOUNT_WINDOW_SECONDS`, `PASSWORD_HASH_MAX_IN_FLIGHT`, `BREACH_CHECK_ENABLED` (required), `SEED_MASTER_PASSWORD`; `customMigrations` gains `03_audit_redact_token_hashes.sql`
+- [ ] `CHANGELOG.md` gains a `## [2.0.0]` section listing every breaking item: required `BREACH_CHECK_ENABLED`, the `RATE_LIMITER` path move, the `BreachCheck` verdict port, the removed `EmailBelongsToDeletedUserError`, the new `rate_limiter_degraded` enum value, the boot seed move
+- [ ] `README.md` port/permission/env prose is corrected at the lines named in `touches-audit.md`
+- [ ] `ADV-20260822-01.md` is `kind: breaking`, `severity: high`, with a runnable `detect`, a `fix` that includes `drizzle-kit generate` for the new enum value (AD-015), and a `parity` pointer; the body is pt-BR per `docs/advisories/README.md`
+- [ ] This is the **first** commit of the cluster touching identity, so it stages the advisory with the code
+- [ ] Gate check passes: `pnpm catalog:lint`
+
+**Tests**: none — manifest/docs (matrix says gate only)
+**Gate**: quick
+**Commit**: `feat(identity)!: release 2.0.0 with the security audit remediation`
+
+---
+
+### T54: Attachment 1.1.0 — manifest, changelog, advisory
+
+**What**: Ship the attachment entry with its advisory.
+**Where**: `catalog/attachment/module.json`
+**Touches**: `catalog/attachment/module.json`, `catalog/attachment/CHANGELOG.md`, `catalog/attachment/README.md`, `docs/advisories/ADV-20260822-02.md`
+**Depends on**: T46, T52
+**Exclusive**: no
+**Reuses**: `catalog/attachment/module.json:3,5,14-39`; `catalog/attachment/README.md:69,98-99`
+**Requirement**: Goal 3
+
+**Done when**:
+
+- [ ] `version` → `1.1.0`; `kernelRange` → `">=2.0.0 <3.0.0"`; `env` gains `ATTACHMENT_PENDING_QUOTA_BYTES` and `ATTACHMENT_MAX_CONCURRENT_UPLOADS`
+- [ ] `CHANGELOG.md` gains `## [1.1.0]` naming the `DownloadResult` shape change (a public facade surface), the inline allowlist, the sniffing batch path and the new bounds
+- [ ] `README.md` download and env prose updated at `:12,66,80,98-99`
+- [ ] `ADV-20260822-02.md` is `kind: security`, `severity: high` — stored XSS and the storage socket leak — with `detect`, `fix` and `parity`
+- [ ] Gate check passes: `pnpm catalog:lint`
+
+**Tests**: none — manifest/docs
+**Gate**: quick
+**Commit**: `feat(attachment): release 1.1.0 with the upload and download hardening`
+
+---
+
+### T55: Notification 1.1.0 — manifest, changelog, advisory
+
+**What**: Ship the notification entry with its advisory.
+**Where**: `catalog/notification/module.json`
+**Touches**: `catalog/notification/module.json`, `catalog/notification/CHANGELOG.md`, `catalog/notification/README.md`, `docs/advisories/ADV-20260822-03.md`
+**Depends on**: T49, T52
+**Exclusive**: no
+**Reuses**: `catalog/notification/module.json:3,13`; `catalog/notification/README.md:75`
+**Requirement**: Goal 3
+
+**Done when**:
+
+- [ ] `version` → `1.1.0`; `kernelRange` → `">=2.0.0 <3.0.0"`
+- [ ] `CHANGELOG.md` gains `## [1.1.0]` naming the `http(s)` link refine, the SSE origin check, the shared `NODE_ENV` enum and the widened delivery redaction
+- [ ] `ADV-20260822-03.md` is `kind: security`, `severity: medium` with `detect`, `fix`, `parity`
+- [ ] Gate check passes: `pnpm catalog:lint`
+
+**Tests**: none — manifest/docs
+**Gate**: quick
+**Commit**: `feat(notification): release 1.1.0 with the link and origin hardening`
+
+---
+
+### T56: Audit 1.0.1 and tag 1.0.1 — manifests, changelogs, advisories
+
+**What**: Ship the two small entries with their advisories.
+**Where**: `catalog/audit/module.json`
+**Touches**: `catalog/audit/module.json`, `catalog/audit/CHANGELOG.md`, `catalog/audit/README.md`, `catalog/tag/module.json`, `catalog/tag/CHANGELOG.md`, `catalog/tag/README.md`, `docs/advisories/ADV-20260822-04.md`, `docs/advisories/ADV-20260822-05.md`
+**Depends on**: T32, T50, T52
+**Exclusive**: no
+**Reuses**: `catalog/audit/module.json:3,5`; `catalog/tag/module.json:3,5`; `catalog/audit/README.md:128`, `catalog/tag/README.md:62,88`
+**Requirement**: Goal 3
+
+**Done when**:
+
+- [ ] Both `version` → `1.0.1`; both `kernelRange` → `">=2.0.0 <3.0.0"`
+- [ ] `catalog/audit/CHANGELOG.md` names the query bounds; `catalog/tag/CHANGELOG.md` names the trash permission check
+- [ ] `ADV-20260822-04.md` — audit, `kind: bug`, `severity: low`; `ADV-20260822-05.md` — tag, `kind: security`, `severity: low`; both with `detect`, `fix`, `parity`
+- [ ] Gate check passes: `pnpm catalog:lint`
+
+**Tests**: none — manifest/docs
+**Gate**: quick
+**Commit**: `feat(audit,tag): release 1.0.1 with the input and permission fixes`
+
+---
+
+### T57: Kernel v2.0.0 template changelog
+
+**What**: Record the kernel's breaking changes for children applying `copier update`.
+**Where**: `docs/dev/template-changelog.md`
+**Touches**: `docs/dev/template-changelog.md`
+**Depends on**: T53, T54, T55, T56
+**Exclusive**: no
+**Reuses**: `docs/dev/template-changelog.md:3` — version truth is the git tag plus this entry (AD-006); `package.json` is not bumped
+**Requirement**: Goal 3
+
+**Done when**:
+
+- [ ] A `v2.0.0` section lists, each with the child's action: `NODE_ENV`/`DATABASE_SSL` now required, `BREACH_CHECK_ENABLED` required (identity), `TRUST_PROXY_HOPS` default `0`, `redis://` refused in production without `REDIS_ALLOW_PLAINTEXT`, `/docs` off in production without `DOCS_ENABLED`, swc `ignore` for harness directories, the entrypoint seed glob, the `@RateLimit` import path move, the widened redaction list, `outbox-dead.purge` with `lockId` 3
+- [ ] The section states the tag is applied by the maintainer after merge (`git tag v2.0.0`), not by this task
+- [ ] The same `v2.0.0` section points at the Vitest migration's entry (the runner switch is part of the same kernel major — children's `copier update` gets both)
+- [ ] Gate check passes: `pnpm catalog:lint`
+
+**Tests**: none — docs
+**Gate**: quick
+**Commit**: `docs(template): record the v2.0.0 kernel changes`
+
+---
+
+### T58: Deploy and environment documentation
+
+**What**: Tell operators what the new fail-closed configuration expects.
+**Where**: `docs/dev/deploy.md.jinja`
+**Touches**: `docs/dev/deploy.md.jinja`, `docs/dev/local-environment.md`
+**Depends on**: T57
+**Exclusive**: no
+**Reuses**: `docs/dev/deploy.md.jinja:32,45,50-51,57,65,68,79-80,108-109,158`
+**Requirement**: REM-24
+
+**Done when**:
+
+- [ ] `TRUST_PROXY_HOPS=2` is documented for the Cloudflare → Traefik chain, with the reason the default is `0`
+- [ ] `DOCS_ENABLED`, `REDIS_ALLOW_PLAINTEXT`, `DATABASE_SSL_CA`, `OUTBOX_DEAD_RETENTION_DAYS`, `STORAGE_REQUEST_TIMEOUT_MS`, `STORAGE_MAX_SOCKETS` and the identity/attachment variables are listed with their defaults and their production guidance
+- [ ] The `legacy-import` entrypoint step is removed from the deploy prose; the seed glob replaces it (`:50,158`)
+- [ ] `docs/dev/local-environment.md` gains the variables a developer must now set explicitly
+- [ ] Gate check passes: `pnpm catalog:lint` and `pnpm template:smoke`
+
+**Tests**: none — docs
+**Gate**: full
+**Commit**: `docs(deploy): document the fail-closed configuration`
+
+---
+
+### T59: Merge the Vitest-only `main` into the feature branch
+
+**What**: Bring `main` (`278dde0` or later — the `vitest-migration` merge) into `feat/security-audit-remediation` with one merge commit, resolving every conflict by the class table of design § H.
+**Where**: the feature branch (merge commit)
+**Touches**: every file on the `main` side (349) — in conflict: 68 spec files (take ours, codemod in T60), `.github/workflows/ci.yml`, `apps/api/package.json`, `apps/api/test/setup/unit-env.ts`, `apps/api/tsconfig.build.json`, `scripts/platform/catalog-check.mjs`, `scripts/platform/lib/child.mjs`; deleted on `main` and dropped here: `apps/api/test/jest-e2e.json`, `apps/api/test/jest-integration.json`, `apps/api/test/setup/global-teardown.ts`, `apps/api/test/setup/scalar-stub.ts`, `apps/api/scripts/coverage-all.sh`, `apps/api/test/tools/normalize-coverage.ts`
+**Depends on**: T50 (wave 2 complete and gated)
+**Exclusive**: **yes** — a merge touches the whole tree
+**Reuses**: design § H conflict table; `.specs/features/done/vitest-migration/design.md` (what moved where); `git merge main` (never rebase — 60+ commits would each re-conflict)
+**Requirement**: REM-48, REM-51
+
+**Done when**:
+
+- [ ] One merge commit `Merge main (vitest-migration) into feat/security-audit-remediation`; `git status` clean; no `<<<<<<<` marker anywhere
+- [ ] Every spec file in conflict is the feature's version (the new cases are intact — `git diff main...HEAD --stat` still lists all 85 spec files)
+- [ ] The six tooling files keep both intents: `ci.yml` = Vitest steps + T18 SHA pins + `permissions:`; `apps/api/package.json` = no `test*` script, Vitest deps, T13's build edits; `unit-env.ts`/`int-env.ts`/`e2e-env.ts` = `container-uris.ts` wiring + every variable the merged `env.ts` and `identity.config.ts` require (`BREACH_CHECK_ENABLED`, not the old `BREACH_CHECK_MODE`); `tsconfig.build.json` = T13 exclusion + `main`'s; `catalog-check.mjs` = `check → test → test:db` + T17's `pnpm catalog:lint` step; `child.mjs` = `main`'s `runGates` + T11's child env defaults
+- [ ] No Jest config or stub survives (the REM-48 probe's `ls`/`grep '"test'` halves are empty; the `jest.` half is T60's)
+- [ ] Gate check passes: `pnpm install --frozen-lockfile` exits 0 and `pnpm test:scripts` exits 0 (scripts are spec-independent; `typecheck`/`test` are expected red until T60)
+
+**Tests**: none — merge commit; proven by T60–T62 gates (matrix: gate only)
+**Gate**: quick
+**Commit**: the merge commit itself (no pathspec — the one allowed whole-tree commit of the feature)
+
+---
+
+### T60: Port every feature-authored spec to Vitest
+
+**What**: Run the codemod over the tree, fix its manual-review leftovers by hand, and bring `typecheck`, `lint` and the unit suite back to green.
+**Where**: `scripts/platform/jest-to-vitest.mjs` (consumer, not edited)
+**Touches**: the 85 spec files the feature authored or changed (`git diff --name-only 77d2a05...HEAD -- '*.spec.ts' '*.int-spec.ts' '*.e2e-spec.ts'`), plus any non-spec test helper under `apps/api/test/**` or `catalog/*/api/testing/**` the codemod flags
+**Depends on**: T59
+**Exclusive**: **yes** — same wave as T59, same worker
+**Reuses**: `node scripts/platform/jest-to-vitest.mjs apps/api/src apps/api/test catalog` (walks directories; `--check` reports without writing); `pnpm lint:fix` for import order; the migration's hand-fix list in `.specs/features/done/vitest-migration/design.md:200,207,289` (top-level `await` in setup files; `vi.mock` factories closing over an outer variable → `vi.hoisted`)
+**Requirement**: REM-48, REM-49
+
+**Done when**:
+
+- [ ] Codemod exits 0 on a second run (nothing left to rewrite); every leftover it reported was hand-fixed, never suppressed
+- [ ] `grep -rEn "\bjest\.|@jest/globals|ts-jest" apps/api/src apps/api/test catalog --include='*.ts'` is empty (REM-48 probe, first half)
+- [ ] Every touched spec imports what it uses from `vitest` (`globals: false`); no `// @ts-expect-error` or `any` added to make a mock type compile
+- [ ] No spec is deleted, `.skip`ped or `.todo`ed to pass; the unit count is ≥ wave 2's (kernel unit 395 + the entries' unit count recorded in the wave-2 gate)
+- [ ] Gate check passes: `pnpm check` exits 0 and `pnpm test` exits 0, with `src/modules/module-boundaries.spec.ts` in the run
+
+**Tests**: the ported specs themselves (matrix: import-path rewrite with no behaviour change → the moved spec keeps its cases)
+**Gate**: full
+**Commit**: `test: port the security-audit-remediation specs to vitest`
+
+---
+
+### T61: Integration, e2e and catalog proofs green on Vitest
+
+**What**: Make the feature's int/e2e specs run under the Testcontainers setup and the entry specs run inside the rendered child.
+**Where**: `apps/api/test/setup/`
+**Touches**: `apps/api/src/**/*.int-spec.ts`, `apps/api/test/*.e2e-spec.ts`, `apps/api/src/db/outbox-replay.int-spec.ts`, `catalog/**/*.int-spec.ts`, `catalog/**/__e2e__/*.e2e-spec.ts`, `apps/api/test/setup/{int-env,e2e-env,e2e-after-env}.ts` (env contract only — the Testcontainers wiring is `main`'s)
+**Depends on**: T60
+**Exclusive**: **yes** — same wave, same worker
+**Reuses**: `apps/api/test/setup/global-setup.ts:183-243` (`setup(project)` provides `postgresUri`/`redisUri`; worker DBs per `VITEST_POOL_ID`); `apps/api/test/setup/container-uris.ts:12`; `scripts/platform/catalog-check.mjs:189-217` (`module add` + `runGates`)
+**Requirement**: REM-49, REM-50
+
+**Done when**:
+
+- [ ] `pnpm test:int` and `pnpm test:e2e` exit 0 (Docker up) — the C4 outbox int-specs, the C2 `security-bootstrap.e2e-spec.ts`, the C5/C6 identity int-specs included
+- [ ] `pnpm catalog:check` runs every entry's unit + int + e2e inside the rendered child; the **only** red allowed is `catalog/identity/single-tenant/parity/contract.parity.spec.ts` (T52 re-freezes it — record the literal failure in the summary)
+- [ ] The wave-2 "entry e2e unrunnable in the staged child" finding is closed: no proof the feature wrote is left unrun
+- [ ] No int/e2e spec was weakened (no `.skip`, no assertion removed); a spec that cannot run under the provided URIs is fixed at its env/setup, not at its assertions
+- [ ] Gate check passes: `pnpm test:int`, `pnpm test:e2e`, `pnpm catalog:check` (the parity red excepted)
+
+**Tests**: the ported int/e2e specs (matrix: entry infrastructure + entry routes, now via `catalog:check`)
+**Gate**: full (entry)
+**Commit**: `test: run the remediation int/e2e proofs under vitest and catalog:check`
+
+---
+
+### T62: Coverage floors, pre-push chain and CI hold on the merged tree
+
+**What**: Prove the merged tree passes the gates `main` now enforces — coverage floors, pre-push chain, CI workflow — without lowering anything.
+**Where**: `vitest.coverage.mts` (read-only unless a floor must be *raised*)
+**Touches**: `vitest.coverage.mts` (raise-only), `.github/workflows/ci.yml` (only if T59's merge left a Vitest step and a pin inconsistent), `docs/test/testing.md` (one line if the feature's proof paths are not described)
+**Depends on**: T61
+**Exclusive**: **yes** — same wave, same worker
+**Reuses**: `vitest.coverage.mts:39-52` (per-glob thresholds, AD-027 ratchet-only); `.husky/pre-push` (migrations → typecheck → catalog-typecheck → test-coverage); REM-26 / REM-47 probes in `spec.md`
+**Requirement**: REM-51
+
+**Done when**:
+
+- [ ] `pnpm test:coverage` exits 0 with the floors as on `main` or higher — never lower; if the feature raised coverage, the floors MAY be ratcheted up and the new numbers recorded in the summary
+- [ ] The pre-push chain runs end to end on the branch (`migrations → typecheck → catalog-typecheck → test-coverage`) — run it as a command, not by pushing
+- [ ] REM-26 probe (`dist` carries no harness) and REM-47 probe (pinned actions + `permissions:`) are still empty after the merge
+- [ ] `pnpm catalog:lint` exits 0 (the merged manifests/advisories still validate)
+- [ ] Gate check passes: `pnpm test:coverage`, `pnpm test:scripts`, `pnpm catalog:lint`
+
+**Tests**: none — gate + probes (matrix: CI workflows / build output → probe only)
+**Gate**: full
+**Commit**: `chore(test): hold the coverage floors and CI on the merged vitest tree` (skip the commit if nothing changed — record "no-op" in the summary)
+
+---
+
+> **Fix tasks — Verifier round 1 (2026-08-23, `validation.md` § Fix Plans)**. Wave 7 = C13 (attachment, T63→T66) ∥ C14 (identity + audit, T67→T68); disjoint ownership, both touch `catalog/**` so the Build gate includes `pnpm catalog:check`. Spec-precision fixes (REM-39 criterion, REM-48 probe) are made by the orchestrator in `spec.md`, not by a worker. The cosmetic narrower-than-stated proofs (REM-09, REM-10, REM-19, REM-25, REM-27) are accepted as passing and are not re-opened.
+
+### T63: Discriminate the declared-type mismatch in the batch sniff (REM-08, mutant 2)
+
+**What**: Kill the surviving mutant — a valid image whose bytes sniff to a *different* image type than declared must be rejected like a null sniff.
+**Where**: `catalog/attachment/api/application/use-cases/upload-attachments-batch/upload-attachments-batch.use-case.spec.ts`
+**Touches**: `catalog/attachment/api/application/use-cases/upload-attachments-batch/upload-attachments-batch.use-case.spec.ts`, `catalog/attachment/api/__e2e__/attachment-upload.e2e-spec.ts`
+**Depends on**: T46
+**Exclusive**: no
+**Reuses**: the existing spoofed-part cases at `upload-attachments-batch.use-case.spec.ts:294-326` and `attachment-upload.e2e-spec.ts:137` (415); real PNG/JPEG magic bytes (`file-type` sniff)
+**Requirement**: REM-08
+
+**Done when**:
+
+- [ ] A use-case test feeds valid PNG bytes declared `image/jpeg` (and the reverse) and asserts `UnsupportedMediaTypeError`, nothing persisted, every stored object of the batch discarded (the edge case `validation.md` § Edge Cases leaves unticked)
+- [ ] An e2e case asserts HTTP 415 for the same input
+- [ ] Re-applying mutant 2 (`sniffed !== file.contentType` dropped at `upload-attachments-batch.use-case.ts:67`) turns the scoped gate red — state the failing test names in the summary, then restore the file
+- [ ] Gate check passes: `pnpm catalog:check attachment`
+
+**Tests**: unit + e2e (matrix: use-case → unit; HTTP → e2e in the child)
+**Gate**: full (entry)
+**Commit**: `test(attachment): reject a sniffed image type that differs from the declared one`
+
+---
+
+### T64: Prove the upload quotas — 429 / 413 / 503 before the body is read (REM-14)
+
+**What**: Give the three upload bounds the proof the AC declares.
+**Where**: `catalog/attachment/api/__e2e__/attachment-upload.e2e-spec.ts`
+**Touches**: `catalog/attachment/api/__e2e__/attachment-upload.e2e-spec.ts`, `catalog/attachment/api/api/controllers/upload-attachments.controller.spec.ts` (new if absent), `catalog/attachment/api/application/use-cases/upload-attachments-batch/upload-attachments-batch.use-case.spec.ts` (413 quota path only if the check lives in the use case)
+**Depends on**: T63
+**Exclusive**: no
+**Reuses**: `@RateLimit({ limit: 20, windowSeconds: 60 })` at `upload-attachments.controller.ts:72`; `UploadsSaturatedError` (`domain/errors.ts:68`) and `PendingQuotaExceededError` (`domain/errors.ts:79`); `UploadGate`/`InFlightGate` unit spec; the avatar 429 e2e precedent in identity (`__e2e__/auth-csrf-none.e2e-spec.ts:203-209` consumes the rate-limit bucket)
+**Requirement**: REM-14
+
+**Done when**:
+
+- [ ] 429 on the 21st `POST /attachments/uploads` of one IP within 60 s, with `Retry-After`
+- [ ] 413 when the owner's pending bytes exceed `ATTACHMENT_PENDING_QUOTA_BYTES`
+- [ ] 503 with `Retry-After` when `ATTACHMENT_MAX_CONCURRENT_UPLOADS` uploads are in flight
+- [ ] Each case asserts the body was not consumed (the multipart parser / storage `putStream` never invoked)
+- [ ] Gate check passes: `pnpm catalog:check attachment`
+
+**Tests**: e2e in the child (+ unit where the bound is checked in a use case)
+**Gate**: full (entry)
+**Commit**: `test(attachment): prove the upload rate limit, pending quota and in-flight cap`
+
+---
+
+### T65: Prove the post-header stream failure teardown (REM-12)
+
+**What**: A storage stream that errors after the headers were sent must tear the response down, log `attachment.download_stream_failed`, and leave the process up.
+**Where**: `catalog/attachment/api/__e2e__/attachment-download.e2e-spec.ts`
+**Touches**: `catalog/attachment/api/__e2e__/attachment-download.e2e-spec.ts`
+**Depends on**: T64
+**Exclusive**: no
+**Reuses**: the client-abort case at `attachment-download.e2e-spec.ts:538` (fake storage stream, `slowStream.destroyed`); `download-attachment.controller.ts:78-91` (log key)
+**Requirement**: REM-12
+
+**Done when**:
+
+- [ ] A fake storage stream emits `error` after the first chunk; the test asserts the client connection is closed/reset (no complete body), `attachment.download_stream_failed` is logged once, and a subsequent request on the same app succeeds
+- [ ] Gate check passes: `pnpm catalog:check attachment`
+
+**Tests**: e2e in the child
+**Gate**: full (entry)
+**Commit**: `test(attachment): prove the download stream failure after headers tears the response down`
+
+---
+
+### T66: `fieldSize` in the busboy limits and a `parts` proof (REM-15)
+
+**What**: Complete the limits object the AC enumerates and prove the two untested bounds.
+**Where**: `catalog/attachment/api/api/multipart/multipart-files.ts`
+**Touches**: `catalog/attachment/api/api/multipart/multipart-files.ts`, `catalog/attachment/api/api/multipart/multipart-files.spec.ts`
+**Depends on**: T65
+**Exclusive**: no
+**Reuses**: `multipart-files.ts:50-55` (`fileSize`, `files`, `parts`, `fields`); `multipart-files.spec.ts:135-184` (existing limit cases); busboy `limits.fieldSize` (default 1 MiB) → on `fieldsLimit`/`partsLimit` → `InvalidMultipartRequestError` (400), consistent with the `fields` case at `:147`
+**Requirement**: REM-15
+
+**Done when**:
+
+- [ ] `fieldSize` is set from the profile (a small bound, e.g. 1 KiB — the batch route accepts no field; the value protects any route that reuses the parser)
+- [ ] Spec cases: a non-file field over `fieldSize` → 400; more than `parts` parts → 400; the offending part is destroyed (`destroyed === true`)
+- [ ] Gate check passes: `pnpm catalog:check attachment`
+
+**Tests**: unit
+**Gate**: full (entry)
+**Commit**: `fix(attachment): bound multipart field size and prove the parts limit`
+
+---
+
+### T67: Prove the audit-trail redaction of the three token-hash columns (REM-40)
+
+**What**: One trail assertion per column the custom migration registers.
+**Where**: `catalog/identity/single-tenant/api/infrastructure/persistence/audit-redaction.int-spec.ts` (new; or the precedent's file if the trail helper is only reachable from the audit entry)
+**Touches**: `catalog/identity/single-tenant/api/infrastructure/persistence/audit-redaction.int-spec.ts` (new), `catalog/audit/api/infrastructure/trail/audit-trigger.int-spec.ts` (only if the precedent must host the cases)
+**Depends on**: T38
+**Exclusive**: no
+**Reuses**: `catalog/audit/api/infrastructure/trail/audit-trigger.int-spec.ts:144` (`row_new.password_hash === "[REDACTED]"` — the exact pattern to mirror); `catalog/identity/single-tenant/migrations/custom/03_audit_redact_token_hashes.sql:19-21`
+**Requirement**: REM-40
+
+**Done when**:
+
+- [ ] Inserting/updating a `sessions`, `devices` and `verification_tokens` row yields an `audit.entries` row whose `row_new.token_hash` / `row_new.cookie_token_hash` / `row_new.token_hash` is `"[REDACTED]"` and whose other columns are intact
+- [ ] Gate check passes: `pnpm catalog:check identity` (and `audit` if its file changed)
+
+**Tests**: int in the child (matrix: custom SQL migration → int-spec)
+**Gate**: full (entry)
+**Commit**: `test(identity): prove the audit trail redacts the session, device and verification token hashes`
+
+---
+
+### T68: Unit proof for the dev seed password source (REM-28)
+
+**What**: The seed reads `SEED_MASTER_PASSWORD` or generates one — prove both branches.
+**Where**: `catalog/identity/single-tenant/api/testing/seeds/master-user.seed.spec.ts`
+**Touches**: `catalog/identity/single-tenant/api/testing/seeds/master-user.seed.spec.ts` (new), `catalog/identity/single-tenant/api/testing/seeds/master-user.seed.ts` (export only, if `resolveMasterPassword` is not exported)
+**Depends on**: T67
+**Exclusive**: no
+**Reuses**: `master-user.seed.ts:18-24,31-35`
+**Requirement**: REM-28
+
+**Done when**:
+
+- [ ] Env set → that value, `generated: false`; env absent → a generated value of the documented length, `generated: true`, printed once; no literal password anywhere in the file (assert by reading the source in the test or by grep in the summary)
+- [ ] Gate check passes: `pnpm catalog:check identity`
+
+**Tests**: unit
+**Gate**: full (entry)
+**Commit**: `test(identity): prove the master seed reads SEED_MASTER_PASSWORD or generates one`
+
+---
+
+> **Fix tasks — Verifier round 2 (2026-08-23)**. Wave 8 = C15 (T69, opus — migration + install order, cross-entry). Touches `catalog/**` → Build gate includes `pnpm catalog:check`. The REM-48 probe is tightened by the orchestrator in `spec.md` (`jq -r '.scripts | keys[]'`).
+
+### T69: Make the token-hash redaction attach run in the real install order (REM-40)
+
+**What**: In a stock child, `identity` is installed before `audit`, so `03_audit_redact_token_hashes.sql` hits its `audit.attach`-missing guard and no-ops — the trail keeps clear `token_hash` / `cookie_token_hash` values. The attach must execute in the real install path, and the proof must fail when the redact list is emptied (Verifier mutant 7 at `03_audit_redact_token_hashes.sql:19`).
+**Where**: `catalog/identity/single-tenant/migrations/custom/03_audit_redact_token_hashes.sql`
+**Touches**: `catalog/identity/single-tenant/migrations/custom/03_audit_redact_token_hashes.sql`, `catalog/identity/single-tenant/migrations/custom/02_*.sql` (same guard — the `users.password_hash` attach has the same ordering hole; fix both or prove 02 is reached), `catalog/audit/api/infrastructure/trail/audit-trigger.int-spec.ts:46-50` (delete the inline re-attach), `catalog/audit/api/testing/**` (`reattachIdentityTables` helper — delete or align), and ONE of: (a) an audit custom migration that, guarded on `to_regclass('identity.sessions')`, (re)attaches the identity tables with the lists identity declares — installed after identity by `dependsOn`; or (b) the catalog installer re-runs a dependency's `customMigrations` tagged as attach-after (`scripts/platform/**`, `module.json` schema) — pick (a) unless the installer already has such a hook (scout first); record the choice in the summary. If (a): `catalog/audit/module.json` `customMigrations` + `catalog/audit/CHANGELOG.md` `## [2.0.0]` item + `docs/advisories/ADV-20260822-04.md` `fix`/`detect` updated; `catalog/identity/single-tenant/README.md`/`CHANGELOG.md` line if identity's migration changes meaning.
+**Depends on**: T67
+**Exclusive**: **yes** — single cluster of wave 8 (migrations + two entries)
+**Reuses**: the existing guard pattern in `02_*.sql`/`03_*.sql`; `audit.attach(schema, table, pk, redact[])` signature (`catalog/audit/migrations/**`); `catalog:check` install order = topological on `dependsOn` (`scripts/platform/**` — confirm)
+**Requirement**: REM-40 (and the `users.password_hash` case of the original audit finding)
+
+**Done when**:
+
+- [ ] `pnpm catalog:check audit` renders a child with identity then audit and, **without any inline re-attach in tests**, an insert into `sessions`/`devices`/`verification_tokens`/`users` yields trail rows with the hash columns `"[REDACTED]"`
+- [ ] Mutant 7 (redact list → `'{}'` in the migration that now carries the list) turns `pnpm catalog:check audit` red — state the failing test names, restore the file
+- [ ] The inline re-attach at `audit-trigger.int-spec.ts:46-50` and its "never redacts in a real catalog:check" note are gone; `reattachIdentityTables` deleted or reduced to the real path
+- [ ] Advisory/changelog updated for whichever entry carries the attach; `pnpm catalog:lint` 0
+- [ ] Gate check passes: `pnpm catalog:check audit` and `pnpm catalog:check identity`
+
+**Tests**: int in the child (matrix: custom SQL migration → int-spec)
+**Gate**: full (entry)
+**Commit**: `fix(audit,identity): attach the token-hash redaction in the real install order` (+ `Advisory: none — covered by ADV-20260822-04 (security-audit-remediation)` for audit files, `…-01` for identity files — one commit, both trailers)
+
+---
+
+## Wave Execution Map
+
+```
+Wave 1:  [C1: T1→T2→T3→T4→T5→T6→T7]  ∥  [C2: T8→T9→T10→T11→T12]  ∥  [C3: T13→T14→T15→T16→T17→T18]
+Wave 2:  [C4: T19→T20→T21→T22→T23]  ∥  [C5: T24→T25→T26→T27→T28→T29→T30]
+         ∥ [C6: T31→…→T38]  ∥  [C7: T39→…→T46]  ∥  [C8: T47→T48→T49→T50 — FIFO tail]
+Wave 3:  [C12: T59→T60→T61→T62]   (exclusive — merge main + Jest→Vitest port)
+Wave 4:  [C9:  T51]   (exclusive — lockfile + root manifest)
+Wave 5:  [C10: T52]   (exclusive — contract regen)
+Wave 6:  [C11: T53→T54→T55→T56→T57→T58]
+```
+
+At Execute the orchestrator never implements a cluster. Per wave it dispatches one worker per cluster in a single message (≤4 in flight, the rest FIFO), waits for every compact summary, runs the Build gate once through the runner, records results here, and moves on. After wave 6 it dispatches the Verifier (**opus** — auth, data integrity, P0) on the Vitest tree. See `references/cards/orchestrator.md`.
+
+### Execution record
+
+**Wave 1 — DONE (2026-08-22), Build gate PASS** (`full-unit`: typecheck 0 · lint 0 · unit 60 suites / 395 tests, baseline 51 / 330 · `module-boundaries.spec.ts` 32/32 · `test:scripts` 200/200 · `catalog:typecheck` 0). Commit range `77d2a05..8f9c8ee`, 20 commits.
+
+| Cluster | Tier | Tasks → commits | Notes |
+| --- | --- | --- | --- |
+| C1 | opus | T1 `0050f42` · T2 `381ad0c` · T3 `1b2d447` · T4 `588d13e` · T5 `7b8050d` · T6 `d3e377b` + `b6f91d9` · T7 `ca30d62` | **blocked-by-ownership #1 (T6)**: deleting the identity guard (T5) orphaned 27 controller imports + one int-spec double outside every `Touches`; grant expanded and fixed in `b6f91d9` (T6 `Touches` corrected below). SPEC_DEVIATION `resilient-rate-limiter.ts:59`: `reset(key)` takes no options (design § Data Models) — on primary error it always clears the local key instead of gating on `critical`; accepted (clearing a fallback key is harmless). |
+| C2 | sonnet | T8 `0d8720b` · T9 `8b880cd` · T10 `25bb234` · T11 `eea217b` · T12 `fc7b44b` · gate fix `8f9c8ee` | Gate failed once (2 typecheck + 2 lint errors in C2 files), fixed by the same worker. Deviations: `docs.ts` `mountDocs` is async with a dynamic `import("@scalar/nestjs-api-reference")` (static import breaks the unit spec without an ESM stub); `security-bootstrap.e2e-spec.ts` registers its probe route before `app.init()`; `createRedis(config: Env = env())` injectable (mirrors `connection-config.ts`). |
+| C3 | sonnet | T13 `2e9dfbc` · T14 `1b96e43` · T15 `742ee2c` · T16 `39897fc` · T17 `71a28e7` · T18 `ec58740` | `Dockerfile` and `docker-entrypoint.dev.sh` needed no change. `catalog-check.mjs` shells `pnpm catalog:lint` after install, before module-add. REM-26 and REM-47 probes run and empty. |
+
+**Wave 2 — DONE (2026-08-22), Build gate PASS on the 2nd run** (Jest, the last Jest gate: typecheck 0 · lint 0 · unit 60 suites / 424 tests · `module-boundaries.spec.ts` 32/32 · `test:scripts` 200/200 · `catalog:typecheck` 0 · catalog specs in the stage 114 suites / 850 tests — parity specs live outside `api/` and are not staged, so `contract.parity.spec.ts` was not run; it is expected red until T52). Commit range `8f9c8ee..16a9645`, 37 commits. First run failed on 4 lint errors (C7 files), `identity.module.spec.ts:47` (stale `[]` expectation since C1), a `lockId 3` collision (kernel `outbox-dead.purge` vs pre-existing notification `delivery.purge`) and two identity int-specs missing `BREACH_CHECK_ENABLED`; one fix worker (sonnet) closed all four: `d301432` lint · `c2ae534` + `84bc01e` lockId → **6** (4 also collides with identity `email-change.revert`; kernel reserves 1, 2, 6 — design § C corrected) · `eddb1be` module spec · `16a9645` int-spec fixtures.
+
+| Cluster | Tier | Tasks → commits | Notes |
+| --- | --- | --- | --- |
+| C4 | opus | T19 `e663ba3` · T20 `adbe7f4` · T21 `58c674d` · T22 `8679b16` · T23 `ccd6ef3` | `logger.factory.ts` needed no edit (already consumes `redactConfig`). `purgeDeadLetters` reads `env().OUTBOX_DEAD_RETENTION_DAYS`; `outbox.int-spec` fills the env fallbacks in `beforeAll`. Two pre-existing idempotency scope tests re-asserted to REM-32's outcome. |
+| C5 | opus | T24 `90e64bf` · T25 `3a4a830` · T26 `937a8c5` · T27 `f512219` · T28 `710b783` · T29 `ddb61df` · T30 `0bf51bd` | Task-boundary deviations only (T24/T25 carried T30's config keys; T27 renamed `isBreached`→`check` at T28's call sites; T29's guard-order spec lives in `parity/csrf.parity.spec.ts`). Gates ran in a private stage: 671 identity unit+parity green. |
+| C6 | opus | T31 `2e0a549` · T32 `85dc80b` · T33 `4afcb6f` · T34 `e14702d` · T35 `1f0b8f8` · T36 `34a7d8d` · T37 `80bc306` · T38 `48e242b` | Touched `api/domain/errors.spec.ts` outside `Touches` (wave-1 test said "removed in T37"; no sibling owned it — plan corrected below). SPEC_DEVIATIONs accepted: tag `list-tags.use-case.ts:22` goes through the `IDENTITY_ACCESS` facade (cross-entry imports are facade-only); `user-trash.e2e-spec.ts:171` observes 401 at the HTTP edge (AC REM-36 is about `requireAuth` → 403, proven in `require-auth.spec.ts`). **For the Verifier**: `update-user.use-case.ts:112` self-edit refuses any non-empty `schedulingAreaIds` (stricter than spec.md:102 "changes") — no per-user read of scheduling areas on the port. T35 changed the contract → T52 re-freeze. |
+| C7 | sonnet | T39 `1c1cdfe` · T40 `436276d` · T41 `18a0e1f` · T42 `2409644` · T43 `7d85b79` · T44 `14e14b1` · T45 `3f3b88e` · T46 `16ce74b` | **Checkout incident**: the worker authored T39/T40 in the primary checkout on `main` (`7d5a618`, uncommitted T40) while `vitest-migration` was about to merge there; the orchestrator halted it, cherry-picked T39 as `1c1cdfe`, carried the T40 diff into the worktree, reset `main` to `e5cdaa5`, resumed the worker in the worktree. Deviations: T40 drops the stale-profile 404 branch (inline is content-type-only now); `UploadGate` lives in `multipart-files.ts` (circular import via the module); `deleteByIds` → `deletePendingByIds`. 102/102 attachment unit green; its e2e/int proofs typecheck only (Testcontainers kept dying under Docker pressure). |
+| C8 | sonnet (FIFO tail) | T47 `569b42c` · T48 `465c0f8` · T49 `18ccba1` · T50 `5c3e215` | No deviations. Consumed `shared/config/env.ts` read-only (`nodeEnvSchema`, `WEB_ORIGIN`) beyond the payload's consume list. |
+
+**Unrun proofs after wave 2** (every entry `int-spec`/`__e2e__` written in waves 1–2): the Jest staged child has no entry migrations (`schema "identity" does not exist`), `PLATFORM_MODULES` is empty in the template, and parity specs are not staged. They run for the first time in **T61** (`pnpm catalog:check` on the Vitest tree). Plan corrections from wave 2: (a) C6's `Touches` gains `catalog/identity/single-tenant/api/domain/errors.spec.ts` (T37); (b) design § C: `outbox-dead.purge` `lockId` is **6**, not 3; (c) the Build gate for catalog code = `pnpm catalog:typecheck --keep` + jest `--rootDir .catalog-stage` over the five entries (the matrix's `pnpm --filter api test -- modules/<entry>` never ran anything — `rootDir=src`); void after T59; (d) the `vitest-migration` merge landed on `main` at `278dde0` during this wave → wave 3 is the port (C12, T59–T62).
+
+Plan corrections from wave 1: (a) T6 `Touches` gains `catalog/identity/single-tenant/api/api/controllers/**` (the 27 `@RateLimit` importers) and `catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-auth-event.repository.int-spec.ts`; (b) the Build gate's `src/modules/architecture.spec.ts` does not exist in this tree — only `src/modules/module-boundaries.spec.ts` is named from wave 2 on; (c) wave-1 workers touching `catalog/**` used the trailer `Advisory: none — covered by ADV-20260822-NN (security-audit-remediation)` (advisory files themselves land in wave 5, C11).
+
+**Wave 3 — DONE (2026-08-22), Build gate PASS on the 1st run** (Vitest, the first Vitest gate: `pnpm check` 0 · `pnpm test` 86 files / 546 tests · `module-boundaries.spec.ts` 32/32 · `catalog:typecheck` 0 · REM-48 probe empty, no Jest config left). Commit range `16a9645..bd8a4e9`, 3 commits + the merge. **The new post-merge baseline for the Verifier: 86 files / 546 tests** (`main` alone: 76 / 399 at `278dde0`).
+
+| Cluster | Tier | Tasks → commits | Notes |
+| --- | --- | --- | --- |
+| C12 | opus | T59 `aeedbfd` (merge of `main@2bdee72`) · T60 `f6e23a4` · T61 `bd8a4e9` · T62 **no-op** (no commit: floors untouched, `ci.yml` consistent, docs unchanged) | T59: 25 conflicts (22 specs → ours; `rate-limit.guard.spec.ts` kept deleted; `tsconfig.build.json` union; idempotency interceptor + spec merged keeping both intents); `test:scripts` 233/233. T60: codemod clean on the 2nd run (0 changed / 0 manual). T61: `test:int` 119/119 · `test:e2e` 14/14 · **`pnpm catalog:check` exit 0** (child: 1499 unit + 498 int/e2e — `contract.parity.spec.ts` PASSES, nothing red to carry to T52). The wave-2 unrun entry proofs ran for the first time and exposed **5 real defects, fixed at source**: 14 e2e rate-limiter doubles lacked `reset`; attachment upload e2e sent no `Origin` (CSRF 403); **busboy off-by-one in `catalog/attachment/api/api/controllers/multipart-files.ts`** (`parts: maxFiles` 413'd a single legal file — busboy fires `partsLimit` on `++parts === limit`; now `maxFiles + 1` + a boundary unit case); `seeds/bootstrap.ts` imported the root connection (module-boundaries red) → own `pg.Pool` + `poolConfig()`; stale `maintenance-runtime.int-spec` lockId 6 (now the kernel's). Deviations: (1) **`pnpm test:coverage` exit 1 on the merged tree — inherited from `main`, floors NOT lowered**: branches 88.54 % global / 87.56 % `apps/api/src/**` vs the flat 90 (stmts 94.98 · funcs 94.22 · lines 95.51 pass; 679/679 tests green); offenders are kernel infra the feature never touched (`client.factory.ts` 60 %, `dedicated-client.ts` 80 %, `event-context.ts` 83 %) — `main`'s open `api-coverage-to-90` work closes it; the branch must merge `main` once more before the Verifier's Final gate. (2) `apps/api/test/setup/e2e-env.ts` sets `DATABASE_POOL_MAX_WAITING=200` (the 51-request storage-socket burst tripped the fail-closed pool queue under parallel load → 503s). (3) Catalog import order fixed tree-wide (the template never lints `catalog/**`; only the rendered child does). |
+
+Plan corrections from wave 3: (a) `contract.parity.spec.ts` is green on the Vitest tree — T52's "re-freeze" is still owed for the T35 contract change, but no red precedes it; (b) Build gate from here on = the Vitest table (`pnpm check` + `pnpm test` + `module-boundaries.spec.ts` + `catalog:typecheck`); entry int/e2e only via `pnpm catalog:check`; (c) the T62 coverage criterion depends on `main` clearing its own floors — re-run `pnpm test:coverage` after the pre-Verifier merge of `main`.
+
+**Wave 4 — DONE (2026-08-22), Build gate PASS on the 1st run** (`pnpm install --frozen-lockfile` 0 · `pnpm check` 0 · `pnpm test` 86 files / 546 tests · `module-boundaries.spec.ts` in the run · `catalog:typecheck` 0). Commit `298e8f3` (1 commit).
+
+| Cluster | Tier | Tasks → commits | Notes |
+| --- | --- | --- | --- |
+| C9 | sonnet | T51 `298e8f3` | `multer` → 2.2.0 (direct dep + root override, since `@nestjs/platform-express` ships its own copy); `limits.fields: 0` on both avatar `FileInterceptor`s + 1 new config assertion. Root `pnpm.overrides`: multer, js-yaml, `@opentelemetry/propagator-jaeger`, `minimatch@3/@10>brace-expansion`, `postcss>nanoid` / `@scalar/types>nanoid`, postcss, vite, undici — **advisory mapping lives in the commit body** (JSON has no comments and pnpm rejects non-selector `"//"` keys; the AC's "one-line comment per entry" is satisfied there). Deviation: **`pnpm audit --prod --audit-level=high` exits 1, not 0** — 21 highs → 2, the residue is exactly the spec's Out of Scope (`packages/api-client>axios` GHSA-gcfj-64vw-6mp9 + its transitive `form-data` GHSA-hmw2-7cc7-3qxx); pnpm audits the workspace lockfile from any package, so the literal "exits 0" cannot be met without touching `api-client` — for the Verifier: the AC holds modulo the Out-of-Scope chain. Scoped gate ran against the staged copy (`catalog:typecheck --keep` + `vitest run`, 3/3) because catalog specs only resolve from their staged position. |
+
+**Wave 4 gate-fix (2026-08-23)** — the wave-4 Build gate did not run `pnpm catalog:check`, and C10's run exposed two T51 reds: `upload-avatar.controller.spec.ts:54` eslint `unbound-method` (surfaces only in the child) and `access-link-avatar-ownership.e2e-spec.ts:178` 400 — `limits.fields = 0` rejected the legitimate `token` multipart field of the pre-auth access-link avatar route. One fix worker (sonnet) closed both in `6c8e35e`: `upload-access-link-avatar.controller.ts` → `fields: 1` (the `@Body("token")` field), `upload-avatar.controller.ts` keeps `fields: 0`, spec lint fixed without `eslint-disable`. **SPEC_DEVIATION for the Verifier** (inlined at `upload-access-link-avatar.controller.ts:50-53`): REM-39 literally says `fields: 0` on both avatar interceptors; the access-link route needs exactly one. `pnpm catalog:check` exit 0 after the fix (216 unit + 498 test:db, 5 module adds OK). Plan correction: **a wave that touches `catalog/**` code must include `pnpm catalog:check` in its Build gate** (the scoped unit gate cannot see child-only lint or the entry e2e).
+
+**Wave 5 — DONE (2026-08-23), Build gate PASS on the 1st run** (`pnpm check` 0 · `pnpm test` 86 files / 546 tests · `module-boundaries.spec.ts` in the run · `catalog:typecheck` 0 · `catalog:check` 0 via the gate-fix above). Commits `65af323` + `6c8e35e`.
+
+| Cluster | Tier | Tasks → commits | Notes |
+| --- | --- | --- | --- |
+| C10 | opus | T52 `65af323` | `openapi.json`: 1-line delta only (`info.description` — CSRF attributed to identity's `CsrfGuard`, from T18). The T35/T50 input bounds live in `catalog/**`, so they never appear in the template's kernel-only document (2 paths: `/health`, `/ready`); `packages/api-client/generated/**` regenerated byte-identical → nothing to commit. **Parity needed no edit**: in a kept child (identity + 4 entries, 44 paths / 53 ops) 14 parity files / 89 tests pass, `contract.parity.spec.ts` included; child typecheck green (both web consumers OK); child `pnpm test` 216 files / 1500. STOPPED once on the T51 reds above (outside its ownership — reported, not touched). DX note for T57: `pnpm contract` now requires the kernel env (`NODE_ENV`, `DATABASE_URL`, `DATABASE_SSL`, `REDIS_URL`, `WEB_ORIGIN`, `R2_*`) after T8–T12; no `.env` in a fresh worktree and no CI job runs it. |
+
+**Wave 6 — DONE (2026-08-23), Build gate PASS on the 1st run** (`pnpm check` 0 · `pnpm test` 86 files / 546 tests · `module-boundaries.spec.ts` 32/32 · `catalog:typecheck` 0 · `catalog:lint` 0 · `template:smoke` 4/4 · `catalog:check` 0 — child 216 unit files / 1500 tests + 70 test:db files / 498 tests, 5 entries OK). Commit range `6c8e35e..a4ebe34`, 6 commits. **Version fold applied (default, spec § Open questions closed)**: entries stay `2.0.0`, items folded into the existing `## [2.0.0]` sections, `ADV-20260822-01..05` beside `ADV-20260821-01..05`, `kernelRange` `">=2.0.0 <3.0.0"` ×5, kernel tag `v2.0.0` covers Vitest + security. The worker died once mid-T53 (host sleep; three identity files modified, nothing committed) and was resumed from its transcript — diff repaired, no re-dispatch. **Execute complete — all 58 tasks DONE; next: pre-Verifier `git merge main` in the worktree + `pnpm test:coverage`, then the Verifier at opus.**
+
+| Cluster | Tier | Tasks → commits | Notes |
+| --- | --- | --- | --- |
+| C11 | sonnet | T53 `f1e76ca` · T54 `d975c1e` · T55 `e8d7195` · T56 `b9b0ca1` · T57 `5bb31ff` · T58 `a4ebe34` | T53–T56 each stage their `ADV-20260822-NN.md` with the catalog change (01 identity `breaking/high` · 02 attachment `security/high` · 03 notification `security/medium` · 04 audit `bug/low` · 05 tag `security/low`). READMEs edited only for identity and attachment (the only Done-when items naming README lines). T57: `## v2.0.0` in `template-changelog.md` lists every fail-closed change with the child's action, `outbox-dead.purge` **`lockId` 6** (task body said 3 — stale since the wave-2 fix), the tag-by-maintainer note, the pointer to the Vitest entry and the `pnpm contract` kernel-env DX note. T58: `deploy.md.jinja` drops the `legacy-import` entrypoint step for the seed glob and gains a "Fail-closed configuration" table (`TRUST_PROXY_HOPS=2` for Cloudflare → Traefik, `DOCS_ENABLED`, `REDIS_ALLOW_PLAINTEXT`, `DATABASE_SSL_CA`, `OUTBOX_DEAD_RETENTION_DAYS`, `STORAGE_*`, identity/attachment vars); `local-environment.md` lists the variables a developer now sets explicitly. No `SPEC_DEVIATION` in this wave. |
+
+**Verifier round 1 (2026-08-23, opus) — FAIL**: 45/51 ACs evidenced, Final gate 10/11 (`pnpm audit` residue = Out-of-Scope `api-client>axios`), sensor 4/5 (mutant 2 survived). `validation.md` committed on the branch at `e46790a`; fix tasks T63–T68 + spec precision (REM-39 filtered gate, REM-48 probe, Success Criteria #2) on `main` at `44d8fd4`, merged into the worktree at `3b7554f`.
+
+**Wave 7 (fix round 1) — DONE (2026-08-23), Build gate PASS on the 1st run** (`pnpm check` 0 · `pnpm test` 89 files / 585 tests · `module-boundaries.spec.ts` 32/32 · `catalog:typecheck` 0 · `catalog:lint` 0 · `catalog:check` 0 — child 221 unit files / 1548 tests + 70 test:db files / 510 tests; attachment 20/117, identity 74/677 + 3/15, audit 6/44). Commit range `3b7554f..ca6bb6f`, 6 commits.
+
+| Cluster | Tier | Tasks → commits | Notes |
+| --- | --- | --- | --- |
+| C13 | sonnet | T63 `b3b1259` · T64 `1937907` · T65 `b721676` · T66 `ca6bb6f` | **Mutant 2 kill verified**: re-injected the `sniffed !== file.contentType` drop at `upload-attachments-batch.use-case.ts:67`, `catalog:check attachment` went red on "recusa PNG válido declarado como image/jpeg…" and "recusa JPEG válido declarado como image/png e descarta o objeto já enviado do lote", file restored. T64: new `upload-attachments.controller.spec.ts` (503/413 wiring) + 3 e2e blocks (429 real limiter, 413 seeded pending rows, 503 pre-acquired `UploadGate`), body-not-read asserted. T65: fake `LoggerFactory` spy proves `attachment.download_stream_failed`; a cross-test socket-pool flake (`Parse Error: Expected HTTP/`) fixed with `agent: false` on the raw `http.request`. T66: `fields`/`fieldSize` configurable on `MultipartLimits` (defaults 0 / 1024 keep callers unchanged), `field` handler rejects `nameTruncated`/`valueTruncated` → 400, `partsLimit` isolated with `stream.destroyed === true`. Plan correction: the multipart parser lives at `catalog/attachment/api/api/controllers/multipart-files.ts` (T66's `api/multipart/` path was wrong). |
+| C14 | sonnet | T67 `63f1e5e` · T68 `1ec6034` | T67 hosted in `catalog/audit/api/infrastructure/trail/audit-trigger.int-spec.ts` (precedent), not a new identity file: `catalog:check identity` resolves only identity's `dependsOn` (notification), so `audit.entries` does not exist in an identity-only child and migration 03 no-ops there; `audit` depends on `identity`, so `catalog:check audit` proves both. **SPEC_DEVIATION for the Verifier** (inline in that spec's `beforeAll`): it re-attaches `sessions`/`devices`/`verification_tokens` with migration 03's redact lists because the shared `reattachIdentityTables` helper (outside C14's ownership) mirrors migration 02's empty lists. T68: `resolveMasterPassword` exported (no behaviour change), env-set/absent branches + 32-char base64url + printed-once; no literal password in the file. |
+
+**Verifier round 2 (2026-08-23, opus, same agent resumed) — FAIL, 1 Major**: 50/51 ACs evidenced; Final gate 12/12 (REM-39 filtered gate exit 0); sensor round 2 3 injected / 2 killed (mutant 2 now killed by T63, fresh mutant 6 on the REM-14 quota arithmetic killed), **mutant 7 survived** — `03_audit_redact_token_hashes.sql:19` redact list → `'{}'` leaves `catalog:check audit` green because `audit-trigger.int-spec.ts:46-50` re-attaches the tables inline with hand-copied literals, and in a stock install (identity before audit) the migration hits its guard and never runs: **REM-40 is not closed in product**. Closed this round: REM-08, REM-12, REM-14, REM-15, REM-28. Cosmetics carried (REM-09/10/19/25/27, REM-12 server socket). → fix task **T69** (wave 8, C15, opus, exclusive); REM-48 probe re-tightened in `spec.md` (`jq -r '.scripts | keys[]'`). Lessons L-022..L-024 (L-023 restates L-013).
+
+**Wave 8 (fix round 2) — DONE (2026-08-23), Build gate PASS on the 1st run** (`pnpm check` 0 · `pnpm test` 89 files / 585 tests · `module-boundaries.spec.ts` 32/32 · `catalog:typecheck` 0 · `catalog:lint` 0 · `test:scripts` 233/233 · `catalog:check` 0 — child 221 unit files / 1548 tests + 70 test:db files / 510 tests). Commit `621c5da` (1 commit, range `ee64726..621c5da`).
+
+| Cluster | Tier | Tasks → commits | Notes |
+| --- | --- | --- | --- |
+| C15 | opus | T69 `621c5da` | **The hole was wider than mutant 7 showed**: `audit` depends on `identity`, so audit always installs last and identity's `02`/`03` `audit.attach` guards were dead code — a fresh child had **no identity trail at all** (`users.password_hash` included). Design (a), hook variant (scout: no installer hook exists — `module.schema.json` is `additionalProperties: false`, so (b) was out): identity `02` + `03` deleted → new `04_audit_attach_hook.sql` declares `identity.attach_audit()` (14 tables, 4 redacted columns) and self-`PERFORM`s when audit is already installed; new audit `migrations/custom/02_attach_module_hooks.sql` defines `audit.attach_module_hooks()`, which finds every installed `<schema>.attach_audit()` and runs it at the end of audit's install — audit never carries the list of who is audited, only the hook name. Inline re-attach and both SPEC_DEVIATION notes removed; `reattachIdentityTables` kept (two sibling specs import it) but reduced to `SELECT audit.attach_module_hooks()` — the shipped statement, no literals. **Mutant 7 killed**: redact list → `'{}'` at `04_audit_attach_hook.sql:35` → `catalog:check audit` exit 7, "redaction: identity.sessions.token_hash vira [REDACTED] na trilha" (received `token-secreto-real`); restored. Gates: `catalog:check audit` 0 (197/1418 + 61/449) · `catalog:check identity` 0 (53/400 test:db; first run hit the runner's 600 s cap with 189/189 files green, re-run clean) · `catalog:lint` 0. Manifests/CHANGELOGs/README/advisories `ADV-20260822-01` + `-04` updated. |
+
+**Verifier round 3 (2026-08-23, opus, same agent resumed) — PASS ✅**: 51/51 ACs with `file:line`, Final gate 12/12 (REM-39 filtered gate exit 0, `catalog:check` OK ×5), sensor 8/9 across three rounds with the lone survivor fixed and re-killed by name. Two non-blocking caveats recorded in `validation.md` for `security-hardening-2`: round-2 mutants ran in the primary checkout (files proven byte-identical; no conclusion changed), and the reverse install order / hook-declaration enforcement are unexercised. `validation.md` committed on the branch at `efb6ba9`. **Execute closed — 69 tasks / 15 clusters / 8 waves.** Closeout 2026-08-23: feature moved to `.specs/features/done/`, Handoff archived, AD-029..031 accepted, AD-032 recorded. Merged into `main` at `2f84f9f` (`--no-ff`). **Released as kernel `v2.1.0`** (`2bd4da3`): `v2.0.0` had already been tagged by another session at `115f7ed` (Vitest + lean-docs hook, pushed to origin) before this merge, so the remediation ships on its own tag; `template-changelog.md` split accordingly; entries stay `2.0.0` (`kernelRange >=2.0.0 <3.0.0`). Known residue: identity/attachment/notification/audit/tag `2.0.0` at tag `v2.0.0` differ from `2.0.0` at `v2.1.0` (the security changes were folded into an already-tagged entry version) — a child that installed an entry from `v2.0.0` must apply `ADV-20260822-*` by hand; a proper entry bump is a `security-hardening-2` candidate.
+
+---
+
+## Task Granularity Check
+
+| Task group | Scope | Status |
+| --- | --- | --- |
+| T1, T2, T4, T12, T23, T31, T42, T48 | one module/function + its spec | ✅ Granular |
+| T3, T5, T14 | one move (delete + recreate), no behaviour change | ✅ Granular |
+| T6 | one mechanical import rewrite across a closed, enumerated file list | ✅ Granular (atomic by nature — a partial rewrite does not typecheck) |
+| T7, T35, T50 | one contract/error surface, cohesive edits in one file + spec | ✅ Granular |
+| T8, T30, T41, T45 (config halves) | one config schema + its spec | ✅ Granular |
+| T9, T19, T36, T37, T46, T49 | 2–3 related things in the same vertical, one commit's worth | ⚠️ OK — cohesive (each pair shares a single behaviour statement) |
+| T13, T18, T26, T29 | one cross-cutting switch (build ignore / CI pinning / enum + listener / guard order) | ✅ Granular |
+| T16, T17 | one script + its `node:test` file | ✅ Granular |
+| T20, T21, T22, T24, T25, T27, T28, T32, T33, T34, T39, T40, T43, T44, T47 | one behaviour, one owner file + spec | ✅ Granular |
+| T51, T52 | one exclusive operation each (lockfile, regen) | ✅ Granular |
+| T53–T58 | one release surface each (per entry / kernel / docs) | ✅ Granular |
+| T59, T60, T61, T62 (added 2026-08-22) | one operation each: merge · codemod + unit green · int/e2e/catalog green · coverage/CI hold | ✅ Granular (T59 is atomic by nature — a merge commit; T60 is one mechanical rewrite over an enumerated list, like T6) |
+
+No task creates more than one vertical slice; nothing needs splitting.
+
+---
+
+## Diagram-Definition Cross-Check
+
+| Task | Depends on (body) | Map shows | Status |
+| --- | --- | --- | --- |
+| T1 | None | C1 root | ✅ |
+| T2, T3 | T1 | after T1 in C1 | ✅ |
+| T4 | T2, T3 | after T3 in C1 | ✅ |
+| T5 | T4 | after T4 in C1 | ✅ |
+| T6 | T5 | after T5 in C1 | ✅ |
+| T7 | T1 | after T6 in C1 (order is legal: dep is earlier) | ✅ |
+| T8 | None | C2 root | ✅ |
+| T9, T10, T11 | T8 | after T8 in C2 | ✅ |
+| T12 | None | C2 (independent root, ordered last) | ✅ |
+| T13, T14, T18 | None | C3 roots | ✅ |
+| T15, T16, T17 | T14 | after T14 in C3 | ✅ |
+| T19, T20 | T12 | wave 1 → wave 2 | ✅ |
+| T21 | T20 | after T20 in C4 | ✅ |
+| T22, T23 | None | C4 roots | ✅ |
+| T24 | T6, T7 | wave 1 (C1) → wave 2 (C5) | ✅ |
+| T25 | T1, T7 | wave 1 (C1) → wave 2 (C5) | ✅ |
+| T26 | T4, T6 | wave 1 (C1) → wave 2 (C5) | ✅ |
+| T27 | T7 | wave 1 (C1) → wave 2 (C5) | ✅ |
+| T28 | T27 | after T27 in C5 | ✅ |
+| T29 | T6 | wave 1 (C1) → wave 2 (C5) | ✅ |
+| T30 | T24, T25, T27 | after all three in C5 | ✅ |
+| T31 | T7 | wave 1 (C1) → wave 2 (C6) | ✅ |
+| T32 | T31 | after T31 in C6 | ✅ |
+| T33 | T7 | wave 1 (C1) → wave 2 (C6) | ✅ |
+| T34 | T33 | after T33 in C6 | ✅ |
+| T35–T38 | None | C6 roots, ordered after T34 | ✅ |
+| T39, T41, T42, T43, T47, T48, T50 | None | C7 / C8 roots | ✅ |
+| T40 | T39 | after T39 in C7 | ✅ |
+| T44 | T43 | after T43 in C7 | ✅ |
+| T45 | T40, T43 | after both in C7 | ✅ |
+| T46 | T45 | after T45 in C7 | ✅ |
+| T49 | T8, T12 | wave 1 (C2) → wave 2 (C8) | ✅ |
+| T51 | T45 | wave 2 (C7) → wave 3 | ✅ |
+| T52 | T35, T50 | wave 2 (C6, C8) → wave 4 | ✅ |
+| T53 | T30, T38, T51, T52 | waves 2, 3, 4 → wave 5 | ✅ |
+| T54 | T46, T52 | waves 2, 4 → wave 5 | ✅ |
+| T55 | T49, T52 | waves 2, 4 → wave 5 | ✅ |
+| T56 | T32, T50, T52 | waves 2, 4 → wave 5 | ✅ |
+| T57 | T53, T54, T55, T56 | after all four in C11 | ✅ |
+| T58 | T57 | after T57 in C11 | ✅ |
+
+**No task depends on a later wave, and no task depends on a sibling cluster of its own wave.** The two cross-cluster edges inside wave 2 that would have existed were removed at authoring time: the identity error catalog moved to wave 1 (T7, so C5 and C6 only read it) and the kernel `sensitive-keys` module moved to wave 1 (T12, so C4 and C8 only read it).
+
+---
+
+## Test Co-location Validation
+
+| Task | Code layer created/modified | Matrix requires | Task says | Status |
+| --- | --- | --- | --- | --- |
+| T1, T2, T4, T5 | Kernel domain / pure util | unit | unit | ✅ |
+| T3 | Kernel infra with IO (Redis) | integration | integration | ✅ |
+| T6 | Import-path rewrite | unit | unit | ✅ |
+| T7 | Entry domain (error catalog) | unit | unit | ✅ |
+| T8 | Kernel config / env schema | unit | unit | ✅ |
+| T9 | Kernel config + infra provider | unit | unit | ✅ |
+| T10 | Kernel domain (pure predicate) + wiring | unit | unit | ✅ |
+| T11 | Kernel HTTP surface (trust proxy) + harness | e2e | e2e | ✅ |
+| T12 | Kernel domain / pure util | unit | unit | ✅ |
+| T13 | Build output | none — probe | none — probe | ✅ |
+| T14, T15 | Entry boot seed | none | none | ✅ |
+| T16, T17 | Platform scripts | node:test | node:test | ✅ |
+| T18 | CI workflows | none — probe | none — probe | ✅ |
+| T19 | Kernel domain / pure util | unit | unit | ✅ |
+| T20 | Kernel infra with IO (outbox) | integration | integration | ✅ |
+| T21 | Kernel domain (registry) + infra (outbox) | unit + integration | unit + integration | ✅ |
+| T22, T23 | Kernel domain / pure util | unit | unit | ✅ |
+| T24 | Entry application + routes | unit + e2e | unit + e2e | ✅ |
+| T25, T26, T27 | Entry application / infrastructure | unit | unit | ✅ |
+| T28 | Entry application + infrastructure IO | unit + integration | unit + integration | ✅ |
+| T29 | Entry api (guards) + routes | unit + e2e | unit + e2e | ✅ |
+| T30 | Entry config | unit | unit | ✅ |
+| T31 | Entry application | unit | unit | ✅ |
+| T32 | Entry application + routes (two entries) | unit + e2e | unit + e2e | ✅ |
+| T33 | Entry application + routes | unit + e2e | unit + e2e | ✅ |
+| T34 | Entry application | unit | unit | ✅ |
+| T35 | Entry api contract + routes | unit + e2e | unit + e2e | ✅ |
+| T36 | Entry api + application + repository + routes | unit + integration + e2e | unit + integration + e2e | ✅ |
+| T37 | Entry application + domain + routes | unit + integration + e2e | unit + integration + e2e | ✅ |
+| T38 | Custom SQL migration | none | none | ✅ |
+| T39 | Entry application + facade | unit | unit | ✅ |
+| T40 | Entry routes | e2e | e2e | ✅ |
+| T41 | Kernel infra (storage adapter) + config | unit | unit | ✅ |
+| T42 | Kernel domain / pure util | unit | unit | ✅ |
+| T43 | Entry api (multipart reader) | unit | unit | ✅ |
+| T44 | Entry domain + application + routes | unit + integration + e2e | unit + integration + e2e | ✅ |
+| T45 | Entry api + repository | unit + integration | unit + integration | ✅ |
+| T46 | Entry application (jobs, use case) | unit | unit | ✅ |
+| T47, T48, T49, T50 | Entry application / api / config | unit | unit | ✅ |
+| T51 | Root manifests + entry api | unit | unit | ✅ |
+| T52 | Contract + parity | unit (parity) | unit (parity) | ✅ |
+| T53–T58 | Manifests / CHANGELOG / advisories / docs | none | none | ✅ |
+
+**No `Tests: none` is a deferral.** Every `none` maps to a matrix row that says `none` for that layer: build output and CI (probe), entry boot seeds, custom SQL migrations, and manifests/docs. The three matrix rows covering them were added during this authoring pass, not to excuse a task, but because those layers genuinely have no importable surface — each names the gate that does prove it.
+
+---
+
+## Wave/Cluster Cross-Check
+
+| Wave | Cluster | Tasks (order) | Deps outside earlier waves / own cluster? | Files shared with a sibling cluster? | Exclusive alone? | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | C1 | T1→T2→T3→T4→T5→T6→T7 | none | none — kernel `rate-limit`/`errors`/`collections`/`infra/rate-limit` + enumerated identity/cross-entry importer files; C2 owns `shared/config` + `shared/kernel/redaction`, C3 owns build/scripts/CI | n/a | ✅ |
+| 1 | C2 | T8→T9→T10→T11→T12 | none | none — `shared/config`, `shared/infra/database`, `shared/infra/redis`, `src/docs`, `src/main.ts`, `test/setup/**`, `lib/child.mjs`, `.env.example`, `docker-compose.yml`, `shared/kernel/redaction` | n/a | ✅ |
+| 1 | C3 | T13→T14→T15→T16→T17→T18 | none | none — `nest-cli.json`, `tsconfig.build.json`, Dockerfile + entrypoints, `apps/api/package.json`, identity `api/seeds` + `testing/seeds`, `lib/lint.mjs`, `catalog-lint.mjs`, `catalog-check.mjs`, `__tests__/**`, `.github/workflows/**`, `openapi-config.ts` | n/a | ✅ |
+| 2 | C4 | T19→T20→T21→T22→T23 | T12 (wave 1) | none — kernel `logging`, `outbox`, `scheduling`, `idempotency`, `listing`, `src/db/outbox-replay.int-spec.ts` | n/a | ✅ |
+| 2 | C5 | T24→…→T30 | T1, T4, T6, T7 (wave 1) | none — identity login/password/hashing/auth-event/config + the 8 critical auth controllers + 4 e2e + 2 parity specs; C6 owns authz/contract/middleware/session and the other 4 e2e | n/a | ✅ |
+| 2 | C6 | T31→…→T38 | T7 (wave 1) | none — identity access-policy/assert-permission/require-auth/list-users/update-user/create-user/request-email-change/middleware/contract/session-repo/errors/user-entity + custom migration + tag | n/a | ✅ |
+| 2 | C7 | T39→…→T46 | none | none — attachment entry + kernel `http/content-disposition` + `infra/storage` (no sibling touches either kernel path) | n/a | ✅ |
+| 2 | C8 | T47→T48→T49→T50 | T8, T12 (wave 1) | none — notification entry + `audit.contract.ts` | n/a | ✅ |
+| 3 | C12 | T59→T60→T61→T62 | T50 (wave 2 gated) | none — alone in the wave (every file is in play) | yes — only cluster in wave 3 | ✅ (added 2026-08-22) |
+| 4 | C9 | T51 | T45 (wave 2), T62 (wave 3) | none — alone in the wave | yes — only cluster in wave 4 | ✅ |
+| 5 | C10 | T52 | T35, T50 (wave 2), T62 (wave 3) | none — alone in the wave | yes — only cluster in wave 5 | ✅ |
+| 6 | C11 | T53→…→T58 | T30, T32, T38, T46, T49, T50 (wave 2), T51 (wave 4), T52 (wave 5) | none — alone in the wave | n/a (not exclusive) | ✅ |
+
+**Cluster sizes**: 7, 5, 6 · 5, 7, 8, 8, 4 · 4 (exclusive, one worker) · 1 (exclusive) · 1 (exclusive) · 6 — all within 4–8 except the two exclusive single-task waves, which the rules allow. No wave holds three or more single-task non-exclusive clusters. Wave 2 holds five clusters at one dependency level: that is one wave with a FIFO tail, not two waves. Wave 3 is one cluster of four exclusive tasks: one worker (opus — merge conflict resolution across tooling + spec semantics), one gate.
+
+**Shared files that forced the ordering** (design § *Execute notes*): `catalog/identity/single-tenant/api/domain/errors.ts` → additions in wave 1 (T7), removal in wave 2 by its only producer (T37). `apps/api/src/shared/kernel/redaction/sensitive-keys.ts` → created in wave 1 (T12) so C4 and C8 only consume it. `identity.module.ts` → C1 in wave 1, C5 in wave 2, never two clusters at once. `module.json` and `CHANGELOG.md` of every entry → wave 5 only, so no entry cluster owns a manifest.
+
+---
+
+## Requirement Coverage
+
+All 51 requirements map to at least one task; every task names at least one requirement. REM-48..51 (Vitest port, added 2026-08-22): 48 → T59, T60 · 49 → T60, T61 · 50 → T61 · 51 → T59, T62.
+
+| REM | Task(s) | REM | Task(s) | REM | Task(s) |
+| --- | --- | --- | --- | --- | --- |
+| 01–03 | T24 | 17 | T21 | 33 | T23 |
+| 04 | T2, T3, T4, T9, T26 | 18 | T7, T33 | 34–36 | T35, T52 |
+| 05 | T1, T7, T25 | 19 | T34 | 37 | T50, T52 |
+| 06 | T5, T6, T29 | 20 | T12, T19, T49 | 38 | T47 |
+| 07 | T7, T27, T28 | 21 | T8, T11, T30 | 39 | T51 |
+| 08 | T44 | 22 | T8 | 40 | T38 |
+| 09 | T40 | 23 | T9 | 41 | T46 |
+| 10 | T40 | 24 | T8, T11, T58 | 42 | T42 |
+| 11 | T39, T40 | 25 | T10 | 43 | T36 |
+| 12 | T40 | 26 | T13 | 44 | T37 |
+| 13 | T41 | 27 | T14, T16 | 45 | T36 |
+| 14 | T1, T5, T45 | 28 | T15 | 46 | T48 |
+| 15 | T43 | 29 | T14, T17 | 47 | T18 |
+| 16 | T12, T20 | 30 | T8, T49 | Goal 3 | T53–T57 |
+| | | 31 | T31, T32 | | |
+| | | 32 | T22 | | |

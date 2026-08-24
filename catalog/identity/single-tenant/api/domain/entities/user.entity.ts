@@ -244,6 +244,19 @@ export class User {
   }
 
   /**
+   * Carimba a TENTATIVA de troca de e-mail sem mudar mais nada: a recusa por
+   * endereço já em uso paga o mesmo cooldown do pedido aceito, senão sondar
+   * endereços sai de graça.
+   */
+  recordEmailChangeAttempt(now: Date): User {
+    return new User({
+      ...this.props,
+      lastEmailChangeRequestedAt: now,
+      updatedAt: now,
+    });
+  }
+
+  /**
    * Inicia a troca de e-mail: desativa a conta (status 'pending', emailVerified
    * false) e guarda `pendingEmail` SEM destruir o `email` atual. O usuário é
    * deslogado e só reativa confirmando o link enviado ao novo endereço. Exige

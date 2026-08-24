@@ -8,16 +8,15 @@ import { AppModule } from "../../../app.module"
 import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
 import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
-import { RATE_LIMITER } from "../domain/ports/rate-limiter"
+import { InMemoryRateLimiter } from "../../../shared/kernel/rate-limit/in-memory-rate-limiter"
+import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
+import { allowAllRateLimiter } from "../testing/allow-all-rate-limiter"
 import { seedUser } from "../testing/seed-user"
 
 const ORIGIN = "http://localhost:5173"
 const EMAIL = "login-cookie@example.com"
 const PASSWORD = "Senha-Muito-Forte-2026!"
-
-const allowAll = {
-  consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
-}
+const BRUTE_EMAIL = "login-brute@example.com"
 
 describe("Login — cookie de sessão (e2e)", () => {
   let app: INestApplication
@@ -32,7 +31,7 @@ describe("Login — cookie de sessão (e2e)", () => {
       imports: [AppModule],
     })
       .overrideProvider(RATE_LIMITER)
-      .useValue(allowAll)
+      .useValue(allowAllRateLimiter)
       .compile()
     app = moduleRef.createNestApplication()
     app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
@@ -72,5 +71,96 @@ describe("Login — cookie de sessão (e2e)", () => {
     expect(cookie).toMatch(/Path=\//i)
     expect(cookie).not.toMatch(/Domain=/i)
     // Secure depende de COOKIE_SECURE (false no e2e-env); não asserido aqui.
+  })
+})
+
+describe("Login — força bruta distribuída por conta (e2e)", () => {
+  let app: INestApplication
+
+  beforeAll(async () => {
+    const pool = createTestPool()
+    await truncateIdentity(pool)
+    await truncateKernel(pool)
+    await pool.end()
+
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule],
+    })
+      // Limiter real (em memória): o bucket por conta precisa contar de verdade.
+      .overrideProvider(RATE_LIMITER)
+      .useValue(new InMemoryRateLimiter())
+      .compile()
+    app = moduleRef.createNestApplication()
+    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
+    applySecurity(app)
+    // TRUST_PROXY_HOPS é 0 por padrão; sem confiar em um hop o teste não
+    // conseguiria variar o IP de origem, que é o ponto do caso.
+    app.getHttpAdapter().getInstance().set("trust proxy", 1)
+    app.use(createRequestContextMiddleware(app.get(RequestContext)))
+    await app.init()
+
+    const seedPool = createTestPool()
+    await seedUser(app, seedPool, {
+      email: BRUTE_EMAIL,
+      name: "Login Brute",
+      password: PASSWORD,
+    })
+    await seedPool.end()
+  })
+
+  afterAll(async () => {
+    await app.close()
+  })
+
+  it("11ª falha na mesma conta, vinda de dois IPs, responde 429 com Retry-After", async () => {
+    const attempt = (ip: string) =>
+      request(app.getHttpServer())
+        .post("/v1/auth/login")
+        .set("Origin", ORIGIN)
+        .set("X-Forwarded-For", ip)
+        .send({ email: BRUTE_EMAIL, password: "senha-errada", rememberMe: false })
+
+    const responses: Awaited<ReturnType<typeof attempt>>[] = []
+    for (let i = 0; i < 11; i++) {
+      // Alterna os IPs: o teto de 10 é da conta, não de um IP (o bucket por
+      // IP é 30/min e nem chega perto de estourar aqui).
+      responses.push(await attempt(i % 2 === 0 ? "203.0.113.7" : "198.51.100.9"))
+    }
+    const last = responses[10]!
+    expect(last.status).toBe(429)
+    expect(last.headers["retry-after"]).toBeDefined()
+    expect(last.headers["content-type"]).toMatch(/application\/problem\+json/)
+    expect(last.body.status).toBe(429)
+    expect(responses.slice(0, 10).map((res) => res.status)).toEqual(
+      Array(10).fill(401)
+    )
+  })
+
+  it("senha correta depois de falhas limpa o bucket da conta", async () => {
+    const email = "login-brute-reset@example.com"
+    const seedPool = createTestPool()
+    await seedUser(app, seedPool, {
+      email,
+      name: "Login Brute Reset",
+      password: PASSWORD,
+    })
+    await seedPool.end()
+
+    const login = (password: string) =>
+      request(app.getHttpServer())
+        .post("/v1/auth/login")
+        .set("Origin", ORIGIN)
+        .set("X-Forwarded-For", "203.0.113.8")
+        .send({ email, password, rememberMe: false })
+
+    for (let i = 0; i < 9; i++) {
+      await login("senha-errada")
+    }
+    await login(PASSWORD).expect(200)
+
+    // Bucket zerado: outras 9 falhas ainda não estouram o teto de 10.
+    for (let i = 0; i < 9; i++) {
+      await login("senha-errada").expect(401)
+    }
   })
 })

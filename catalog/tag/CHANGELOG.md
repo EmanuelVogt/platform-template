@@ -18,6 +18,13 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   `pgSchema("tag")`): o snapshot do drizzle-kit gerava `"schemas": {}` e a migração baseline
   não emitia `CREATE SCHEMA "tag"`, quebrando `pnpm catalog:check` em bancos novos.
 
+### Security
+
+- `ListTagsUseCase` passa a exigir a permissão `admin.tags.trash.read` quando `?deleted=true` —
+  antes a lixeira era legível só com `admin.tags.read`, um upgrade de leitura grátis que a
+  permissão `trash.read` do catálogo de acesso declarava mas nunca era checada (auditoria de
+  segurança 2026-08-22, AUTHZ-2, ADV-20260822-05).
+
 ## [1.0.0]
 
 ### Adicionado

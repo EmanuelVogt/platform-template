@@ -13,7 +13,24 @@ import {
 } from "../../domain/access/permission.types"
 import { PERMISSION_KEYS } from "../../domain/permissions/permission-catalog"
 
-const email = z.string().trim().toLowerCase().pipe(z.email("E-mail inválido."))
+// Limites de tamanho em TODA entrada de texto: 254 é o máximo de um endereço
+// de e-mail (RFC 5321), 128 cobre qualquer token emitido aqui e 200 o nome.
+const email = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .pipe(z.email("E-mail inválido.").max(254))
+const token = z.string().min(1, "Token obrigatório.").max(128)
+const name = z.string().trim().min(1, "Informe o nome.").max(200)
+
+/** Lista de ids não repete item: duplicata é entrada malformada, não intenção. */
+const noDuplicates = (values: readonly string[]): boolean =>
+  new Set(values).size === values.length
+const NO_DUPLICATES = "Não repita itens na lista."
+
+/** `:id` de rota: presente e curto — ULID/UUID cabem em 64 caracteres. */
+export const idParamSchema = z.object({ id: z.string().min(1).max(64) })
+export class IdParamDto extends createZodDto(idParamSchema) {}
 
 export const permissionKeySchema = z.enum(PERMISSION_KEYS)
 // Enum atribuível EXCLUI 'master' — master existe só via seed (spec, regra 6).
@@ -22,14 +39,22 @@ export const accessProfileSchema = z.enum(ACCESS_PROFILES)
 export const permissionSetSchema = z
   .array(permissionKeySchema)
   .max(PERMISSION_KEYS.length)
+  .refine(noDuplicates, NO_DUPLICATES)
 
 // Áreas/serviços de atuação e áreas de agendamento. Schemas PLANOS de
 // propósito (sem superRefine): ZodEffects quebraria a introspecção
-// OpenAPI→Kubb. A regra cross-field (quem atende exige ≥1 área de atuação;
+// OpenAPI→Kubb — o `.refine` de duplicata é um check simples do Zod 4, que
+// preserva o shape de array na introspecção. A regra cross-field (quem atende exige ≥1 área de atuação;
 // quem não atende ignora os arrays) é validada no server (use-case) e
 // espelhada no front. Ver ADR 0032 e 0082.
-export const areaIdsSchema = z.array(z.string().min(1)).max(100)
-export const serviceIdsSchema = z.array(z.string().min(1)).max(2000)
+export const areaIdsSchema = z
+  .array(z.string().min(1))
+  .max(100)
+  .refine(noDuplicates, NO_DUPLICATES)
+export const serviceIdsSchema = z
+  .array(z.string().min(1))
+  .max(2000)
+  .refine(noDuplicates, NO_DUPLICATES)
 
 // password no contrato só valida presença/limites grosseiros; força real
 // (zxcvbn + breach) é checada no use-case (spec §7 — não é teatro de cliente).
@@ -46,7 +71,7 @@ export const forgotPasswordSchema = z.object({
 })
 
 export const resetPasswordSchema = z.object({
-  token: z.string().min(1, "Token obrigatório."),
+  token,
   password,
 })
 
@@ -56,7 +81,7 @@ export const changePasswordSchema = z.object({
 })
 
 export const verifyEmailSchema = z.object({
-  token: z.string().min(1, "Token obrigatório."),
+  token,
 })
 
 export const userResponseSchema = z.object({
@@ -142,7 +167,7 @@ export class PurgeUsersResponseDto extends createZodDto(purgeUsersResponseSchema
 
 // --- link de acesso ---
 export const createUserSchema = z.object({
-  name: z.string().trim().min(1, "Informe o nome."),
+  name,
   email,
   accessProfile: assignableAccessProfileSchema,
   // Atende cliente: independe do perfil de acesso (ADR 0082).
@@ -160,7 +185,7 @@ export type CreateUserInput = z.infer<typeof createUserSchema>
 // updateUser NÃO aceita e-mail: mudança de e-mail tem cadeia própria
 // (re-verificação/access-link) — fora do escopo do authz (spec).
 export const updateUserSchema = z.object({
-  name: z.string().trim().min(1, "Informe o nome."),
+  name,
   accessProfile: assignableAccessProfileSchema,
   // Atende cliente: independe do perfil de acesso (ADR 0082).
   servesClients: z.boolean().default(false),
@@ -171,15 +196,15 @@ export const updateUserSchema = z.object({
   // Perfil Agendamentos. Omitido/[] nos demais perfis (o server o ignora).
   schedulingAreaIds: areaIdsSchema.default([]),
 })
-export const updateUserParamsSchema = z.object({ id: z.string().min(1) })
+export const updateUserParamsSchema = idParamSchema
 export class UpdateUserDto extends createZodDto(updateUserSchema) {}
 export class UpdateUserParamsDto extends createZodDto(updateUserParamsSchema) {}
 export type UpdateUserBody = z.infer<typeof updateUserSchema>
 
 export const setPasswordSchema = z.object({
-  token: z.string().min(1, "Token obrigatório."),
+  token,
   password,
-  name: z.string().trim().min(1, "Informe o nome."),
+  name,
   // ISO 'YYYY-MM-DD'. Validação de data real fica no domínio (activate).
   birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida."),
   avatarAttachmentId: z.string().optional(),
@@ -189,7 +214,7 @@ export type SetPasswordInput = z.infer<typeof setPasswordSchema>
 
 // --- conta self-service (perfil, avatar, troca de e-mail) ---
 export const updateMyProfileSchema = z.object({
-  name: z.string().trim().min(1, "Informe o nome."),
+  name,
   // ISO 'YYYY-MM-DD'. Opcional: quem não tem nascimento (master/seed) salva só o
   // nome. Validação de data real fica no domínio (updateOwnProfile).
   birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida.").optional(),
@@ -217,7 +242,7 @@ export class ChangeEmailDto extends createZodDto(changeEmailSchema) {}
 export type ChangeEmailInput = z.infer<typeof changeEmailSchema>
 
 export const validateEmailChangeQuerySchema = z.object({
-  token: z.string().min(1, "Token obrigatório."),
+  token,
 })
 export class ValidateEmailChangeQueryDto extends createZodDto(validateEmailChangeQuerySchema) {}
 
@@ -225,7 +250,7 @@ export const emailChangeInfoSchema = z.object({ newEmail: z.string() })
 export class EmailChangeInfoDto extends createZodDto(emailChangeInfoSchema) {}
 
 export const confirmEmailChangeSchema = z.object({
-  token: z.string().min(1, "Token obrigatório."),
+  token,
 })
 export class ConfirmEmailChangeDto extends createZodDto(confirmEmailChangeSchema) {}
 export type ConfirmEmailChangeInput = z.infer<typeof confirmEmailChangeSchema>
@@ -249,7 +274,7 @@ export const accessHistoryListResponseSchema = makePaginatedSchema(accessHistory
 export class AccessHistoryListResponseDto extends createZodDto(accessHistoryListResponseSchema) {}
 
 export const validateAccessLinkQuerySchema = z.object({
-  token: z.string().min(1, "Token obrigatório."),
+  token,
 })
 export class ValidateAccessLinkQueryDto extends createZodDto(validateAccessLinkQuerySchema) {}
 
@@ -261,7 +286,7 @@ export const accessLinkInfoSchema = z.object({
 export class AccessLinkInfoDto extends createZodDto(accessLinkInfoSchema) {}
 
 export const cancelAccessLinkSchema = z.object({
-  token: z.string().min(1, "Token obrigatório."),
+  token,
 })
 export class CancelAccessLinkDto extends createZodDto(cancelAccessLinkSchema) {}
 

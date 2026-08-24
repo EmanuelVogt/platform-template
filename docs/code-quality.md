@@ -38,6 +38,10 @@ Not one of the 4 → badly named/badly structured code, fix the cause.
 
 **JSDoc/TSDoc:** only on public API (export consumed outside the module/slice) AND when the signature does not cover the contract (idempotency, side effect, ordering, lock). Documents the contract, never the implementation. Text in pt-BR; tags/types in English. Paraphrasing the signature = AI comment, delete.
 
+## Documentation
+
+**A handbook (`docs/`, `CLAUDE.md`, `AGENTS.md`) is a manual: mechanism, command, the trap that bites.** Rationale, rejected alternatives and history only in the ADR (`docs/adr/README.md`: "Why" in at most 4 sentences) — the handbook links the ADR, never repeats it. Surgical edit: one edit grows at most 30 lines; a new handbook ≤ 80, a new ADR ≤ 60. No diagram in prose, no "Context"/"Alternatives" section. Longer text is the user's decision, never the agent's. Hook: `.claude/hooks/docs-stay-lean.mjs`.
+
 ## Language
 
 - Identifiers (variable, function, type, file, branch, module): **English**.

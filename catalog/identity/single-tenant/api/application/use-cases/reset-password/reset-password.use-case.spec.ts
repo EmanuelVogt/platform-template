@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { User } from "../../../domain/entities/user.entity"
-import { InvalidResetTokenError, WeakPasswordError } from "../../../domain/errors"
+import {
+  BreachCheckUnavailableError,
+  InvalidResetTokenError,
+  WeakPasswordError,
+} from "../../../domain/errors"
 import { makeIdentityConfig } from "../../../identity.config.fixture"
 import { fakeRequestContext } from "../../request-context.fixture"
 
@@ -47,7 +51,7 @@ function makeDeps(over: Record<string, any> = {}) {
   }
   const hasher = over.hasher ?? { hash: vi.fn().mockResolvedValue("argon2-new") }
   const strength = over.strength ?? { score: vi.fn().mockReturnValue(4) }
-  const breach = over.breach ?? { isBreached: vi.fn().mockResolvedValue(false) }
+  const breach = over.breach ?? { check: vi.fn().mockResolvedValue("clear") }
   const tokens = over.tokens ?? {
     hashOf: vi.fn().mockReturnValue("hash-of-raw"),
   }
@@ -145,29 +149,89 @@ describe("ResetPasswordUseCase", () => {
     expect(t.users.update).not.toHaveBeenCalled()
   })
 
-  it("senha vazada (fail_closed) lança WeakPasswordError ANTES de tocar o banco", async () => {
+  it("senha vazada lança WeakPasswordError ANTES de tocar o banco", async () => {
     const t = makeDeps({
-      breach: { isBreached: vi.fn().mockResolvedValue(true) },
-      config: makeIdentityConfig({ BREACH_CHECK_MODE: "fail_closed" }),
+      breach: { check: vi.fn().mockResolvedValue("breached") },
+      config: makeIdentityConfig({
+        BREACH_CHECK_ENABLED: true,
+        BREACH_CHECK_MODE: "fail_closed",
+      }),
     })
     await expect(
       t.uc.execute({ token: "tok", password: "nova-senha-forte-1" }),
     ).rejects.toBeInstanceOf(WeakPasswordError)
     // breach é pré-condição: o token não chega a ser consumido nem a senha trocada.
-    expect(t.breach.isBreached).toHaveBeenCalled()
+    expect(t.breach.check).toHaveBeenCalled()
     expect(t.verificationTokens.consumeByHash).not.toHaveBeenCalled()
     expect(t.users.update).not.toHaveBeenCalled()
   })
 
-  it("modo fail_open: breach NÃO é consultado mesmo que senha esteja vazada", async () => {
-    const isBreached = vi.fn().mockResolvedValue(true)
+  it("desabilitado: breach NÃO é consultado", async () => {
+    const check = vi.fn().mockResolvedValue("breached")
     const t = makeDeps({
-      breach: { isBreached },
-      config: makeIdentityConfig({ BREACH_CHECK_MODE: "fail_open" }),
+      breach: { check },
+      config: makeIdentityConfig({
+        BREACH_CHECK_ENABLED: false,
+        BREACH_CHECK_MODE: "fail_closed",
+      }),
     })
     await t.uc.execute({ token: "tok", password: "nova-senha-forte-1" })
-    expect(isBreached).not.toHaveBeenCalled()
+    expect(check).not.toHaveBeenCalled()
     expect(t.users.update).toHaveBeenCalledTimes(1)
+  })
+
+  it("habilitado em fail_open: senha vazada é barrada (o modo não decide SE consulta)", async () => {
+    const check = vi.fn().mockResolvedValue("breached")
+    const t = makeDeps({
+      breach: { check },
+      config: makeIdentityConfig({
+        BREACH_CHECK_ENABLED: true,
+        BREACH_CHECK_MODE: "fail_open",
+      }),
+    })
+    await expect(
+      t.uc.execute({ token: "tok", password: "nova-senha-forte-1" }),
+    ).rejects.toBeInstanceOf(WeakPasswordError)
+    expect(check).toHaveBeenCalledWith("nova-senha-forte-1")
+    expect(t.users.update).not.toHaveBeenCalled()
+  })
+
+  it("fail_open + consulta indisponível: reset segue e grava breach_check_skipped", async () => {
+    const t = makeDeps({
+      breach: { check: vi.fn().mockResolvedValue("skipped") },
+      config: makeIdentityConfig({
+        BREACH_CHECK_ENABLED: true,
+        BREACH_CHECK_MODE: "fail_open",
+      }),
+    })
+    await t.uc.execute({ token: "tok", password: "nova-senha-forte-1" })
+    expect(t.users.update).toHaveBeenCalledTimes(1)
+    expect(t.authEvents.recordInTx).toHaveBeenCalledWith(
+      expect.objectContaining({
+        props: expect.objectContaining({
+          userId: "u-1",
+          eventType: "breach_check_skipped",
+          metadata: { mode: "fail_open" },
+        }),
+      }),
+    )
+  })
+
+  it("fail_closed + consulta indisponível: 503 sobe e o token não é consumido", async () => {
+    const t = makeDeps({
+      breach: {
+        check: vi.fn().mockRejectedValue(new BreachCheckUnavailableError()),
+      },
+      config: makeIdentityConfig({
+        BREACH_CHECK_ENABLED: true,
+        BREACH_CHECK_MODE: "fail_closed",
+      }),
+    })
+    await expect(
+      t.uc.execute({ token: "tok", password: "nova-senha-forte-1" }),
+    ).rejects.toBeInstanceOf(BreachCheckUnavailableError)
+    expect(t.verificationTokens.consumeByHash).not.toHaveBeenCalled()
+    expect(t.users.update).not.toHaveBeenCalled()
   })
 
   it("usuário não encontrado após consumir token lança InvalidResetTokenError", async () => {

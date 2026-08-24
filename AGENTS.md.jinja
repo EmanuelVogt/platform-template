@@ -4,8 +4,9 @@ pnpm + Turbo monorepo: NestJS API (modular monolith, kernel-only — modules are
 entries installed via `pnpm platform module add`) + headless React/Vite web (transport +
 access guard only; UI kit is the product's choice), HTTP contract via Zod → OpenAPI →
 generated Kubb client. Generated from `platform-template` — upstream changes arrive via
-`copier update` (see [`docs/dev/template.md`](docs/dev/template.md)); a fix landing on an
-installed catalog entry surfaces at session start via the pending-advisories hook.
+`copier update` (see [`docs/dev/template.md`](docs/dev/template.md)); a newer template tag
+or a fix landing on an installed catalog entry surfaces at session start via the
+template-behind and pending-advisories hooks — the routine is the `template-update` skill.
 
 **This file routes; it does not argue.** Every rule below is one line plus a link to
 where it is decided. Detail belongs in the handbook or the ADR — never here.
@@ -26,7 +27,7 @@ where it is decided. Detail belongs in the handbook or the ADR — never here.
 | Writing a reply to the user | [`docs/agents/communication.md`](docs/agents/communication.md) |
 | AWS, Dokploy, Cloudflare, Resend, env databases | [`docs/agents/infra.md`](docs/agents/infra.md) |
 | GitHub issues | [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md) |
-| Template origin, upstream updates (`copier update`), what is platform vs product | [`docs/dev/template.md`](docs/dev/template.md) |
+| Template origin, upstream updates (`copier update`, the `template-update` skill), what is platform vs product | [`docs/dev/template.md`](docs/dev/template.md) |
 | Installing/updating a catalog entry, advisories, the pending-advisories hook | [`docs/dev/template.md`](docs/dev/template.md), [`docs/catalog/catalog.md`](docs/catalog/catalog.md) |
 
 Situation outside the table: start at the area handbook; one-off decisions live in the
@@ -45,6 +46,8 @@ pnpm contract:consumers     which screens consume an operationId/route
 pnpm contract:diff          readable pt-BR summary of an openapi.json change
 pnpm skills:sync            re-link .claude/skills → .agents/skills
 pnpm platform module add    install a catalog entry into this product
+pnpm platform status        template installed vs latest tag, lock modules, pending advisories
+pnpm platform feedback      prepare an upstream issue for a platform defect (skill platform-feedback)
 ```
 
 ## Tripwires
@@ -54,6 +57,7 @@ never opened one. The reasoning is at the link.
 
 - **Language** — identifiers English; comments, docstrings and user-facing errors pt-BR. Stack terms (`stream`, `cache`, `webhook`, `payload`, `outbox`) stay English. → [`code-quality.md`](docs/code-quality.md)
 - **Comments** — default is zero; only the 4 listed exceptions. → [`code-quality.md`](docs/code-quality.md)
+- **Docs are manuals** — mechanism, commands, the caveat that bites; reasoning and rejected alternatives only in an ADR. An edit grows a handbook ≤ 30 lines; the hook blocks more. → [`code-quality.md`](docs/code-quality.md)
 - **No `console.*`** in `src/` (it's a lint error); back uses `LoggerFactory`. → [`back.md`](docs/arch/back.md)
 - **`any` forbidden** — `unknown` + narrowing. → [`code-quality.md`](docs/code-quality.md)
 - **`throw` is the only error path** — never `Result<T>`/`Either`. → [`code-quality.md`](docs/code-quality.md)

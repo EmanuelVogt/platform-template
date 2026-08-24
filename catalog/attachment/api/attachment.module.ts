@@ -4,6 +4,7 @@ import { PROFILE_IMAGE_STORE } from "../../shared/kernel/profile-image/profile-i
 
 import { AttachmentProfileImageStore } from "./api/adapters/profile-image-store.adapter"
 import { CONTROLLERS } from "./api/controllers"
+import { UploadGate } from "./api/controllers/multipart-files"
 import { AttachmentFacade } from "./api/facades/attachment.facade"
 import { PurgeAttachmentAccessLogsJob } from "./application/jobs/purge-attachment-access-logs.job"
 import { PurgePendingAttachmentsJob } from "./application/jobs/purge-pending-attachments.job"
@@ -61,6 +62,7 @@ const USE_CASES = [
     PurgePendingAttachmentsJob,
     AttachmentFacade,
     { provide: PROFILE_IMAGE_STORE, useClass: AttachmentProfileImageStore },
+    UploadGate,
   ],
   exports: [AttachmentFacade, PROFILE_IMAGE_STORE],
 })

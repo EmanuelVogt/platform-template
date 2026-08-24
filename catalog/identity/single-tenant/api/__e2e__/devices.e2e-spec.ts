@@ -136,6 +136,20 @@ describe("/auth/devices (e2e)", () => {
     await listDevices(jarB).expect(401)
   })
 
+  it("id de device longo demais → 400, sem chegar ao repositório", async () => {
+    const jar = await login()
+
+    const res = await request(app.getHttpServer())
+      .delete(`/v1/auth/devices/${"x".repeat(65)}`)
+      .set("Origin", ORIGIN)
+      .set("Cookie", cookieHeader(jar))
+      .expect(400)
+    expect(res.body.type).not.toMatch(/device-not-found$/)
+
+    // a sessão segue viva: a recusa foi de validação, não de autorização
+    await listDevices(jar).expect(200)
+  })
+
   it("revogar o device atual → 409", async () => {
     const jar = await login()
     const list = await listDevices(jar).expect(200)

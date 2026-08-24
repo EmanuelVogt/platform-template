@@ -19,6 +19,7 @@ export type AuthEventType =
   | 'email_verified'
   | 'breach_check_skipped'
   | 'rate_limited_burst'
+  | 'rate_limiter_degraded'
   | 'access_link_sent'
   | 'access_link_resent'
   | 'password_set'

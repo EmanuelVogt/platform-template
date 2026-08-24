@@ -125,6 +125,35 @@ test("computePending: lista de advisories vazia (diretório ausente) não gera e
   assert.deepEqual(result.pending, []);
 });
 
+test("computePending: advisory de kernel fica pendente quando a versão instalada bate com affects", () => {
+  const advisory = parseAdvisory(advisoryMd({ module: "kernel", affects: ">=2.0.0 <2.1.0" }));
+  const result = computePending({ modules: {} }, [advisory], [], { templateVersion: "2.0.3" });
+  assert.deepEqual(result.pending, [
+    { id: "ADV-20260901-01", kind: "security", severity: "high", module: "kernel" },
+  ]);
+});
+
+test("computePending: advisory de kernel já no ledger não fica pendente", () => {
+  const advisory = parseAdvisory(advisoryMd({ module: "kernel", affects: ">=2.0.0 <2.1.0" }));
+  const result = computePending({ modules: {} }, [advisory], ["ADV-20260901-01"], { templateVersion: "2.0.3" });
+  assert.deepEqual(result.pending, []);
+});
+
+test("computePending: advisory de kernel sem templateVersion não fica pendente", () => {
+  const advisory = parseAdvisory(advisoryMd({ module: "kernel", affects: ">=2.0.0 <2.1.0" }));
+  const result = computePending(lockWith(installedIdentity), [advisory], []);
+  assert.deepEqual(result.pending, []);
+});
+
+test("computePending: advisory de kernel independe do lock (module lock ausente)", () => {
+  const advisory = parseAdvisory(advisoryMd({ module: "kernel", affects: ">=2.0.0 <2.1.0" }));
+  const result = computePending({ modules: {} }, [advisory], [], { templateVersion: "2.0.3" });
+  assert.equal(result.noLock, true);
+  assert.deepEqual(result.pending, [
+    { id: "ADV-20260901-01", kind: "security", severity: "high", module: "kernel" },
+  ]);
+});
+
 test("loadAdvisories: diretório ausente devolve lista vazia silenciosamente", () => {
   const dir = mkdtempSync(path.join(tmpdir(), "advisories-test-"));
   const missingDir = path.join(dir, "does-not-exist");

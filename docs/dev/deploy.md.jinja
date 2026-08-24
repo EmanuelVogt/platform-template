@@ -55,32 +55,21 @@ the non-root `nextjs` user. Exposes port **3000**, with no nginx — the standal
 
 ## What runs at API boot
 
-`docker-entrypoint.sh` runs three conditional steps before bringing the app up:
+`docker-entrypoint.sh` runs two conditional steps before bringing the app up:
 
 | Step | Condition | Default |
 | --- | --- | --- |
 | Migrations (`node dist/db/migrate`) | `RUN_MIGRATIONS != false` | **on** |
-| Superuser bootstrap (`node dist/seeds/bootstrap-master`) | `MASTER_EMAIL` **and** `MASTER_PASSWORD` set | conditional |
-| Legacy backfill (`node dist/legacy-import/run`) | `RUN_BACKFILL == true` | **off** |
+| Module boot seed (`dist/modules/*/seeds/bootstrap.js`, one per installed module) | `MASTER_EMAIL` **and** `MASTER_PASSWORD` set | conditional |
 
 Migrations are fail-fast: a wrong schema aborts the boot. `RUN_MIGRATIONS=false` only
 makes sense when a dedicated job migrates and the replicas only serve.
 
-The bootstrap is idempotent (`onConflictDoNothing` by email), safe on every boot and per
-replica. Without the secrets it becomes a no-op — the dev seed never runs here (`NODE_ENV`
-guard).
-
-The backfill is self-guarded (`_sync.states` ledger + advisory lock), so re-running it is
-a no-op. Even so, the **default in a long-lived environment is to leave it off** and fire
-it as a one-off deploy job:
-
-```bash
-docker run --rm <api-image> node dist/legacy-import/run
-```
-
-Turning on `RUN_BACKFILL=true` in an environment with a large database makes the API
-unavailable for the whole import on every restart — the initial production load took
-~19 min.
+The module boot seed replaces the old single template script: the entrypoint globs every
+installed module's own `seeds/bootstrap.js` (e.g. `identity`'s superuser) and runs each one.
+Every seed under this glob is idempotent (`onConflictDoNothing` by email) and safe on every
+boot and per replica. Without the secrets it becomes a no-op — the dev/demo seeds (`db:seed`,
+`db:seed:demo`) never run here, only what the glob finds under `dist/modules/*/seeds/`.
 
 ## Variables per environment
 
@@ -102,6 +91,25 @@ other:
 The rest (session parameters, Argon2, lockout, cookie, timeouts) is pure configuration and
 can be identical in both. Validation is fail-fast per module: a missing value or wrong
 format brings the boot down with an explicit error.
+
+## Fail-closed configuration
+
+A batch of previously-defaulted variables now either has no default (the boot fails without
+an explicit value) or defaults to the safer side and needs an explicit opt-in for the riskier
+one. Same value in both environments unless noted:
+
+| Variable | Default | Production guidance |
+| --- | --- | --- |
+| `TRUST_PROXY_HOPS` | `0` | **Set to `2`** for this topology (Cloudflare → Traefik, two hops in front of the app). `0` means "trust nothing in front" — every request looks like it comes from the edge, which breaks per-IP rate limiting and records the wrong IP in `auth_events`/sessions/new-device e-mail. Never leave the default in a deployed environment that sits behind a proxy. |
+| `DOCS_ENABLED` | `false` | Leave off in production (`/docs` was reachable by default before this default flipped). Turn on only for a controlled window if the OpenAPI UI is needed there. |
+| `REDIS_ALLOW_PLAINTEXT` | `false` | `REDIS_URL` starting with `redis://` (not `rediss://`) in production is refused at boot unless this is `true`. Prefer `rediss://` when the Redis service supports TLS; set this flag only when the connection is already isolated to the Swarm overlay network. |
+| `DATABASE_SSL_CA` | unset | Optional PEM (accepts escaped `\n`) for `DATABASE_SSL=require`. Unset relies on the platform's default CA trust. |
+| `OUTBOX_DEAD_RETENTION_DAYS` | `30` | How long a dead-lettered outbox event survives before the `outbox-dead.purge` maintenance job removes it (`lockId` 6 — see `docs/dev/template-changelog.md`). Raise it if dead letters need a longer investigation window. |
+| `STORAGE_REQUEST_TIMEOUT_MS` | `30000` | Timeout per request to the object storage (R2) adapter. |
+| `STORAGE_MAX_SOCKETS` | `50` | Ceiling on concurrent HTTPS connections (`keepAlive` agent) to the object storage — part of the fix for the socket-leak finding that could take the whole storage subsystem down under an upload/download burst. |
+| `BREACH_CHECK_ENABLED` (identity) | none — **required** | Boot fails without it. `true` calls the real HIBP breach-check adapter; `false` is a deliberate, explicit opt-out — never an accidental default. |
+| `LOGIN_ACCOUNT_MAX_FAILURES` / `LOGIN_ACCOUNT_WINDOW_SECONDS` (identity) | `10` / `900` | Per-account login throttle (sums every source IP), independent from the per-IP rate limit. |
+| `ATTACHMENT_PENDING_QUOTA_BYTES` / `ATTACHMENT_MAX_CONCURRENT_UPLOADS` (attachment) | `2147483648` (2 GiB) / `16` | Cap on unconfirmed pending bytes per owner and on concurrent multipart uploads per instance — both contain the storage exhaustion / socket-leak class of finding. |
 
 ## Deploy flow
 
@@ -163,10 +171,11 @@ docker service logs --tail 50 <service>    # logs of one service
 docker system df                           # Docker disk usage
 ```
 
-Migrations, bootstrap and backfill can also be fired by hand from the already-built image,
+Migrations and the module boot seed can also be fired by hand from the already-built image,
 without a redeploy:
 
 ```bash
 docker run --rm <api-image> node dist/db/migrate
-docker run --rm <api-image> node dist/seeds/bootstrap-master
+docker run --rm -e MASTER_EMAIL=... -e MASTER_PASSWORD=... <api-image> \
+  node dist/modules/identity/seeds/bootstrap.js
 ```

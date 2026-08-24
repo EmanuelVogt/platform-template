@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest"
 
+import { RATE_LIMITER } from '../../../../shared/kernel/rate-limit/rate-limiter.port';
+
 import { AUTH_EVENT_REPOSITORY } from './auth-event.repository';
-import { BREACH_CHECK } from './breach-check';
+import { BREACH_CHECK, type BreachVerdict } from './breach-check';
 import { CSRF } from './csrf';
 import { PASSWORD_HASHER } from './password-hasher';
 import { PASSWORD_STRENGTH } from './password-strength';
-import { RATE_LIMITER } from './rate-limiter';
 import { SESSION_REPOSITORY } from './session.repository';
 import { TOKEN_GENERATOR } from './token-generator';
 import { USER_REPOSITORY } from './user.repository';
@@ -21,6 +22,8 @@ describe('ports — tokens de injeção', () => {
     [PASSWORD_STRENGTH, 'PasswordStrength'],
     [BREACH_CHECK, 'BreachCheck'],
     [TOKEN_GENERATOR, 'TokenGenerator'],
+    // RATE_LIMITER mora no kernel (shared/kernel/rate-limit): o seam é
+    // compartilhado com attachment, identity só consome.
     [RATE_LIMITER, 'RateLimiter'],
     [CSRF, 'Csrf'],
   ] as const;
@@ -42,4 +45,22 @@ describe('ports — tokens de injeção', () => {
       expect(token.description).toBe(expectedDescription);
     },
   );
+});
+
+describe('BreachCheck — veredito de três estados', () => {
+  // Record exaustivo: acrescentar ou remover um estado quebra a compilação
+  // antes de quebrar quem faz switch sobre o veredito.
+  const HANDLED: Record<BreachVerdict, true> = {
+    clear: true,
+    breached: true,
+    skipped: true,
+  };
+
+  it('tem exatamente clear | breached | skipped (nunca um boolean)', () => {
+    expect(Object.keys(HANDLED).sort()).toEqual([
+      'breached',
+      'clear',
+      'skipped',
+    ]);
+  });
 });

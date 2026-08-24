@@ -67,6 +67,42 @@ describe("DrizzleSessionRepository (int)", () => {
     })
   }
 
+  it("touch abaixo do intervalo não grava; a partir dele grava", async () => {
+    const uid = await seedUser("touch@example.com")
+    const created = new Date("2026-05-30T00:00:00.000Z")
+    const session = Session.fromProps({
+      ...makeSession(uid).props,
+      createdAt: created,
+      lastSeenAt: created,
+      expiresAt: new Date(created.getTime() + 3_600_000),
+    })
+    await sessions.create(session)
+
+    // 30 s depois, com intervalo de 60 s: a linha não é tocada.
+    const tooSoon = new Date(created.getTime() + 30_000)
+    await sessions.touch(
+      session.props.id,
+      tooSoon,
+      new Date(tooSoon.getTime() + 3_600_000),
+      new Date(tooSoon.getTime() - 60_000)
+    )
+    const untouched = await sessions.findByTokenHash(session.props.tokenHash)
+    expect(untouched?.props.lastSeenAt).toEqual(created)
+
+    // 60 s depois: grava lastSeenAt e expiresAt.
+    const due = new Date(created.getTime() + 60_000)
+    const nextExpiresAt = new Date(due.getTime() + 3_600_000)
+    await sessions.touch(
+      session.props.id,
+      due,
+      nextExpiresAt,
+      new Date(due.getTime() - 60_000)
+    )
+    const touched = await sessions.findByTokenHash(session.props.tokenHash)
+    expect(touched?.props.lastSeenAt).toEqual(due)
+    expect(touched?.props.expiresAt).toEqual(nextExpiresAt)
+  })
+
   it("deleteById de sessão de OUTRO dono retorna 0 (anti-IDOR)", async () => {
     const owner = await seedUser("owner@example.com")
     const attacker = await seedUser("attacker@example.com")

@@ -4,11 +4,156 @@ Version truth = git tag + this entry (AD-006); `package.json` is not bumped on
 release. Each version lists the contract-breaking changes and the steps for the child
 to apply on `copier update`.
 
-## Unreleased
+## v2.3.0
 
-Vitest replaces jest as the api runner and takes over the whole root, and a new copier
-question picks the headless front shell. Breaking for every child: the specs change
-runner and the five catalog entries move to `2.0.0`; the shell question is additive.
+The update contract: a tag only ships green, the kernel carries advisories like any
+catalog entry, and the product reads them before updating instead of after. A new copier
+question also picks the product's headless front shell — additive, with no migration.
+
+### Changes
+
+1. **Release gate** (`release.yml` + `release-preflight.mjs`, template-only): full gate,
+   version/tag/ref checks, unbumped-entry check, manual-step check on a non-major
+   changelog — then tag + push.
+2. **Kernel advisories** (`module: kernel` in `lib/advisories.mjs`): matched to the
+   installed template version regardless of the module lock; `ADV-20260823-01`/`-02`
+   cover issue #9 and the fixture leak.
+3. **Remote feed** (`lib/advisory-feed.mjs`): `status`/hook read `docs/advisories/` from
+   the latest tag (24 h cache) merged with local by id.
+4. **Cadence** (`docs/dev/template-update.md`): `overdue` marks past each kind's
+   recommended days; nothing blocks.
+5. **Weekly bot** (`template-update.yml` + `template-update-ci.mjs`): PR on green, issue
+   naming the blocker otherwise.
+6. **Executable migrations** (`pnpm platform template migrate`): runs every
+   `migrations/v<X.Y.Z>.mjs` up to target, idempotent per script.
+7. **New copier question `web_stack`** (`vite` | `next`, default `vite`): picks the
+   product's headless front — see [`template.md`](template.md#module-catalog). Additive:
+   `copier update --defaults` (or `--skip-answered`) writes `web_stack: vite` into the
+   answers file of an existing child, preserving its current Vite front with no action
+   required. New decision in `.specs/STATE.md`: AD-035.
+
+### Child migration steps
+
+None — copier update is enough.
+
+## v2.2.1
+
+Two `module add` fixes (issues #10, #11). No contract change; migration = re-run
+what failed.
+
+### Changes
+
+1. **Second `module add` on the same machine died on the catalog cache** (issue #10,
+   `scripts/platform/lib/catalog-source.mjs`): `resolveCatalog` cloned into the cache
+   dir without ever reading it — the second call hit `destination path already exists`,
+   mislabeled "catálogo inacessível". Now: intact clone of an immutable ref (tag) is
+   reused; mutable ref (branch) or corrupted/half clone is discarded and re-cloned.
+   A real access failure still reports as unreachable.
+2. **Custom migration SQL written outside the journal** (issue #11,
+   `scripts/platform/lib/migrations.mjs`): destination names were computed from a
+   predicted index, so an entry with no schema diff (no baseline) shifted every custom
+   SQL one file above the one drizzle registered — the journaled file kept the empty
+   stub (for `identity`, the `auth_events` append-only control). Names are now read
+   from the journal after each `generate`; the shipped SQL overwrites the registered
+   file and the lock only lists files that exist.
+
+### Child migration steps (`copier update` from v2.2.0)
+
+1. Clean `git status`, then `copier update` (or `--vcs-ref v2.2.1`) — only
+   `scripts/platform/**` and this changelog change.
+2. If a previous add left stub-in-journal / orphan-outside, `--rollback` (or remove
+   the orphans) and re-run the add. No manual cache cleanup is needed anymore.
+
+## v2.2.0
+
+The product gains the routine that brings the template forward, and the answers file it
+was born with is repaired. No contract change and no migration; one manual step.
+
+### Changes
+
+1. **`pnpm platform status`** (`scripts/platform/lib/commands/status.mjs`): installed
+   template version (`_commit`) vs the latest stable `v*` tag on `_src_path` via
+   `git ls-remote` (8s timeout, `--offline`), the entries in the lock, the pending
+   advisories; `--json` for agents. Shared lib `scripts/platform/lib/template-version.mjs`.
+2. **Harness: `template-behind` hook** (`.claude/hooks/template-behind.mjs`, on
+   `SessionStart` and the first `UserPromptSubmit`): same check, one `ls-remote` per 24h
+   per machine cached in the OS temp dir, silent offline and silent in the template
+   repository. Names the skill when the product is behind.
+3. **Skill `template-update`** (`.agents/skills/template-update/`): one tag per cycle in
+   a worktree, conflict rules by ownership, the changelog's child migration steps, then
+   stale entries (`port-module-update`) and advisories, gates and commits; push stays the
+   user's act. `module update` now also points at it.
+
+4. **Fix: the product's `.copier-answers.yml` was a test fixture.** copier writes any
+   tracked file named like `_answers_file` to the product root, before `_exclude`:
+   `scripts/platform/__tests__/fixtures/child/.copier-answers.yml` overwrote the rendered
+   answers with `_commit: v1.0.0` and no answers. Every product born from v1.0.0 to
+   v2.1.0 cannot `copier update` ("Question project_name is required") and
+   `module add` cloned the catalog at v1.0.0. The fixture is renamed;
+   `copier-answers-leak.test.mjs` guards it.
+5. **Guard for issue #9 (`kernelRange` not opened on the bump).** `v2.0.0` shipped the
+   five entries at `2.0.0` with `kernelRange ">=1.0.0 <2.0.0"`, so no `v2.0.0` child
+   could `module add` anything (exit 8); `v2.1.0` already carries `">=2.0.0 <3.0.0"`.
+   `pnpm catalog:lint` now fails when an entry's `kernelRange` excludes the latest
+   version of this changelog (the version `catalog:check` simulates and the next tag
+   carries); the pre-commit glob includes this file. Template-only, nothing for the child.
+
+### Child migration steps
+
+1. **Repair `.copier-answers.yml` by hand, once, before `copier update`**: add the
+   answers (`project_name`, `project_slug`, `github_org`, `github_repo`, `root_domain`,
+   `app_domain` — from `AGENTS.md`, `package.json`, `README.md`) and set `_commit` to
+   the tag the product was really generated from (the top entry of the product's copy
+   of this changelog). Commit, then `copier update`.
+2. `copier update` brings the command, the hook (in `.claude/settings.json`) and the
+   skill; copier's post-task `pnpm skills:sync` links it — nothing else manual.
+
+## v2.1.0
+
+Security audit remediation (2026-08-22 white-box audit, 4 High / 9 Medium). Breaking for
+every child despite the minor: several kernel defaults changed from "silently degrade" to
+"fail closed at boot" — `v2.0.0` was tagged before this landed, so it ships on its own tag.
+
+### Changes
+
+1. **Fail-closed kernel configuration; hardened identity, attachment, notification, audit, tag.**
+   The five catalog entries stay at `2.0.0` (`kernelRange` `">=2.0.0 <3.0.0"` covers this
+   tag) and each ships a second advisory (`ADV-20260822-01..05`). An entry's audit trail is
+   now attached by a hook the entry declares (`<schema>.attach_audit()`, run by
+   `audit.attach_module_hooks()` at the end of audit's install — AD-032).
+
+   | Change                                              | Child action                                                                                                                                                               |
+   | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `NODE_ENV` and `DATABASE_SSL` lose their default    | Set both explicitly in every environment — the boot now fails fast instead of guessing                                                                                     |
+   | `BREACH_CHECK_ENABLED` (identity) loses its default | Set it explicitly — a missing value no longer silently means "don't check for breached passwords"                                                                          |
+   | `TRUST_PROXY_HOPS` default changes to `0`           | Set the real hop count explicitly (e.g. `2` for a Cloudflare → Traefik chain) — `0` alone means "trust nothing in front", every request looks like it comes from the edge  |
+   | `redis://` in production                            | Refused unless `REDIS_ALLOW_PLAINTEXT=true` — use `rediss://` or set the flag deliberately                                                                                 |
+   | `/docs` in production                               | Off unless `DOCS_ENABLED=true` — was reachable by default before                                                                                                           |
+   | `nest-cli.json` swc `ignore`                        | `copier update` brings the new ignore globs for `testing/`, `__e2e__/`, `parity/`, `__parity__/` — no manual action                                                        |
+   | Boot seed                                           | The entrypoint now discovers `dist/modules/*/seeds/bootstrap.js` by glob (one per installed module) instead of a single template script — no product action, informational |
+   | `@RateLimit` import path                            | Moves to `shared/kernel/rate-limit/rate-limit.decorator` — the codemod/`copier update` updates in-kernel usages; a product importing it directly updates the path by hand  |
+   | Redaction list (`sensitive-keys.ts`)                | Widens to include `cookie` and `link` — a product with its own redaction allowlist built on the same fragments picks up the wider default on `copier update`               |
+   | `outbox-dead.purge` maintenance job                 | Registers with `lockId` **6** (`maintenance-registry.ts`) — a product with a custom job must not reuse this id                                                             |
+
+   **DX note**: `pnpm contract` (`apps/api` `ts-node src/openapi/export-openapi.ts`, boots the
+   Nest app to introspect routes) now needs the kernel's env loaded — `NODE_ENV`/`DATABASE_SSL`
+   and the rest of `env.ts` no longer have defaults, so running it with an incomplete `.env`
+   fails at boot instead of generating a partial contract.
+
+### Child migration steps
+
+1. `copier update` brings the swc `ignore` globs and the entrypoint's seed glob — no manual action.
+2. Set `NODE_ENV`, `DATABASE_SSL`, `TRUST_PROXY_HOPS` and, if the `identity` entry is
+   installed, `BREACH_CHECK_ENABLED` explicitly in every environment — the boot now fails
+   fast when any of these is absent. Set `REDIS_ALLOW_PLAINTEXT`/`DOCS_ENABLED` if production
+   needs `redis://` or `/docs` on.
+3. Apply the `ADV-20260822-*` advisories of the entries already installed
+   (`pnpm platform module …`, see `docs/catalog/catalog.md`).
+
+## v2.0.0
+
+The Jest → Vitest port (item 1) and the lean-docs harness hook (item 2). Breaking for every
+child: the specs change runner and the five catalog entries move to `2.0.0`.
 
 ### Changes
 
@@ -26,28 +171,30 @@ runner and the five catalog entries move to `2.0.0`; the shell question is addit
    api does not clear it yet (measured 87.70 / 74.21 / 91.30 / 88.44 at the merge), so the
    coverage step is red until that gap is covered; the web clears it (94.78 / 94.51 /
    95.56 / 96.58). A floor is never lowered to make a push pass.
-2. **New copier question `web_stack` (`vite` | `next`, default `vite`)** picks the
-   product's headless front — see [`template.md`](template.md#module-catalog). Additive
-   and with no migration step: `copier update --defaults` (or `--skip-answered`) writes
-   `web_stack: vite` into the answers file of an existing child, preserving its current
-   Vite front with no action required. New decision in `.specs/STATE.md`: AD-032.
+2. **Harness: `docs-stay-lean` hook** (`.claude/hooks/docs-stay-lean.mjs`, wired in
+   `.claude/settings.json` on `Edit|Write|MultiEdit` and `Bash`). A handbook edit that
+   grows the file by more than 30 lines, a new handbook over 80 / ADR over 60, rationale
+   prose outside `docs/adr` or a shell write into `docs/` is refused;
+   `PLATFORM_DOCS_LEAN_OFF=1` disables it. Rule in `docs/code-quality.md § Documentation`,
+   tripwire in `AGENTS.md`. `docs/agents/workflow.md` now states that push, release,
+   `v*` tag and deploy-branch moves are the user's acts. Not breaking.
 
 ### Child migration steps
 
 1. `copier update` already brings the root runner configs (`vitest*.mts`),
-   `lefthook.yml`, `ci.yml` and the eslint configs — no manual action here.
+   `lefthook.yml`, `ci.yml`, the eslint configs, the swc `ignore` globs and the entrypoint's
+   seed glob — no manual action for any of those.
 2. `node scripts/platform/jest-to-vitest.mjs apps/api/src apps/api/test apps/web/src`
    rewrites the product's specs for the new runner.
 3. `pnpm lint:fix` settles what the codemod left out of order (import order and such).
 4. Remove `jest`, `@swc/jest`, `@types/jest` and `nyc` from `apps/api`; remove
    `@vitest/coverage-v8` from `apps/web` (web coverage moved to the root).
 5. `pnpm install`.
-6. Apply the advisories of the entries already installed (`pnpm platform module …`, see
-   `docs/catalog/catalog.md`).
+6. Apply the `ADV-20260821-*` advisories of the entries already installed
+   (`pnpm platform module …`, see `docs/catalog/catalog.md`).
 7. Run `pnpm test:coverage` once and read the gap: the coverage floors are 90 on all four
    metrics, and a product whose tree does not clear them will have `pre-push` blocked until
    it does. Cover the gap — do not lower the floor.
-8. Nothing to do for `web_stack`: an existing child keeps the Vite shell.
 
 ## v1.2.0
 

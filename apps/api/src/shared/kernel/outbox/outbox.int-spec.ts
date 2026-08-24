@@ -127,6 +127,10 @@ function sampleEvent(aggregateId: string): InvoicePaidEvent {
   })
 }
 
+function domainPayload(envelope: unknown): Record<string, unknown> {
+  return (envelope as { payload: Record<string, unknown> }).payload
+}
+
 describe("Outbox (integração)", () => {
   let pool: Pool
   let db: DrizzleDb
@@ -140,6 +144,11 @@ describe("Outbox (integração)", () => {
   let dedicatedClients: DedicatedClientFactory
 
   beforeAll(() => {
+    // purgeDeadLetters lê a retenção de env(), que exige as chaves obrigatórias
+    // no process.env — o setup de integração só resolve a conexão por helper.
+    process.env.DATABASE_URL ??= testDatabaseUrl()
+    process.env.WEB_ORIGIN ??= "http://localhost:5173"
+    process.env.REDIS_URL ??= "redis://localhost:6379"
     pool = createTestPool()
     db = createTestDb(pool)
     const testLogger = makeTestLogger()
@@ -781,5 +790,149 @@ describe("Outbox (integração)", () => {
       .map((r) => r.eventId)
       .sort()
     expect(remaining).toEqual(["pending", "recent-pub"])
+  })
+  it("ao marcar published redige a chave sensível do envelope (REM-16)", async () => {
+    emitter.on("notification.requested", () => undefined)
+    await db.insert(outbox).values({
+      eventId: "notif-secret",
+      eventName: "notification.requested",
+      eventVersion: 1,
+      aggregateId: "n-1",
+      aggregateType: "notification",
+      payload: {
+        eventName: "notification.requested",
+        eventId: "notif-secret",
+        correlationId: "c",
+        causationId: null,
+        tenantId: null,
+        traceparent: null,
+        payload: {
+          recipientId: "user-1",
+          link: "https://app.example/definir-senha?token=cru-123",
+        },
+      },
+      correlationId: "c",
+      occurredAt: new Date(),
+    })
+
+    await dispatcher.poll()
+
+    const rows = await db
+      .select()
+      .from(outbox)
+      .where(eq(outbox.eventId, "notif-secret"))
+    expect(rows[0]?.publishedAt).not.toBeNull()
+    const stored = domainPayload(rows[0]?.payload)
+    expect(stored.link).toBe("[REDACTED]")
+    expect(stored.recipientId).toBe("user-1")
+    expect(JSON.stringify(rows[0]?.payload)).not.toContain("cru-123")
+  })
+
+  it("payload sem chave redigível fica idêntico após publish", async () => {
+    emitter.on("plain.event", () => undefined)
+    await db.insert(outbox).values({
+      eventId: "plain-1",
+      eventName: "plain.event",
+      eventVersion: 1,
+      aggregateId: "a",
+      aggregateType: "t",
+      payload: {
+        eventName: "plain.event",
+        eventId: "plain-1",
+        correlationId: "c",
+        causationId: null,
+        tenantId: null,
+        traceparent: null,
+        payload: { invoiceId: "inv-1", amountCents: 1234 },
+      },
+      correlationId: "c",
+      occurredAt: new Date(),
+    })
+    const before = await db
+      .select()
+      .from(outbox)
+      .where(eq(outbox.eventId, "plain-1"))
+
+    await dispatcher.poll()
+
+    const after = await db
+      .select()
+      .from(outbox)
+      .where(eq(outbox.eventId, "plain-1"))
+    expect(after[0]?.publishedAt).not.toBeNull()
+    expect(JSON.stringify(after[0]?.payload)).toBe(
+      JSON.stringify(before[0]?.payload)
+    )
+  })
+
+  it("dead-letter redige o payload de domínio aninhado (REM-16)", async () => {
+    emitter.on("fail.event", () => {
+      throw new Error("handler explodiu")
+    })
+    await db.insert(outbox).values({
+      eventId: "dead-secret",
+      eventName: "fail.event",
+      eventVersion: 1,
+      aggregateId: "a",
+      aggregateType: "t",
+      payload: {
+        eventName: "fail.event",
+        eventId: "dead-secret",
+        correlationId: "c",
+        causationId: null,
+        tenantId: null,
+        traceparent: null,
+        payload: { token: "cru-456", recipientId: "user-2" },
+      },
+      correlationId: "c",
+      occurredAt: new Date(),
+      attempts: MAX_ATTEMPTS - 1,
+      nextAttemptAt: new Date(0),
+    })
+
+    await dispatcher.poll()
+
+    const dead = await db
+      .select()
+      .from(outboxDead)
+      .where(eq(outboxDead.eventId, "dead-secret"))
+    expect(dead).toHaveLength(1)
+    const stored = domainPayload(dead[0]?.payload)
+    expect(stored.token).toBe("[REDACTED]")
+    expect(stored.recipientId).toBe("user-2")
+    expect(JSON.stringify(dead[0]?.payload)).not.toContain("cru-456")
+  })
+  it("purgeDeadLetters remove dead>retenção e preserva o recente (REM-17)", async () => {
+    const retentionDays = connectionEnv().OUTBOX_DEAD_RETENTION_DAYS
+    const insertDead = (eventId: string, deadLetteredAt: Date) =>
+      db.insert(outboxDead).values({
+        eventId,
+        eventName: "x.event",
+        eventVersion: 1,
+        aggregateId: "a",
+        aggregateType: "t",
+        payload: {
+          eventName: "x.event",
+          eventId,
+          correlationId: "c",
+          causationId: null,
+          tenantId: null,
+          traceparent: null,
+          payload: {},
+        },
+        correlationId: "c",
+        occurredAt: new Date(),
+        attempts: MAX_ATTEMPTS,
+        lastError: "explodiu",
+        deadLetteredAt,
+      })
+    const dayMs = 86_400_000
+    await insertDead("dead-old", new Date(Date.now() - (retentionDays + 1) * dayMs))
+    await insertDead("dead-new", new Date(Date.now() - (retentionDays - 1) * dayMs))
+
+    await dispatcher.purgeDeadLetters()
+
+    const remaining = (await db.select().from(outboxDead)).map((r) => r.eventId)
+    expect(remaining).toEqual(["dead-new"])
   })
 })

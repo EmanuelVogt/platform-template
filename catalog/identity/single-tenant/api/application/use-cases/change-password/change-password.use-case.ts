@@ -9,10 +9,7 @@ import { Transactional } from "../../../../../shared/kernel/transactional/transa
 import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
 import { NotificationRequested } from "../../../../notification/api/events/notification-requested.event"
 import { User } from "../../../domain/entities/user.entity"
-import {
-  InvalidCredentialsError,
-  WeakPasswordError,
-} from "../../../domain/errors"
+import { InvalidCredentialsError } from "../../../domain/errors"
 import { validatePasswordPolicy } from "../../../domain/password-policy"
 import {
   AUTH_EVENT_REPOSITORY,
@@ -37,6 +34,7 @@ import {
 } from "../../../domain/ports/user.repository"
 import { IDENTITY_CONFIG, type IdentityConfig } from "../../../identity.config"
 import { authEventOf } from "../../auth-event.factory"
+import { type BreachOutcome, checkBreach } from "../../password/check-breach"
 import { type AuthedActor, requireAuth } from "../../require-auth"
 
 import type { ChangePasswordInput } from "./types"
@@ -83,24 +81,34 @@ export class ChangePasswordUseCase
 
     // Breach-check (fetch HIBP) fora da tx — nunca segura conexão durante o IO
     // de rede (R17).
-    await this.validateNewPassword(input.newPassword)
+    if ((await this.validateNewPassword(input.newPassword)) === "skipped") {
+      await this.recordBreachSkipped(ctx.userId)
+    }
 
     const newPasswordHash = await this.hasher.hash(input.newPassword)
     await this.applyChange(user, newPasswordHash, ctx)
   }
 
-  private async validateNewPassword(password: string): Promise<void> {
+  // BREACH_CHECK_ENABLED decide SE consulta; BREACH_CHECK_MODE decide só o que
+  // fazer quando a consulta falha — quem aplica o modo é o adapter.
+  private async validateNewPassword(password: string): Promise<BreachOutcome> {
     validatePasswordPolicy({
       minZxcvbnScore: this.config.PASSWORD_MIN_ZXCVBN_SCORE,
       zxcvbnScore: this.strength.score(password),
     })
-    if (this.config.BREACH_CHECK_MODE === "fail_closed") {
-      if (await this.breach.isBreached(password)) {
-        throw new WeakPasswordError(
-          "Esta senha apareceu em vazamentos conhecidos.",
-        )
-      }
-    }
+    return this.config.BREACH_CHECK_ENABLED
+      ? checkBreach(this.breach, password)
+      : "clear"
+  }
+
+  private async recordBreachSkipped(userId: string): Promise<void> {
+    await this.authEvents.record(
+      authEventOf(this.ctx.get(), {
+        userId,
+        eventType: "breach_check_skipped",
+        metadata: { mode: this.config.BREACH_CHECK_MODE },
+      }),
+    )
   }
 
   @Transactional()

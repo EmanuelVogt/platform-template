@@ -1,8 +1,10 @@
-/**
- * Lista canônica de campos PII/segredo. Fonte única: alimenta tanto a
- * redaction do pino (paths por profundidade) quanto o redactValue aplicado ao
- * corpo de request/response no log interceptor. Não divergir as listas.
- */
+import {
+  isSensitiveKey,
+  SENSITIVE_KEY_FRAGMENTS,
+} from "../redaction/sensitive-keys"
+
+// pino casa path por path, sem substring: cada variante de nome precisa de uma
+// entrada literal aqui. redactValue não lê esta lista — casa por fragmento.
 export const SENSITIVE_FIELDS = [
   "password",
   "token",
@@ -21,17 +23,35 @@ export const SENSITIVE_FIELDS = [
   "authorization",
   "cookie",
   "set-cookie",
+  "newPassword",
+  "currentPassword",
+  "newEmail",
+  "pendingEmail",
+  "passwordHash",
+  "tokenHash",
+  "cookieTokenHash",
 ]
 
-const SENSITIVE_SET = new Set(SENSITIVE_FIELDS.map((f) => f.toLowerCase()))
+/** Vocabulário canônico do kernel mais a PII que só o log precisa esconder. */
+export const LOG_FRAGMENTS = [
+  ...SENSITIVE_KEY_FRAGMENTS,
+  "email",
+  "cpf",
+  "phone",
+  "creditcard",
+  "useragent",
+  "user_agent",
+  "set-cookie",
+]
+
+// Igualdade exata, não fragmento: `ip` como substring derrubaria `recipientId`,
+// `description` e qualquer chave que apenas contenha as duas letras.
+const LOG_EXACT = new Set(["ip", "ip_address", "ipaddress"])
 
 /**
- * Redige PII/segredo de um valor arbitrário em qualquer profundidade, por nome
- * de chave (case-insensitive contra SENSITIVE_FIELDS). Objeto vira cópia com os
- * campos sensíveis substituídos por `[REDACTED]`; array é mapeado; primitivo
- * passa. Usado pelo log interceptor para sanitizar o corpo de request/response
- * antes de logá-lo (o pino redige headers/paths; o corpo arbitrário precisa
- * desta redaction recursiva própria).
+ * Redige PII/segredo em qualquer profundidade, por nome de chave. Existe além
+ * do redact do pino porque o pino só cobre paths conhecidos e o corpo de
+ * request/response tem forma arbitrária.
  */
 export function redactValue(value: unknown): unknown {
   if (Array.isArray(value)) {
@@ -41,7 +61,7 @@ export function redactValue(value: unknown): unknown {
     const record = value as Record<string, unknown>
     return Object.fromEntries(
       Object.keys(record).map((k) =>
-        SENSITIVE_SET.has(k.toLowerCase())
+        isSensitiveKey(k, LOG_FRAGMENTS) || LOG_EXACT.has(k.toLowerCase())
           ? [k, "[REDACTED]"]
           : [k, redactValue(record[k])]
       )
@@ -66,7 +86,6 @@ const fieldPaths = DEPTH_PREFIXES.flatMap((prefix) =>
   SENSITIVE_FIELDS.map((field) => `${prefix}${field}`)
 )
 
-/** Paths de PII/segredo censurados em todo log. Aplicado no logger raiz pino. */
 export const redactConfig = {
   paths: ["req.headers.authorization", "req.headers.cookie", ...fieldPaths],
   censor: "[REDACTED]",

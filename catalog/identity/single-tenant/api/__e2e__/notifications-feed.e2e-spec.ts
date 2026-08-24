@@ -10,7 +10,7 @@ import { applySecurity } from "../../../main"
 import { RequestContext } from "../../../shared/kernel/context/request-context"
 import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
 import { OutboxDispatcher } from "../../../shared/kernel/outbox/outbox.dispatcher"
-import { RATE_LIMITER } from "../domain/ports/rate-limiter"
+import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
 import { seedUser } from "../testing/seed-user"
 
 import type { Pool } from "pg"
@@ -20,6 +20,7 @@ const PASSWORD = "Senha-Feed-Muito-Forte-2026!"
 
 const allowAll = {
   consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
+  reset: () => Promise.resolve(),
 }
 
 type Lifecycle = {

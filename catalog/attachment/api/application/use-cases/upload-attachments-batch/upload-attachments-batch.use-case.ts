@@ -9,9 +9,11 @@ import { Traced } from "../../../../../shared/kernel/tracing/traced.decorator"
 import { TransactionManager } from "../../../../../shared/kernel/transactional/transaction-manager"
 import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
 import { Attachment } from "../../../domain/attachment.entity"
+import { sniffImageStream } from "../../../domain/content-type-sniff"
 import { CountingLimit } from "../../../domain/counting-limit"
 import {
   EmptyUploadBatchError,
+  UnsupportedMediaTypeError,
   UploadInterruptedError,
   UploadQuotaExceededError,
 } from "../../../domain/errors"
@@ -56,8 +58,20 @@ export class UploadAttachmentsBatchUseCase {
           )
         }
 
+        // Nunca confia no Content-Type declarado pelo cliente: perfil "image"
+        // exige que os magic bytes batam com o que foi declarado, e é o tipo
+        // farejado (não o declarado) que vira o `contentType` persistido.
+        let contentType = file.contentType
+        if (profile.accept === "image") {
+          const sniffed = await sniffImageStream(file.stream)
+          if (sniffed === null || sniffed !== file.contentType) {
+            throw new UnsupportedMediaTypeError()
+          }
+          contentType = sniffed
+        }
+
         const pending = Attachment.createPending({
-          contentType: file.contentType,
+          contentType,
           sizeBytes: 0,
           originalFilename: file.filename,
           profile: input.profile,

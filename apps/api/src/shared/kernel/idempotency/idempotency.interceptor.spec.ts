@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   type CallHandler,
   ConflictException,
   type ExecutionContext,
@@ -35,6 +36,8 @@ type ContextOverrides = {
   originalUrl?: string
   body?: unknown
   headers?: Record<string, string | string[] | undefined>
+  key?: string
+  ip?: string
   type?: string
   response?: ResponseStub
 }
@@ -70,7 +73,10 @@ function makeExecutionContext(
     method: overrides.method ?? "POST",
     originalUrl: overrides.originalUrl ?? "/v1/things?page=2",
     body: overrides.body ?? { b: 1, a: 2 },
-    headers: overrides.headers ?? { "idempotency-key": "k-1" },
+    headers: overrides.headers ?? {
+      "idempotency-key": overrides.key ?? "k-1",
+    },
+    ip: overrides.ip,
   }
   const response = overrides.response ?? makeResponse()
   return {
@@ -194,12 +200,55 @@ describe("IdempotencyInterceptor — escopo da chave", () => {
     expect(reserved[0]?.scope).toBe("t-1:a-1")
   })
 
-  it("usa o placeholder quando não há ator no contexto", async () => {
+  it("escopa por IP quando não há ator no contexto", async () => {
+    const { interceptor, ctx, reserved } = makeInterceptor()
+    await ctx.run(makeStore("t-1"), async () => {
+      await firstValueFrom(
+        interceptor.intercept(makeExecutionContext({ ip: "203.0.113.7" }), next)
+      )
+    })
+    expect(reserved[0]?.scope).toBe("t-1:ip:203.0.113.7")
+  })
+
+  it("sem ator e sem IP conhecido resta o placeholder do IP", async () => {
     const { interceptor, ctx, reserved } = makeInterceptor()
     await ctx.run(makeStore("t-1"), async () => {
       await firstValueFrom(interceptor.intercept(makeExecutionContext(), next))
     })
-    expect(reserved[0]?.scope).toBe("t-1:_")
+    expect(reserved[0]?.scope).toBe("t-1:ip:_")
+  })
+
+  it("dois anônimos de IPs diferentes não colidem (REM-32)", async () => {
+    const { interceptor, ctx, reserved } = makeInterceptor()
+    for (const ip of ["203.0.113.7", "198.51.100.4"]) {
+      await ctx.run(makeStore("t-1"), async () => {
+        await firstValueFrom(
+          interceptor.intercept(makeExecutionContext({ ip }), next)
+        )
+      })
+    }
+    expect(reserved.map((r) => r.scope)).toEqual([
+      "t-1:ip:203.0.113.7",
+      "t-1:ip:198.51.100.4",
+    ])
+  })
+
+  it("dois anônimos do mesmo IP compartilham o escopo (dedup preservado)", async () => {
+    const { interceptor, ctx, reserved } = makeInterceptor()
+    for (let i = 0; i < 2; i++) {
+      await ctx.run(makeStore("t-1"), async () => {
+        await firstValueFrom(
+          interceptor.intercept(
+            makeExecutionContext({ ip: "203.0.113.7" }),
+            next
+          )
+        )
+      })
+    }
+    expect(reserved.map((r) => r.scope)).toEqual([
+      "t-1:ip:203.0.113.7",
+      "t-1:ip:203.0.113.7",
+    ])
   })
 
   it("isola o escopo por ator dentro do mesmo tenant", async () => {
@@ -213,12 +262,12 @@ describe("IdempotencyInterceptor — escopo da chave", () => {
     expect(reserved.map((r) => r.scope)).toEqual(["t-1:a-1", "t-1:a-2"])
   })
 
-  it("sem tenant e sem ator o escopo cai nos dois placeholders", async () => {
+  it("sem tenant, sem ator e sem IP conhecido restam os placeholders", async () => {
     const { interceptor, ctx, reserved } = makeInterceptor()
     await ctx.run(makeStore(), async () => {
       await firstValueFrom(interceptor.intercept(makeExecutionContext(), next))
     })
-    expect(reserved[0]?.scope).toBe("_:_")
+    expect(reserved[0]?.scope).toBe("_:ip:_")
   })
 
   it("usa só o ator quando o contexto não tem tenant", async () => {
@@ -230,10 +279,10 @@ describe("IdempotencyInterceptor — escopo da chave", () => {
     expect(firstReserve(reserved).scope).toBe("_:a-1")
   })
 
-  it("fora de um escopo de request o escopo usa os dois placeholders", async () => {
+  it("fora de um escopo de request o escopo usa os placeholders", async () => {
     const { interceptor, reserved } = makeInterceptor()
     await firstValueFrom(interceptor.intercept(makeExecutionContext(), next))
-    expect(firstReserve(reserved).scope).toBe("_:_")
+    expect(firstReserve(reserved).scope).toBe("_:ip:_")
   })
 })
 
@@ -311,7 +360,7 @@ describe("IdempotencyInterceptor — reserva sem conflito", () => {
     const context = makeExecutionContext({ response: makeResponse(201) })
     await firstValueFrom(interceptor.intercept(context, next))
     expect(firstComplete(completed)).toEqual({
-      scope: "_:_",
+      scope: "_:ip:_",
       key: "k-1",
       status: "completed",
       responseStatus: 201,
@@ -424,7 +473,7 @@ describe("IdempotencyInterceptor — conflito na reserva", () => {
       interceptor.intercept(makeExecutionContext(), next)
     )
     expect(result).toEqual({ ok: true })
-    expect(reopenCalls).toEqual([{ scope: "_:_", key: "k-1" }])
+    expect(reopenCalls).toEqual([{ scope: "_:ip:_", key: "k-1" }])
     expect(firstComplete(completed).status).toBe("completed")
   })
 
@@ -455,7 +504,7 @@ describe("IdempotencyInterceptor — falha do handler", () => {
     )
     expect(error).toBe(thrown)
     expect(firstComplete(completed)).toEqual({
-      scope: "_:_",
+      scope: "_:ip:_",
       key: "k-1",
       status: "completed",
       responseStatus: 422,
@@ -473,7 +522,7 @@ describe("IdempotencyInterceptor — falha do handler", () => {
     )
     expect(error).toBe(thrown)
     expect(firstComplete(completed)).toEqual({
-      scope: "_:_",
+      scope: "_:ip:_",
       key: "k-1",
       status: "failed",
       responseStatus: 503,
@@ -491,7 +540,7 @@ describe("IdempotencyInterceptor — falha do handler", () => {
     )
     expect(error).toBe(thrown)
     expect(firstComplete(completed)).toEqual({
-      scope: "_:_",
+      scope: "_:ip:_",
       key: "k-1",
       status: "failed",
       responseStatus: 500,
@@ -576,5 +625,55 @@ describe("IdempotencyInterceptor — validade da reserva", () => {
     expect(firstReserve(reserved).expiresAt.toISOString()).toBe(
       "2026-03-11T12:00:00.000Z"
     )
+  })
+})
+
+describe("IdempotencyInterceptor — formato da chave (REM-32)", () => {
+  function attempt(key: string): { error: unknown; reservations: number } {
+    const { interceptor, reserved } = makeInterceptor()
+    let error: unknown = null
+    try {
+      interceptor.intercept(makeExecutionContext({ key }), next)
+    } catch (err) {
+      error = err
+    }
+    return { error, reservations: reserved.length }
+  }
+
+  it("aceita chave dentro do padrão e chega ao store", async () => {
+    const { interceptor, ctx, reserved } = makeInterceptor()
+    await ctx.run(makeStore("t-1"), async () => {
+      await firstValueFrom(
+        interceptor.intercept(makeExecutionContext({ key: "abc_XYZ-09" }), next)
+      )
+    })
+    expect(reserved[0]?.key).toBe("abc_XYZ-09")
+  })
+
+  it("aceita exatamente 200 caracteres", async () => {
+    const { interceptor, ctx, reserved } = makeInterceptor()
+    await ctx.run(makeStore("t-1"), async () => {
+      await firstValueFrom(
+        interceptor.intercept(
+          makeExecutionContext({ key: "a".repeat(200) }),
+          next
+        )
+      )
+    })
+    expect(reserved[0]?.key).toHaveLength(200)
+  })
+
+  it("rejeita 201 caracteres com 400, sem consultar o store", () => {
+    const { error, reservations } = attempt("a".repeat(201))
+    expect(error).toBeInstanceOf(BadRequestException)
+    expect((error as HttpException).getStatus()).toBe(400)
+    expect(reservations).toBe(0)
+  })
+
+  it("rejeita chave com `/` com 400, sem consultar o store", () => {
+    const { error, reservations } = attempt("path/traversal")
+    expect(error).toBeInstanceOf(BadRequestException)
+    expect((error as HttpException).getStatus()).toBe(400)
+    expect(reservations).toBe(0)
   })
 })

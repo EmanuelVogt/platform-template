@@ -1,5 +1,6 @@
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
+import semver from "semver";
 import { AdvisoryParseError, parseAdvisory } from "./frontmatter.mjs";
 import { ManifestValidationError, validateManifest } from "./manifest.mjs";
 
@@ -11,6 +12,9 @@ const TEST_FILE_RE = /\.test\.tsx?$/;
 const IMPORT_RE = /import\s+(?:[\s\S]*?\s+from\s+)?["']([^"']+)["']/g;
 const HEADING_RE = /^## .+$/gm;
 const CONTRACT_FENCE_RE = /```\n([\s\S]*?)```/;
+const API_TEST_SUFFIX_RE = /\.(spec|int-spec|e2e-spec|parity\.spec|fixture)\.ts$/;
+const API_TEST_DIR_RE = /(^|\/)(testing|__e2e__|parity)\//;
+const TESTING_SPECIFIER_RE = /\/testing\//;
 
 function isAllowedSpecifier(specifier, allowed) {
   if (specifier.startsWith(".")) return true;
@@ -71,6 +75,37 @@ export function lintWebImports(files) {
   return errors;
 }
 
+function walkTsFiles(dir) {
+  if (!existsSync(dir)) return [];
+  const out = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      out.push(...walkTsFiles(full));
+    } else if (entry.name.endsWith(".ts")) {
+      out.push(full);
+    }
+  }
+  return out;
+}
+
+// AD-023/AD-031: testing/, __e2e__/ e parity/ ficam fora do build (nest-cli.json,
+// tsconfig.build.json) — código de produção que importa de lá quebra em runtime.
+export function lintProductionTestingImports(entryDir) {
+  const apiDir = path.join(entryDir, "api");
+  const errors = [];
+  for (const filePath of walkTsFiles(apiDir)) {
+    const relativeToApi = path.relative(apiDir, filePath).split(path.sep).join("/");
+    if (API_TEST_SUFFIX_RE.test(relativeToApi) || API_TEST_DIR_RE.test(relativeToApi)) continue;
+    for (const specifier of importsFrom(readFileSync(filePath, "utf8"))) {
+      if (TESTING_SPECIFIER_RE.test(specifier)) {
+        errors.push(`${filePath}: código de produção importa de testing/: ${specifier}`);
+      }
+    }
+  }
+  return errors;
+}
+
 export function lintManifest(manifest) {
   try {
     validateManifest(manifest);
@@ -81,6 +116,16 @@ export function lintManifest(manifest) {
   }
 }
 
+// A versão mais recente do changelog é a que catalog:check simula e a que a próxima tag
+// carrega (AD-006): um range que a exclui só aparece no child, como exit 8 (issue #9).
+export function lintKernelRange(manifest, kernelVersion) {
+  if (!manifest.kernelRange || !semver.validRange(manifest.kernelRange)) return [];
+  if (semver.satisfies(kernelVersion, manifest.kernelRange)) return [];
+  return [
+    `kernelRange "${manifest.kernelRange}" não aceita o kernel ${kernelVersion} (versão mais recente de docs/dev/template-changelog.md) — nenhum child nessa versão consegue instalar a entrada; abra o range junto com o bump`,
+  ];
+}
+
 export function lintAdvisoryFrontmatter(content, filePath) {
   try {
     parseAdvisory(content, filePath);
@@ -89,6 +134,11 @@ export function lintAdvisoryFrontmatter(content, filePath) {
     if (err instanceof AdvisoryParseError) return [err.message];
     throw err;
   }
+}
+
+export function lintAdvisoryModule(advisory, entryNames) {
+  if (advisory.module === "kernel" || entryNames.includes(advisory.module)) return [];
+  return [`module "${advisory.module}" não é "kernel" nem uma entrada existente do catálogo (${advisory.id})`];
 }
 
 // Para em módulos com variant: catalog/<name>/<variant>/module.json não descende além do module.json encontrado.

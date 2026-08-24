@@ -1,13 +1,22 @@
 import { createHash } from "node:crypto"
 
-import type { BreachCheck } from "../../domain/ports/breach-check"
+import { BreachCheckUnavailableError } from "../../domain/errors"
+
+import type {
+  BreachCheck,
+  BreachVerdict,
+} from "../../domain/ports/breach-check"
 
 export type BreachCheckMode = "fail_open" | "fail_closed"
 
+/** Teto duro da consulta: o cadastro de senha não espera o HIBP indefinidamente. */
+const LOOKUP_TIMEOUT_MS = 2000
+
 /**
  * Have I Been Pwned via k-anonymity (spec §7): envia só os 5 primeiros chars
- * do sha1 da senha; nunca a senha. Em falha de rede respeita BREACH_CHECK_MODE:
- * fail_open => trata como não-vazada; fail_closed => trata como vazada.
+ * do sha1 da senha; nunca a senha. Falha de rede, status não-2xx ou estouro do
+ * timeout não são veredito: sob `fail_open` viram "skipped", sob `fail_closed`
+ * derrubam a operação com 503.
  */
 export class HibpBreachCheck implements BreachCheck {
   constructor(
@@ -15,25 +24,32 @@ export class HibpBreachCheck implements BreachCheck {
     private readonly fetchFn: typeof fetch = fetch
   ) {}
 
-  async isBreached(password: string): Promise<boolean> {
+  async check(password: string): Promise<BreachVerdict> {
     const sha1 = createHash("sha1").update(password).digest("hex").toUpperCase()
     const prefix = sha1.slice(0, 5)
     const suffix = sha1.slice(5)
+    let body: string
     try {
       const res = await this.fetchFn(
         `https://api.pwnedpasswords.com/range/${prefix}`,
-        { headers: { "Add-Padding": "true" } }
+        {
+          headers: { "Add-Padding": "true" },
+          signal: AbortSignal.timeout(LOOKUP_TIMEOUT_MS),
+        }
       )
       if (!res.ok) throw new Error(`HIBP status ${res.status}`)
-      const body = await res.text()
-      // suffix já é UPPERCASE (sha1.toUpperCase); normaliza o token da resposta
-      // p/ comparação case-insensitive — o contrato HIBP não garante o case.
-      return body
-        .split("\n")
-        .some((line) => line.split(":")[0]?.trim().toUpperCase() === suffix)
+      body = await res.text()
     } catch {
-      // fail_open: deixa passar (false); fail_closed: bloqueia (true).
-      return this.mode === "fail_closed"
+      if (this.mode === "fail_closed") {
+        throw new BreachCheckUnavailableError()
+      }
+      return "skipped"
     }
+    // suffix já é UPPERCASE (sha1.toUpperCase); normaliza o token da resposta
+    // p/ comparação case-insensitive — o contrato HIBP não garante o case.
+    const hit = body
+      .split("\n")
+      .some((line) => line.split(":")[0]?.trim().toUpperCase() === suffix)
+    return hit ? "breached" : "clear"
   }
 }

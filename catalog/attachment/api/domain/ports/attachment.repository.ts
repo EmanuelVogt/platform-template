@@ -11,7 +11,9 @@ export interface AttachmentRepository {
   saveMany(attachments: Attachment[]): Promise<void>
   /** Pendentes criados antes do corte — alvo do expurgo de órfãos. */
   findPendingOlderThan(cutoff: Date): Promise<Attachment[]>
-  deleteByIds(ids: string[]): Promise<void>
+  deletePendingByIds(ids: string[]): Promise<void>
+  /** Soma de `size_bytes` dos pendentes do dono — base da cota de upload. */
+  sumPendingBytesByOwner(ownerId: string): Promise<number>
 }
 
 export const ATTACHMENT_REPOSITORY: unique symbol = Symbol("AttachmentRepository")

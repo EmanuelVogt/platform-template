@@ -89,16 +89,6 @@ export class EmailAlreadyInUseError extends DomainError {
   }
 }
 
-/** E-mail pertence a um usuário soft-deleted — resolver na lixeira (restore/purge). */
-export class EmailBelongsToDeletedUserError extends DomainError {
-  readonly status = 409;
-  readonly type = `${TYPE_BASE}/email-belongs-to-deleted-user`;
-
-  constructor() {
-    super('Este e-mail pertence a um usuário excluído. Restaure-o ou exclua definitivamente na lixeira.');
-  }
-}
-
 /** Purge exige alvo soft-deleted — não existe hard delete direto. */
 export class UserNotInTrashError extends DomainError {
   readonly status = 409;
@@ -282,5 +272,41 @@ export class PermissionGrantNotAllowedError extends DomainError {
 
   constructor() {
     super('Acesso negado', 'Não é possível conceder permissões que você não possui.');
+  }
+}
+
+/**
+ * Gate de hashing cheio: já há PASSWORD_HASH_MAX_IN_FLIGHT argon2 em voo.
+ * 503 curto em vez de enfileirar — enfileirar troca saturação por latência
+ * ilimitada, que é exatamente o que uma inundação de login procura.
+ */
+export class PasswordHashingSaturatedError extends DomainError {
+  readonly status = 503;
+  readonly type = `${TYPE_BASE}/password-hashing-saturated`;
+  override readonly retryAfterSeconds = 2;
+
+  constructor() {
+    super(
+      'Serviço temporariamente indisponível',
+      'Muitas verificações de senha em andamento. Tente novamente em instantes.',
+    );
+  }
+}
+
+/**
+ * Consulta de vazamento indisponível sob `fail_closed`: a política manda
+ * recusar a operação em vez de seguir sem a verificação. Nunca vira "senha
+ * vazada" — o usuário não pode ser punido por uma queda do provedor.
+ */
+export class BreachCheckUnavailableError extends DomainError {
+  readonly status = 503;
+  readonly type = `${TYPE_BASE}/breach-check-unavailable`;
+  override readonly retryAfterSeconds = 5;
+
+  constructor() {
+    super(
+      'Serviço temporariamente indisponível',
+      'Não foi possível verificar se a senha foi vazada. Tente novamente em instantes.',
+    );
   }
 }

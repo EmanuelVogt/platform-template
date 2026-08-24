@@ -11,7 +11,7 @@ import {
   truncateKernel,
 } from "../../../../test/setup/test-db"
 import { OBJECT_STORAGE } from "../../../shared/infra/storage/object-storage.port"
-import { RATE_LIMITER } from "../../identity/domain/ports/rate-limiter"
+import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
 import { allowAllRateLimiter } from "../../identity/testing/allow-all-rate-limiter"
 import { seedUser } from "../../identity/testing/seed-user"
 import { ATTACHMENT_ACCESS_LOG_REPOSITORY } from "../domain/ports/attachment-access-log.repository"

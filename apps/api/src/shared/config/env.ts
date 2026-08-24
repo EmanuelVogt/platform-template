@@ -1,10 +1,16 @@
 import { z } from "zod"
 
+/** Compartilhado com módulos que precisam do mesmo enum (ex.: notification.config.ts). */
+export const nodeEnvSchema = z.enum([
+  "development",
+  "test",
+  "staging",
+  "production",
+])
+
 const envSchema = z
   .object({
-    NODE_ENV: z
-      .enum(["development", "test", "staging", "production"])
-      .default("development"),
+    NODE_ENV: nodeEnvSchema,
     PORT: z.coerce.number().int().positive().default(3222),
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
@@ -15,7 +21,13 @@ const envSchema = z
         message: "DATABASE_URL deve usar scheme postgres:// ou postgresql://",
       }),
     DATABASE_POOL_MAX: z.coerce.number().int().positive().default(10),
-    DATABASE_SSL: z.enum(["disable", "require"]).default("disable"),
+    DATABASE_SSL: z.enum(["disable", "require"]),
+    // PEM costuma vir com `\n` escapado (variável de ambiente de linha única);
+    // desescapa antes de entregar ao driver pg.
+    DATABASE_SSL_CA: z
+      .string()
+      .optional()
+      .transform((v) => v?.replaceAll("\\n", "\n")),
     DATABASE_CONNECTION_TIMEOUT_MS: z.coerce
       .number()
       .int()
@@ -43,15 +55,32 @@ const envSchema = z
       .refine((v) => /^rediss?:\/\//.test(v), {
         message: "REDIS_URL deve usar scheme redis:// ou rediss://",
       }),
+    REDIS_ALLOW_PLAINTEXT: z.stringbool().default(false),
     OTEL_SERVICE_NAME: z.string().min(1).default("api"),
     SERVICE_VERSION: z.string().min(1).default("0.0.1"),
     OTEL_EXPORTER_OTLP_ENDPOINT: z.union([z.url(), z.literal("")]).optional(),
+    DOCS_ENABLED: z.stringbool().default(false),
+    OUTBOX_DEAD_RETENTION_DAYS: z.coerce.number().int().positive().default(30),
 
     // --- rede / proxy (consumido pelo app shell: CORS, trust proxy) ---
     // Cada módulo declara num config próprio o que ele consome; aqui só entra
     // o que a casca do template lê.
     WEB_ORIGIN: z.url(),
-    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(1),
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.NODE_ENV === "production" &&
+      data.REDIS_URL.startsWith("redis://") &&
+      !data.REDIS_ALLOW_PLAINTEXT
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["REDIS_URL"],
+        message:
+          "REDIS_URL em produção exige rediss:// ou REDIS_ALLOW_PLAINTEXT=true",
+      })
+    }
   })
 
 export type Env = z.infer<typeof envSchema>

@@ -45,16 +45,29 @@ function parseModuleRef(moduleField) {
   return { name, variant };
 }
 
-export function computePending(lock, advisories, ledger) {
+export function computePending(lock, advisories, ledger, { templateVersion } = {}) {
   const installedModules = lock?.modules ?? {};
-  if (Object.keys(installedModules).length === 0) {
-    return { noLock: true, pending: [] };
-  }
-
+  const noLock = Object.keys(installedModules).length === 0;
   const appliedIds = new Set(ledger ?? []);
   const pending = [];
 
   for (const advisory of advisories) {
+    if (appliedIds.has(advisory.id)) {
+      continue;
+    }
+    if (advisory.module === "kernel") {
+      if (!templateVersion) {
+        continue;
+      }
+      if (!semver.satisfies(templateVersion, advisory.affects)) {
+        continue;
+      }
+      pending.push({ id: advisory.id, kind: advisory.kind, severity: advisory.severity, module: advisory.module });
+      continue;
+    }
+    if (noLock) {
+      continue;
+    }
     const { name, variant } = parseModuleRef(advisory.module);
     const installed = installedModules[name];
     if (!installed) {
@@ -63,14 +76,11 @@ export function computePending(lock, advisories, ledger) {
     if (variant && installed.variant !== variant) {
       continue;
     }
-    if (appliedIds.has(advisory.id)) {
-      continue;
-    }
     if (!semver.satisfies(installed.version, advisory.affects)) {
       continue;
     }
     pending.push({ id: advisory.id, kind: advisory.kind, severity: advisory.severity, module: advisory.module });
   }
 
-  return { noLock: false, pending };
+  return { noLock, pending };
 }

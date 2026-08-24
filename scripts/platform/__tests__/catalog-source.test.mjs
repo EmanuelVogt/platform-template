@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { CatalogUnreachableError, defaultCatalogRef, expandGitShorthand, isGitRef, resolveCatalog, splitCatalogRef } from "../lib/catalog-source.mjs";
 
 function git(args, cwd) {
-  execFileSync("git", args, { cwd, stdio: "pipe" });
+  execFileSync("git", ["-c", "user.email=test@test.local", "-c", "user.name=test", ...args], { cwd, stdio: "pipe" });
 }
 
 function makeBareOriginWithCatalog() {
@@ -19,12 +19,25 @@ function makeBareOriginWithCatalog() {
     "utf8",
   );
   git(["init", "-q"], workDir);
-  git(["-c", "user.email=test@test.local", "-c", "user.name=test", "add", "."], workDir);
-  git(["-c", "user.email=test@test.local", "-c", "user.name=test", "commit", "-q", "-m", "init"], workDir);
+  git(["branch", "-M", "main"], workDir);
+  git(["add", "."], workDir);
+  git(["commit", "-q", "-m", "init"], workDir);
+  git(["tag", "v1.0.0"], workDir);
 
   const bareDir = `${workDir}.git`;
   git(["clone", "-q", "--bare", workDir, bareDir]);
-  return bareDir;
+  return { bareDir, workDir };
+}
+
+function pushNewOriginFile(workDir, bareDir, relPath, content) {
+  writeFileSync(path.join(workDir, relPath), content, "utf8");
+  git(["add", "."], workDir);
+  git(["commit", "-q", "-m", "update"], workDir);
+  git(["push", "-q", bareDir, "main:main"], workDir);
+}
+
+function cacheDirOf(result) {
+  return path.dirname(result.root);
 }
 
 test("resolveCatalog aceita um caminho local existente", () => {
@@ -84,13 +97,92 @@ test("resolveCatalog resolve a fonte default de um _src_path local (raiz do temp
 });
 
 test("resolveCatalog clona via git sparse-checkout um repositório bare local e resolve a raiz catalog/", () => {
-  const bareDir = makeBareOriginWithCatalog();
+  const { bareDir } = makeBareOriginWithCatalog();
   const cacheRoot = mkdtempSync(path.join(tmpdir(), "catalog-cache-"));
 
   const result = resolveCatalog(bareDir, { cacheRoot });
 
   assert.equal(result.kind, "git");
   assert.ok(existsSync(path.join(result.root, "alpha", "module.json")));
+});
+
+test("resolveCatalog duas vezes com o mesmo ref funciona sem limpeza manual do cache (issue #10)", () => {
+  const { bareDir } = makeBareOriginWithCatalog();
+  const cacheRoot = mkdtempSync(path.join(tmpdir(), "catalog-cache-"));
+  const ref = `${bareDir}#v1.0.0`;
+
+  const first = resolveCatalog(ref, { cacheRoot });
+  const second = resolveCatalog(ref, { cacheRoot });
+
+  assert.equal(second.kind, "git");
+  assert.equal(second.root, first.root);
+  assert.ok(existsSync(path.join(second.root, "alpha", "module.json")));
+});
+
+test("resolveCatalog reaproveita o cache de um ref imutável (tag) sem clonar de novo", () => {
+  const { bareDir } = makeBareOriginWithCatalog();
+  const cacheRoot = mkdtempSync(path.join(tmpdir(), "catalog-cache-"));
+  const ref = `${bareDir}#v1.0.0`;
+
+  const first = resolveCatalog(ref, { cacheRoot });
+  const sentinel = path.join(cacheDirOf(first), "sentinel-reuso.txt");
+  writeFileSync(sentinel, "sobrevive se o cache foi reusado", "utf8");
+
+  const second = resolveCatalog(ref, { cacheRoot });
+
+  assert.ok(existsSync(sentinel), "cache de tag deveria ser reusado, não reclonado");
+  assert.ok(existsSync(path.join(second.root, "alpha", "module.json")));
+});
+
+test("resolveCatalog revalida um ref móvel (branch): a segunda chamada enxerga o que andou no origin", () => {
+  const { bareDir, workDir } = makeBareOriginWithCatalog();
+  const cacheRoot = mkdtempSync(path.join(tmpdir(), "catalog-cache-"));
+  const ref = `${bareDir}#main`;
+
+  const first = resolveCatalog(ref, { cacheRoot });
+  assert.ok(!existsSync(path.join(first.root, "alpha", "novo.txt")));
+  pushNewOriginFile(workDir, bareDir, path.join("catalog", "alpha", "novo.txt"), "novo conteúdo");
+
+  const second = resolveCatalog(ref, { cacheRoot });
+
+  assert.ok(existsSync(path.join(second.root, "alpha", "novo.txt")));
+});
+
+test("resolveCatalog se recupera sozinho de um cache corrompido, sem exigir rm -rf", () => {
+  const { bareDir } = makeBareOriginWithCatalog();
+  const cacheRoot = mkdtempSync(path.join(tmpdir(), "catalog-cache-"));
+  const ref = `${bareDir}#v1.0.0`;
+
+  const first = resolveCatalog(ref, { cacheRoot });
+  rmSync(path.join(cacheDirOf(first), ".git"), { recursive: true, force: true });
+
+  const second = resolveCatalog(ref, { cacheRoot });
+
+  assert.ok(existsSync(path.join(second.root, "alpha", "module.json")));
+});
+
+test("resolveCatalog se recupera de um clone pela metade (diretório sem catalog/)", () => {
+  const { bareDir } = makeBareOriginWithCatalog();
+  const cacheRoot = mkdtempSync(path.join(tmpdir(), "catalog-cache-"));
+  const ref = `${bareDir}#v1.0.0`;
+
+  const first = resolveCatalog(ref, { cacheRoot });
+  rmSync(first.root, { recursive: true, force: true });
+
+  const second = resolveCatalog(ref, { cacheRoot });
+
+  assert.ok(existsSync(path.join(second.root, "alpha", "module.json")));
+});
+
+test("resolveCatalog continua reportando inacessível quando o origin some, mesmo com cache móvel presente", () => {
+  const { bareDir } = makeBareOriginWithCatalog();
+  const cacheRoot = mkdtempSync(path.join(tmpdir(), "catalog-cache-"));
+  const ref = `${bareDir}#main`;
+
+  resolveCatalog(ref, { cacheRoot });
+  rmSync(bareDir, { recursive: true, force: true });
+
+  assert.throws(() => resolveCatalog(ref, { cacheRoot }), CatalogUnreachableError);
 });
 
 test("resolveCatalog resolve um caminho local com sufixo #<ref> para o diretório antes do #", () => {

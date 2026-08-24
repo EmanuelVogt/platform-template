@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -14,6 +14,9 @@ const CHILD_FIXTURE = path.join(TESTS_DIR, "fixtures/child");
 function makeChild() {
   const dir = mkdtempSync(path.join(tmpdir(), "cli-child-"));
   cpSync(CHILD_FIXTURE, dir, { recursive: true });
+  // The fixture cannot carry the real name: copier writes any file called
+  // `.copier-answers.yml` to the product root (copier-answers-leak.test.mjs).
+  renameSync(path.join(dir, "copier-answers.yml"), path.join(dir, ".copier-answers.yml"));
   return dir;
 }
 
@@ -67,11 +70,33 @@ async function installAlpha(child) {
   return run(["module", "add", "alpha", "--catalog-ref", CATALOG_ROOT], { cwd: child, run: stubRun });
 }
 
+// generateForModule lê do journal o que o drizzle registrou (issue #11); para o lock
+// gravar o baseline, o stub precisa simular o journal andando a cada `generate`.
+function withDrizzleJournal(child, stubRun) {
+  return (command, args, options) => {
+    const result = stubRun(command, args, options);
+    if (args.includes("generate")) {
+      const migrationsDir = path.join(child, "apps/api/drizzle/migrations");
+      mkdirSync(path.join(migrationsDir, "meta"), { recursive: true });
+      const journalPath = path.join(migrationsDir, "meta/_journal.json");
+      const journal = existsSync(journalPath) ? JSON.parse(readFileSync(journalPath, "utf8")) : { entries: [] };
+      const tag = `${String(journal.entries.length).padStart(4, "0")}_${args[args.indexOf("--name") + 1]}`;
+      journal.entries.push({ idx: journal.entries.length, tag });
+      writeFileSync(journalPath, JSON.stringify(journal), "utf8");
+      writeFileSync(path.join(migrationsDir, `${tag}.sql`), "-- gerado\n", "utf8");
+    }
+    return result;
+  };
+}
+
 test("module add instala alpha com sucesso: copia arquivo, grava lock e registries", async () => {
   const child = makeChild();
   const { run: stubRun, calls } = makeStubRun();
 
-  const exitCode = await run(["module", "add", "alpha", "--catalog-ref", CATALOG_ROOT], { cwd: child, run: stubRun });
+  const exitCode = await run(["module", "add", "alpha", "--catalog-ref", CATALOG_ROOT], {
+    cwd: child,
+    run: withDrizzleJournal(child, stubRun),
+  });
 
   assert.equal(exitCode, EXIT_CODES.OK);
   assert.equal(readFileSync(alphaDestFile(child), "utf8"), "export class AlphaModule {}\n");
@@ -373,4 +398,63 @@ test("advisory detect retorna exit 0 quando o comando detect não acusa afetaç�
   const exitCode = await run(["advisory", "detect", "ADV-20260901-02"], { advisoriesDir, run: stubRun });
 
   assert.equal(exitCode, EXIT_CODES.OK);
+});
+
+function writeKernelAdvisory(dir) {
+  mkdirSync(path.join(dir, "docs", "advisories"), { recursive: true });
+  writeFileSync(path.join(dir, "docs", "advisories", "APPLIED.md"), "");
+  writeFileSync(
+    path.join(dir, "docs", "advisories", "ADV-20260823-01.md"),
+    [
+      "---",
+      'id: "ADV-20260823-01"',
+      'kind: "bug"',
+      'module: "kernel"',
+      'affects: ">=2.0.0 <2.1.0"',
+      'severity: "high"',
+      'detect: "pnpm platform status"',
+      'fix: "copier update para >= v2.1.0"',
+      'parity: "scripts/platform/__tests__/lint.test.mjs"',
+      "---",
+      "Corpo em pt-BR.",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+}
+
+test("status --json reporta advisory de kernel pendente sem quebrar o shape existente", async () => {
+  const cwd = mkdtempSync(path.join(tmpdir(), "cli-status-"));
+  writeFileSync(
+    path.join(cwd, ".copier-answers.yml"),
+    "_src_path: gh:EmanuelVogt/platform-template\n_commit: v2.0.0\n",
+    "utf8",
+  );
+  writeKernelAdvisory(cwd);
+
+  const { result: exitCode, output } = await captureOutput("stdout", () =>
+    run(["status", "--json"], { cwd, fetchTags: () => ["v2.0.0"] }),
+  );
+
+  assert.equal(exitCode, EXIT_CODES.OK);
+  const status = JSON.parse(output);
+  assert.equal(status.advisories.noLock, true);
+  assert.deepEqual(status.advisories.pending, [
+    { id: "ADV-20260823-01", kind: "bug", severity: "high", module: "kernel" },
+  ]);
+  assert.deepEqual(Object.keys(status).sort(), ["advisories", "modules", "template"]);
+});
+
+test("status --json não reporta o advisory de kernel quando a versão instalada está fora do affects", async () => {
+  const cwd = mkdtempSync(path.join(tmpdir(), "cli-status-"));
+  writeFileSync(
+    path.join(cwd, ".copier-answers.yml"),
+    "_src_path: gh:EmanuelVogt/platform-template\n_commit: v2.1.0\n",
+    "utf8",
+  );
+  writeKernelAdvisory(cwd);
+
+  const { output } = await captureOutput("stdout", () => run(["status", "--json"], { cwd, fetchTags: () => ["v2.1.0"] }));
+
+  assert.deepEqual(JSON.parse(output).advisories.pending, []);
 });

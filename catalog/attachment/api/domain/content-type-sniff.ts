@@ -1,3 +1,5 @@
+import type { Readable } from "node:stream"
+
 export type SupportedImage = "image/jpeg" | "image/png" | "image/webp"
 
 /**
@@ -20,4 +22,53 @@ export function sniffImageContentType(buf: Buffer): SupportedImage | null {
     return "image/webp"
   }
   return null
+}
+
+const SNIFF_PEEK_BYTES = 16
+
+/**
+ * Espia os primeiros bytes de um stream de upload (busboy) sem consumi-lo:
+ * `readable` + `read(n)` — nunca `for await`, que ao dar `break` destrói o
+ * stream de origem e trunca o arquivo pro consumidor seguinte. `read(n)` num
+ * stream binário (não object mode) só devolve menos que `n` quando a origem
+ * já acabou — nesse caso devolve o que sobrou, mesmo sendo menos que o pedido
+ * — então um único `read` por evento já cobre acúmulo entre pushes pequenos.
+ * Os bytes lidos voltam pro buffer via `unshift`: quem consumir o stream
+ * depois enxerga o arquivo inteiro, do primeiro byte.
+ */
+export function sniffImageStream(stream: Readable): Promise<SupportedImage | null> {
+  return new Promise((resolve, reject) => {
+    let settled = false
+
+    const cleanup = (): void => {
+      stream.off("readable", onReadable)
+      stream.off("end", onEnd)
+      stream.off("error", onError)
+    }
+    const finish = (result: SupportedImage | null): void => {
+      if (settled) return
+      settled = true
+      cleanup()
+      resolve(result)
+    }
+    const onReadable = (): void => {
+      const chunk = stream.read(SNIFF_PEEK_BYTES) as Buffer | null
+      if (chunk === null) return
+      stream.unshift(chunk)
+      finish(sniffImageContentType(chunk))
+    }
+    const onEnd = (): void => {
+      finish(null)
+    }
+    const onError = (error: Error): void => {
+      if (settled) return
+      settled = true
+      cleanup()
+      reject(error)
+    }
+
+    stream.on("readable", onReadable)
+    stream.on("end", onEnd)
+    stream.on("error", onError)
+  })
 }

@@ -3,13 +3,13 @@ import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger"
 
 import { Public } from "../../../../../shared/kernel/access/decorators"
 import { ListQuery } from "../../../../../shared/kernel/listing/list-query.decorator"
+import { RateLimit } from "../../../../../shared/kernel/rate-limit/rate-limit.decorator"
 import { ValidateAccessLinkQuery } from "../../../application/use-cases/validate-access-link/validate-access-link.use-case"
 import {
   AccessLinkInfoDto,
   ValidateAccessLinkQueryDto,
   validateAccessLinkQuerySchema,
 } from "../../contracts/identity.contract"
-import { RateLimit } from "../../guards/rate-limit.guard"
 
 @ApiTags("Auth")
 @Controller("auth")
@@ -19,7 +19,7 @@ export class ValidateAccessLinkController {
   @ApiOperation({ operationId: "validateAccessLink" })
   @Public()
   @Get("access-link")
-  @RateLimit({ limit: 20, windowSeconds: 60 })
+  @RateLimit({ limit: 20, windowSeconds: 60, critical: true })
   @HttpCode(HttpStatus.OK)
   @ListQuery(validateAccessLinkQuerySchema)
   @ApiOkResponse({ type: AccessLinkInfoDto })

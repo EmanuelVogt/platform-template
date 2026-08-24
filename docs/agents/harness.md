@@ -225,6 +225,21 @@ never recreate `.cursor/skills` — Cursor reads `.agents` directly.
   [Token economy](#token-economy); constants at the top of the file). Fires in the main
   thread and inside subagents alike; `PLATFORM_SPECS_LANG_OFF=1` disables it. Rule in
   [`workflow.md`](workflow.md) and `tlc-spec-driven` Critical Rule 6.
+- `.claude/hooks/docs-stay-lean.mjs` — `PreToolUse(Edit|Write|MultiEdit|Bash)`: blocks a
+  handbook edit (`docs/` outside `adr/` and `advisories/`, `CLAUDE.md`/`AGENTS.md`, the
+  `.md.jinja` variants included) that grows the file by more than 30 lines, a new handbook
+  over 80 lines or a new ADR over 60, rationale prose outside `docs/adr` (`porque`,
+  `descartado`, a `Context`/`Alternatives`/`Why` heading…), and any shell write into those
+  files (heredoc, `sed -i`, `tee`, `open(…, 'w')`) so the text always passes through
+  Edit/Write. Constants at the top of the file; `PLATFORM_DOCS_LEAN_OFF=1` disables it. Rule
+  in [`../code-quality.md`](../code-quality.md) § Documentation.
+- `.claude/hooks/template-behind.mjs` — `SessionStart` and the first `UserPromptSubmit`:
+  in a generated product, compares `.copier-answers.yml`'s `_commit` with the latest
+  stable `v*` tag of `_src_path` (one `git ls-remote` per 24h per machine, cached in the
+  OS temp dir, 8s timeout, silent offline) and names the `template-update` skill when the
+  product is behind. Silent in the template repository. Sibling of
+  `pending-advisories.mjs`, which does the same for catalog advisories. Rule in
+  [`../dev/template.md`](../dev/template.md).
 - `.claude/hooks/delegate-to-subagent.mjs` — `PreToolUse(Bash|Grep|Glob|Read)`: blocks
   navigation in the main thread past a per-turn quota (2) and every test/typecheck/lint/
   build run (quota 0), naming the subagent to call — `repo-scout` or `shell-runner`. A

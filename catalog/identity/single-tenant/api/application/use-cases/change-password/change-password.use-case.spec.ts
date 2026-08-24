@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.error"
 import { User, type UserProps } from "../../../domain/entities/user.entity"
 import {
+  BreachCheckUnavailableError,
   InvalidCredentialsError,
   WeakPasswordError,
 } from "../../../domain/errors"
@@ -57,12 +58,13 @@ function makeDeps(over: Record<string, any> = {}) {
     score: vi.fn().mockReturnValue(4),
   }
   const breach = over.breach ?? {
-    isBreached: vi.fn().mockResolvedValue(false),
+    check: vi.fn().mockResolvedValue("clear"),
   }
   const outbox = over.outbox ?? {
     publish: vi.fn().mockResolvedValue(undefined),
   }
   const authEvents = over.authEvents ?? {
+    record: vi.fn().mockResolvedValue(undefined),
     recordInTx: vi.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? { now: () => NOW }
@@ -194,23 +196,96 @@ describe("ChangePasswordUseCase", () => {
     expect(t.sessions.deleteOthers).not.toHaveBeenCalled()
   })
 
-  it("nova senha em breach (fail_closed) lança WeakPasswordError sem atualizar nada", async () => {
-    const config = makeIdentityConfig({ BREACH_CHECK_MODE: "fail_closed" })
+  it("nova senha em breach lança WeakPasswordError sem atualizar nada", async () => {
+    const config = makeIdentityConfig({
+      BREACH_CHECK_ENABLED: true,
+      BREACH_CHECK_MODE: "fail_closed",
+    })
     const t = makeDeps({
       config,
-      breach: { isBreached: vi.fn().mockResolvedValue(true) },
+      breach: { check: vi.fn().mockResolvedValue("breached") },
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(WeakPasswordError)
     expect(t.users.update).not.toHaveBeenCalled()
     expect(t.sessions.deleteOthers).not.toHaveBeenCalled()
   })
 
-  it("breach check NÃO é chamado quando BREACH_CHECK_MODE não é fail_closed", async () => {
-    const config = makeIdentityConfig({ BREACH_CHECK_MODE: "fail_open" })
+  it("breach check NÃO é chamado quando BREACH_CHECK_ENABLED é false", async () => {
+    const config = makeIdentityConfig({
+      BREACH_CHECK_ENABLED: false,
+      BREACH_CHECK_MODE: "fail_closed",
+    })
     const t = makeDeps({ config })
     await t.uc.execute(VALID_INPUT)
-    expect(t.breach.isBreached).not.toHaveBeenCalled()
+    expect(t.breach.check).not.toHaveBeenCalled()
     expect(t.users.update).toHaveBeenCalledTimes(1)
+  })
+
+  it("habilitado em fail_open: a senha vazada é barrada (o modo não decide SE consulta)", async () => {
+    const config = makeIdentityConfig({
+      BREACH_CHECK_ENABLED: true,
+      BREACH_CHECK_MODE: "fail_open",
+    })
+    const t = makeDeps({
+      config,
+      breach: { check: vi.fn().mockResolvedValue("breached") },
+    })
+    await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(WeakPasswordError)
+    expect(t.breach.check).toHaveBeenCalledWith(VALID_INPUT.newPassword)
+    expect(t.users.update).not.toHaveBeenCalled()
+  })
+
+  it("fail_open + consulta indisponível: troca segue e grava breach_check_skipped", async () => {
+    const config = makeIdentityConfig({
+      BREACH_CHECK_ENABLED: true,
+      BREACH_CHECK_MODE: "fail_open",
+    })
+    const t = makeDeps({
+      config,
+      breach: { check: vi.fn().mockResolvedValue("skipped") },
+    })
+    await t.uc.execute(VALID_INPUT)
+    expect(t.users.update).toHaveBeenCalledTimes(1)
+    expect(t.authEvents.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        props: expect.objectContaining({
+          userId: "u-1",
+          eventType: "breach_check_skipped",
+          metadata: { mode: "fail_open" },
+        }),
+      }),
+    )
+  })
+
+  it("fail_closed + consulta indisponível: 503 sobe e nada é persistido", async () => {
+    const config = makeIdentityConfig({
+      BREACH_CHECK_ENABLED: true,
+      BREACH_CHECK_MODE: "fail_closed",
+    })
+    const t = makeDeps({
+      config,
+      breach: {
+        check: vi.fn().mockRejectedValue(new BreachCheckUnavailableError()),
+      },
+    })
+    const error = await t.uc
+      .execute(VALID_INPUT)
+      .then(() => null)
+      .catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(BreachCheckUnavailableError)
+    expect(error).toMatchObject({ status: 503 })
+    expect(t.users.update).not.toHaveBeenCalled()
+    expect(t.authEvents.record).not.toHaveBeenCalled()
+  })
+
+  it("consulta bem-sucedida NÃO grava breach_check_skipped", async () => {
+    const config = makeIdentityConfig({
+      BREACH_CHECK_ENABLED: true,
+      BREACH_CHECK_MODE: "fail_open",
+    })
+    const t = makeDeps({ config })
+    await t.uc.execute(VALID_INPUT)
+    expect(t.authEvents.record).not.toHaveBeenCalled()
   })
 
   it("hash da nova senha é chamado antes de persistir", async () => {
@@ -221,11 +296,14 @@ describe("ChangePasswordUseCase", () => {
   })
 
   it("fail_closed: senha não-breachada prossegue normalmente e persiste a troca", async () => {
-    const config = makeIdentityConfig({ BREACH_CHECK_MODE: "fail_closed" })
-    const breach = { isBreached: vi.fn().mockResolvedValue(false) }
+    const config = makeIdentityConfig({
+      BREACH_CHECK_ENABLED: true,
+      BREACH_CHECK_MODE: "fail_closed",
+    })
+    const breach = { check: vi.fn().mockResolvedValue("clear") }
     const t = makeDeps({ config, breach })
     await t.uc.execute(VALID_INPUT)
-    expect(breach.isBreached).toHaveBeenCalledWith(VALID_INPUT.newPassword)
+    expect(breach.check).toHaveBeenCalledWith(VALID_INPUT.newPassword)
     expect(t.users.update).toHaveBeenCalledTimes(1)
     expect(t.sessions.deleteOthers).toHaveBeenCalledWith("u-1", "sess-1")
     expect(t.authEvents.recordInTx).toHaveBeenCalledTimes(1)
@@ -258,7 +336,7 @@ describe("ChangePasswordUseCase", () => {
     expect(t.outbox.publish).not.toHaveBeenCalled()
   })
 
-  it("senha atual inválida: breach.isBreached e users.update NÃO são chamados", async () => {
+  it("senha atual inválida: breach.check e users.update NÃO são chamados", async () => {
     const t = makeDeps({
       hasher: {
         verify: vi.fn().mockResolvedValue(false),
@@ -266,7 +344,7 @@ describe("ChangePasswordUseCase", () => {
       },
     })
     await expect(t.uc.execute(VALID_INPUT)).rejects.toBeInstanceOf(InvalidCredentialsError)
-    expect(t.breach.isBreached).not.toHaveBeenCalled()
+    expect(t.breach.check).not.toHaveBeenCalled()
     expect(t.authEvents.recordInTx).not.toHaveBeenCalled()
   })
 })

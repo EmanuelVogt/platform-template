@@ -9,5 +9,10 @@ import type { IdentityConfig } from "./identity.config"
 export function makeIdentityConfig(
   over: Partial<IdentityConfig> = {},
 ): IdentityConfig {
-  return { ...parseIdentityConfig(process.env), ...over }
+  // BREACH_CHECK_ENABLED não tem default no schema; o fixture preenche o piso
+  // para que um spec não precise conhecer o env inteiro, e o env vence.
+  return {
+    ...parseIdentityConfig({ BREACH_CHECK_ENABLED: "false", ...process.env }),
+    ...over,
+  }
 }

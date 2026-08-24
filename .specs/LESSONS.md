@@ -104,37 +104,91 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: transaction-manager.int-spec.ts:285 (pre-9ff5e57) (testing)
 - last seen: 2026-08-23T00:06:13Z
 
-### L-016 — A spec that also runs inside a rendered child must derive its expected paths from the directories it finds, never from the template's own directory names
+### L-016 — A rejection written as 'A or B' needs one test per disjunct: content-sniff specs that only feed bytes sniffing to null leave the 'sniffed type differs from the declared type' branch deletable with the suite still green.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `catalog/attachment` · harmful: 0
+- features: security-audit-remediation
+- evidence: mutant 2 — catalog/attachment/api/application/use-cases/upload-attachments-batch/upload-attachments-batch.use-case.ts:67 (catalog/attachment)
+- last seen: 2026-08-23T15:33:00Z
+
+### L-017 — Asserting a quota's config default is not proof of the quota: an AC that names a status code (429/413/503) needs an assertion on that status on the route, not on the parsed config value.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `catalog/attachment` · harmful: 0
+- features: security-audit-remediation
+- evidence: REM-14 (P1 Attach AC7) (catalog/attachment)
+- last seen: 2026-08-23T15:33:00Z
+
+### L-018 — A migration that registers columns for redaction is not evidence of redaction — every newly registered column needs its own read-back assertion on the trail row, since the pre-existing one covers only the column added earlier.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `migrations` · harmful: 0
+- features: security-audit-remediation
+- evidence: REM-40 (P3 AC10) — catalog/identity/single-tenant/migrations/custom/03_audit_redact_token_hashes.sql (migrations)
+- last seen: 2026-08-23T15:33:00Z
+
+### L-019 — An error branch whose only visible artifact is a log line stays untested unless a spec asserts that log key; grep the key across specs before calling the catch path covered.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `catalog/attachment` · harmful: 0
+- features: security-audit-remediation
+- evidence: REM-12 (P1 Attach AC5) — catalog/attachment/api/api/controllers/download-attachment.controller.ts:78-91 (catalog/attachment)
+- last seen: 2026-08-23T15:33:00Z
+
+### L-020 — When a spec excludes a dependency chain in Out of Scope, its audit gate cannot also demand exit 0 — state the proof as 'no advisory outside that chain' with a command that filters, or the gate is unpassable by construction.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: security-audit-remediation
+- evidence: REM-39 Proof + Success Criteria #2 vs spec.md Out of Scope (spec)
+- last seen: 2026-08-23T15:33:00Z
+
+### L-021 — A blanket 'fields: 0' upload limit breaks any route that declares a required multipart field; derive the cap from the fields the route actually accepts before writing it into the design.
+- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `catalog/identity` · harmful: 0
+- features: security-audit-remediation
+- evidence: catalog/identity/single-tenant/api/api/controllers/auth/upload-access-link-avatar.controller.ts:53-60 (catalog/identity)
+- last seen: 2026-08-23T15:33:00Z
+
+### L-022 — A test that re-creates a migration's effect in its own setup proves the mechanism, not the migration: emptying the migration stays green. Assert against the state the migration itself produced, or the assertion is about the trigger only.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `migrations` · harmful: 0
+- features: security-audit-remediation
+- evidence: mutant 7 — catalog/identity/single-tenant/migrations/custom/03_audit_redact_token_hashes.sql:19 survives pnpm catalog:check audit (migrations)
+- last seen: 2026-08-23T16:53:38Z
+
+### L-023 — When two catalog entries are siblings (install order not forced by dependsOn) and one attaches DDL that depends on the other, a combined multi-entry install can silently skip the attach — cover it with a coverage-enforcement test that simulates the documented manual re-apply, and document the manual step in both entries' advisories, not just the code comment.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `catalog` · harmful: 0
+- features: security-audit-remediation
+- evidence: REM-40 — audit-trigger.int-spec.ts:32-45 SPEC_DEVIATION concedes the attach never runs in a real catalog:check (catalog)
+- last seen: 2026-08-23T16:53:38Z
+
+### L-024 — A probe grep for a JSON script key must be anchored to the scripts block: a pattern like '"test[^"]*":' also matches devDependencies such as 'testcontainers', so the probe reports a failure the AC does not have.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
+- features: security-audit-remediation
+- evidence: REM-48 probe, spec.md:244 vs apps/api/package.json:88 (spec)
+- last seen: 2026-08-23T16:53:38Z
+
+### L-025 — A spec that also runs inside a rendered child must derive its expected paths from the directories it finds, never from the template's own directory names
 - signal: `ac_gap` · recurrence: 1 feature(s) · scope: `gates` · harmful: 0
 - features: web-stack-next
 - evidence: apps/api/src/modules/module-boundaries.spec.ts:615,632,639 (gates)
 - last seen: 2026-08-23T17:11:55Z
 
-### L-017 — When a lockfile bump upgrades the linter, re-run lint over catalog/** as well — an entry's spec is only linted inside a rendered child
+### L-026 — When a lockfile bump upgrades the linter, re-run lint over catalog/** as well — an entry's spec is only linted inside a rendered child
 - signal: `gate_fail` · recurrence: 1 feature(s) · scope: `catalog` · harmful: 0
 - features: web-stack-next
 - evidence: catalog/identity/single-tenant/api/application/access-policy.spec.ts:116,139,183 (catalog)
 - last seen: 2026-08-23T17:11:55Z
 
-### L-018 — Give every build-time env var an ARG default in the Dockerfile, or the acceptance criterion that runs a bare docker build can never pass
+### L-027 — Give every build-time env var an ARG default in the Dockerfile, or the acceptance criterion that runs a bare docker build can never pass
 - signal: `ac_gap` · recurrence: 1 feature(s) · scope: `docker` · harmful: 0
 - features: web-stack-next
 - evidence: apps/web-next/Dockerfile:24 (docker)
 - last seen: 2026-08-23T17:11:55Z
 
-### L-019 — Add the framework's build output directory to .gitignore in the same commit that adds a new app, or the artifacts get committed and ship to every rendered child
+### L-028 — Add the framework's build output directory to .gitignore in the same commit that adds a new app, or the artifacts get committed and ship to every rendered child
 - signal: `ac_gap` · recurrence: 1 feature(s) · scope: `repo` · harmful: 0
 - features: web-stack-next
 - evidence: .gitignore:1-68 (237 tracked files under apps/web-next/.next) (repo)
 - last seen: 2026-08-23T17:11:55Z
 
-### L-020 — A zero-diff acceptance criterion must list every path the change legitimately touches, lockfile and shared config packages included, or it fails by construction
+### L-029 — A zero-diff acceptance criterion must list every path the change legitimately touches, lockfile and shared config packages included, or it fails by construction
 - signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `spec` · harmful: 0
 - features: web-stack-next
 - evidence: .specs/features/web-stack-next/spec.md ACC-01/ACC-02 (spec)
 - last seen: 2026-08-23T17:11:55Z
 
-### L-021 — Adding a path to .gitignore does not untrack what is already committed — pair it with git rm -r --cached in the same commit and verify with git ls-files
+### L-030 — Adding a path to .gitignore does not untrack what is already committed — pair it with git rm -r --cached in the same commit and verify with git ls-files
 - signal: `ac_gap` · recurrence: 1 feature(s) · scope: `repo` · harmful: 0
 - features: web-stack-next
 - evidence: d74104c (.gitignore:13) — git ls-files apps/web-next/.next still 237 at HEAD 0e08d3d (repo)

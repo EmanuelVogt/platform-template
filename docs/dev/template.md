@@ -45,6 +45,21 @@ Conflicts show up as regular `<<<<<<<` markers; resolve them, run `pnpm check` a
 tests, and commit. To jump to a specific version: `copier update --vcs-ref vX.Y.Z`.
 To see what would change without touching the disk: `copier update --pretend --diff`.
 
+### The agent routine (`template-update` skill)
+
+`pnpm platform status` prints the installed template version (`_commit`), the latest
+stable `v*` tag on the source (`git ls-remote`, 8s timeout, `--offline` to skip), the
+installed entries from the lock and the pending advisories — `--json` for an agent. The
+`template-behind` session-start hook runs the same check (one `ls-remote` per 24h per
+machine, cached in the OS temp dir) and names the skill when the product is behind.
+
+The skill applies **one tag per cycle** in a worktree: `copier update --vcs-ref <tag>`,
+the conflict rules of the ownership table above (platform path → template side; generated
+files and lockfiles → regenerate, never merge), the `### Child migration steps` of that
+version in [`template-changelog.md`](template-changelog.md), `pnpm install`, the gates,
+one commit. Then the stale entries (`port-module-update`) and the pending advisories, one
+commit each. Push, tag and deploy stay the user's acts.
+
 ## Module catalog
 
 Platform modules are no longer copied by copier — they live as versioned entries in
@@ -61,6 +76,8 @@ day to day.
 | `module adopt <entry> [--variant v] [--version x.y.z]`                              | records in the lock an entry the product already had before the catalog existed (migration from v0.2) — without copying any file         |
 | `module list`                                                                       | compares the lock version with the catalog HEAD                                                                                          |
 | `module update <entry>`                                                             | copies nothing — prints the instructions of the `port-module-update` skill (porting is an agent's job, not a script's)                   |
+| `status [--json] [--offline]`                                                       | template installed vs latest stable tag, entries in the lock, pending advisories — the entry point of the `template-update` skill        |
+| `feedback <draft.md> [--json]`                                                      | validates a platform-feedback draft (platform-owned paths only, secret scan, version stamp) and prints the `gh issue create` command + prefilled URL — opening the issue stays a human act (`platform-feedback` skill) |
 
 `module add` also deletes the template-only files (`TEMPLATE_ONLY_FILES` in `apply.mjs`) — guards
 that only hold while no entry is installed, such as `template-kernel-only.spec.ts` (KRN-01) and the
@@ -82,7 +99,7 @@ and detection command, plus the reference to the entry's `CHANGELOG.md`). The pr
 receives the file via `copier update`; a session-start hook cross-checks the lock against
 the affected version range and warns which advisories have not been applied yet — ledger
 in `docs/advisories/APPLIED.md`, also never rewritten by hand. Rule of the template
-repository: **a fix in `catalog/**` without a corresponding advisory is not accepted** (the
+repository: **a fix in `catalog/**` without a corresponding advisory is not accepted\*\* (the
 platform's commit-msg hook).
 
 ### Porting an entry update
@@ -97,7 +114,11 @@ the product has already modified — there the port is manual.
 `pnpm catalog:check [entry…]`, in the template repository (the product does not receive
 the command), renders a kernel-only product in a throwaway directory, installs each entry
 in topological order and runs the tests; it is the catalog's pre-tag gate (minutes — it is
-not a commit hook).
+not a commit hook). It simulates the kernel at the latest `## vX.Y.Z` of
+`docs/dev/template-changelog.md`, so every entry's `kernelRange` must accept that version —
+`pnpm catalog:lint` (pre-commit, CI on `main` and on every `v*` tag) checks the same rule in
+seconds (AD-033). Run the gate before the tag, not after: `v2.0.0` was cut without it and
+shipped entries no 2.x child could install (issue #9).
 
 ### Recipe: `/docs` protected by login
 
@@ -133,3 +154,10 @@ module. A product that needs the login back:
 A generic fix (kernel, harness, docs, infra) is born here? Reproduce it in the template
 repository as a PR, publish a tag, and bring it back with `copier update`. Do not keep the
 fix only locally: on the next update it becomes a conflict.
+
+To *report* a platform defect or improvement upstream instead of fixing it yourself, the
+guided flow is the `platform-feedback` skill: draft `.platform-feedback/<slug>.md`
+(platform-owned paths only — the product's business code never leaves the repo), then
+`pnpm platform feedback <draft>` validates the scope, scans for secrets, stamps the
+installed template/module versions and prints the `gh issue create` command plus a
+prefilled issue URL. Nothing is sent until a human runs one of them.

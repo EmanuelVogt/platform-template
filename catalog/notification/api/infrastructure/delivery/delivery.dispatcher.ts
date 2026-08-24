@@ -10,6 +10,7 @@ import {
   type AppLogger,
   LoggerFactory,
 } from "../../../../shared/kernel/logging/logger.factory"
+import { redactSensitive } from "../../../../shared/kernel/redaction/sensitive-keys"
 import { MaintenanceJob } from "../../../../shared/kernel/scheduling/maintenance-job.decorator"
 import { registerMaintenanceJob } from "../../../../shared/kernel/scheduling/maintenance-registry"
 import { TransactionManager } from "../../../../shared/kernel/transactional/transaction-manager"
@@ -44,11 +45,11 @@ export function backoffMs(attempts: number): number {
   return base + jitter
 }
 
-/** Redige o payload em estado terminal: token/link nunca fica em repouso. */
+/** Redige o payload em estado terminal: nenhuma chave sensível fica em repouso. */
 export function redactPayload(
   payload: Record<string, unknown>
 ): Record<string, unknown> {
-  return "link" in payload ? { ...payload, link: "[REDACTED]" } : payload
+  return redactSensitive(payload).value
 }
 
 @Injectable()

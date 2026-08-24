@@ -97,13 +97,13 @@ describe("parseEnv", () => {
 
   it("falha com DATABASE_URL inválida apontando o campo", () => {
     expect(() => parseEnv({ ...BASE, DATABASE_URL: "notaurl" })).toThrow(
-      /DATABASE_URL/,
+      /DATABASE_URL/
     )
   })
 
   it("rejeita DATABASE_URL com scheme não-postgres", () => {
     expect(() =>
-      parseEnv({ ...BASE, DATABASE_URL: "https://localhost:5432/db" }),
+      parseEnv({ ...BASE, DATABASE_URL: "https://localhost:5432/db" })
     ).toThrow(/DATABASE_URL/)
   })
 
@@ -131,7 +131,7 @@ describe("parseEnv", () => {
 
   it("rejeita REDIS_URL com scheme não-redis", () => {
     expect(() =>
-      parseEnv({ ...BASE, REDIS_URL: "http://localhost:6379" }),
+      parseEnv({ ...BASE, REDIS_URL: "http://localhost:6379" })
     ).toThrow(/REDIS_URL/)
   })
 

@@ -74,7 +74,7 @@ describe("RedisRateLimiter (int)", () => {
   it("consumos concorrentes admitem exatamente o limite (ZCARD+ZADD atômico)", async () => {
     const key = "ip:9.9.9.9:login"
     const results = await Promise.all(
-      Array.from({ length: 10 }, () => limiter.consume(key, 5, 60)),
+      Array.from({ length: 10 }, () => limiter.consume(key, 5, 60))
     )
     const allowed = results.filter((r) => r.allowed).length
     expect(allowed).toBe(5)

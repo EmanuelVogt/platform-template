@@ -99,11 +99,12 @@ instance.interceptors.response.use(
         "correlationId" in data &&
         typeof (data as { correlationId: unknown }).correlationId === "string"
       ) {
-        lastErrorCorrelationId = (data as { correlationId: string }).correlationId
+        lastErrorCorrelationId = (data as { correlationId: string })
+          .correlationId
       }
     }
     return Promise.reject(error)
-  },
+  }
 )
 
 export type ConfigureClientOptions = {
@@ -128,7 +129,7 @@ export function configureClient(options: ConfigureClientOptions): void {
           onUnauthorized({ url: error.config?.url })
         }
         return Promise.reject(error)
-      },
+      }
     )
   }
 }
@@ -138,7 +139,7 @@ export function configureClient(options: ConfigureClientOptions): void {
  * e devolve o response (o hook lê `.data`).
  */
 const client = async <TData, _TError = unknown, TVariables = unknown>(
-  config: RequestConfig<TVariables>,
+  config: RequestConfig<TVariables>
 ): Promise<ResponseConfig<TData>> => {
   const response = await instance.request<TData>(config as AxiosRequestConfig)
   return {

@@ -111,10 +111,7 @@ describe("decorators de acesso", () => {
 describe("RequireAnyPermission", () => {
   it("grava { kind: anyPermission, keys } no requisito do kernel", () => {
     class T {
-      @RequireAnyPermission([
-        "admin.users.audit.read",
-        "admin.tags.audit.read",
-      ])
+      @RequireAnyPermission(["admin.users.audit.read", "admin.tags.audit.read"])
       h(): void {
         return
       }

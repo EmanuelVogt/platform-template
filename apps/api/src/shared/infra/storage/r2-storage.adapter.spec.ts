@@ -89,15 +89,17 @@ describe("R2StorageAdapter", () => {
         ContentType: "image/png",
       },
     })
-    expect(sendMock.mock.calls[0]?.[1]).toMatchObject({ abortSignal: expect.any(AbortSignal) as unknown })
+    expect(sendMock.mock.calls[0]?.[1]).toMatchObject({
+      abortSignal: expect.any(AbortSignal) as unknown,
+    })
   })
 
   it("put mapeia TimeoutError do SDK pra StorageUnavailableError (503)", async () => {
     sendMock.mockRejectedValue(timeoutError())
 
-    await expect(adapter.put("k", Buffer.from("x"), "text/plain")).rejects.toBeInstanceOf(
-      StorageUnavailableError,
-    )
+    await expect(
+      adapter.put("k", Buffer.from("x"), "text/plain")
+    ).rejects.toBeInstanceOf(StorageUnavailableError)
   })
 
   it("getStream retorna o Body do GetObjectCommand sem passar abortSignal", async () => {
@@ -125,7 +127,9 @@ describe("R2StorageAdapter", () => {
       sizeBytes: 1234,
       etag: "abc",
     })
-    expect(sendMock.mock.calls[0]?.[1]).toMatchObject({ abortSignal: expect.any(AbortSignal) as unknown })
+    expect(sendMock.mock.calls[0]?.[1]).toMatchObject({
+      abortSignal: expect.any(AbortSignal) as unknown,
+    })
   })
 
   it("head aplica defaults quando a resposta omite os campos", async () => {
@@ -147,7 +151,9 @@ describe("R2StorageAdapter", () => {
   it("head mapeia TimeoutError do SDK pra StorageUnavailableError em vez de null", async () => {
     sendMock.mockRejectedValue(timeoutError())
 
-    await expect(adapter.head("k")).rejects.toBeInstanceOf(StorageUnavailableError)
+    await expect(adapter.head("k")).rejects.toBeInstanceOf(
+      StorageUnavailableError
+    )
   })
 
   it("delete envia DeleteObjectCommand com a key e abortSignal", async () => {
@@ -158,7 +164,9 @@ describe("R2StorageAdapter", () => {
     expect(sendMock.mock.calls[0]?.[0]).toMatchObject({
       input: { Bucket: "bucket-test", Key: "k" },
     })
-    expect(sendMock.mock.calls[0]?.[1]).toMatchObject({ abortSignal: expect.any(AbortSignal) as unknown })
+    expect(sendMock.mock.calls[0]?.[1]).toMatchObject({
+      abortSignal: expect.any(AbortSignal) as unknown,
+    })
   })
 
   it("delete mapeia AbortError do SDK pra StorageUnavailableError (503)", async () => {
@@ -166,12 +174,17 @@ describe("R2StorageAdapter", () => {
     error.name = "AbortError"
     sendMock.mockRejectedValue(error)
 
-    await expect(adapter.delete("k")).rejects.toBeInstanceOf(StorageUnavailableError)
+    await expect(adapter.delete("k")).rejects.toBeInstanceOf(
+      StorageUnavailableError
+    )
   })
 
   it("putStream repassa o stream ao bucket com a key e o contentType", async () => {
     sendMock.mockResolvedValue({ ETag: '"abc"' })
-    const body = Readable.from([Buffer.from("primeiro"), Buffer.from("segundo")])
+    const body = Readable.from([
+      Buffer.from("primeiro"),
+      Buffer.from("segundo"),
+    ])
 
     await adapter.putStream("attachments/01J", body, "application/pdf")
 
@@ -193,7 +206,7 @@ describe("R2StorageAdapter", () => {
     })
 
     await expect(
-      adapter.putStream("attachments/01J", body, "application/pdf"),
+      adapter.putStream("attachments/01J", body, "application/pdf")
     ).rejects.toThrow("origem interrompida")
   })
 })

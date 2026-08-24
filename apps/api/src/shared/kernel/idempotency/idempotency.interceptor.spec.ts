@@ -256,7 +256,9 @@ describe("IdempotencyInterceptor — escopo da chave", () => {
     for (const actorId of ["a-1", "a-2"]) {
       await ctx.run(makeStore("t-1"), async () => {
         ctx.setActor({ id: actorId, kind: "user" })
-        await firstValueFrom(interceptor.intercept(makeExecutionContext(), next))
+        await firstValueFrom(
+          interceptor.intercept(makeExecutionContext(), next)
+        )
       })
     }
     expect(reserved.map((r) => r.scope)).toEqual(["t-1:a-1", "t-1:a-2"])

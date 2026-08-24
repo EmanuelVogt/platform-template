@@ -35,8 +35,12 @@ function asTitle(value: unknown, fallback: string): string {
 
 // getZodError() é tipado como `unknown` no nestjs-zod v5; extrai issues com guard.
 function extractIssues(zodError: unknown): unknown {
-  if (zodError !== null && typeof zodError === "object" && "issues" in zodError) {
-    return (zodError).issues
+  if (
+    zodError !== null &&
+    typeof zodError === "object" &&
+    "issues" in zodError
+  ) {
+    return zodError.issues
   }
   return undefined
 }
@@ -74,7 +78,10 @@ function toProblem(
     const title =
       typeof response === "string"
         ? response
-        : asTitle((response as { message?: unknown }).message, exception.message)
+        : asTitle(
+            (response as { message?: unknown }).message,
+            exception.message
+          )
     return {
       type: `https://errors.example.com/http/${status}`,
       title,

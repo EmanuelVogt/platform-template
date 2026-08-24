@@ -11,9 +11,9 @@ describe("shell route loaders", () => {
     } catch (error) {
       thrown = error
     }
-    expect((thrown as { options?: { to?: string } } | undefined)?.options?.to).toBe(
-      "/inicio"
-    )
+    expect(
+      (thrown as { options?: { to?: string } } | undefined)?.options?.to
+    ).toBe("/inicio")
   })
 
   it("o layout da área logada sobe sem guard — o template não exige sessão", () => {

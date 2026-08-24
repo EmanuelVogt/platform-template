@@ -91,9 +91,7 @@ describe("toDedicatedPoints", () => {
       idleCount: 1,
       waitingCount: 0,
     })
-    const dedicated = toDedicatedPoints(
-      new Map([["api:outbox-listen", 7]])
-    )
+    const dedicated = toDedicatedPoints(new Map([["api:outbox-listen", 7]]))
 
     expect(dedicated).toEqual([
       {

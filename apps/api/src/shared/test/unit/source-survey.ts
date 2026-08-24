@@ -3,7 +3,11 @@ import { join, sep } from "node:path"
 
 export type SourceFile = { rel: string; path: string; content: string }
 
-export type ImportStatement = { line: number; clause: string; specifier: string }
+export type ImportStatement = {
+  line: number
+  clause: string
+  specifier: string
+}
 
 const IMPORT_STATEMENT =
   /\b(?:import|export)\s+([^"';]*?)\s*from\s*["']([^"']+)["']/g

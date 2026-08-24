@@ -49,7 +49,8 @@ async function collectRoutes(): Promise<RouteAccess[]> {
         if (name === "constructor") continue
         const handler = proto[name]
         if (typeof handler !== "function") continue
-        if (Reflect.getMetadata(METHOD_METADATA, handler) === undefined) continue
+        if (Reflect.getMetadata(METHOD_METADATA, handler) === undefined)
+          continue
         routes.push({
           file: relative(SRC_DIR, file),
           controller: exported.name,

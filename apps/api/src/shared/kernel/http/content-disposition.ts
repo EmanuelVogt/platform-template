@@ -6,7 +6,7 @@ const RFC5987_EXTRA = /['()*]/g
 function encodeRfc5987(value: string): string {
   return encodeURIComponent(value).replaceAll(
     RFC5987_EXTRA,
-    (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
+    (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`
   )
 }
 

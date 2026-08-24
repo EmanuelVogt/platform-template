@@ -22,7 +22,10 @@ describe("redactConfig", () => {
 
   it("redige de fato via pino no topo e aninhado", () => {
     const lines: string[] = []
-    const logger = pino({ redact: redactConfig }, { write: (s) => lines.push(s) })
+    const logger = pino(
+      { redact: redactConfig },
+      { write: (s) => lines.push(s) }
+    )
 
     logger.info(
       {
@@ -71,11 +74,16 @@ describe("redactConfig — profundidade e headers de auth aninhados", () => {
 
   it("redige authorization a 4 níveis (err de cliente HTTP)", () => {
     const lines: string[] = []
-    const logger = pino({ redact: redactConfig }, { write: (s) => lines.push(s) })
+    const logger = pino(
+      { redact: redactConfig },
+      { write: (s) => lines.push(s) }
+    )
     logger.error(
       {
         err: {
-          response: { config: { headers: { authorization: "Bearer segredo-x" } } },
+          response: {
+            config: { headers: { authorization: "Bearer segredo-x" } },
+          },
         },
       },
       "upstream falhou"
@@ -87,7 +95,10 @@ describe("redactConfig — profundidade e headers de auth aninhados", () => {
 
   it("redige cookie aninhado em err.config.headers", () => {
     const lines: string[] = []
-    const logger = pino({ redact: redactConfig }, { write: (s) => lines.push(s) })
+    const logger = pino(
+      { redact: redactConfig },
+      { write: (s) => lines.push(s) }
+    )
     logger.error(
       { err: { config: { headers: { cookie: "session=abc123" } } } },
       "x"
@@ -97,7 +108,10 @@ describe("redactConfig — profundidade e headers de auth aninhados", () => {
 
   it("não redige além do cap de 5 níveis (limite consciente)", () => {
     const lines: string[] = []
-    const logger = pino({ redact: redactConfig }, { write: (s) => lines.push(s) })
+    const logger = pino(
+      { redact: redactConfig },
+      { write: (s) => lines.push(s) }
+    )
     // password a 6 níveis (a.b.c.d.e.f.password) — acima do cap.
     logger.error(
       { a: { b: { c: { d: { e: { f: { password: "fundo-do-poco" } } } } } } },
@@ -116,7 +130,9 @@ describe("redactValue (corpo de request/response no log)", () => {
   })
 
   it("redige link (token viaja na URL)", () => {
-    expect(redactValue({ link: "https://x/configurar-senha?token=raw" })).toEqual({
+    expect(
+      redactValue({ link: "https://x/configurar-senha?token=raw" })
+    ).toEqual({
       link: "[REDACTED]",
     })
   })
@@ -155,23 +171,29 @@ describe("redactValue (corpo de request/response no log)", () => {
   })
 
   it("reusa SENSITIVE_FIELDS (mesma lista do pino)", () => {
-    expect(SENSITIVE_FIELDS).toEqual(expect.arrayContaining(["password", "token", "email"]))
+    expect(SENSITIVE_FIELDS).toEqual(
+      expect.arrayContaining(["password", "token", "email"])
+    )
   })
 })
 
 describe("redactValue — chave sensível como substring (REM-20)", () => {
-  it.each([
-    "newPassword",
-    "currentPassword",
-    "newEmail",
-    "pendingEmail",
-  ])("redige %s", (key) => {
-    expect(redactValue({ [key]: "valor-cru" })).toEqual({ [key]: "[REDACTED]" })
-  })
+  it.each(["newPassword", "currentPassword", "newEmail", "pendingEmail"])(
+    "redige %s",
+    (key) => {
+      expect(redactValue({ [key]: "valor-cru" })).toEqual({
+        [key]: "[REDACTED]",
+      })
+    }
+  )
 
   it("redige hashes que carregam o fragmento no nome", () => {
     expect(
-      redactValue({ passwordHash: "h1", tokenHash: "h2", cookieTokenHash: "h3" })
+      redactValue({
+        passwordHash: "h1",
+        tokenHash: "h2",
+        cookieTokenHash: "h3",
+      })
     ).toEqual({
       passwordHash: "[REDACTED]",
       tokenHash: "[REDACTED]",
@@ -187,7 +209,11 @@ describe("redactValue — chave sensível como substring (REM-20)", () => {
 
   it("redige ip, ip_address e ipAddress por igualdade exata", () => {
     expect(
-      redactValue({ ip: "203.0.113.1", ip_address: "203.0.113.2", ipAddress: "203.0.113.3" })
+      redactValue({
+        ip: "203.0.113.1",
+        ip_address: "203.0.113.2",
+        ipAddress: "203.0.113.3",
+      })
     ).toEqual({
       ip: "[REDACTED]",
       ip_address: "[REDACTED]",

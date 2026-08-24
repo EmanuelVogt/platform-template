@@ -32,7 +32,9 @@ export function Transactional(opts: TxOptions = {}): MethodDecorator {
 }
 
 /** Açúcar para transação somente-leitura (`SET TRANSACTION READ ONLY`). */
-export function ReadOnly(opts: Omit<TxOptions, "readOnly"> = {}): MethodDecorator {
+export function ReadOnly(
+  opts: Omit<TxOptions, "readOnly"> = {}
+): MethodDecorator {
   return Transactional({ ...opts, readOnly: true })
 }
 

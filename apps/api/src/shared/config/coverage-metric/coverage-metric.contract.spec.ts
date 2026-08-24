@@ -20,13 +20,15 @@ type BranchTally = { total: number; uncovered: number }
  */
 function branchTally(
   coverageFinalPath: string,
-  sourceSuffix: string,
+  sourceSuffix: string
 ): BranchTally {
   const map = JSON.parse(readFileSync(coverageFinalPath, "utf8")) as Record<
     string,
     FileCoverage
   >
-  const entry = Object.entries(map).find(([path]) => path.endsWith(sourceSuffix))
+  const entry = Object.entries(map).find(([path]) =>
+    path.endsWith(sourceSuffix)
+  )
   if (!entry) {
     throw new Error(`coverage entry not found for ${sourceSuffix}`)
   }
@@ -35,7 +37,7 @@ function branchTally(
     total: hits.reduce((sum, arr) => sum + arr.length, 0),
     uncovered: hits.reduce(
       (sum, arr) => sum + arr.filter((hit) => hit === 0).length,
-      0,
+      0
     ),
   }
 }
@@ -71,7 +73,7 @@ function runFixtureCoverage(args: {
       cwd: apiRoot,
       stdio: "pipe",
       env: { ...process.env, COVERAGE_METRIC_FIXTURE: "1" },
-    },
+    }
   )
   const suffix = args.source.replace(/^.*\//, "")
   return branchTally(join(outDir, "coverage-final.json"), suffix)

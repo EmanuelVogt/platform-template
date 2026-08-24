@@ -20,7 +20,9 @@ import type { DrizzleDb } from "../../infra/database/drizzle.provider"
 import type { RequestContextStore } from "../context/request-context"
 import type { Pool } from "pg"
 
-function testStore(over: Partial<RequestContextStore> = {}): RequestContextStore {
+function testStore(
+  over: Partial<RequestContextStore> = {}
+): RequestContextStore {
   return {
     requestId: "req-1",
     correlationId: "corr-1",
@@ -275,11 +277,9 @@ describe("TransactionManager (integração)", () => {
     // null`, e a asserção abaixo prova o conteúdo carimbado de verdade.
     const observed = await requestContext.run(store, () =>
       txmComContexto.run(async () => {
-        const result = await txmComContexto
-          .getExecutor()
-          .execute<{ ctx: string }>(
-            sql`SELECT current_setting('app.audit_ctx', true) AS ctx`
-          )
+        const result = await txmComContexto.getExecutor().execute<{
+          ctx: string
+        }>(sql`SELECT current_setting('app.audit_ctx', true) AS ctx`)
         return result.rows.at(0)?.ctx ?? null
       })
     )

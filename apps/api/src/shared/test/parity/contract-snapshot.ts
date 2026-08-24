@@ -41,7 +41,16 @@ interface ComparisonScope {
   visited: Set<string>
 }
 
-const HTTP_METHODS = new Set(["get", "post", "put", "patch", "delete", "head", "options", "trace"])
+const HTTP_METHODS = new Set([
+  "get",
+  "post",
+  "put",
+  "patch",
+  "delete",
+  "head",
+  "options",
+  "trace",
+])
 const SCHEMA_POINTER_PREFIX = "#/components/schemas/"
 
 function routeKey(method: string, path: string): string {
@@ -60,7 +69,10 @@ function collectOperations(doc: OpenApiDocument): Map<string, OperationEntry> {
   return operations
 }
 
-function resolveSchema(schema: JsonSchemaObject | undefined, doc: OpenApiDocument): ResolvedSchema {
+function resolveSchema(
+  schema: JsonSchemaObject | undefined,
+  doc: OpenApiDocument
+): ResolvedSchema {
   const followed = new Set<string>()
   let current = schema
   let pointer: string | undefined
@@ -70,7 +82,8 @@ function resolveSchema(schema: JsonSchemaObject | undefined, doc: OpenApiDocumen
       return { pointer }
     }
     followed.add(pointer)
-    current = doc.components?.schemas?.[pointer.slice(SCHEMA_POINTER_PREFIX.length)]
+    current =
+      doc.components?.schemas?.[pointer.slice(SCHEMA_POINTER_PREFIX.length)]
     if (!current) {
       return { pointer }
     }
@@ -82,7 +95,7 @@ function compareSchema(
   scope: ComparisonScope,
   field: string,
   snapshotSchema: JsonSchemaObject | undefined,
-  childSchema: JsonSchemaObject | undefined,
+  childSchema: JsonSchemaObject | undefined
 ): void {
   const resolvedSnapshot = resolveSchema(snapshotSchema, scope.snapshot)
   if (!resolvedSnapshot.schema) {
@@ -104,7 +117,7 @@ function compareSchema(
   if (pinned.type !== undefined && pinned.type !== actual.type) {
     throw new Error(
       `contract-snapshot: operação "${scope.operationId}" mudou o tipo do campo "${field}" de ` +
-        `"${pinned.type}" para "${actual.type ?? "ausente"}"`,
+        `"${pinned.type}" para "${actual.type ?? "ausente"}"`
     )
   }
 
@@ -114,7 +127,7 @@ function compareSchema(
     if (!actualRequired.includes(name)) {
       throw new Error(
         `contract-snapshot: operação "${scope.operationId}" perdeu o campo obrigatório ` +
-          `"${field}.${name}"`,
+          `"${field}.${name}"`
       )
     }
   }
@@ -122,12 +135,14 @@ function compareSchema(
     if (!pinnedRequired.includes(name)) {
       throw new Error(
         `contract-snapshot: operação "${scope.operationId}" mudou o campo obrigatório ` +
-          `"${field}.${name}"`,
+          `"${field}.${name}"`
       )
     }
   }
 
-  for (const [name, pinnedProperty] of Object.entries(pinned.properties ?? {})) {
+  for (const [name, pinnedProperty] of Object.entries(
+    pinned.properties ?? {}
+  )) {
     const actualProperty = actual.properties?.[name]
     if (actualProperty) {
       compareSchema(scope, `${field}.${name}`, pinnedProperty, actualProperty)
@@ -138,9 +153,20 @@ function compareSchema(
   }
 }
 
-function compareOperation(scope: ComparisonScope, pinned: OpenApiOperation, actual: OpenApiOperation): void {
-  for (const [mediaType, media] of Object.entries(pinned.requestBody?.content ?? {})) {
-    compareSchema(scope, "requestBody", media.schema, actual.requestBody?.content?.[mediaType]?.schema)
+function compareOperation(
+  scope: ComparisonScope,
+  pinned: OpenApiOperation,
+  actual: OpenApiOperation
+): void {
+  for (const [mediaType, media] of Object.entries(
+    pinned.requestBody?.content ?? {}
+  )) {
+    compareSchema(
+      scope,
+      "requestBody",
+      media.schema,
+      actual.requestBody?.content?.[mediaType]?.schema
+    )
   }
   for (const [status, response] of Object.entries(pinned.responses ?? {})) {
     for (const [mediaType, media] of Object.entries(response.content ?? {})) {
@@ -148,7 +174,7 @@ function compareOperation(scope: ComparisonScope, pinned: OpenApiOperation, actu
         scope,
         `responses.${status}`,
         media.schema,
-        actual.responses?.[status]?.content?.[mediaType]?.schema,
+        actual.responses?.[status]?.content?.[mediaType]?.schema
       )
     }
   }
@@ -162,8 +188,13 @@ function compareOperation(scope: ComparisonScope, pinned: OpenApiOperation, actu
  * simétrica; um `$ref` que não resolve no snapshot não fixa nada. A asserção é de
  * subconjunto: o child pode acrescentar rotas e campos opcionais.
  */
-export function expectContractSubset(openapiPath: string, snapshot: OpenApiDocument): void {
-  const child = JSON.parse(readFileSync(openapiPath, "utf-8")) as OpenApiDocument
+export function expectContractSubset(
+  openapiPath: string,
+  snapshot: OpenApiDocument
+): void {
+  const child = JSON.parse(
+    readFileSync(openapiPath, "utf-8")
+  ) as OpenApiDocument
   const childOperations = collectOperations(child)
 
   for (const [route, pinned] of collectOperations(snapshot)) {
@@ -171,20 +202,20 @@ export function expectContractSubset(openapiPath: string, snapshot: OpenApiDocum
     const actual = childOperations.get(route)
     if (!actual) {
       throw new Error(
-        `contract-snapshot: operação "${operationId}" (${route}) ausente no openapi do child`,
+        `contract-snapshot: operação "${operationId}" (${route}) ausente no openapi do child`
       )
     }
     if (actual.operation.operationId !== operationId) {
       throw new Error(
         `contract-snapshot: rota "${route}" mudou o operationId de "${operationId}" para ` +
-          `"${actual.operation.operationId ?? "ausente"}"`,
+          `"${actual.operation.operationId ?? "ausente"}"`
       )
     }
 
     compareOperation(
       { operationId, snapshot, child, visited: new Set<string>() },
       pinned.operation,
-      actual.operation,
+      actual.operation
     )
   }
 }

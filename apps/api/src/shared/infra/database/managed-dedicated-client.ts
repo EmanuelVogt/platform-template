@@ -54,7 +54,10 @@ export class ManagedDedicatedClient {
     if (!client) {
       return
     }
-    this.log?.warn("db.dedicated_client_drop", { purpose: this.purpose, reason })
+    this.log?.warn("db.dedicated_client_drop", {
+      purpose: this.purpose,
+      reason,
+    })
     try {
       await client.end()
     } catch (err) {

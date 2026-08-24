@@ -1,5 +1,14 @@
 #!/usr/bin/env node
-import { readdirSync, lstatSync, readlinkSync, symlinkSync, unlinkSync, rmSync, existsSync, mkdirSync } from "node:fs"
+import {
+  readdirSync,
+  lstatSync,
+  readlinkSync,
+  symlinkSync,
+  unlinkSync,
+  rmSync,
+  existsSync,
+  mkdirSync,
+} from "node:fs"
 import { join, dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -9,7 +18,8 @@ const source = join(repoRoot, ".agents", "skills")
 // Cursor e Codex leem .agents/skills nativamente; só o Claude Code precisa da ponte.
 const mirrors = [join(repoRoot, ".claude", "skills")]
 
-const isSkill = (name) => !name.startsWith(".") && existsSync(join(source, name, "SKILL.md"))
+const isSkill = (name) =>
+  !name.startsWith(".") && existsSync(join(source, name, "SKILL.md"))
 
 const skills = readdirSync(source).filter(isSkill).sort()
 const changes = []
@@ -49,4 +59,6 @@ for (const mirror of mirrors) {
 }
 
 console.log(`${skills.length} skills em .agents/skills`)
-console.log(changes.length ? changes.map((c) => `  ${c}`).join("\n") : "  nada a fazer")
+console.log(
+  changes.length ? changes.map((c) => `  ${c}`).join("\n") : "  nada a fazer"
+)

@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import {
-  InMemoryRateLimiter,
-  MAX_TRACKED_KEYS,
-} from "./in-memory-rate-limiter"
+import { InMemoryRateLimiter, MAX_TRACKED_KEYS } from "./in-memory-rate-limiter"
 
 import type { Clock } from "../clock/clock"
 

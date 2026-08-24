@@ -36,7 +36,11 @@ describe("buildEventContextStore", () => {
   })
 
   it("traceId null quando traceparent ausente ou inválido", () => {
-    expect(buildEventContextStore(envelope({ traceparent: null })).traceId).toBeNull()
-    expect(buildEventContextStore(envelope({ traceparent: "invalid" })).traceId).toBeNull()
+    expect(
+      buildEventContextStore(envelope({ traceparent: null })).traceId
+    ).toBeNull()
+    expect(
+      buildEventContextStore(envelope({ traceparent: "invalid" })).traceId
+    ).toBeNull()
   })
 })

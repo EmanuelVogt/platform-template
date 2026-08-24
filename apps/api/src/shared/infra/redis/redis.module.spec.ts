@@ -24,17 +24,19 @@ function makeConnection(quit: Mock): {
 
 describe("RedisConnection.onApplicationShutdown", () => {
   it("quit resolve → sem disconnect forçado", async () => {
-    const { conn, disconnect } = makeConnection(
-      vi.fn().mockResolvedValue("OK")
-    )
+    const { conn, disconnect } = makeConnection(vi.fn().mockResolvedValue("OK"))
     await conn.onApplicationShutdown()
     expect(disconnect).not.toHaveBeenCalled()
   })
 
   it("quit rejeita (socket ainda conectando) → não propaga e cai para disconnect", async () => {
-    const quit = vi.fn().mockRejectedValue(
-      new Error("Stream isn't writeable and enableOfflineQueue options is false")
-    )
+    const quit = vi
+      .fn()
+      .mockRejectedValue(
+        new Error(
+          "Stream isn't writeable and enableOfflineQueue options is false"
+        )
+      )
     const { conn, disconnect } = makeConnection(quit)
     await expect(conn.onApplicationShutdown()).resolves.toBeUndefined()
     expect(disconnect).toHaveBeenCalledTimes(1)

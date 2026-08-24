@@ -1,6 +1,10 @@
 import { performance } from "node:perf_hooks"
 
-import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
+import {
+  Injectable,
+  type OnModuleDestroy,
+  type OnModuleInit,
+} from "@nestjs/common"
 import { SpanStatusCode, trace } from "@opentelemetry/api"
 
 import { DedicatedClientFactory } from "../../infra/database/dedicated-client.factory"
@@ -79,7 +83,10 @@ export class MaintenanceRuntime implements OnModuleInit, OnModuleDestroy {
    * ocupa conexão do pool, e `atomic: true` decide apenas se o corpo roda
    * dentro de uma transação aberta DEPOIS do lock.
    */
-  async run(name: MaintenanceJobName, body: () => Promise<void>): Promise<void> {
+  async run(
+    name: MaintenanceJobName,
+    body: () => Promise<void>
+  ): Promise<void> {
     await this.requestContext.run(buildJobContextStore(), () =>
       this.runGuarded(name, body)
     )

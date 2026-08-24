@@ -101,7 +101,9 @@ export class IdempotencyRepository {
     await this.db
       .update(idempotencyKeys)
       .set({ status, responseStatus, responseBody })
-      .where(and(eq(idempotencyKeys.scope, scope), eq(idempotencyKeys.key, key)))
+      .where(
+        and(eq(idempotencyKeys.scope, scope), eq(idempotencyKeys.key, key))
+      )
   }
 
   /** Apaga rows expiradas (cleanup nightly). Retorna a contagem removida. */

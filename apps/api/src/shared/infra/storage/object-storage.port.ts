@@ -5,7 +5,7 @@ export interface ObjectStoragePort {
   put(key: string, body: Buffer, contentType: string): Promise<void>
   getStream(key: string): Promise<NodeJS.ReadableStream>
   head(
-    key: string,
+    key: string
   ): Promise<{ contentType: string; sizeBytes: number; etag: string } | null>
   delete(key: string): Promise<void>
   /** Repassa o stream ao bucket sem materializar o conteúdo em memória. */

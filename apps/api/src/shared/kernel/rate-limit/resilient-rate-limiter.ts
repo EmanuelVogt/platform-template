@@ -5,7 +5,11 @@ import { type AppLogger, LoggerFactory } from "../logging/logger.factory"
 
 import { InMemoryRateLimiter } from "./in-memory-rate-limiter"
 
-import type { RateLimiter, RateLimitOptions, RateLimitResult } from "./rate-limiter.port"
+import type {
+  RateLimiter,
+  RateLimitOptions,
+  RateLimitResult,
+} from "./rate-limiter.port"
 
 /** Payload de `rate-limiter.degraded` — quem escuta registra o início da queda. */
 export interface RateLimiterDegradedEvent {

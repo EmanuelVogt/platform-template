@@ -26,7 +26,7 @@ class DatabaseConnection implements OnModuleInit, OnApplicationShutdown {
 
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
-    loggerFactory: LoggerFactory,
+    loggerFactory: LoggerFactory
   ) {
     this.log = loggerFactory.forModule("DatabaseConnection")
   }

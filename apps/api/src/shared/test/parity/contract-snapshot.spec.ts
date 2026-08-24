@@ -41,7 +41,10 @@ interface SchemaFixture {
 interface OperationFixture {
   operationId: string
   requestBody?: { content: Record<string, { schema: SchemaFixture }> }
-  responses?: Record<string, { content: Record<string, { schema: SchemaFixture }> }>
+  responses?: Record<
+    string,
+    { content: Record<string, { schema: SchemaFixture }> }
+  >
 }
 
 interface DocumentFixture {
@@ -67,13 +70,17 @@ const refSnapshot: DocumentFixture = {
         operationId: "createUser",
         requestBody: {
           content: {
-            "application/json": { schema: { $ref: "#/components/schemas/CreateUserDto" } },
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CreateUserDto" },
+            },
           },
         },
         responses: {
           "201": {
             content: {
-              "application/json": { schema: { $ref: "#/components/schemas/UserResponseDto" } },
+              "application/json": {
+                schema: { $ref: "#/components/schemas/UserResponseDto" },
+              },
             },
           },
         },
@@ -178,7 +185,7 @@ describe("expectContractSubset", () => {
     expect(() => {
       expectContractSubset(childPath, refSnapshot)
     }).toThrow(
-      'contract-snapshot: operação "createUser" mudou o tipo do campo "responses.201.user.email" de "string" para "number"',
+      'contract-snapshot: operação "createUser" mudou o tipo do campo "responses.201.user.email" de "string" para "number"'
     )
   })
 
@@ -193,7 +200,7 @@ describe("expectContractSubset", () => {
     expect(() => {
       expectContractSubset(childPath, refSnapshot)
     }).toThrow(
-      'contract-snapshot: operação "createUser" perdeu o campo obrigatório "responses.201.user.email"',
+      'contract-snapshot: operação "createUser" perdeu o campo obrigatório "responses.201.user.email"'
     )
   })
 

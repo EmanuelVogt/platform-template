@@ -1,5 +1,5 @@
 pre-push:
-  piped: true        # pipeline: se typecheck OU test falhar, o push é barrado
+  piped: true # pipeline: se typecheck OU test falhar, o push é barrado
   commands:
     # Primeiro da fila: é o mais barato e o único que pega migration nascida no
     # passado da base — falha que não aparece em teste, só no boot do ambiente.

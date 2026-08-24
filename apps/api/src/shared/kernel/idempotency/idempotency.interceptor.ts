@@ -78,9 +78,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
     if (!opts || executionContext.getType() !== "http") {
       return next.handle()
     }
-    const req = executionContext
-      .switchToHttp()
-      .getRequest<Request>()
+    const req = executionContext.switchToHttp().getRequest<Request>()
     const key = firstHeader(req.headers["idempotency-key"])
     // Header opcional por design (modelo Stripe): sem chave → sem dedup,
     // duplicação fica com a constraint de domínio. Não voltar a exigir (400).
@@ -142,7 +140,9 @@ export class IdempotencyInterceptor implements NestInterceptor {
           // Replay de erro: re-lança pro ProblemDetailsFilter formatar RFC 7807
           // idêntico à 1ª resposta (senão a 2ª devolveria corpo cru / null).
           throw new HttpException(
-            (existing.responseBody ?? "Erro") as string | Record<string, unknown>,
+            (existing.responseBody ?? "Erro") as
+              | string
+              | Record<string, unknown>,
             persistedStatus
           )
         }

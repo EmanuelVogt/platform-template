@@ -116,7 +116,7 @@ export const reactConfig = tseslint.config(
     rules: {
       "@typescript-eslint/consistent-type-definitions": "off",
     },
-  },
+  }
 )
 
 export default reactConfig

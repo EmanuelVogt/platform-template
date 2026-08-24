@@ -63,7 +63,9 @@ async function runMigrations(
 ): Promise<void> {
   const journalPath = join(migrationsFolder, "meta", "_journal.json")
   if (!existsSync(journalPath)) {
-    throw new Error(`Arquivo _journal.json não encontrado em ${migrationsFolder}`)
+    throw new Error(
+      `Arquivo _journal.json não encontrado em ${migrationsFolder}`
+    )
   }
   const journal = JSON.parse(readFileSync(journalPath, "utf8")) as {
     entries: { tag: string; when: number; breakpoints: boolean }[]
@@ -95,10 +97,7 @@ async function runMigrations(
       const statements = entry.breakpoints
         ? sqlText.split("--> statement-breakpoint")
         : [sqlText]
-      const hash = crypto
-        .createHash("sha256")
-        .update(sqlText)
-        .digest("hex")
+      const hash = crypto.createHash("sha256").update(sqlText).digest("hex")
 
       await client.query("BEGIN")
       try {
@@ -136,7 +135,9 @@ async function createWorkerDatabases(
   adminUrl.pathname = "/postgres"
   await withSetupPool(adminUrl.toString(), async (admin) => {
     for (let worker = 1; worker <= maxWorkers; worker++) {
-      await admin.query(`CREATE DATABASE test_w${worker} TEMPLATE "${templateDb}"`)
+      await admin.query(
+        `CREATE DATABASE test_w${worker} TEMPLATE "${templateDb}"`
+      )
     }
   })
 }

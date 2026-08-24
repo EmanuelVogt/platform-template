@@ -23,10 +23,7 @@ vi.mock("pino", async () => {
   return { ...actual, default: pinoMock }
 })
 
-function withEnv(overrides: {
-  NODE_ENV: string
-  LOG_LEVEL?: string
-}): void {
+function withEnv(overrides: { NODE_ENV: string; LOG_LEVEL?: string }): void {
   pinoMock.mockClear()
   env.mockReturnValue({ OTEL_SERVICE_NAME: "api", ...overrides })
 }

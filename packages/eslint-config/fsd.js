@@ -46,7 +46,13 @@ export const fsdConfig = tseslint.config({
         policies: [
           {
             from: fromType("app"),
-            allow: allowTypes("pages", "widgets", "features", "entities", "shared"),
+            allow: allowTypes(
+              "pages",
+              "widgets",
+              "features",
+              "entities",
+              "shared"
+            ),
           },
           {
             from: fromType("pages"),
@@ -56,7 +62,10 @@ export const fsdConfig = tseslint.config({
             from: fromType("widgets"),
             allow: allowTypes("features", "entities", "shared"),
           },
-          { from: fromType("features"), allow: allowTypes("entities", "shared") },
+          {
+            from: fromType("features"),
+            allow: allowTypes("entities", "shared"),
+          },
           {
             from: fromType("entities"),
             allow: [

@@ -44,7 +44,11 @@ describe("buildJobContextStore", () => {
   it("cada job recebe uma sacola de extensões própria", () => {
     const ctx = new RequestContext()
     const key = Symbol("audit.batch")
-    ctx.run(buildJobContextStore(), () => { ctx.setExtension(key, "lote-1") })
-    expect(ctx.run(buildJobContextStore(), () => ctx.getExtension(key))).toBeUndefined()
+    ctx.run(buildJobContextStore(), () => {
+      ctx.setExtension(key, "lote-1")
+    })
+    expect(
+      ctx.run(buildJobContextStore(), () => ctx.getExtension(key))
+    ).toBeUndefined()
   })
 })

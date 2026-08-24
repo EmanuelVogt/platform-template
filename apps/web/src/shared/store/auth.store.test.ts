@@ -30,12 +30,12 @@ describe("useAuthStore", () => {
       new StorageEvent("storage", {
         key: "rit-auth-logout",
         newValue: "123",
-      }),
+      })
     )
     expect(onForeignLogout).toHaveBeenCalledOnce()
 
     window.dispatchEvent(
-      new StorageEvent("storage", { key: "other", newValue: "x" }),
+      new StorageEvent("storage", { key: "other", newValue: "x" })
     )
     expect(onForeignLogout).toHaveBeenCalledOnce()
 
@@ -44,7 +44,7 @@ describe("useAuthStore", () => {
       new StorageEvent("storage", {
         key: "rit-auth-logout",
         newValue: "456",
-      }),
+      })
     )
     expect(onForeignLogout).toHaveBeenCalledOnce()
   })

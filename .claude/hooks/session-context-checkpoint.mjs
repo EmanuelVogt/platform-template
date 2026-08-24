@@ -18,37 +18,40 @@
 // clears nothing, compacts nothing, and which exit fits — and where the
 // boundary is — stays with the agent's judgement, not the hook's.
 // Harness tooling — not app code.
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { readContextTokens } from "./lib/transcript-context.mjs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { readContextTokens } from "./lib/transcript-context.mjs"
 
-const FIRST_ALERT = 120_000;
-const STEP = 60_000;
-const HARD_ALERT = 250_000;
+const FIRST_ALERT = 120_000
+const STEP = 60_000
+const HARD_ALERT = 250_000
 
 try {
-  const input = JSON.parse(readFileSync(0, "utf8"));
-  const { transcript_path: transcriptPath, session_id: sessionId } = input;
-  if (!transcriptPath || !sessionId || !existsSync(transcriptPath)) process.exit(0);
+  const input = JSON.parse(readFileSync(0, "utf8"))
+  const { transcript_path: transcriptPath, session_id: sessionId } = input
+  if (!transcriptPath || !sessionId || !existsSync(transcriptPath))
+    process.exit(0)
 
-  const contextTokens = readContextTokens(transcriptPath);
-  if (contextTokens < FIRST_ALERT) process.exit(0);
+  const contextTokens = readContextTokens(transcriptPath)
+  if (contextTokens < FIRST_ALERT) process.exit(0)
 
-  const bucket = Math.floor((contextTokens - FIRST_ALERT) / STEP);
-  const stateFile = join(tmpdir(), `platform-context-checkpoint-${sessionId}`);
-  const lastBucket = existsSync(stateFile) ? Number(readFileSync(stateFile, "utf8")) : Number.NaN;
-  if (Number.isFinite(lastBucket) && bucket <= lastBucket) process.exit(0);
-  writeFileSync(stateFile, String(bucket));
+  const bucket = Math.floor((contextTokens - FIRST_ALERT) / STEP)
+  const stateFile = join(tmpdir(), `platform-context-checkpoint-${sessionId}`)
+  const lastBucket = existsSync(stateFile)
+    ? Number(readFileSync(stateFile, "utf8"))
+    : Number.NaN
+  if (Number.isFinite(lastBucket) && bucket <= lastBucket) process.exit(0)
+  writeFileSync(stateFile, String(bucket))
 
-  const thousands = Math.round(contextTokens / 1000);
-  const ratio = (contextTokens / 46_000).toFixed(1);
+  const thousands = Math.round(contextTokens / 1000)
+  const ratio = (contextTokens / 46_000).toFixed(1)
   const exits = [
     "Two exits — you decide which fits, then tell the user in their language, in one line:",
     "• `/compact` — the work continues in the same direction and the recent turns are still the working set (a follow-up of a few turns; a wave mid-feature whose plan is in tasks.md). A summary keeps the thread at a fraction of the cost. Say what must survive the summary (feature, step, constraint).",
     "• `/clear` — what remains is a new stretch of work (dozens of turns) or the direction changed: the conversation is dead weight and disk holds the memory. First write the Handoff (.specs/STATE.md § Handoff, section-scoped), then hand the user a ready-to-paste prompt for the next session, fenced, in their language:",
-    "```\nContinue <feature/task>. Load: .specs/STATE.md § Handoff entry \"<name>\"; <spec/tasks/design paths>. Checkout: <worktree path>, branch <branch>. Next: <the exact next step>. Keep: <1–3 constraints or decisions that must not be lost>.\n```",
-  ].join("\n");
+    '```\nContinue <feature/task>. Load: .specs/STATE.md § Handoff entry "<name>"; <spec/tasks/design paths>. Checkout: <worktree path>, branch <branch>. Next: <the exact next step>. Keep: <1–3 constraints or decisions that must not be lost>.\n```',
+  ].join("\n")
   const context =
     contextTokens >= HARD_ALERT
       ? [
@@ -61,14 +64,17 @@ try {
           "Finish the step in progress — never abandon a half-done edit or an in-flight wave — then STOP at the next natural boundary (task committed, wave gated, verifier returned, fix landed).",
           exits,
           "Do not push the boundary further than the current step. Do not mention cost figures to the user; one line plus the prompt (when /clear) is enough.",
-        ].join("\n\n");
+        ].join("\n\n")
 
   process.stdout.write(
     JSON.stringify({
-      hookSpecificOutput: { hookEventName: "UserPromptSubmit", additionalContext: context },
-    }),
-  );
+      hookSpecificOutput: {
+        hookEventName: "UserPromptSubmit",
+        additionalContext: context,
+      },
+    })
+  )
 } catch {
   // A context hook must never take the prompt down: any failure exits silently.
 }
-process.exit(0);
+process.exit(0)

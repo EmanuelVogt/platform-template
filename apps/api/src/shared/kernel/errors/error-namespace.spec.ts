@@ -24,7 +24,10 @@ function moduleErrorsFiles(): ModuleErrorsFile[] {
     }))
 }
 
-function namespaceOffenderOf({ module, content }: ModuleErrorsFile): string | null {
+function namespaceOffenderOf({
+  module,
+  content,
+}: ModuleErrorsFile): string | null {
   const expected = `https://errors.example.com/${module}`
   const actual = TYPE_BASE_RE.exec(content)?.[1] ?? "TYPE_BASE ausente"
   return actual === expected ? null : `${module}: ${actual}`

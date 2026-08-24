@@ -1,66 +1,75 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import semver from "semver";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { existsSync, readFileSync, writeFileSync } from "node:fs"
+import semver from "semver"
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml"
 
-const CHANGELOG_HEADING = /^## v(\d+\.\d+\.\d+)\s*$/gm;
-const MIGRATION_STEPS_SENTINEL = "None — copier update is enough.";
-const MIGRATION_STEPS_HEADING = /^### Child migration steps.*$/m;
+const CHANGELOG_HEADING = /^## v(\d+\.\d+\.\d+)\s*$/gm
+const MIGRATION_STEPS_SENTINEL = "None — copier update is enough."
+const MIGRATION_STEPS_HEADING = /^### Child migration steps.*$/m
 
 export class ChangelogVersionMissingError extends Error {
   constructor() {
-    super('nenhuma seção "## vX.Y.Z" encontrada em docs/dev/template-changelog.md');
-    this.name = "ChangelogVersionMissingError";
+    super(
+      'nenhuma seção "## vX.Y.Z" encontrada em docs/dev/template-changelog.md'
+    )
+    this.name = "ChangelogVersionMissingError"
   }
 }
 
 export class ChangelogSectionMissingError extends Error {
   constructor(version) {
-    super(`nenhuma seção "## v${version}" encontrada no changelog`);
-    this.name = "ChangelogSectionMissingError";
-    this.version = version;
+    super(`nenhuma seção "## v${version}" encontrada no changelog`)
+    this.name = "ChangelogSectionMissingError"
+    this.version = version
   }
 }
 
 export function readLatestChangelogVersion(changelogPath) {
-  let text;
+  let text
   try {
-    text = readFileSync(changelogPath, "utf8");
+    text = readFileSync(changelogPath, "utf8")
   } catch {
-    throw new ChangelogVersionMissingError();
+    throw new ChangelogVersionMissingError()
   }
-  const versions = [...text.matchAll(CHANGELOG_HEADING)].map((match) => match[1]);
-  if (versions.length === 0) throw new ChangelogVersionMissingError();
-  return versions.reduce((latest, version) => (semver.gt(version, latest) ? version : latest));
+  const versions = [...text.matchAll(CHANGELOG_HEADING)].map(
+    (match) => match[1]
+  )
+  if (versions.length === 0) throw new ChangelogVersionMissingError()
+  return versions.reduce((latest, version) =>
+    semver.gt(version, latest) ? version : latest
+  )
 }
 
 // Fatia a seção de uma versão: do heading "## vX.Y.Z" (exclusive) até o
 // próximo heading "## vX.Y.Z" (exclusive) ou o fim do arquivo.
 export function readChangelogSection(changelogPath, version) {
-  let text;
+  let text
   try {
-    text = readFileSync(changelogPath, "utf8");
+    text = readFileSync(changelogPath, "utf8")
   } catch {
-    throw new ChangelogSectionMissingError(version);
+    throw new ChangelogSectionMissingError(version)
   }
-  const headingRe = new RegExp(`^## v${version.replace(/\./g, "\\.")}\\s*$`, "m");
-  const match = headingRe.exec(text);
-  if (!match) throw new ChangelogSectionMissingError(version);
-  const rest = text.slice(match.index + match[0].length);
-  const nextHeadingRe = /^## v\d+\.\d+\.\d+\s*$/m;
-  const nextMatch = nextHeadingRe.exec(rest);
-  return (nextMatch ? rest.slice(0, nextMatch.index) : rest).trim();
+  const headingRe = new RegExp(
+    `^## v${version.replace(/\./g, "\\.")}\\s*$`,
+    "m"
+  )
+  const match = headingRe.exec(text)
+  if (!match) throw new ChangelogSectionMissingError(version)
+  const rest = text.slice(match.index + match[0].length)
+  const nextHeadingRe = /^## v\d+\.\d+\.\d+\s*$/m
+  const nextMatch = nextHeadingRe.exec(rest)
+  return (nextMatch ? rest.slice(0, nextMatch.index) : rest).trim()
 }
 
 // Primeiro parágrafo da seção: até a primeira linha em branco ou o primeiro
 // heading (### Changes, ### Child migration steps), o que vier primeiro.
 export function sectionFirstParagraph(section) {
-  const trimmed = section.trim();
-  const blankLineIdx = trimmed.search(/\n[ \t]*\n/);
-  const headingIdx = trimmed.search(/^#{2,3} /m);
-  let end = trimmed.length;
-  if (blankLineIdx !== -1) end = Math.min(end, blankLineIdx);
-  if (headingIdx !== -1) end = Math.min(end, headingIdx);
-  return trimmed.slice(0, end).trim();
+  const trimmed = section.trim()
+  const blankLineIdx = trimmed.search(/\n[ \t]*\n/)
+  const headingIdx = trimmed.search(/^#{2,3} /m)
+  let end = trimmed.length
+  if (blankLineIdx !== -1) end = Math.min(end, blankLineIdx)
+  if (headingIdx !== -1) end = Math.min(end, headingIdx)
+  return trimmed.slice(0, end).trim()
 }
 
 // REL-05 / MIG-03: para versões não-major, "### Child migration steps" só
@@ -68,45 +77,52 @@ export function sectionFirstParagraph(section) {
 // comando entre crases. Versões major (X.0.0) ficam livres (passos manuais
 // são esperados). Retorna { ok, reason } em vez de lançar — puro e testável.
 export function lintChildMigrationSteps(section, version) {
-  const parsed = semver.parse(version);
-  if (!parsed) throw new TypeError(`versão inválida: ${version}`);
-  const isMajor = parsed.minor === 0 && parsed.patch === 0;
-  if (isMajor) return { ok: true };
+  const parsed = semver.parse(version)
+  if (!parsed) throw new TypeError(`versão inválida: ${version}`)
+  const isMajor = parsed.minor === 0 && parsed.patch === 0
+  if (isMajor) return { ok: true }
 
-  const headingMatch = MIGRATION_STEPS_HEADING.exec(section);
+  const headingMatch = MIGRATION_STEPS_HEADING.exec(section)
   if (!headingMatch) {
-    return { ok: false, reason: 'seção "### Child migration steps" não encontrada' };
+    return {
+      ok: false,
+      reason: 'seção "### Child migration steps" não encontrada',
+    }
   }
-  const afterHeading = section.slice(headingMatch.index + headingMatch[0].length);
-  const nextHeadingRe = /^#{2,3} /m;
-  const nextMatch = nextHeadingRe.exec(afterHeading);
-  const body = (nextMatch ? afterHeading.slice(0, nextMatch.index) : afterHeading).trim();
+  const afterHeading = section.slice(
+    headingMatch.index + headingMatch[0].length
+  )
+  const nextHeadingRe = /^#{2,3} /m
+  const nextMatch = nextHeadingRe.exec(afterHeading)
+  const body = (
+    nextMatch ? afterHeading.slice(0, nextMatch.index) : afterHeading
+  ).trim()
 
-  if (body === MIGRATION_STEPS_SENTINEL) return { ok: true };
+  if (body === MIGRATION_STEPS_SENTINEL) return { ok: true }
 
-  const stepRe = /^(\d+)\.\s+(.*)$/gm;
-  const steps = [...body.matchAll(stepRe)];
+  const stepRe = /^(\d+)\.\s+(.*)$/gm
+  const steps = [...body.matchAll(stepRe)]
   if (steps.length === 0) {
     return {
       ok: false,
       reason: `"### Child migration steps" precisa ser "${MIGRATION_STEPS_SENTINEL}" ou uma lista numerada; nenhuma das duas foi encontrada`,
-    };
+    }
   }
   for (const [, stepNumber, rest] of steps) {
     if (!/^`[^`]+`/.test(rest.trim())) {
       return {
         ok: false,
         reason: `passo ${stepNumber} de "### Child migration steps" não começa com um comando entre crases: "${rest.trim().slice(0, 60)}"`,
-      };
+      }
     }
   }
-  return { ok: true };
+  return { ok: true }
 }
 
 export function writeSimulatedKernelVersion({ answersPath, kernelVersion }) {
-  if (!existsSync(answersPath)) return false;
-  const answers = parseYaml(readFileSync(answersPath, "utf8")) ?? {};
-  answers._commit = `v${kernelVersion}`;
-  writeFileSync(answersPath, stringifyYaml(answers));
-  return true;
+  if (!existsSync(answersPath)) return false
+  const answers = parseYaml(readFileSync(answersPath, "utf8")) ?? {}
+  answers._commit = `v${kernelVersion}`
+  writeFileSync(answersPath, stringifyYaml(answers))
+  return true
 }

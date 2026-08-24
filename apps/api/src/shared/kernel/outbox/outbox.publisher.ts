@@ -7,10 +7,7 @@ import { TransactionManager } from "../transactional/transaction-manager"
 
 import { outbox } from "./outbox.table"
 
-import type {
-  DomainEvent,
-  EventEnvelope,
-} from "../events/domain-event.base"
+import type { DomainEvent, EventEnvelope } from "../events/domain-event.base"
 
 @Injectable()
 export class OutboxPublisher {
@@ -44,19 +41,22 @@ export class OutboxPublisher {
       payload: event.payload,
     }
 
-    await this.tx.getExecutor().insert(outbox).values({
-      eventId: envelope.eventId,
-      eventName: envelope.eventName,
-      eventVersion: envelope.eventVersion,
-      aggregateId: envelope.aggregateId,
-      aggregateType: envelope.aggregateType,
-      payload: envelope,
-      correlationId: envelope.correlationId,
-      causationId: envelope.causationId,
-      tenantId: envelope.tenantId,
-      traceparent: envelope.traceparent,
-      occurredAt: new Date(envelope.occurredAt),
-    })
+    await this.tx
+      .getExecutor()
+      .insert(outbox)
+      .values({
+        eventId: envelope.eventId,
+        eventName: envelope.eventName,
+        eventVersion: envelope.eventVersion,
+        aggregateId: envelope.aggregateId,
+        aggregateType: envelope.aggregateType,
+        payload: envelope,
+        correlationId: envelope.correlationId,
+        causationId: envelope.causationId,
+        tenantId: envelope.tenantId,
+        traceparent: envelope.traceparent,
+        occurredAt: new Date(envelope.occurredAt),
+      })
 
     this.log.info("outbox.published", {
       eventId: envelope.eventId,

@@ -17,7 +17,7 @@ describe("storage.config", () => {
 
   it("rejeita endpoint não-URL", () => {
     expect(() => parseStorageConfig({ ...valid, R2_ENDPOINT: "x" })).toThrow(
-      /Configuração de storage inválida/,
+      /Configuração de storage inválida/
     )
   })
 

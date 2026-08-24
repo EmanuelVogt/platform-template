@@ -30,7 +30,7 @@ describe("AppProviders CrossTabLogout", () => {
       new StorageEvent("storage", {
         key: "rit-auth-logout",
         newValue: String(Date.now()),
-      }),
+      })
     )
 
     await waitFor(() => {

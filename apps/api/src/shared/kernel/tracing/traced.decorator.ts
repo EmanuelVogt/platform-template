@@ -19,7 +19,7 @@ export function Traced(opts: TracedOptions = {}): MethodDecorator {
     ): Promise<unknown> {
       return tracer.startActiveSpan(spanName, async (span) => {
         try {
-          return (await original.apply(this, args))
+          return await original.apply(this, args)
         } catch (err) {
           span.recordException(err as Error)
           span.setStatus({ code: SpanStatusCode.ERROR })

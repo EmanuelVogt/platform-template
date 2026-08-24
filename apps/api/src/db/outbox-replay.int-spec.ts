@@ -119,9 +119,15 @@ describe("outbox-replay (integração)", () => {
 
     expect(await replaySince(db, cutoff)).toBe(1)
 
-    const sNew = await db.select().from(outbox).where(eq(outbox.eventId, "s-new"))
+    const sNew = await db
+      .select()
+      .from(outbox)
+      .where(eq(outbox.eventId, "s-new"))
     expect(sNew[0]?.publishedAt).toBeNull()
-    const sOld = await db.select().from(outbox).where(eq(outbox.eventId, "s-old"))
+    const sOld = await db
+      .select()
+      .from(outbox)
+      .where(eq(outbox.eventId, "s-old"))
     expect(sOld[0]?.publishedAt).not.toBeNull()
   })
 })

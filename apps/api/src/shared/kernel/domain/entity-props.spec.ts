@@ -17,14 +17,16 @@ describe("isUnchanged", () => {
   })
 
   it("false quando um campo de negócio muda", () => {
-    expect(isUnchanged(base, { ...base, name: "B", updatedAt: later })).toBe(false)
+    expect(isUnchanged(base, { ...base, name: "B", updatedAt: later })).toBe(
+      false
+    )
   })
 
   it("Date comparada por valor (getTime), não identidade", () => {
     const clone = new Date("2026-01-01T00:00:00Z")
-    expect(isUnchanged(base, { ...base, createdAt: clone, updatedAt: later })).toBe(
-      true
-    )
+    expect(
+      isUnchanged(base, { ...base, createdAt: clone, updatedAt: later })
+    ).toBe(true)
   })
 
   it("array reconstruído conta como mudança (identidade)", () => {

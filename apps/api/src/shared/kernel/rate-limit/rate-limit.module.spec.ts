@@ -51,11 +51,9 @@ describe("RateLimitModule", () => {
       EventEmitter2,
       LoggerFactory,
     ])
-    const instance = provider?.useFactory(
-      {},
-      new EventEmitter2(),
-      { forModule: () => ({ warn: () => undefined }) }
-    )
+    const instance = provider?.useFactory({}, new EventEmitter2(), {
+      forModule: () => ({ warn: () => undefined }),
+    })
     expect(instance).toBeInstanceOf(ResilientRateLimiter)
   })
 

@@ -123,11 +123,7 @@ export const baseConfig = tseslint.config(
     },
   },
   {
-    files: [
-      "**/*.test.{ts,tsx}",
-      "**/*.spec.{ts,tsx}",
-      "**/*-spec.{ts,tsx}",
-    ],
+    files: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/*-spec.{ts,tsx}"],
     rules: {
       "@typescript-eslint/no-non-null-assertion": "off",
       "@typescript-eslint/no-explicit-any": "off",
@@ -138,7 +134,7 @@ export const baseConfig = tseslint.config(
       "@typescript-eslint/no-unsafe-argument": "off",
     },
   },
-  prettier,
+  prettier
 )
 
 export default baseConfig

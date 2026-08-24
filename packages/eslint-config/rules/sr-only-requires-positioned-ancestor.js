@@ -40,7 +40,10 @@ function readExpression(node, tokens) {
       if (node.expressions.length > 0) {
         return false
       }
-      addTokens(tokens, node.quasis.map((quasi) => quasi.value.cooked).join(" "))
+      addTokens(
+        tokens,
+        node.quasis.map((quasi) => quasi.value.cooked).join(" ")
+      )
       return true
 
     // Ramo condicional entra inteiro: se qualquer um posiciona, não acusamos.
@@ -60,7 +63,9 @@ function readExpression(node, tokens) {
       ) {
         return false
       }
-      return node.arguments.every((argument) => readExpression(argument, tokens))
+      return node.arguments.every((argument) =>
+        readExpression(argument, tokens)
+      )
 
     case "JSXExpressionContainer":
       return readExpression(node.expression, tokens)
@@ -152,7 +157,9 @@ export const srOnlyRequiresPositionedAncestor = {
           return
         }
 
-        const parent = findEnclosingElement(context.sourceCode.getAncestors(node))
+        const parent = findEnclosingElement(
+          context.sourceCode.getAncestors(node)
+        )
         if (!parent || !isHostElement(parent)) {
           return
         }

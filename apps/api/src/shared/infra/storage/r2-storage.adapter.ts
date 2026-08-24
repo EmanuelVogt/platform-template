@@ -43,7 +43,10 @@ export class R2StorageAdapter implements ObjectStoragePort {
       requestHandler: {
         requestTimeout: cfg.STORAGE_REQUEST_TIMEOUT_MS,
         connectionTimeout: 5000,
-        httpsAgent: new https.Agent({ keepAlive: true, maxSockets: cfg.STORAGE_MAX_SOCKETS }),
+        httpsAgent: new https.Agent({
+          keepAlive: true,
+          maxSockets: cfg.STORAGE_MAX_SOCKETS,
+        }),
       },
     })
     this.bucket = cfg.R2_BUCKET
@@ -58,7 +61,7 @@ export class R2StorageAdapter implements ObjectStoragePort {
           Body: body,
           ContentType: contentType,
         }),
-        { abortSignal: AbortSignal.timeout(this.requestTimeoutMs) },
+        { abortSignal: AbortSignal.timeout(this.requestTimeoutMs) }
       )
     } catch (error) {
       mapStorageError(error)
@@ -71,18 +74,18 @@ export class R2StorageAdapter implements ObjectStoragePort {
   // travado antes do primeiro byte.
   async getStream(key: string): Promise<NodeJS.ReadableStream> {
     const out = await this.client.send(
-      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+      new GetObjectCommand({ Bucket: this.bucket, Key: key })
     )
     return out.Body as NodeJS.ReadableStream
   }
 
   async head(
-    key: string,
+    key: string
   ): Promise<{ contentType: string; sizeBytes: number; etag: string } | null> {
     try {
       const out = await this.client.send(
         new HeadObjectCommand({ Bucket: this.bucket, Key: key }),
-        { abortSignal: AbortSignal.timeout(this.requestTimeoutMs) },
+        { abortSignal: AbortSignal.timeout(this.requestTimeoutMs) }
       )
       return {
         contentType: out.ContentType ?? "application/octet-stream",
@@ -102,14 +105,18 @@ export class R2StorageAdapter implements ObjectStoragePort {
     try {
       await this.client.send(
         new DeleteObjectCommand({ Bucket: this.bucket, Key: key }),
-        { abortSignal: AbortSignal.timeout(this.requestTimeoutMs) },
+        { abortSignal: AbortSignal.timeout(this.requestTimeoutMs) }
       )
     } catch (error) {
       mapStorageError(error)
     }
   }
 
-  async putStream(key: string, body: Readable, contentType: string): Promise<void> {
+  async putStream(
+    key: string,
+    body: Readable,
+    contentType: string
+  ): Promise<void> {
     const upload = new Upload({
       client: this.client,
       params: {

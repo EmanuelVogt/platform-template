@@ -1,6 +1,14 @@
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { eq } from "drizzle-orm"
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest"
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "vitest"
 
 import {
   createTestDb,
@@ -69,7 +77,9 @@ async function waitUntil(
   }
 }
 
-function dedicatedListenClient(dispatcher: OutboxDispatcher): ManagedDedicatedClient {
+function dedicatedListenClient(
+  dispatcher: OutboxDispatcher
+): ManagedDedicatedClient {
   return (dispatcher as unknown as { listenClient: ManagedDedicatedClient })
     .listenClient
 }
@@ -187,7 +197,9 @@ describe("Outbox (integração)", () => {
   })
 
   it("publish dentro de tx grava o envelope com correlationId do contexto", async () => {
-    await ctx.run(store(), () => txm.run(() => publisher.publish(sampleEvent("inv-1"))))
+    await ctx.run(store(), () =>
+      txm.run(() => publisher.publish(sampleEvent("inv-1")))
+    )
 
     const rows = await db.select().from(outbox)
     expect(rows).toHaveLength(1)
@@ -203,8 +215,12 @@ describe("Outbox (integração)", () => {
   })
 
   it("markIfNew retorna true só na primeira vez (dedupe)", async () => {
-    const first = await txm.run(() => processed.markIfNew("evt-1", "consumer-x"))
-    const second = await txm.run(() => processed.markIfNew("evt-1", "consumer-x"))
+    const first = await txm.run(() =>
+      processed.markIfNew("evt-1", "consumer-x")
+    )
+    const second = await txm.run(() =>
+      processed.markIfNew("evt-1", "consumer-x")
+    )
     expect(first).toBe(true)
     expect(second).toBe(false)
   })
@@ -224,7 +240,9 @@ describe("Outbox (integração)", () => {
       received.push(envelope)
     })
 
-    await ctx.run(store(), () => txm.run(() => publisher.publish(sampleEvent("inv-9"))))
+    await ctx.run(store(), () =>
+      txm.run(() => publisher.publish(sampleEvent("inv-9")))
+    )
     await dispatcher.poll()
 
     expect(received).toHaveLength(1)
@@ -760,7 +778,11 @@ describe("Outbox (integração)", () => {
   it("purgePublished remove published>30d, preserva recente e unpublished", async () => {
     const old = new Date(Date.now() - 40 * 86_400_000)
     const yesterday = new Date(Date.now() - 86_400_000)
-    const insert = (eventId: string, publishedAt: Date | null, occurredAt: Date) =>
+    const insert = (
+      eventId: string,
+      publishedAt: Date | null,
+      occurredAt: Date
+    ) =>
       db.insert(outbox).values({
         eventId,
         eventName: "x.event",
@@ -927,8 +949,14 @@ describe("Outbox (integração)", () => {
         deadLetteredAt,
       })
     const dayMs = 86_400_000
-    await insertDead("dead-old", new Date(Date.now() - (retentionDays + 1) * dayMs))
-    await insertDead("dead-new", new Date(Date.now() - (retentionDays - 1) * dayMs))
+    await insertDead(
+      "dead-old",
+      new Date(Date.now() - (retentionDays + 1) * dayMs)
+    )
+    await insertDead(
+      "dead-new",
+      new Date(Date.now() - (retentionDays - 1) * dayMs)
+    )
 
     await dispatcher.purgeDeadLetters()
 

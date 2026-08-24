@@ -14,7 +14,8 @@ export function isUnchanged<T extends { readonly updatedAt: Date }>(
     if (key === "updatedAt") return true
     const a = current[key]
     const b = next[key]
-    if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime()
+    if (a instanceof Date && b instanceof Date)
+      return a.getTime() === b.getTime()
     return a === b
   })
 }

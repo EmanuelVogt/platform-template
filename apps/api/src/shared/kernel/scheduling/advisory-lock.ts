@@ -28,7 +28,9 @@ export async function advisoryXactLock(
   namespace: number,
   lockId: number
 ): Promise<void> {
-  await executor.execute(sql`SELECT pg_advisory_xact_lock(${namespace}, ${lockId})`)
+  await executor.execute(
+    sql`SELECT pg_advisory_xact_lock(${namespace}, ${lockId})`
+  )
 }
 
 /**

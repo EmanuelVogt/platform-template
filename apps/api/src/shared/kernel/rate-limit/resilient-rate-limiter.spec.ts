@@ -17,9 +17,7 @@ function makeHarness(): {
   warns: Warn[]
 } {
   const primary = {
-    consume: vi
-      .fn()
-      .mockResolvedValue({ allowed: true, retryAfterSeconds: 0 }),
+    consume: vi.fn().mockResolvedValue({ allowed: true, retryAfterSeconds: 0 }),
     reset: vi.fn().mockResolvedValue(undefined),
   }
   const fallback = new InMemoryRateLimiter()
@@ -38,7 +36,12 @@ function makeHarness(): {
   } as unknown as LoggerFactory
 
   return {
-    limiter: new ResilientRateLimiter(primary, fallback, emitter, loggerFactory),
+    limiter: new ResilientRateLimiter(
+      primary,
+      fallback,
+      emitter,
+      loggerFactory
+    ),
     fallback,
     primary,
     emitted,
@@ -146,10 +149,12 @@ describe("ResilientRateLimiter", () => {
 
     // Nova queda: a janela local recomeça do zero em vez de já estar no teto.
     primary.consume.mockRejectedValue(REDIS_DOWN)
-    expect(await limiter.consume("acct:a", 1, 900, { critical: true })).toEqual({
-      allowed: true,
-      retryAfterSeconds: 0,
-    })
+    expect(await limiter.consume("acct:a", 1, 900, { critical: true })).toEqual(
+      {
+        allowed: true,
+        retryAfterSeconds: 0,
+      }
+    )
     expect(fallback.trackedKeys).toBe(1)
   })
 
@@ -195,8 +200,12 @@ describe("ResilientRateLimiter", () => {
 
     await limiter.reset("acct:a")
 
-    expect((await limiter.consume("acct:a", 1, 900, { critical: true })).allowed).toBe(true)
-    expect((await limiter.consume("acct:b", 1, 900, { critical: true })).allowed).toBe(false)
+    expect(
+      (await limiter.consume("acct:a", 1, 900, { critical: true })).allowed
+    ).toBe(true)
+    expect(
+      (await limiter.consume("acct:b", 1, 900, { critical: true })).allowed
+    ).toBe(false)
     expect(warns).toHaveLength(1)
     expect(emitted.map((e) => e.name)).toEqual(["rate-limiter.degraded"])
   })

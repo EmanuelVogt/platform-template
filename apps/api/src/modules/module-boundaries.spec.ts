@@ -97,7 +97,11 @@ function bindingsIn(clause: string): Binding[] {
     .map((part) => part.trim())
     .filter((part) => part.length > 0)
     .map((part) => ({
-      name: part.replace(/^type\s+/, "").split(/\s+as\s+/)[0]?.trim() ?? "",
+      name:
+        part
+          .replace(/^type\s+/, "")
+          .split(/\s+as\s+/)[0]
+          ?.trim() ?? "",
       typeOnly: typeOnlyStatement || /^type\s/.test(part),
     }))
 }
@@ -183,8 +187,7 @@ function violationOf(edge: Edge): string | null {
 
   if (edge.importerLayer === "domain") {
     const sameDomain =
-      inModules &&
-      pair.includes(` -> ${edge.importerModule}/domain/`)
+      inModules && pair.includes(` -> ${edge.importerModule}/domain/`)
     const kernel = targetAbs.startsWith(toPosix(KERNEL_PREFIX))
     if (sameDomain || kernel || SAME_MODULE_ALLOWLIST.has(pair)) return null
     return `domain importa fora de domain/kernel: ${pair}`
@@ -237,7 +240,10 @@ describe("module-boundaries — import entre camadas e módulos segue a tabela d
       violationOf({
         importer: "agenda/application/x.use-case.ts",
         target: toPosix(
-          resolve(MODULES_DIR, "agenda/infrastructure/repositories/y.repository.ts")
+          resolve(
+            MODULES_DIR,
+            "agenda/infrastructure/repositories/y.repository.ts"
+          )
         ),
         importerModule: "agenda",
         importerLayer: "application",
@@ -251,7 +257,9 @@ describe("module-boundaries — import entre camadas e módulos segue a tabela d
     expect(
       violationOf({
         importer: "agenda/domain/x.entity.ts",
-        target: toPosix(resolve(MODULES_DIR, "agenda/application/y.use-case.ts")),
+        target: toPosix(
+          resolve(MODULES_DIR, "agenda/application/y.use-case.ts")
+        ),
         importerModule: "agenda",
         importerLayer: "domain",
       })
@@ -283,7 +291,10 @@ describe("module-boundaries — import entre camadas e módulos segue a tabela d
     const illegal: Edge = {
       importer: "agenda/application/use-cases/x.use-case.ts",
       target: toPosix(
-        resolve(MODULES_DIR, "billing/application/events/invoice-issued.event.ts")
+        resolve(
+          MODULES_DIR,
+          "billing/application/events/invoice-issued.event.ts"
+        )
       ),
       importerModule: "agenda",
       importerLayer: "application",
@@ -343,7 +354,8 @@ describe("module-boundaries — varredura de import", () => {
 })
 
 describe("module-boundaries — nenhum módulo enxerga a conexão raiz do banco", () => {
-  const FAKE_REL = "guest/infrastructure/repositories/drizzle-fake.repository.ts"
+  const FAKE_REL =
+    "guest/infrastructure/repositories/drizzle-fake.repository.ts"
   const FAKE_ABS = resolve(MODULES_DIR, FAKE_REL)
   const RELATIVE = "../../../../shared/infra/database/drizzle.provider"
 
@@ -377,16 +389,18 @@ describe("module-boundaries — nenhum módulo enxerga a conexão raiz do banco"
   })
 
   it("aceita DrizzleExecutor type-only, no statement ou inline", () => {
-    expect(offensesOf(`import type { DrizzleExecutor } from "${RELATIVE}"`))
-      .toEqual([])
-    expect(offensesOf(`import { type DrizzleExecutor } from '${RELATIVE}'`))
-      .toEqual([])
+    expect(
+      offensesOf(`import type { DrizzleExecutor } from "${RELATIVE}"`)
+    ).toEqual([])
+    expect(
+      offensesOf(`import { type DrizzleExecutor } from '${RELATIVE}'`)
+    ).toEqual([])
   })
 
   it("reprova DrizzleExecutor importado como valor", () => {
-    expect(offensesOf(`import { DrizzleExecutor } from "${RELATIVE}"`)).toEqual([
-      `módulo importa a conexão raiz: ${FAKE_REL}:1 — DrizzleExecutor`,
-    ])
+    expect(offensesOf(`import { DrizzleExecutor } from "${RELATIVE}"`)).toEqual(
+      [`módulo importa a conexão raiz: ${FAKE_REL}:1 — DrizzleExecutor`]
+    )
   })
 
   it("reprova specifier não-relativo, que a varredura antiga não via", () => {
@@ -417,8 +431,9 @@ describe("module-boundaries — nenhum módulo enxerga a conexão raiz do banco"
   })
 
   it("não confunde import de outro alvo com a conexão raiz", () => {
-    expect(offensesOf(`import { DRIZZLE } from "./drizzle-fake.helper"`))
-      .toEqual([])
+    expect(
+      offensesOf(`import { DRIZZLE } from "./drizzle-fake.helper"`)
+    ).toEqual([])
   })
 })
 
@@ -488,9 +503,7 @@ describe("module-boundaries — RULE A: shared/** nunca importa modules/**", () 
   })
 
   it("reprova import type — o tipo de produto também é dependência", () => {
-    expect(
-      offensesOf(`import type { Anything } from "${RELATIVE}"`)
-    ).toEqual([
+    expect(offensesOf(`import type { Anything } from "${RELATIVE}"`)).toEqual([
       `shared importa modules: ${FAKE_REL} -> module-boundaries.spec.ts`,
     ])
   })
@@ -602,7 +615,9 @@ describe("module-boundaries — RULE C: o vocabulário do kernel não conhece m�
   it("nenhum token de módulo sobrevive na casca do template", () => {
     const offenders = kernelSurfaceFiles().flatMap((abs) =>
       tokenOffensesIn(
-        toPosix(abs).slice(toPosix(resolve(SRC_DIR, "..", "..", "..")).length + 1),
+        toPosix(abs).slice(
+          toPosix(resolve(SRC_DIR, "..", "..", "..")).length + 1
+        ),
         readFileSync(abs, "utf8")
       )
     )

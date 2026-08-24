@@ -3,10 +3,7 @@ import { performance } from "node:perf_hooks"
 import { context, trace } from "@opentelemetry/api"
 import { isValid, ulid } from "ulid"
 
-import type {
-  RequestContext,
-  RequestContextStore,
-} from "./request-context"
+import type { RequestContext, RequestContextStore } from "./request-context"
 import type { NextFunction, Request, Response } from "express"
 
 function firstHeader(value: string | string[] | undefined): string | null {

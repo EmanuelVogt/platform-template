@@ -1,6 +1,14 @@
 import { sql } from "drizzle-orm"
 import { Pool } from "pg"
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 
 import {
   createTestDb,
@@ -124,7 +132,12 @@ describe("MaintenanceRuntime (integração)", () => {
     const testLogger = makeTestLogger()
     txm = new TransactionManager(db, testLogger.loggerFactory)
     clients = makeClientFactory()
-    runtime = new MaintenanceRuntime(txm, testLogger.ctx, testLogger.loggerFactory, clients)
+    runtime = new MaintenanceRuntime(
+      txm,
+      testLogger.ctx,
+      testLogger.loggerFactory,
+      clients
+    )
   })
 
   afterAll(async () => {
@@ -363,8 +376,7 @@ describe("MaintenanceRuntime (integração)", () => {
       // Sem tx envolvente: o insert do corpo NÃO sofre rollback.
       expect(rows).toHaveLength(1)
       expect(
-        runtime.lastRuns().find((r) => r.name === "outbox.purge")
-          ?.outcome
+        runtime.lastRuns().find((r) => r.name === "outbox.purge")?.outcome
       ).toBe("failed")
     })
 
@@ -380,8 +392,7 @@ describe("MaintenanceRuntime (integração)", () => {
 
         expect(bodyRan).toBe(false)
         expect(
-          runtime.lastRuns().find((r) => r.name === "outbox.purge")
-            ?.outcome
+          runtime.lastRuns().find((r) => r.name === "outbox.purge")?.outcome
         ).toBe("skipped")
       } finally {
         await advisorySessionUnlock(holder, 1)
@@ -511,7 +522,12 @@ describe("job.skipped não toca o pool de aplicação (integração)", () => {
       testLogger.loggerFactory
     )
     clients = makeClientFactory()
-    runtime = new MaintenanceRuntime(txm, testLogger.ctx, testLogger.loggerFactory, clients)
+    runtime = new MaintenanceRuntime(
+      txm,
+      testLogger.ctx,
+      testLogger.loggerFactory,
+      clients
+    )
   })
 
   afterAll(async () => {
@@ -560,13 +576,10 @@ describe("job.skipped não toca o pool de aplicação (integração)", () => {
     })
 
     expect(bodyRan).toBe(false)
-    const last = cego
-      .lastRuns()
-      .find((r) => r.name === "idempotency.purge")
+    const last = cego.lastRuns().find((r) => r.name === "idempotency.purge")
     expect(last?.outcome).toBe("skipped")
     expect(last?.error).toEqual(expect.stringMatching(/\S/))
     expect(foraDoAr.liveCount()).toBe(0)
     expect(poolSnapshot(starved)).toEqual(before)
   })
 })
-

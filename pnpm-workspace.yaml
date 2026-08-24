@@ -3,8 +3,8 @@ packages:
   - "packages/*"
 
 ignoredBuiltDependencies:
-  - '@nestjs/core'
-  - '@scarf/scarf'
+  - "@nestjs/core"
+  - "@scarf/scarf"
   - cpu-features
   - es5-ext
   - esbuild

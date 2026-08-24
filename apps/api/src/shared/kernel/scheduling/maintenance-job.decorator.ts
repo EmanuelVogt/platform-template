@@ -1,6 +1,9 @@
 import { Cron } from "@nestjs/schedule"
 
-import { maintenanceRegistry, type MaintenanceJobName } from "./maintenance-registry"
+import {
+  maintenanceRegistry,
+  type MaintenanceJobName,
+} from "./maintenance-registry"
 import { getActiveMaintenanceRuntime } from "./maintenance-runtime"
 
 type AsyncJob = (...args: unknown[]) => Promise<void>

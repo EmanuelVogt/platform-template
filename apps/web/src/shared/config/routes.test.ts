@@ -26,7 +26,7 @@ describe("toSafeProtectedRoute", () => {
 describe("resolveProtectedRouteTemplate", () => {
   it("resolve template paramétrico sob /inicio", () => {
     expect(resolveProtectedRouteTemplate("/inicio/detalhe")).toBe(
-      "/inicio/$segment",
+      "/inicio/$segment"
     )
     expect(toSafeProtectedRoute("/inicio/detalhe")).toBe("/inicio/detalhe")
   })

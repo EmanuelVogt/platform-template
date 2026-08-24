@@ -23,7 +23,7 @@ export class HealthController {
       factory,
       "readiness",
       undefined,
-      this.log,
+      this.log
     )
   }
 

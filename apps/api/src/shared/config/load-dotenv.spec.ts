@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { loadDotenvForDev } from "./load-dotenv"
 
-const spyLoadEnvFile = () => vi.spyOn(process, "loadEnvFile").mockImplementation(() => undefined)
+const spyLoadEnvFile = () =>
+  vi.spyOn(process, "loadEnvFile").mockImplementation(() => undefined)
 
 describe("loadDotenvForDev", () => {
   const originalEnv = process.env.NODE_ENV

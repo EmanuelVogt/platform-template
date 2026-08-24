@@ -9,7 +9,9 @@ const DOCS_PATH = "/docs"
  * Predicado puro: `/docs` não pode ser exercitado sob Jest (Scalar é ESM), então
  * a regra de gate mora aqui, testável sem boot do Nest.
  */
-export function shouldMountDocs(env: Pick<Env, "NODE_ENV" | "DOCS_ENABLED">): boolean {
+export function shouldMountDocs(
+  env: Pick<Env, "NODE_ENV" | "DOCS_ENABLED">
+): boolean {
   return !(env.NODE_ENV === "production" && !env.DOCS_ENABLED)
 }
 

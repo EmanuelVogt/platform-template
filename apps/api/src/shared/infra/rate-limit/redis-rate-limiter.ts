@@ -25,7 +25,7 @@ export class RedisRateLimiter implements RateLimiter {
   async consume(
     key: string,
     limit: number,
-    windowSeconds: number,
+    windowSeconds: number
   ): Promise<RateLimitResult> {
     const nowMs = Date.now()
     // membro único por request: senão o ZADD sobrescreveria o score e o
@@ -38,7 +38,7 @@ export class RedisRateLimiter implements RateLimiter {
       windowSeconds,
       limit,
       nowMs,
-      member,
+      member
     )) as [number, number]
 
     return {

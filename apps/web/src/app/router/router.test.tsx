@@ -28,7 +28,7 @@ describe("createAppRouter", () => {
     const client = makeClient()
     const appRouter = createAppRouter({ queryClient: client })
     expect(appRouter.options.stringifySearch({ layers: ["a", "b"] })).toBe(
-      "?layers=a%2Cb",
+      "?layers=a%2Cb"
     )
   })
 
@@ -36,7 +36,7 @@ describe("createAppRouter", () => {
     const client = makeClient()
     const appRouter = createAppRouter({ queryClient: client })
     expect(appRouter.options.stringifySearch({ layers: ["a", 1] })).toBe(
-      '?layers=%5B%22a%22%2C1%5D',
+      "?layers=%5B%22a%22%2C1%5D"
     )
   })
 

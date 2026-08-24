@@ -73,14 +73,7 @@ export function redactValue(value: unknown): unknown {
 // pino não tem wildcard recursivo: cada profundidade exige uma entrada própria.
 // Cap em 5 níveis cobre o err serializado de cliente HTTP, cujo header de auth
 // vem em paths como err.response.config.headers.authorization (4 níveis).
-const DEPTH_PREFIXES = [
-  "",
-  "*.",
-  "*.*.",
-  "*.*.*.",
-  "*.*.*.*.",
-  "*.*.*.*.*.",
-]
+const DEPTH_PREFIXES = ["", "*.", "*.*.", "*.*.*.", "*.*.*.*.", "*.*.*.*.*."]
 
 const fieldPaths = DEPTH_PREFIXES.flatMap((prefix) =>
   SENSITIVE_FIELDS.map((field) => `${prefix}${field}`)

@@ -13,7 +13,10 @@ import { ProblemDetailsFilter } from "./problem-details.filter"
 
 import type { ArgumentsHost } from "@nestjs/common"
 
-function makeHost(captured: { status?: number; body?: unknown }): ArgumentsHost {
+function makeHost(captured: {
+  status?: number
+  body?: unknown
+}): ArgumentsHost {
   const res = {
     status(code: number) {
       captured.status = code

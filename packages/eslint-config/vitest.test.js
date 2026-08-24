@@ -12,7 +12,9 @@ function messagesFor(config, filename, code) {
 }
 
 function hasError(messages, ruleId) {
-  return messages.some((message) => message.ruleId === ruleId && message.severity === 2)
+  return messages.some(
+    (message) => message.ruleId === ruleId && message.severity === 2
+  )
 }
 
 const focusedTest = `describe("d", () => {
@@ -128,7 +130,10 @@ const RULE_FIXTURES = [
   { ruleId: "vitest/prefer-to-have-length", code: preferToHaveLength },
   { ruleId: "vitest/valid-expect", code: invalidExpect },
   { ruleId: "vitest/consistent-test-it", code: testInsteadOfIt },
-  { ruleId: "vitest/require-top-level-describe", code: missingTopLevelDescribe },
+  {
+    ruleId: "vitest/require-top-level-describe",
+    code: missingTopLevelDescribe,
+  },
   { ruleId: "max-nested-callbacks", code: tooManyNestedCallbacks },
 ]
 
@@ -136,12 +141,18 @@ describe("vitestNodeConfig / vitestConfig — LNT-01 (regras de erro)", () => {
   for (const { ruleId, code } of RULE_FIXTURES) {
     it(`${ruleId} reporta error em x.spec.ts (vitestNodeConfig)`, () => {
       const messages = messagesFor(vitestNodeConfig, "x.spec.ts", code)
-      assert.ok(hasError(messages, ruleId), `esperava ${ruleId} em ${JSON.stringify(messages)}`)
+      assert.ok(
+        hasError(messages, ruleId),
+        `esperava ${ruleId} em ${JSON.stringify(messages)}`
+      )
     })
 
     it(`${ruleId} reporta error em x.test.tsx (vitestConfig)`, () => {
       const messages = messagesFor(vitestConfig, "x.test.tsx", code)
-      assert.ok(hasError(messages, ruleId), `esperava ${ruleId} em ${JSON.stringify(messages)}`)
+      assert.ok(
+        hasError(messages, ruleId),
+        `esperava ${ruleId} em ${JSON.stringify(messages)}`
+      )
     })
   }
 })
@@ -154,11 +165,22 @@ describe("vitestConfig — Testing Library", () => {
 
   it("no-manual-cleanup, prefer-explicit-assert e prefer-presence-queries valem error", () => {
     const testingLibraryBlock = vitestConfig.find((block) =>
-      Object.keys(block.rules ?? {}).includes("testing-library/no-manual-cleanup"),
+      Object.keys(block.rules ?? {}).includes(
+        "testing-library/no-manual-cleanup"
+      )
     )
-    assert.equal(testingLibraryBlock?.rules["testing-library/no-manual-cleanup"], "error")
-    assert.equal(testingLibraryBlock?.rules["testing-library/prefer-explicit-assert"], "error")
-    assert.equal(testingLibraryBlock?.rules["testing-library/prefer-presence-queries"], "error")
+    assert.equal(
+      testingLibraryBlock?.rules["testing-library/no-manual-cleanup"],
+      "error"
+    )
+    assert.equal(
+      testingLibraryBlock?.rules["testing-library/prefer-explicit-assert"],
+      "error"
+    )
+    assert.equal(
+      testingLibraryBlock?.rules["testing-library/prefer-presence-queries"],
+      "error"
+    )
   })
 })
 

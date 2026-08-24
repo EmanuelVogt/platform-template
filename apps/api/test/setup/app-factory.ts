@@ -18,7 +18,7 @@ import type { TestingModuleBuilder } from "@nestjs/testing"
  */
 export async function createE2eApp(
   configure?: (builder: TestingModuleBuilder) => TestingModuleBuilder,
-  extraModules?: Type<unknown>[],
+  extraModules?: Type<unknown>[]
 ): Promise<INestApplication> {
   const base = Test.createTestingModule({
     imports: [AppModule, ...(extraModules ?? [])],

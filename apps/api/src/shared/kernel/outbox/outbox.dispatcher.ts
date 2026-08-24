@@ -7,7 +7,17 @@ import {
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { Interval } from "@nestjs/schedule"
 import { SpanStatusCode, trace } from "@opentelemetry/api"
-import { and, asc, eq, inArray, isNotNull, isNull, lt, lte, sql } from "drizzle-orm"
+import {
+  and,
+  asc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  lte,
+  sql,
+} from "drizzle-orm"
 
 import { env } from "../../config/env"
 import { DedicatedClientFactory } from "../../infra/database/dedicated-client.factory"

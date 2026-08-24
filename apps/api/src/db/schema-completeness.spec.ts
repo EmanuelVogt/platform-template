@@ -112,9 +112,9 @@ describe("schema-completeness — todo *.table.ts entra no agregador do drizzle"
     })
 
     it("não conta `import` — importar tabela vizinha não a reexporta", () => {
-      expect(
-        reexportsOf(`import { exemplos } from "./exemplo.table"`)
-      ).toEqual([])
+      expect(reexportsOf(`import { exemplos } from "./exemplo.table"`)).toEqual(
+        []
+      )
     })
   })
 })

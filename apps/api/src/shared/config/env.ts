@@ -15,11 +15,9 @@ const envSchema = z
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
       .optional(),
-    DATABASE_URL: z
-      .url()
-      .refine((v) => /^postgres(ql)?:\/\//.test(v), {
-        message: "DATABASE_URL deve usar scheme postgres:// ou postgresql://",
-      }),
+    DATABASE_URL: z.url().refine((v) => /^postgres(ql)?:\/\//.test(v), {
+      message: "DATABASE_URL deve usar scheme postgres:// ou postgresql://",
+    }),
     DATABASE_POOL_MAX: z.coerce.number().int().positive().default(10),
     DATABASE_SSL: z.enum(["disable", "require"]),
     // PEM costuma vir com `\n` escapado (variável de ambiente de linha única);
@@ -33,7 +31,11 @@ const envSchema = z
       .int()
       .positive()
       .default(10000),
-    DATABASE_IDLE_TIMEOUT_MS: z.coerce.number().int().nonnegative().default(10000),
+    DATABASE_IDLE_TIMEOUT_MS: z.coerce
+      .number()
+      .int()
+      .nonnegative()
+      .default(10000),
     DATABASE_STATEMENT_TIMEOUT_MS: z.coerce
       .number()
       .int()
@@ -50,11 +52,9 @@ const envSchema = z
       .int()
       .positive()
       .default(500),
-    REDIS_URL: z
-      .url()
-      .refine((v) => /^rediss?:\/\//.test(v), {
-        message: "REDIS_URL deve usar scheme redis:// ou rediss://",
-      }),
+    REDIS_URL: z.url().refine((v) => /^rediss?:\/\//.test(v), {
+      message: "REDIS_URL deve usar scheme redis:// ou rediss://",
+    }),
     REDIS_ALLOW_PLAINTEXT: z.stringbool().default(false),
     OTEL_SERVICE_NAME: z.string().min(1).default("api"),
     SERVICE_VERSION: z.string().min(1).default("0.0.1"),

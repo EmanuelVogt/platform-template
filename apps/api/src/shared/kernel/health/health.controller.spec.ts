@@ -51,6 +51,8 @@ describe("HealthController.readiness", () => {
     const { ctrl } = makeController(() =>
       Promise.reject(new Error("conn refused at /pg/internal"))
     )
-    await expect(ctrl.readiness()).rejects.toThrow("Banco de dados indisponível")
+    await expect(ctrl.readiness()).rejects.toThrow(
+      "Banco de dados indisponível"
+    )
   })
 })

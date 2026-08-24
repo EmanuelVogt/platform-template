@@ -1,4 +1,13 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 
 import { createTestPool, testDatabaseUrl } from "../../../../test/setup/test-db"
 import { makeTestLogger } from "../../../../test/setup/test-logger"
@@ -86,9 +95,7 @@ describe("clients dedicados (integração)", () => {
       const result = await client.query<{ application_name: string }>(
         "SELECT application_name FROM pg_stat_activity WHERE pid = pg_backend_pid()"
       )
-      expect(result.rows.at(0)?.application_name).toBe(
-        "api:outbox-listen"
-      )
+      expect(result.rows.at(0)?.application_name).toBe("api:outbox-listen")
     })
 
     it("outra sessão enxerga o application_name em pg_stat_activity", async () => {
@@ -98,9 +105,7 @@ describe("clients dedicados (integração)", () => {
         "SELECT application_name FROM pg_stat_activity WHERE pid = $1",
         [pid]
       )
-      expect(result.rows.at(0)?.application_name).toBe(
-        "api:advisory-lock"
-      )
+      expect(result.rows.at(0)?.application_name).toBe("api:advisory-lock")
     })
 
     it("aponta para o banco do worker, como o pool", async () => {
@@ -147,9 +152,7 @@ describe("clients dedicados (integração)", () => {
       ])
       const pids = await Promise.all(clients.map(backendPid))
 
-      expect(
-        Object.fromEntries(factory.liveCountByApplicationName())
-      ).toEqual({
+      expect(Object.fromEntries(factory.liveCountByApplicationName())).toEqual({
         "api:job:delivery.purge": 2,
         "api:outbox-listen": 1,
       })
@@ -181,9 +184,9 @@ describe("clients dedicados (integração)", () => {
       await purge.end()
       await ended
 
-      expect(
-        Object.fromEntries(factory.liveCountByApplicationName())
-      ).toEqual({ "api:outbox-listen": 1 })
+      expect(Object.fromEntries(factory.liveCountByApplicationName())).toEqual({
+        "api:outbox-listen": 1,
+      })
     })
 
     it("dá baixa também quando a sessão morre server-side", async () => {

@@ -22,7 +22,7 @@ export class RedisConnection implements OnModuleInit, OnApplicationShutdown {
 
   constructor(
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
-    loggerFactory: LoggerFactory,
+    loggerFactory: LoggerFactory
   ) {
     this.log = loggerFactory.forModule("RedisConnection")
   }
@@ -51,7 +51,10 @@ export class RedisConnection implements OnModuleInit, OnApplicationShutdown {
 
 @Global()
 @Module({
-  providers: [{ provide: REDIS_CLIENT, useFactory: createRedis }, RedisConnection],
+  providers: [
+    { provide: REDIS_CLIENT, useFactory: createRedis },
+    RedisConnection,
+  ],
   exports: [REDIS_CLIENT],
 })
 export class RedisModule {}

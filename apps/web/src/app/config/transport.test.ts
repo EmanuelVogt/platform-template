@@ -1,6 +1,15 @@
 import { client, configureClient } from "@platform/api-client/client"
 import { http, HttpResponse } from "msw"
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 
 import { server } from "@/shared/test/msw-server"
 
@@ -46,7 +55,7 @@ describe("transporte do api-client (integração via MSW)", () => {
       http.post(`${BASE_URL}${MUTATION_URL}`, ({ request }) => {
         received = request.headers.get("x-csrf-token")
         return HttpResponse.json({ ok: true })
-      }),
+      })
     )
 
     await post({ campo: "valor" })
@@ -60,7 +69,7 @@ describe("transporte do api-client (integração via MSW)", () => {
       http.post(`${BASE_URL}${MUTATION_URL}`, ({ request }) => {
         received = request.headers.get("x-csrf-token")
         return new HttpResponse(null, { status: 204 })
-      }),
+      })
     )
 
     await expect(post()).resolves.toMatchObject({ status: 204 })
@@ -70,15 +79,15 @@ describe("transporte do api-client (integração via MSW)", () => {
   it("dispara onUnauthorized no 401 com a url da request", async () => {
     server.use(
       http.post(`${BASE_URL}${MUTATION_URL}`, () =>
-        HttpResponse.json({ type: "about:blank", status: 401 }, { status: 401 }),
-      ),
+        HttpResponse.json({ type: "about:blank", status: 401 }, { status: 401 })
+      )
     )
 
     await expect(post({ campo: "valor" })).rejects.toBeDefined()
 
     expect(onUnauthorized).toHaveBeenCalledTimes(1)
     expect(onUnauthorized).toHaveBeenCalledWith(
-      expect.objectContaining({ url: MUTATION_URL }),
+      expect.objectContaining({ url: MUTATION_URL })
     )
   })
 
@@ -91,8 +100,8 @@ describe("transporte do api-client (integração via MSW)", () => {
     }
     server.use(
       http.post(`${BASE_URL}${MUTATION_URL}`, () =>
-        HttpResponse.json(problem, { status: 400 }),
-      ),
+        HttpResponse.json(problem, { status: 400 })
+      )
     )
 
     await expect(post({ campo: "valor" })).rejects.toMatchObject({

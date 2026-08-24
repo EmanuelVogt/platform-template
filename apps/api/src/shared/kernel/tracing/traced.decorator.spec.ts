@@ -6,10 +6,10 @@ import { Traced } from "./traced.decorator"
 
 const { mockSpan } = vi.hoisted(() => {
   const mockSpan = {
-  recordException: vi.fn(),
-  setStatus: vi.fn(),
-  end: vi.fn(),
-}
+    recordException: vi.fn(),
+    setStatus: vi.fn(),
+    end: vi.fn(),
+  }
   return { mockSpan }
 })
 

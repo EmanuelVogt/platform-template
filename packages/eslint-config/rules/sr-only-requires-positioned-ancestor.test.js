@@ -72,5 +72,5 @@ ruleTester.run(
         errors: unpositionedAncestor,
       },
     ],
-  },
+  }
 )

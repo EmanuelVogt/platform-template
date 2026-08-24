@@ -16,7 +16,6 @@ import { type AppLogger, LoggerFactory } from "./logger.factory"
 import type { Request, Response } from "express"
 import type { Observable } from "rxjs"
 
-
 /** Remove query string da url — evita logar token/email de ?token=, ?email=. */
 export function stripQuery(url: string): string {
   const index = url.indexOf("?")
@@ -26,9 +25,7 @@ export function stripQuery(url: string): string {
 /** Body só entra no log se tiver conteúdo — não polui GET/DELETE com `{}`. */
 function hasBody(body: unknown): boolean {
   return (
-    body !== null &&
-    typeof body === "object" &&
-    Object.keys(body).length > 0
+    body !== null && typeof body === "object" && Object.keys(body).length > 0
   )
 }
 

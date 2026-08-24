@@ -69,9 +69,9 @@ describe("RequestContext", () => {
     const store = makeStore()
     ctx.run(store, () => {
       ctx.setActor({ id: "a-1", kind: "user" })
-      expect(() => { ctx.setActor({ id: "a-2", kind: "service" }) }).toThrow(
-        /actor já definido/
-      )
+      expect(() => {
+        ctx.setActor({ id: "a-2", kind: "service" })
+      }).toThrow(/actor já definido/)
     })
     expect(store.actor).toEqual({ id: "a-1", kind: "user" })
   })
@@ -119,7 +119,9 @@ describe("RequestContext", () => {
   it("extensões ficam isoladas entre requests concorrentes", async () => {
     const ctx = new RequestContext()
     const key = Symbol("modulo.permissions")
-    const writeThenRead = async (value: string): Promise<string | undefined> => {
+    const writeThenRead = async (
+      value: string
+    ): Promise<string | undefined> => {
       ctx.setExtension(key, value)
       await Promise.resolve()
       return ctx.getExtension<string>(key)

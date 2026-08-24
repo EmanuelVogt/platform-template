@@ -1,41 +1,43 @@
-import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
-import { existsSync, readFileSync, rmSync, statSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
-import { parse as parseYaml } from "yaml";
+import { execFileSync } from "node:child_process"
+import { createHash } from "node:crypto"
+import { existsSync, readFileSync, rmSync, statSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
+import { parse as parseYaml } from "yaml"
 
 export class CatalogUnreachableError extends Error {
   constructor(ref, reason) {
-    super(`catálogo inacessível: ${ref} — ${reason}`);
-    this.name = "CatalogUnreachableError";
-    this.ref = ref;
+    super(`catálogo inacessível: ${ref} — ${reason}`)
+    this.name = "CatalogUnreachableError"
+    this.ref = ref
   }
 }
 
 export function isGitRef(source) {
-  return /^(git@|https?:\/\/|gh:|file:\/\/)/.test(source) || source.endsWith(".git");
+  return (
+    /^(git@|https?:\/\/|gh:|file:\/\/)/.test(source) || source.endsWith(".git")
+  )
 }
 
 // O copier grava `_src_path` como o usuário passou — o shorthand `gh:`/`gl:` é o caso do
 // README. `git clone` não entende esses prefixos; expande para a URL https equivalente.
 export function expandGitShorthand(source) {
-  const match = /^(gh|gl):(?!\/\/)(.+)$/.exec(source);
-  if (!match) return source;
-  const host = match[1] === "gh" ? "github.com" : "gitlab.com";
-  return `https://${host}/${match[2].replace(/\.git$/, "")}.git`;
+  const match = /^(gh|gl):(?!\/\/)(.+)$/.exec(source)
+  if (!match) return source
+  const host = match[1] === "gh" ? "github.com" : "gitlab.com"
+  return `https://${host}/${match[2].replace(/\.git$/, "")}.git`
 }
 
 function hashRef(ref) {
-  return createHash("sha1").update(ref).digest("hex").slice(0, 12);
+  return createHash("sha1").update(ref).digest("hex").slice(0, 12)
 }
 
 function gitSucceeds(args, cwd) {
   try {
-    execFileSync("git", args, { cwd, stdio: "pipe" });
-    return true;
+    execFileSync("git", args, { cwd, stdio: "pipe" })
+    return true
   } catch {
-    return false;
+    return false
   }
 }
 
@@ -43,57 +45,65 @@ function gitSucceeds(args, cwd) {
 // deixa HEAD simbólico. HEAD destacado ⇒ o ref era imutável e o cache vale como está;
 // simbólico ⇒ ref móvel, que pode ter andado no origin — o chamador descarta e reclona.
 function isReusableCache(dest) {
-  if (!existsSync(path.join(dest, "catalog"))) return false;
-  if (!gitSucceeds(["rev-parse", "--git-dir"], dest)) return false;
-  return !gitSucceeds(["symbolic-ref", "-q", "HEAD"], dest);
+  if (!existsSync(path.join(dest, "catalog"))) return false
+  if (!gitSucceeds(["rev-parse", "--git-dir"], dest)) return false
+  return !gitSucceeds(["symbolic-ref", "-q", "HEAD"], dest)
 }
 
 // Uma fonte pode vir como "<source>#<ref>" (ex.: _src_path + _commit do copier).
 // O split é na PRIMEIRA "#": uma fonte local cujo próprio nome contenha "#" não é suportada
 // e será truncada nesse caractere.
 export function splitCatalogRef(ref) {
-  const hashIndex = ref.indexOf("#");
-  if (hashIndex === -1) return { source: ref, gitRef: undefined };
-  return { source: ref.slice(0, hashIndex), gitRef: ref.slice(hashIndex + 1) };
+  const hashIndex = ref.indexOf("#")
+  if (hashIndex === -1) return { source: ref, gitRef: undefined }
+  return { source: ref.slice(0, hashIndex), gitRef: ref.slice(hashIndex + 1) }
 }
 
 export function defaultCatalogRef(copierAnswersPath) {
-  if (!existsSync(copierAnswersPath)) return undefined;
-  const answers = parseYaml(readFileSync(copierAnswersPath, "utf8")) ?? {};
-  if (!answers._src_path) return undefined;
+  if (!existsSync(copierAnswersPath)) return undefined
+  const answers = parseYaml(readFileSync(copierAnswersPath, "utf8")) ?? {}
+  if (!answers._src_path) return undefined
   // `_src_path` do copier é a raiz do template (repo inteiro), não a pasta `catalog/`.
   // Para uma fonte git, resolveCatalog já desce em `catalog/` após o clone (sparse-checkout);
   // para uma fonte local, precisamos descer aqui — resolveCatalog trata o caminho local
   // recebido como a raiz do catálogo em si (mesma convenção de `--catalog-ref` explícito).
-  const srcPath = isGitRef(answers._src_path) ? answers._src_path : path.join(answers._src_path, "catalog");
-  return answers._commit ? `${srcPath}#${answers._commit}` : srcPath;
+  const srcPath = isGitRef(answers._src_path)
+    ? answers._src_path
+    : path.join(answers._src_path, "catalog")
+  return answers._commit ? `${srcPath}#${answers._commit}` : srcPath
 }
 
 export function resolveCatalog(
   ref,
-  { cacheRoot = path.join(tmpdir(), "platform-catalog"), copierAnswersPath = ".copier-answers.yml" } = {},
+  {
+    cacheRoot = path.join(tmpdir(), "platform-catalog"),
+    copierAnswersPath = ".copier-answers.yml",
+  } = {}
 ) {
-  const resolvedRef = ref ?? defaultCatalogRef(copierAnswersPath);
+  const resolvedRef = ref ?? defaultCatalogRef(copierAnswersPath)
   if (!resolvedRef) {
     throw new CatalogUnreachableError(
       String(ref),
-      "nenhuma referência informada e .copier-answers.yml sem _src_path",
-    );
+      "nenhuma referência informada e .copier-answers.yml sem _src_path"
+    )
   }
 
-  const { source, gitRef } = splitCatalogRef(resolvedRef);
+  const { source, gitRef } = splitCatalogRef(resolvedRef)
 
   if (!isGitRef(source)) {
     // Fonte local: o sufixo "#<ref>", se houver, é ignorado na resolução do diretório —
     // um checkout local não tem semântica de "ref" nesta ferramenta. O valor completo
     // (com ref) continua preservado em `ref` para fins de registro (ex.: lock file).
     if (!existsSync(source) || !statSync(source).isDirectory()) {
-      throw new CatalogUnreachableError(source, "diretório local não encontrado");
+      throw new CatalogUnreachableError(
+        source,
+        "diretório local não encontrado"
+      )
     }
-    return { kind: "local", root: source, ref: resolvedRef };
+    return { kind: "local", root: source, ref: resolvedRef }
   }
 
-  const dest = path.join(cacheRoot, hashRef(resolvedRef));
+  const dest = path.join(cacheRoot, hashRef(resolvedRef))
 
   // `dest` é cache (issue #10): a segunda chamada com o mesmo ref deve reaproveitá-lo,
   // não deixar o clone tropeçar no diretório ocupado e virar um falso "catálogo
@@ -102,9 +112,9 @@ export function resolveCatalog(
   // metade — é descartado e clonado de novo, que é a revalidação mais forte.
   if (existsSync(dest)) {
     if (isReusableCache(dest)) {
-      return { kind: "git", root: path.join(dest, "catalog"), ref: resolvedRef };
+      return { kind: "git", root: path.join(dest, "catalog"), ref: resolvedRef }
     }
-    rmSync(dest, { recursive: true, force: true });
+    rmSync(dest, { recursive: true, force: true })
   }
 
   try {
@@ -120,12 +130,15 @@ export function resolveCatalog(
         expandGitShorthand(source),
         dest,
       ],
-      { stdio: "pipe" },
-    );
-    execFileSync("git", ["sparse-checkout", "set", "catalog"], { cwd: dest, stdio: "pipe" });
+      { stdio: "pipe" }
+    )
+    execFileSync("git", ["sparse-checkout", "set", "catalog"], {
+      cwd: dest,
+      stdio: "pipe",
+    })
   } catch (err) {
-    throw new CatalogUnreachableError(resolvedRef, err.message);
+    throw new CatalogUnreachableError(resolvedRef, err.message)
   }
 
-  return { kind: "git", root: path.join(dest, "catalog"), ref: resolvedRef };
+  return { kind: "git", root: path.join(dest, "catalog"), ref: resolvedRef }
 }

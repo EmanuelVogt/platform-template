@@ -53,7 +53,7 @@ export function freeDevPort() {
   for (const pid of pids) {
     if (!run("ps", ["-o", "command=", "-p", pid]).includes("vite")) {
       console.error(
-        `Porta ${port} ocupada por processo que não é do Vite (pid ${pid}). Libere manualmente.`,
+        `Porta ${port} ocupada por processo que não é do Vite (pid ${pid}). Libere manualmente.`
       )
       process.exit(1)
     }

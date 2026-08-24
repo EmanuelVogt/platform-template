@@ -10,4 +10,4 @@ export const EXIT_CODES = Object.freeze({
   KERNEL_RANGE_UNSATISFIED: 8,
   MIGRATION_FAILURE: 9,
   FEEDBACK_BLOCKED: 10,
-});
+})

@@ -11,7 +11,6 @@ const MODULES_DIR = join(__dirname, "..", "modules")
 // entrada do catálogo carrega as suas na própria cópia deste guard.
 const ALLOWLIST = new Set<string>([])
 
-
 // Não aceita `.run(` genérico de propósito: `ctx.run(`/`als.run(` não provam
 // transação nenhuma. Nenhum use case depende dessa fresta hoje — ela é um
 // buraco aberto esperando alguém pisar, não uma isenção em uso.
@@ -29,9 +28,7 @@ function useCaseFiles(): string[] {
 }
 
 function hasTxMarker(relPath: string): boolean {
-  return TX_MARKER.test(
-    readFileSync(join(MODULES_DIR, relPath), "utf8")
-  )
+  return TX_MARKER.test(readFileSync(join(MODULES_DIR, relPath), "utf8"))
 }
 
 describe("transactional-coverage — todo use case declara participação em tx", () => {
@@ -56,7 +53,9 @@ describe("transactional-coverage — todo use case declara participação em tx"
   // frouxo. São estes casos sintéticos que provam o estreitamento.
   describe("prova sintética do marcador", () => {
     it("recusa `.run(` genérico como prova de transação", () => {
-      expect(TX_MARKER.test("await this.ctx.run(store, () => fn())")).toBe(false)
+      expect(TX_MARKER.test("await this.ctx.run(store, () => fn())")).toBe(
+        false
+      )
       expect(TX_MARKER.test("await als.run(store, fn)")).toBe(false)
       expect(TX_MARKER.test("await engine.run(input)")).toBe(false)
     })
@@ -77,9 +76,9 @@ describe("transactional-coverage — todo use case declara participação em tx"
     })
 
     it("arquivo sem marcador nenhum segue reprovando", () => {
-      expect(TX_MARKER.test("export class FooUseCase { async execute() {} }")).toBe(
-        false
-      )
+      expect(
+        TX_MARKER.test("export class FooUseCase { async execute() {} }")
+      ).toBe(false)
     })
   })
 })

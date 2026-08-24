@@ -293,21 +293,32 @@ describe("ProblemDetailsFilter — extensões RFC 7807", () => {
 
 describe("ProblemDetailsFilter — mapeamento por classe DomainError", () => {
   const cases = [
-    { name: "FakeUnprocessableError", err: new FakeUnprocessableError(), status: 422 },
+    {
+      name: "FakeUnprocessableError",
+      err: new FakeUnprocessableError(),
+      status: 422,
+    },
     { name: "FakeNotFoundError", err: new FakeNotFoundError(), status: 404 },
     { name: "PoolSaturatedError", err: new PoolSaturatedError(), status: 503 },
     { name: "ForbiddenError", err: new ForbiddenError(), status: 403 },
-    { name: "FakeRateLimitedError", err: new FakeRateLimitedError(30), status: 429 },
+    {
+      name: "FakeRateLimitedError",
+      err: new FakeRateLimitedError(30),
+      status: 429,
+    },
   ]
 
-  it.each(cases)("$name → status $status, type e title presentes", ({ err, status }) => {
-    const r = run(err)
-    const body = r.body as Record<string, unknown>
-    expect(r.status).toBe(status)
-    expect(body.status).toBe(status)
-    expect(typeof body.type).toBe("string")
-    expect(typeof body.title).toBe("string")
-  })
+  it.each(cases)(
+    "$name → status $status, type e title presentes",
+    ({ err, status }) => {
+      const r = run(err)
+      const body = r.body as Record<string, unknown>
+      expect(r.status).toBe(status)
+      expect(body.status).toBe(status)
+      expect(typeof body.type).toBe("string")
+      expect(typeof body.title).toBe("string")
+    }
+  )
 })
 
 class FakeConflictError extends DomainError {
@@ -327,7 +338,9 @@ class FakeThrottledError extends DomainError {
 }
 
 function zodFailure(): { exception: ZodValidationException; issues: unknown } {
-  const parsed = z.object({ age: z.number() }).safeParse({ age: "não é número" })
+  const parsed = z
+    .object({ age: z.number() })
+    .safeParse({ age: "não é número" })
   if (parsed.success) {
     throw new Error("o payload de teste precisa falhar na validação")
   }
@@ -459,7 +472,9 @@ describe("ProblemDetailsFilter — fallback do Retry-After", () => {
   })
 
   it("retryAfter que não é número cai em 60", () => {
-    const r = runWith(new HttpException({ message: "rate", retryAfter: "45" }, 429))
+    const r = runWith(
+      new HttpException({ message: "rate", retryAfter: "45" }, 429)
+    )
     expect(r.headers["Retry-After"]).toBe("60")
   })
 

@@ -115,7 +115,7 @@ async function main(): Promise<void> {
 if (require.main === module) {
   void main().catch((err: unknown) => {
     console.error(
-      `[outbox:replay] falhou: ${err instanceof Error ? err.message : String(err)}`,
+      `[outbox:replay] falhou: ${err instanceof Error ? err.message : String(err)}`
     )
     process.exitCode = 1
   })

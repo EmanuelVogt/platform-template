@@ -20,7 +20,8 @@ describe("contrato OpenAPI do kernel", () => {
     const operations = Object.entries(doc.paths)
       .flatMap(([route, methods]) =>
         Object.entries(methods).map(
-          ([method, op]) => `${method.toUpperCase()} ${route} :: ${op.operationId}`
+          ([method, op]) =>
+            `${method.toUpperCase()} ${route} :: ${op.operationId}`
         )
       )
       .sort()

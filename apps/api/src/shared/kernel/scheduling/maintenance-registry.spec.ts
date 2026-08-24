@@ -176,7 +176,8 @@ describe("@MaintenanceJob", () => {
 
 const SRC_DIR = join(__dirname, "..", "..", "..")
 const DECORATOR = /^\s*@MaintenanceJob\(\s*"([^"]+)"/gm
-const JOB_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
+const JOB_NAME =
+  /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
 const OUTSIDE_TX_MARKER = "outsideTransaction("
 
 type JobBodyIndex = ReadonlyMap<string, readonly string[]>
@@ -274,7 +275,14 @@ describe("job atômico não referencia a porta fora-de-tx", () => {
 
     it("job atômico com outsideTransaction reprova nomeando job e arquivo", () => {
       const offenders = atomicJobsUsingOutsideTransaction(
-        [{ name: "exemplo.purge", cron: "0 3 * * *", lockId: 99, atomic: true }],
+        [
+          {
+            name: "exemplo.purge",
+            cron: "0 3 * * *",
+            lockId: 99,
+            atomic: true,
+          },
+        ],
         bodyOf,
         withPort
       )
@@ -294,7 +302,14 @@ describe("job atômico não referencia a porta fora-de-tx", () => {
 
     it("job atômico passa quando o arquivo não referencia a porta", () => {
       const offenders = atomicJobsUsingOutsideTransaction(
-        [{ name: "exemplo.purge", cron: "0 3 * * *", lockId: 99, atomic: true }],
+        [
+          {
+            name: "exemplo.purge",
+            cron: "0 3 * * *",
+            lockId: 99,
+            atomic: true,
+          },
+        ],
         bodyOf,
         withoutPort
       )

@@ -118,9 +118,9 @@ describe("LogInterceptor", () => {
     const boom = new Error("boom")
     const next: CallHandler = { handle: () => throwError(() => boom) }
     const ctx = makeExecutionContext({ method: "POST", url: "/v1/things" })
-    await expect(
-      firstValueFrom(interceptor.intercept(ctx, next))
-    ).rejects.toBe(boom)
+    await expect(firstValueFrom(interceptor.intercept(ctx, next))).rejects.toBe(
+      boom
+    )
     expect(log.error).toHaveBeenCalledWith("http", {
       method: "POST",
       url: "/v1/things",

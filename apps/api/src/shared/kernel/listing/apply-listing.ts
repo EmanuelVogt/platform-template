@@ -80,7 +80,8 @@ export function buildListingClauses(
   const where = conds.length > 0 ? and(...conds) : undefined
 
   const sortKey = params.sort ?? config.defaultSort.key
-  const col = config.sortable[sortKey] ?? config.sortable[config.defaultSort.key]
+  const col =
+    config.sortable[sortKey] ?? config.sortable[config.defaultSort.key]
   if (col === undefined) {
     throw new Error(
       `defaultSort.key "${config.defaultSort.key}" não está na allowlist de sortable.`

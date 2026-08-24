@@ -5,7 +5,6 @@ import { ulid } from "ulid"
 import type { RequestContextStore } from "./request-context"
 import type { EventEnvelope } from "../events/domain-event.base"
 
-
 function traceIdFromTraceparent(traceparent: string | null): string | null {
   if (!traceparent) {
     return null

@@ -1,7 +1,15 @@
 import { performance } from "node:perf_hooks"
 
 import { Pool } from "pg"
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 
 import {
   createTestDb,

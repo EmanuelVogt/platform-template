@@ -618,6 +618,77 @@ another task's tests.
 
 ---
 
+## Execution Log
+
+### Wave 1 — DONE, 11 tasks in 4 clusters, 2026-08-23
+
+| Cluster | Tier | Task | Commit | Result |
+| --- | --- | --- | --- | --- |
+| C1 | sonnet | T1 merge `catalog.yml` into `ci.yml` | `6b99461` | gate deferred to T2 by design |
+| C1 | sonnet | T2 rewrite `gates.test.mjs` | `529ad5c` | 9 → 16 tests, exit 0 |
+| C2 | sonnet | T4 `release-marker.mjs` grammar | `f3b5635` | 16 tests, exit 0 |
+| C2 | sonnet | T5 `--decide` entry | `dc1e3c7` | 24 tests, exit 0 |
+| C2 | sonnet | T6 rewrite `release.yml` | `2c21355` | YAML parse verified; asserted in T7 |
+| C2 | sonnet | T7 rewrite `release-workflow.test.mjs` | `3ced718` | 5 → 9 tests; cluster gate 33/33 exit 0 |
+| C3 | sonnet | T8 `pnpm platform release` | `c3f3690` | 10 tests, exit 0 |
+| C3 | sonnet | T9 register in `cli.mjs` | `e1e2c8c` | 42 tests, exit 0 |
+| C4 | haiku | T10 retire the dispatch from the docs | `c4ea19e` | probe DOC-03 clean |
+| C4 | haiku | T11 correct the stale CI shape | `7550d88` | guards exit 0 |
+
+**Build gate: `pnpm test:scripts` exit 0 — 446 tests / 49 files, up from the 376 / 42 baseline.
+Nothing dropped. `pnpm check` exit 1 — FOREIGN, see below.**
+
+**`git diff HEAD -- .github/workflows/` is empty**, so the working-tree revert the C1 worker hit
+mid-T1 left no residue: disk matches the commits. The sibling session independently read the
+merged file on disk (`gates:` at `:94`, `fetch-depth: 0` at `:102`) and confirmed the same.
+
+#### The `pnpm check` failure is not this feature's — do not "fix" it
+
+19 `apps/web` lint errors plus an `api#lint` failure. Attribution, verified read-only:
+
+- `git log 0358bd4..HEAD --name-only -- apps/` → **empty**. No commit of this feature touches `apps/`.
+- The failing files (`app/router/shell.tsx`, `shared/config/routes.ts`, `shared/lib/auth-redirect.ts`,
+  `shared/lib/last-location.ts` + two test files) were last edited by `fd1b48a`, `377c2f0`,
+  `68bdca5` — all **before** `0358bd4`, all from `audit-2026-08-23-remediation`'s web work.
+- `git stash list` empty; no lost state.
+
+**Rule for the rest of this feature:** never edit `apps/**` to make the Build gate green. That
+area belongs to a live sibling session, and a fix here would land inside their in-flight range.
+The Verifier's Final gate inherits the same constraint — if `pnpm check` is still red at that
+point for the same foreign reason, it is recorded as an external blocker, not a feature failure.
+
+#### Shared-checkout hazard, confirmed
+
+Three foreign commits landed inside this feature's range (`259ac55`, `bc75d78`, and the
+`apps/web` work above), and `scripts/platform/lib/advisories.mjs` carried an uncommitted foreign
+edit during the gate. **This checkout is shared with live sibling sessions.** Every commit stays
+pathspec-limited; `git add -A`, `git add .specs/`, `git stash` and branch operations are
+forbidden for every worker in this feature.
+
+#### Wave 1 repair — formatting, `6e63888`
+
+`pnpm format:check` was red on four files this wave wrote: `gates.test.mjs`, `release-marker.test.mjs`,
+`release-command.test.mjs`, `lib/commands/release.mjs`. Reported by the sibling session, which
+verified per-file authorship with `git log -1` rather than inferring from paths — the finding is
+this feature's, and it was fixed here.
+
+**Root cause, and the lesson for every remaining wave:** `prettier-format-gate` has taken the tree
+to zero formatting diffs, but **its pre-commit auto-fix hook (its T9) has not landed yet**, so
+nothing catches an unformatted file at commit time. Until it does, **every worker payload in this
+feature must instruct the worker to run `npx prettier --write` on what it touched before
+committing.** Wave 1's payloads did not, which is an orchestrator defect, not a worker's.
+
+`npx prettier --check` exit 0 on all four; `node --test` over the three test files exit 0 at 50
+tests (16 + 24 + 10), so the reformat changed no behaviour.
+
+### Wave 2 — HELD, awaiting the owner's ordering ruling
+
+T3 (`copier.yml`) collides with `audit-2026-08-23-remediation` T41, a declared single-editor
+task on the same file. The edit here is one line. The owner rules the order; no peer can decide
+it. Waves 3 and 4 queue behind wave 2 (T12 depends on T3).
+
+---
+
 ## Cross-feature collisions — read before dispatching any wave
 
 Live 2026-08-23. Relayed by the `audit-2026-08-23-remediation` session and verified on disk.

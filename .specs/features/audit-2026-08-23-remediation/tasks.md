@@ -3285,3 +3285,39 @@ surface and gates no blocker, the default `web_stack=vite` path being unaffected
 owner ruling.** *Fix 6* (TOOL-12) is informational and was recorded, not worked.
 
 **Next:** Verifier pass 1, round 2 — the same Verifier resumed with the fix range `ac679f5..bace8cc`.
+
+### Verifier pass 1, round 2 — PASS (2026-08-24). `v2.4.0` is verification-clean
+
+**41/43 ACs covered, 0 failed, 2 flagged** (CAT-05 owner-gated, TOOL-12 spec-adjudicated); 11
+requirements moved from flagged/failed to covered. **Final gate 8/8 exit 0**: `test:scripts` **592**
+(+31), `test` 620/90, coverage 760/105 at 96.5/94.4/94.9/96.8 over a floor of 90. **1212 tests
+against a 930 pre-feature baseline.** **Sensor 7 injected, 7 killed** — cumulative 12/13 across both
+rounds. Report: `validation.md`.
+
+**Both blockers closed by mutation, not by assertion.**
+
+- Round 1's surviving mutant 6 was re-run verbatim and now **dies**. FT1's seeded-noun test shares
+  the same `violationsIn()` path as the end-to-end scan, so the blindness pattern cannot recur.
+- Reverting `issue-tracker.md.jinja:21` to the hardcoded locale goes red. The default-render
+  assertion at `locale-threading.test.mjs:125-129` upgrades the pt-BR absence-of-change edge case
+  from inferred to asserted.
+
+**The workers' hand-revert claims were spot-checked, not taken on faith** — redis credential,
+`RUN_BACKFILL`, lefthook chain order, the nginx favicon block and FT13's `lessons.py` path were each
+reverted independently, and each went red.
+
+**The `booking` exception is ACCEPTED, with a caveat that is now an owner follow-up.** It is that
+file's only domain hit (`:515`'s `attends_guests` does not match `/\bguests?\b/i`, so nothing is
+masked), it is meta-prose about the template's own history, and it is scoped to one file and one
+term. **But wave-7 deviation 2 set the opposite precedent** — there the worker reworded `MySQL`
+rather than excepting it — **and the changelog grows every release, so the exception is a widening
+blanket.** Follow-up: reword `docs/dev/template-changelog.md:67` and drop the exception.
+
+**Open, and deliberately not counted against this pass:** *Fix 5* — confirmed that no `v2.4.0` AC
+fails because of it; LOC-03, LOC-06 and SEAM-04 all pass on the default `vite` shell. It still needs
+an owner ruling before a `web_stack=next` child is shipped. *CAT-05* — owner hand-off point 2.
+*TOOL-12* — spec-adjudicated, recorded so the `v3.0.0` pass does not re-litigate it.
+
+**Execute is complete for the `v2.4.0` scope. The next act is the owner's**: dispatch the release
+(an empty `chore(release): v2.4.0` marker; the agent never tags and never pushes — AD-006/AD-034).
+Waves 8-14 (`v3.0.0`) do not start until that tag exists.

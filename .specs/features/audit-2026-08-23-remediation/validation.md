@@ -1,140 +1,219 @@
-# Audit 2026-08-23 Remediation — Validation (PASS 1, `v2.4.0` scope)
+# Audit 2026-08-23 Remediation — Validation (`v2.4.0` scope)
 
-**Date**: 2026-08-24
+**Feature**: audit-2026-08-23-remediation
 **Spec**: `.specs/features/audit-2026-08-23-remediation/spec.md`
-**Diff range**: `92b4120..0422727` (main) — interleaved with `prettier-format-gate` and
-`web-stack-next` commits; attribution below is by path and task, not by position.
 **Verifier**: independent sub-agent (author ≠ verifier), opus tier, P0 depth
-**Scope**: the 43 requirements named by `tasks.md` § *Task Breakdown — `v2.4.0`* (T1–T48).
-The 8 `v3.0.0` requirements (BRAND-01, BRAND-02, TZ-01, SEAM-05, SEAM-06, IDENT-01..03) are
-unstarted by design and were **not** judged — the release boundary is binding.
+**Scope**: the 43 requirements named by `tasks.md` § *Task Breakdown — `v2.4.0`* (T1–T48). The 8
+`v3.0.0` requirements (BRAND-01, BRAND-02, TZ-01, SEAM-05, SEAM-06, IDENT-01..03) are unstarted by
+design and were **not** judged — the release boundary is binding.
+
+| Round | Date | Range | Verdict |
+| --- | --- | --- | --- |
+| 1 | 2026-08-24 | `92b4120..0422727` | ❌ FAIL — 2 blockers, 5/6 sensor |
+| 2 | 2026-08-24 | `ac679f5..a0584f3` (13 fix + 3 spec commits) | ✅ **PASS** — 0 blockers, 7/7 sensor |
+
+**Current verdict: ✅ PASS.** 41/43 requirements fully covered with `file:line` evidence; the 2
+remaining are CAT-05 (owner-gated, not a code gap) and TOOL-12 (spec-adjudicated "half-refuted").
 
 ---
+
+# Round 2 — fix round 1
+
+**Diff range**: `ac679f5..a0584f3` · FT1–FT13.
+
+## Requirements that moved
+
+| Req | Round 1 | `file:line` + assertion that moved it | Now |
+| --- | --- | --- | --- |
+| LOC-01 | ❌ FAIL (`issue-tracker.md.jinja:21` hardcoded `**pt-BR**`) | FT9 `8ea4a96`. `locale-threading.test.mjs:106-118` — `assert.doesNotMatch(source, /pt-BR/, "the literal locale must be gone")` + a positive assertion the file points at the canonical rule; `:119-123` renders at `product_locale=en` — `assert.match(content, /user-facing errors en\./)`, `/answer the user in en,/`; `:125-129` renders at the copier default with the key **unset** — `/user-facing errors pt-BR\./`, `/answer the user in pt-BR,/`. All four LOC-01 files covered, two by render | ✅ PASS |
+| RUN-02 | ⚠️ no assertion | FT3 `cfaa67d`. `redis-credential-match.test.mjs:28-33` — parses the password out of `.env.example`'s `REDIS_URL` and out of `docker-compose.yml`'s `--requirepass`, then `assert.equal` between them (cross-file derivation, no hardcoded literal) | ✅ PASS |
+| BRAND-06 | ⚠️ compose + entrypoint unscanned | FT2 `f25c6d7`. `legacy-backfill-scan.test.mjs:42-47` — `assert.deepEqual(backfillHits(read("docker-compose.yml")), [])` and the same for `apps/api/docker-entrypoint.dev.sh`; `:33-40` is an explicit non-vacuity self-test | ✅ PASS |
+| LOC-02 | ⚠️ no assertion | FT4 `6642416`. `locale-convention-reference-set.test.mjs:19-38` — `testing.md`, `adr/README.md`, `advisories/README.md` each `assert.match`ed as deferring to the canonical rule instead of restating a locale | ✅ PASS |
+| LOC-06 | ⚠️ no assertion | FT5 `0af4f1f`. `favicon-route.test.mjs:30-40` — asserts `nginx.conf` answers `/favicon.ico` with the static asset and `assert.doesNotMatch` on the SPA fallback. This is the AC's actual wording, stronger than the "asset exists" check round 1 asked for | ✅ PASS |
+| SEAM-07 | ⚠️ no assertion | FT6 `a78f80b`. `ownership-table-seams.test.mjs:19-50` — `main.ts` as platform-owned, `bootstrap.product.ts` as the boot seam, plus the three web seams from T25/T26 | ✅ PASS |
+| TOOL-09 | ⚠️ no assertion | FT7 `ae02a10`. `workflow-doc-pipeline-parity.test.mjs:19-25` — `assert.doesNotMatch` on `testRegex`; `:48` — `assert.deepEqual(commandKeys, ["migrations","typecheck","test-coverage"])` derived from `lefthook.yml`; `:57-65` — every CI job the doc names must be a real job key in `ci.yml` | ✅ PASS |
+| TOOL-10 | ⚠️ no assertion | FT8 `b69eb3a`. `dev-platform-matrix.test.mjs:19-33` — identical matrix asserted in `README.md.jinja`, `local-environment.md`, `TEMPLATE.md`, naming `sync-agent-skills.mjs`; `:35-47` — the same matrix in `copier.yml`'s `_message_after_copy`. All four AC sources | ✅ PASS |
+| BRAND-03 | ⚠️ placeholder + closed-list rule unasserted | FT10 `4dadc14`. `issue-tracker-labels.test.mjs:26-32` — the placeholder is discovered with `gh label list`, not reused from the file; `:34-39` — `assert.match(text, /Three axes, all closed lists/)`, `/\*\*Area\*\* \(one per issue, closed list\)/`, `/None fits → issue with no area label/`; `:41-57` — the illustrative line must contain `` `Billing` `` and `assert.doesNotMatch` against every owner domain term | ✅ PASS |
+| SEAM-03 | ⚠️ "no edit" claim was prose only | FT11 `6e17d14`. `seam-no-edit.test.mjs:41-49` — the identity entry ships no file named `shell.tsx`/`main.tsx`/`app-providers.tsx`; `:51-63` — `webRootFor` always resolves under `apps/web/src/entities/<name>`, never at a seam file; `:81-87` — anti-vacuity guard against an empty-directory false pass. Static proof accepted: a real `module add` costs minutes and the structural claim is what the AC states | ✅ PASS |
+| TOOL-07 | ⚠️ handbook half unguarded | FT12 `41e1e83`. `hook-references.test.mjs` — new `no handbook names a conformance spec or helper that does not exist (TOOL-07)` test walking `docs/**`. `HANDBOOK_EXCLUDED:16-20` = `ADV-*.md`, `template-changelog.md`, `docs/adr/**` (all historical or child-layout); `KNOWN_HANDBOOK_EXCEPTIONS:26-31` = exactly one entry, the YAML schema placeholder `docs/advisories/README.md` → `path/to/the.parity.spec.ts`. `docs/agents/**`, `docs/arch/**`, `docs/test/**`, `docs/code-quality.md` stay live — the guard is not gutted | ✅ PASS |
+
+## Fix 1 (Blocker) — resolved, and the exception judged
+
+FT1 `be83c29`. The end-to-end loop was refactored into a shared `violationsIn()` helper
+(`brand-hygiene.test.mjs:135-158`) called by **both** the end-to-end test (`:217-224`) and a new
+seeded-mutant test (`:226-245`); the helper's own comment states the shared path is deliberate so
+the Verifier's mutant cannot survive one while dying on the other. `violationsIn` now calls
+`withoutKnownExceptions(domainHits(text), rel)` — the missing call. The new test loops all five
+nouns and asserts a violation names each.
+
+**Judgement on the `KNOWN_EXCEPTIONS` addition — ACCEPTED.** FT1 added `"booking"` for
+`docs/dev/template-changelog.md:67`, whose text is *"the identity entry's prose is retired of
+booking-specific vocabulary"*. Verified independently:
+
+- It is that file's **only** domain hit. Line 515's `attendsGuests` / `attends_guests` does not
+  match `/\bguests?\b/i` — there is no word boundary after `s` or `_`, so the exception is not
+  masking a second leak.
+- The sentence is meta-prose about the template's own history, not the pilot's domain being
+  modelled in a client's product. The exception is scoped to one file **and** one term.
+
+**Caveat (Minor, non-blocking).** Wave 7 deviation 2 set the opposite precedent inside this very
+feature: when the gate rejected `MySQL` in T48's changelog draft, the worker **reworded** rather
+than excepted. The changelog gains a section per release, so a term-level exception on it is a
+slowly widening blanket. Follow-up for the owner: reword `:67` to "the pilot's business
+vocabulary" and drop the exception. FT1 could not do it — the file is outside its `Touches`.
+
+## FT13 — the guard's first live catch
+
+`bace8cc`. FT12's new handbook walk surfaced two pre-existing stale references. The real one,
+`docs/test/testing.md` naming `scripts/lessons.py`, is fixed to
+`.agents/skills/tlc-spec-driven/scripts/lessons.py` (verified: the file exists at that path) and
+its exception removed. `docs/advisories/README.md:20` stays excepted as a YAML schema placeholder.
+A guard catching a genuine defect on its first run is the strongest evidence it discriminates.
+
+## Discrimination Sensor — round 2
+
+**Sensor depth**: P0-full. Every worker's claim to have "hand-reverted the shipped outcome and
+watched it go red" was spot-checked by re-injecting that revert independently.
+
+| # | Target | Mutation | Scoped gate | Killed? |
+| --- | --- | --- | --- | --- |
+| 6′ | `.github/workflows/ci.yml` (seeded) | **Round 1's surviving mutant, re-run verbatim**: `# Fluxo de Hospedes e Reservas: agendamento de quartos para os guests.` | `brand-hygiene.test.mjs` → exit 1, `.github/workflows/ci.yml carrega vocabulário de domínio do piloto: Hospedes, agendamento, quartos, guests, Reservas` | ✅ **Killed** (survived in round 1) |
+| 7 | `apps/api/.env.example:49` | `REDIS_URL` password `redis` → `wrongpass` | `redis-credential-match.test.mjs` → exit 1, 1 failure | ✅ Killed |
+| 8 | `apps/api/docker-entrypoint.dev.sh` | Reintroduced `if [ "$RUN_BACKFILL" = "true" ]; then node dist/legacy-import/run; fi` | `legacy-backfill-scan.test.mjs` → exit 1, 1 failure | ✅ Killed |
+| 9 | `lefthook.yml:8` | Pre-push step `typecheck:` renamed → doc no longer matches the real chain | `workflow-doc-pipeline-parity.test.mjs` → exit 1, `commandKeys` deepEqual diff | ✅ Killed |
+| 10 | `apps/web-vite/nginx.conf:37` | Deleted the `location = /favicon.ico` block (falls through to the SPA) | `favicon-route.test.mjs` → exit 1, 1 failure | ✅ Killed |
+| 11 | `docs/agents/issue-tracker.md.jinja:21` | Reverted FT9 — restored the hardcoded `**pt-BR**` line | `locale-threading.test.mjs` → exit 1, 2 failures, `error: 'the literal locale must be gone'` | ✅ Killed |
+| 12 | `docs/test/testing.md:24` | Reverted FT13 — restored the stale `scripts/lessons.py` path | `hook-references.test.mjs` → exit 1, `not ok 3 - no handbook names a conformance spec or helper that does not exist (TOOL-07)` | ✅ Killed |
+
+Each mutation was injected once, run once, restored with `git checkout -- <file>`, and
+`git status --short` confirmed empty before the next. No `stash`, branch or worktree.
+
+**Result**: 7/7 killed — ✅ PASS. The workers' hand-revert claims hold.
+**Cumulative across both rounds**: 13 injected, 12 killed, and the single round-1 survivor is now
+dead.
+
+## Gate Check — round 2
+
+- **Gate command**: `pnpm check && pnpm test && pnpm test:scripts && pnpm test:coverage &&
+  pnpm catalog:lint && pnpm catalog:typecheck && pnpm catalog:check && pnpm template:smoke`
+- **Result**: 8/8 steps **exit 0**
+- `pnpm test` 620 tests / 90 files · `pnpm test:scripts` **592/592** (was 561 — **+31** from the fix
+  round) · `pnpm test:coverage` 760 tests / 105 files
+- **Coverage**: statements 96.51% (1275/1321) · branches 94.42% (627/664) · functions 94.93%
+  (375/395) · lines 96.81% (1216/1256) — all ≥ 90, no violation
+- **Test count**: 930 pre-feature → 1181 (round 1) → **1212** (round 2). No drop at any point
+- **Failures**: none
+
+**Working-tree caveat.** The checkout again carried a concurrent session's uncommitted files (its
+earlier `.specs/features/done/**` renames are now committed; other `handoff-archive.md` files are
+dirty). They are **not** this feature's; I neither staged nor reverted them. All 8 steps were green
+regardless, and no finding in this round derives from them — every judgement came from the fix
+range's own commits or from files that session does not touch.
+
+## Open, not counted against this pass
+
+- **Fix 5 (cross-feature) — owner ruling still open.** `copier.yml` `web_stack` defaults to `vite`;
+  this feature's seams live in `apps/web-vite`, while `apps/web-next` (the sibling
+  `web-stack-next`'s surface) has no favicon, no `product-routes.tsx`, no `registerProtectedRoute`.
+  Confirmed **no `v2.4.0` AC fails because of it**: LOC-03, LOC-06 and SEAM-04 all pass on the
+  default shell. Recorded as an open routing decision, per the coordinator's ruling.
+- **CAT-05 — owner-gated.** `git tag -l 'catalog/*'` still empty; owner hand-off point 2 (the owner
+  tags after wave 7). The agent never tags (AD-006/AD-034). Not a code gap.
+- **TOOL-12 — spec-adjudicated.** `tasks.md:718` declares it "half-refuted"; T31 Done-when 2 keeps
+  the documented 500-not-503 exclusion deliberately, so one pg literal is matched where the AC says
+  both. Latency mitigated by a 2000 ms margin, not eliminated. Recorded so pass 2 does not
+  re-litigate it as new.
+- **The `booking` exception caveat** above — one-line reword, owner-routable.
+
+---
+
+# Round 1 — initial verification (historical)
+
+**Diff range**: `92b4120..0422727`, interleaved with `prettier-format-gate` and `web-stack-next`;
+attribution was by path and task, not position.
 
 ## Task Completion
 
-T1–T48 all landed; waves 1–7 each closed on their own Build gate (Execution Log). Four tasks
-carry deviations the author declared and this report adjudicates: **T16** (area-label placeholder
-shipped as a `gh label list` discovery instruction, not a Jinja variable), **T43** (the
-`SPEC_DEVIATION` exclusion of `docs/agents/harness.md` — confirmed **removed** at HEAD),
-**T45** (`TOKEN_ALLOWLIST` exemption for `openapi-config.ts`, to be cleared by T49), and
-**T46** (domain-noun scanning not wired end to end — adjudicated as a real gap, see Fix 1).
-T9, T10, T12–T15 and T32 shipped as `Tests: none · Gate: build` although the spec's traceability
-declares their proof as `test`; see Fix 3.
-
----
+T1–T48 all landed; waves 1–7 each closed on their own Build gate. Four tasks carried declared
+deviations: **T16** (area-label placeholder shipped as a `gh label list` discovery instruction, not
+a Jinja variable — adjudicated as satisfying the AC's shipped shape), **T43** (the `SPEC_DEVIATION`
+exclusion of `docs/agents/harness.md` — confirmed **removed**), **T45** (`TOKEN_ALLOWLIST`
+exemption for `openapi-config.ts`, to be cleared by T49), **T46** (domain-noun scanning not wired
+end to end — adjudicated a real gap, fixed in round 2 by FT1).
 
 ## Spec-Anchored Acceptance Criteria
 
-| Criterion | Spec-defined outcome | `file:line` + assertion | Result |
+| Criterion | `file:line` + assertion | R1 | R2 |
 | --- | --- | --- | --- |
-| CLI-01 CLI runs in a child, never a module-resolution error | `discoverEntries` out of the `_exclude`d `lib/lint.mjs` | gate exit 0 + `scripts/platform/__tests__/smoke-runs-cli.test.mjs:128` — `assert.equal(code, EXIT_CODES.TEST_FAILURE)` on a reintroduced excluded import | ✅ PASS |
-| CLI-02 guard fails on a `scripts/**` import of an `_exclude`d path | guard fails | `excluded-imports.test.mjs:40-46` — `assert.deepEqual(offenders, [{file:"scripts/platform/cli.mjs", specifier:"./lib/lint.mjs", …}])` | ✅ PASS |
-| CLI-03 `template:smoke` executes the CLI inside the child | CLI runs with `cwd` = child | `smoke-runs-cli.test.mjs:63-80` — `assert.equal(statusCall.options.cwd, childDir)`; `pnpm template:smoke` exit 0 | ✅ PASS |
-| RUN-01 exactly one API port across 10 sites | `3000` everywhere | `canonical-port.test.mjs:29-54` — per-site `assert.equal(value, canonical)`; `:65` — `assert.equal(extractPort(...), "3000")` | ✅ PASS (Dockerfile `HEALTHCHECK` site not separately asserted) |
-| RUN-02 shipped `REDIS_URL` authenticates against the shipped Redis | credentials match | source only: `apps/api/.env.example:49` `REDIS_URL=redis://:redis@localhost:6379` vs `docker-compose.yml:34` `["redis-server","--requirepass","redis"]` — **no assertion ties them** | ⚠️ proof downgraded (Fix 3) |
-| RUN-03 every documented first-run command exists | each resolves in a manifest | `documented-commands.test.mjs:44-61` — `assert.ok(resolved, …)` over README.md.jinja / .github/README.md / local-environment.md; `copier-questions.test.mjs:101` — `assert.ok(script in scripts, …)` for `_message_after_copy` | ✅ PASS |
-| RUN-04 `format:check` completes without a plugin-load error | green at HEAD | satisfied-by-sibling (`prettier-format-gate`, `266d2fd`..`60a011a`); this feature's evidence = `pnpm check`/`format:check` exit 0 in the Final gate | ✅ PASS |
-| RUN-05 fixture repair stays documented | changelog + skill state it | `fixture-repair-documented.test.mjs:13-23` — `assert.match(changelog, /Repair \`\.copier-answers\.yml\` by hand, once, before \`copier update\`/)` | ✅ PASS |
-| BRAND-03 area-label list from a product-filled placeholder, closed-list rule intact, examples domain-neutral | placeholder + closed list | shipped shape `docs/agents/issue-tracker.md.jinja:33-37` (`gh label list` discovery, neutral examples); only guard = `docs-no-owner-infra.test.mjs:79` domain/infra scan. **Placeholder mechanism and closed-list rule unasserted** | ⚠️ partial (Fix 4) |
-| BRAND-04 P0 taxonomy generic, points at the product's domain doc | no booking rules | `harness-taxonomy.test.mjs:22-48` — asserts "auth, payments, data integrity, …the product's own domain doc" present and `booking rules`/`availability` absent; `docs/agents/harness.md:129-130`. The wave-1 `SPEC_DEVIATION` exclusion is **gone** (`docs-no-owner-infra.test.mjs:75-84` lists `harness.md` plainly) | ✅ PASS |
-| BRAND-05 infra/deploy docs carry platform-level facts only | no owner infra nouns | `docs-no-owner-infra.test.mjs:38-49` `OWNER_INFRA_TERMS` (AWS/EC2/Dokploy/Cloudflare/Resend/Traefik/Swarm/MySQL/`~/.local/bin`/us-east-2/sa-east-1) over `:76-84`, incl. `infra.md.jinja` + `deploy.md.jinja`; mutant M5 killed | ✅ PASS |
-| BRAND-06 no legacy-MySQL backfill in docs, compose, entrypoint, env tables | absent everywhere | source clean (`docker-entrypoint.dev.sh`, `docker-compose.yml`, `local-environment.md` carry no `RUN_BACKFILL`/`SyncLegacyModule`/MySQL); guarded only for `docs`/`.claude`/`.github/workflows` via `/\bMySQL\b/i`. **Compose + entrypoint sites unscanned** | ⚠️ partial (Fix 3) |
-| BRAND-07 boundary guard covers `test`, `openapi`, `docs`, `web/src/pages`; kernel harness holds kernel vocabulary | four roots scanned | `apps/api/src/modules/module-boundaries.spec.ts:577-586` `KERNEL_SURFACE`; assertions `:671-680`. `TOKEN_ALLOWLIST:598` exempts `openapi-config.ts` (declared `SPEC_DEVIATION`, T49 must clear) | ✅ PASS |
-| BRAND-08 no workflow wired to an absent module | file not shipped | `copier-questions.test.mjs:130-140` — `assert.deepEqual(tracked(".github/workflows/feedback-triage.yml"), [])` and not in `_exclude` | ✅ PASS |
-| CAT-01 every entry touched by `security-audit-remediation` carries a new version | all five bumped | gate exit 0 (`catalog:lint`, `catalog:check`); five `module.json` at `2.0.2`; `docs/advisories/ADV-20260822-0{1..5}.md:5` `affects: ">=1.0.0 <2.0.1"` | ✅ PASS |
-| CAT-02 changed entry without a `module.json` bump fails lint and CI | lint red | `lib/lint.mjs:225` `lintEntryBump` wired at `catalog-lint.mjs:169`; 7 tests in `entry-bump-lint.test.mjs`; CI baseline `.github/workflows/ci.yml:124-125` `fetch-depth: 0`; mutant M3 killed | ✅ PASS |
-| CAT-03 a child at `v2.0.0` is reported affected by ADV-20260822-01..05 | five advisories listed | `compute-pending-catalogref.test.mjs:123-147` — `assert.deepEqual(result.pending.map(a => a.id).sort(), [ADV-20260822-01..05])`; mutant M2 killed | ✅ PASS (no fixture pins the `#v2.0.0` boundary itself; the `<2.0.1` version half covers it) |
-| CAT-04 advisory `detect`/`parity` paths are child-layout; `catalog/` rejected | lint rejects | `advisory-path-scope.test.mjs:27-34` — `assert.match(errors[0], /^detect referencia "catalog\/widget"/)` | ✅ PASS |
-| CAT-05 a `catalog/<name>@x.y.z` tag exists per published entry version | tag present | probe (budget 1/3, already spent): `git tag -l 'catalog/*'` → **empty**. Owner hand-off point 2 (the owner tags after wave 7); the agent never tags (AD-006/AD-034) | ⚠️ owner-gated, not observable at HEAD |
-| LOC-01 `product_locale` asked (default `pt-BR`) and threaded through the four language rules | all four files | `copier.yml:160-165`; `copier-questions.test.mjs:38-47` — `assert.equal(question.default, "pt-BR")`; `:52-59` — `assert.equal(question.choices, undefined)`. `AGENTS.md.jinja:58,81` threaded; `code-quality.md:12,47` + `communication.md:9` reference the canonical rule. **`docs/agents/issue-tracker.md.jinja:21` still hardcodes `**pt-BR**`** | ❌ FAIL (Fix 2) |
-| LOC-02 the language convention stated in exactly one place, referenced from the others | one canonical home | `AGENTS.md` Tripwires → Language; `docs/code-quality.md:12,47` and `docs/agents/communication.md:9` link it. **No assertion** | ⚠️ proof downgraded (Fix 3) |
-| LOC-03 `VITE_APP_NAME`/`VITE_LOCALE` drive title, `<html lang>`, `pageTitle()` | follow without a platform edit | `apps/web-vite/src/app/router/shell.test.tsx:37` — `expect(pageTitle()).toBe("Acme")`; `:42` — `expect(pageTitle("Início")).toBe("Início · Acme")`; `:96` — `expect(indexHtml).toContain('lang="%VITE_LOCALE%"')`; `:30-31` default preserved | ✅ PASS (Vite shell) |
-| LOC-04 RFC 7807 title / Zod message from a `DEFAULT_LOCALE`-selected pack | pt-BR shipped as one pack | `apps/api/src/shared/kernel/i18n/message-pack.ts` + `message-pack.spec.ts`; `problem-details.filter.spec.ts` | ✅ PASS |
-| LOC-05 one message table per entry; no entry hardcodes a timezone | per-entry table | `catalog/notification/api/application/catalog/notification-catalog.ts` + `.spec.ts`; `catalog/{identity/single-tenant,attachment,tag}/api/domain/errors.ts` + `.spec.ts` | ✅ PASS |
-| LOC-06 `/favicon.ico` served from a shipped `apps/web/public/` | real asset, not SPA fallback | asset shipped `apps/web-vite/public/favicon.ico`, linked `apps/web-vite/index.html:6`. **No assertion**; `apps/web-next/public` holds only `.gitkeep` | ⚠️ partial (Fix 3, Fix 5) |
-| SEAM-01 `rawBody: true` + product-owned `bootstrap.product.ts` before `listen` | no-op under `_skip_if_exists` | `apps/api/src/main.ts:45` `rawBody: true`; `apps/api/test/bootstrap-product.e2e-spec.ts:81-83` — `expect(order).toEqual(["mountDocs","bootstrapProduct"])`; `copier.yml:72` `_skip_if_exists` | ✅ PASS |
-| SEAM-02 one-shot `setTenant`; second call throws | throws | `apps/api/src/shared/kernel/context/request-context.spec.ts:118-125` — `expect(() => { ctx.setTenant("t-2") }).toThrow(/tenantId já definido/)`; mutant M1 killed | ✅ PASS |
-| SEAM-03 installing identity edits no `shell.tsx`/`main.tsx`/`app-providers.tsx` | no platform edit | mechanism asserted `apps/web-vite/src/app/router/shell.test.tsx:51-63` (`registerAppGuard` overrides `beforeLoad`); the "no edit required" claim itself is **prose** (`catalog/identity/single-tenant/README.md:315,375`) | ⚠️ partial (Fix 4) |
-| SEAM-04 a product route joins last-location and post-login redirect without editing `routes.ts` | registration seam | `apps/web-vite/src/shared/config/routes.ts:54` `registerProtectedRoute`; `routes.test.ts:54-58`; `shared/lib/last-location.test.ts:31-35` | ✅ PASS (Vite shell; Fix 5) |
-| SEAM-07 ownership table lists every product edit point, `main.ts` as platform | row present | `docs/dev/template.md:13` — `\| API boot entrypoint \| platform \| \`apps/api/src/main.ts\` \|`. **No assertion** | ⚠️ proof downgraded (Fix 3) |
-| TOOL-01 entry point runs from a path containing a space | main body executes | `is-main.test.mjs:82-83` — `assert.equal(result.status, 0)` / `assert.equal(result.stdout, "ran\n")`; `:59` — `assert.deepEqual(offenders, [])` (no 9th raw comparison) | ✅ PASS |
-| TOOL-02 lock paths relative to the child root | relative path | `lock-paths.test.mjs:42-45` — `assert.equal(nextLock.modules.alpha.files[0].path, "apps/api/src/modules/alpha/alpha.module.ts")` | ✅ PASS |
-| TOOL-03 describe-style `_commit` resolves the base tag | parses through `parseInstalledVersion` | `template-version.test.mjs:353-357` — `assert.equal(readTemplateVersion(cwd), "2.2.1")` for `_commit: v2.2.1-4-gabc1234` | ✅ PASS |
-| TOOL-04 `--rollback` with an unreachable catalog preserves the registry, exits non-zero | registry intact | `rollback.test.mjs:98` — `assert.equal(exitCode, EXIT_CODES.CATALOG_UNREACHABLE)`; `:107-110` — `assert.match(platformModules, /AlphaModule/)` | ✅ PASS |
-| TOOL-05 `--rollback` unwinds a failed `--with-deps`, or refuses with `git` guidance | unwind or refuse | `rollback.test.mjs:139-153` — `assert.equal(lock.modules.alpha, undefined)` (whole chain unwound); `:155-182` — `assert.equal(exitCode, EXIT_CODES.DESTINATION_EXISTS)` + `assert.match(stderr, /git checkout/)` | ✅ PASS |
-| TOOL-06 `advisory detect` failure gets a distinct code, never "not affected" | distinct exit code | `advisory-exit-codes.test.mjs:82-83` and `:97-98` — `assert.equal(exitCode, EXIT_CODES.ADVISORY_DETECT_FAILED)` + `assert.notEqual(exitCode, EXIT_CODES.OK)`; `:114-117` `;`-chains; `:131-136` quoting; mutant M4 killed | ✅ PASS |
-| TOOL-07 a hook or handbook names only files that ship | referenced file exists | `hook-references.test.mjs:63-73` walks `.claude/hooks/**`; `contract-enum.mjs` and `edit-reminders.mjs` verified clean. **No handbook (`docs/`) reference walk** | ⚠️ partial (Fix 4) |
-| TOOL-08 `pending-advisories` silent with nothing to adopt | empty stdout | `pending-advisories.test.mjs:141-142`, `:152-153`, `:180-181` — `assert.equal(result.stdout, "")` (template repo, fresh child, empty advisories) | ✅ PASS |
-| TOOL-09 `workflow.md`/`deploy.md.jinja` match the real pipeline, name no Jest construct | no Jest construct | source correct: `docs/agents/workflow.md:108-109` names Vitest `include` at `apps/api/vitest.config.mts:20`, no `testRegex`. **No assertion** | ⚠️ proof downgraded (Fix 3) |
-| TOOL-10 four sources state macOS / Linux / WSL2, native Windows unsupported | all four | source correct: `README.md.jinja:34`, `TEMPLATE.md:19`, `docs/dev/local-environment.md:9,11`, `copier.yml:112`. **No assertion** | ⚠️ proof downgraded (Fix 3) |
-| TOOL-11 CI regenerates the contract, fails on drift, survives `module add` | check survives | `.github/workflows/ci.yml:71` `- run: pnpm contract:check` (job `quality`, no template-only `if`); `contract-check-ci.test.mjs:35-43` asserts exactly one job runs it | ✅ PASS |
-| TOOL-12 503 + `Retry-After` for **both** pg timeout messages; spec latency-independent | both messages | `problem-details.filter.spec.ts:189-192` — `expect(r.status).toBe(503)` + `expect(r.headers["Retry-After"]).toBe("1")`. Only **one** pg literal exists (`application-pool.ts:19`); `tasks.md:718` declares TOOL-12 "half-refuted" and T31 keeps the 500-not-503 exclusion deliberately. `application-pool.int-spec.ts:305-317` still awaits a real `connectionTimeoutMillis: 2000` | ⚠️ declared half-refuted (Fix 6) |
-| TOOL-13 `copier update` runs `pnpm install`/`skills:sync` at most once, real project only | exactly once | `copier-questions.test.mjs:78-96` — `assert.match(task.when, /_copier_operation\s*==\s*'copy'/)`; `child-lockfile.test.mjs:25-31` — `assert.equal(installs.length, 1)` | ✅ PASS |
+| CLI-01 CLI runs in a child, never a module-resolution error | gate exit 0 + `smoke-runs-cli.test.mjs:128` — `assert.equal(code, EXIT_CODES.TEST_FAILURE)` on a reintroduced excluded import | ✅ | ✅ |
+| CLI-02 guard fails on a `scripts/**` import of an `_exclude`d path | `excluded-imports.test.mjs:40-46` — `assert.deepEqual(offenders, [{file:"scripts/platform/cli.mjs", specifier:"./lib/lint.mjs", …}])` | ✅ | ✅ |
+| CLI-03 `template:smoke` executes the CLI inside the child | `smoke-runs-cli.test.mjs:63-80` — `assert.equal(statusCall.options.cwd, childDir)` | ✅ | ✅ |
+| RUN-01 exactly one API port across 10 sites | `canonical-port.test.mjs:29-54` — per-site `assert.equal(value, canonical)`; `:65` — `assert.equal(extractPort(...), "3000")` | ✅ | ✅ |
+| RUN-02 shipped `REDIS_URL` authenticates against the shipped Redis | `redis-credential-match.test.mjs:28-33` (FT3) | ⚠️ | ✅ |
+| RUN-03 every documented first-run command exists | `documented-commands.test.mjs:44-61` — `assert.ok(resolved, …)`; `copier-questions.test.mjs:101` for `_message_after_copy` | ✅ | ✅ |
+| RUN-04 `format:check` completes without a plugin-load error | satisfied-by-sibling (`prettier-format-gate`, `266d2fd`..`60a011a`); evidence = `pnpm check` exit 0 | ✅ | ✅ |
+| RUN-05 fixture repair stays documented | `fixture-repair-documented.test.mjs:13-23` — `assert.match(changelog, /Repair \`\.copier-answers\.yml\` by hand, once, before \`copier update\`/)` | ✅ | ✅ |
+| BRAND-03 area-label placeholder, closed-list rule, neutral examples | `issue-tracker-labels.test.mjs:26-57` (FT10) | ⚠️ | ✅ |
+| BRAND-04 P0 taxonomy generic, points at the product's domain doc | `harness-taxonomy.test.mjs:22-48`; wave-1 exclusion confirmed gone | ✅ | ✅ |
+| BRAND-05 infra/deploy docs carry platform-level facts only | `docs-no-owner-infra.test.mjs:38-49` `OWNER_INFRA_TERMS` over `:76-84`; mutant 5 killed | ✅ | ✅ |
+| BRAND-06 no legacy-MySQL backfill anywhere | `legacy-backfill-scan.test.mjs:42-47` (FT2) | ⚠️ | ✅ |
+| BRAND-07 boundary guard covers the four roots | `module-boundaries.spec.ts:577-586` `KERNEL_SURFACE`, assertions `:671-680`; `TOKEN_ALLOWLIST:598` declared deviation for T49 | ✅ | ✅ |
+| BRAND-08 no workflow wired to an absent module | `copier-questions.test.mjs:130-140` — `assert.deepEqual(tracked(".github/workflows/feedback-triage.yml"), [])` | ✅ | ✅ |
+| CAT-01 every touched entry carries a new version | gate exit 0; five `module.json` at `2.0.2`; `ADV-20260822-0{1..5}.md:5` `affects: ">=1.0.0 <2.0.1"` | ✅ | ✅ |
+| CAT-02 changed entry without a bump fails lint and CI | `lib/lint.mjs:225` wired at `catalog-lint.mjs:169`; 7 tests in `entry-bump-lint.test.mjs`; CI baseline `ci.yml:124-125` `fetch-depth: 0`; mutant 3 killed | ✅ | ✅ |
+| CAT-03 a child at `v2.0.0` is reported affected by ADV-…-01..05 | `compute-pending-catalogref.test.mjs:123-147` — `assert.deepEqual(result.pending.map(a => a.id).sort(), […])`; mutant 2 killed | ✅ | ✅ |
+| CAT-04 advisory paths are child-layout; `catalog/` rejected | `advisory-path-scope.test.mjs:27-34` — `assert.match(errors[0], /^detect referencia "catalog\/widget"/)` | ✅ | ✅ |
+| CAT-05 a `catalog/<name>@x.y.z` tag exists per entry version | probe (budget 1/3, spent): `git tag -l 'catalog/*'` → **empty**. Owner hand-off point 2 | ⚠️ | ⚠️ |
+| LOC-01 `product_locale` asked and threaded through four files | `copier-questions.test.mjs:38-47`, `:52-59`; `locale-threading.test.mjs:71-129` (FT9) | ❌ | ✅ |
+| LOC-02 language convention stated once, referenced elsewhere | `locale-convention-reference-set.test.mjs:19-38` (FT4) | ⚠️ | ✅ |
+| LOC-03 `VITE_APP_NAME`/`VITE_LOCALE` drive title, `<html lang>`, `pageTitle()` | `shell.test.tsx:37` — `expect(pageTitle()).toBe("Acme")`; `:42`; `:96` — `expect(indexHtml).toContain('lang="%VITE_LOCALE%"')`; `:30-31` default preserved | ✅ | ✅ |
+| LOC-04 RFC 7807 / Zod strings from a `DEFAULT_LOCALE` pack | `shared/kernel/i18n/message-pack.ts` + `message-pack.spec.ts`; `problem-details.filter.spec.ts` | ✅ | ✅ |
+| LOC-05 one message table per entry; no hardcoded timezone | `notification-catalog.spec.ts`; `catalog/{identity/single-tenant,attachment,tag}/api/domain/errors.spec.ts` | ✅ | ✅ |
+| LOC-06 `/favicon.ico` served from a shipped `public/` | `favicon-route.test.mjs:30-40` (FT5) | ⚠️ | ✅ |
+| SEAM-01 `rawBody: true` + `bootstrap.product.ts` before `listen` | `main.ts:45`; `bootstrap-product.e2e-spec.ts:81-83` — `expect(order).toEqual(["mountDocs","bootstrapProduct"])`; `copier.yml:72` `_skip_if_exists` | ✅ | ✅ |
+| SEAM-02 one-shot `setTenant`; second call throws | `request-context.spec.ts:118-125` — `expect(() => { ctx.setTenant("t-2") }).toThrow(/tenantId já definido/)`; mutant 1 killed | ✅ | ✅ |
+| SEAM-03 installing identity edits no platform web file | `seam-no-edit.test.mjs:41-87` (FT11) | ⚠️ | ✅ |
+| SEAM-04 a product route joins last-location without editing `routes.ts` | `routes.ts:54` `registerProtectedRoute`; `routes.test.ts:54-58`; `last-location.test.ts:31-35` | ✅ | ✅ |
+| SEAM-07 ownership table lists `main.ts` as platform | `ownership-table-seams.test.mjs:19-50` (FT6) | ⚠️ | ✅ |
+| TOOL-01 entry point runs from a path containing a space | `is-main.test.mjs:82-83` — `assert.equal(result.stdout, "ran\n")`; `:59` — `assert.deepEqual(offenders, [])` | ✅ | ✅ |
+| TOOL-02 lock paths relative to the child root | `lock-paths.test.mjs:42-45` — `assert.equal(…files[0].path, "apps/api/src/modules/alpha/alpha.module.ts")` | ✅ | ✅ |
+| TOOL-03 describe-style `_commit` resolves the base tag | `template-version.test.mjs:353-357` — `assert.equal(readTemplateVersion(cwd), "2.2.1")` | ✅ | ✅ |
+| TOOL-04 `--rollback` preserves the registry, exits non-zero | `rollback.test.mjs:98` — `assert.equal(exitCode, EXIT_CODES.CATALOG_UNREACHABLE)`; `:107-110` | ✅ | ✅ |
+| TOOL-05 `--rollback` unwinds a failed `--with-deps`, or refuses | `rollback.test.mjs:139-153`; `:155-182` — `assert.equal(exitCode, EXIT_CODES.DESTINATION_EXISTS)` + `assert.match(stderr, /git checkout/)` | ✅ | ✅ |
+| TOOL-06 detect failure gets a distinct code, never "not affected" | `advisory-exit-codes.test.mjs:82-83`, `:97-98`, `:114-117`, `:131-136`; mutant 4 killed | ✅ | ✅ |
+| TOOL-07 a hook **or handbook** names only files that ship | `hook-references.test.mjs:63-73` (hooks) + the handbook walk (FT12) | ⚠️ | ✅ |
+| TOOL-08 `pending-advisories` silent with nothing to adopt | `pending-advisories.test.mjs:141-142`, `:152-153`, `:180-181` — `assert.equal(result.stdout, "")` | ✅ | ✅ |
+| TOOL-09 docs match the real pipeline, no Jest construct | `workflow-doc-pipeline-parity.test.mjs` (FT7) | ⚠️ | ✅ |
+| TOOL-10 four sources state the dev-platform matrix | `dev-platform-matrix.test.mjs:19-47` (FT8) | ⚠️ | ✅ |
+| TOOL-11 CI fails on contract drift, survives `module add` | `ci.yml:71` `- run: pnpm contract:check`; `contract-check-ci.test.mjs:35-43` | ✅ | ✅ |
+| TOOL-12 503 + `Retry-After` for **both** pg timeout messages | `problem-details.filter.spec.ts:189-192` — `expect(r.status).toBe(503)` + `expect(r.headers["Retry-After"]).toBe("1")`. Only one pg literal exists; declared "half-refuted" at `tasks.md:718` | ⚠️ | ⚠️ |
+| TOOL-13 `copier update` runs install/sync at most once | `copier-questions.test.mjs:78-96`; `child-lockfile.test.mjs:25-31` — `assert.equal(installs.length, 1)` | ✅ | ✅ |
 
-**Status**: 30/43 fully covered · 1 failed (LOC-01) · 12 flagged (11 proof/coverage gaps + CAT-05
-owner-gated). Plus one **success-criterion** failure proven by the sensor, see Fix 1.
+## Round-1 Sensor
 
----
-
-## Discrimination Sensor
-
-**Sensor depth**: P0-full (6 mutations, ≥5 required)
-
-| # | File:line | Mutation | Scoped gate | Killed? |
-| --- | --- | --- | --- | --- |
-| 1 | `apps/api/src/shared/kernel/context/request-context.ts:77` | One-shot guard flipped `store.tenantId !== null` → `=== undefined` (second `setTenant` no longer throws) | `pnpm vitest run --project api …/request-context.spec.ts` → exit 1, 1 failed / 18 passed | ✅ Killed |
-| 2 | `scripts/platform/lib/advisories.mjs:106` | `matchesCatalogRef` forced to `false` (drops the CAT-03 catalogRef fallback) | `node --test …/compute-pending-catalogref.test.mjs` → exit 1, 1 fail / 5 | ✅ Killed |
-| 3 | `scripts/platform/release-preflight.mjs:83` | Bump rule inverted `currentVersion === previousVersion` → `!==` | `node --test …/entry-bump-lint.test.mjs` → exit 1, 2 fail / 7 | ✅ Killed |
-| 4 | `scripts/platform/lib/commands/advisory.mjs:65` | Detect-failed return changed `ADVISORY_DETECT_FAILED` → `OK` ("not affected") | `node --test …/advisory-exit-codes.test.mjs` → exit 1, 2 fail / 6 | ✅ Killed |
-| 5 | `.github/workflows/ci.yml` (seeded) | Reintroduced owner infrastructure: `# Deploy runs through Dokploy on the owner AWS EC2 VM.` | `node --test …/brand-hygiene.test.mjs` → exit 1, `.github/workflows/ci.yml carrega um substantivo de infra do dono` | ✅ Killed |
-| 6 | `.github/workflows/ci.yml` (seeded) | Reintroduced **pilot-domain vocabulary**: `# Fluxo de Hospedes e Reservas: agendamento de quartos para os guests.` | `node --test …/brand-hygiene.test.mjs` → **exit 0, 8/8 passed** | ❌ **Survived** → Fix 1 |
-
-Every mutation was injected once, run once, restored with `git checkout -- <file>`, and
-`git status --short -- <file>` confirmed empty before the next. No `stash`, branch or worktree.
-
-**Result**: 5/6 killed — ❌ FAIL
-
----
+| # | File:line | Mutation | Killed? |
+| --- | --- | --- | --- |
+| 1 | `request-context.ts:77` | One-shot guard flipped `!== null` → `=== undefined` | ✅ |
+| 2 | `advisories.mjs:106` | `matchesCatalogRef` forced to `false` | ✅ |
+| 3 | `release-preflight.mjs:83` | Bump rule inverted `===` → `!==` | ✅ |
+| 4 | `advisory.mjs:65` | Detect-failed return `ADVISORY_DETECT_FAILED` → `OK` | ✅ |
+| 5 | `.github/workflows/ci.yml` (seeded) | Owner infrastructure reintroduced | ✅ |
+| 6 | `.github/workflows/ci.yml` (seeded) | Pilot-domain vocabulary reintroduced | ❌ → killed in round 2 |
 
 ## Edge Cases
 
-- [x] Lock reads `identity 2.0.0` with a pre-remediation `catalogRef` → treated as affected
-      (`compute-pending-catalogref.test.mjs:37-56`; the `#v2.0.0` boundary itself is covered by the
-      `affects: <2.0.1` version half, not by a dedicated fixture)
-- [x] `product_locale` absent from an existing child → `pt-BR` default changes no shipped string:
-      `AGENTS.md.jinja:58,81` went from the literal `pt-BR` to `{{ product_locale }}`, which renders
-      byte-identical at the default; asserted at `copier-questions.test.mjs:38-47` with exactly that
-      AD-034 rationale
-- [x] Rendered child with zero modules → session hook silent (`pending-advisories.test.mjs:141-142`)
+- [x] Lock reads `identity 2.0.0` with a pre-remediation `catalogRef` → affected
+      (`compute-pending-catalogref.test.mjs:37-56`)
+- [x] `product_locale` absent → `pt-BR` default changes no shipped string. Round 1: inferred from
+      `AGENTS.md.jinja` rendering byte-identical. Round 2: **asserted by render** at
+      `locale-threading.test.mjs:125-129`
+- [x] Rendered child with zero modules → session hook silent
+      (`pending-advisories.test.mjs:141-142`)
 - [x] `rg` absent → distinguishable from "advisory not found" (`advisory-exit-codes.test.mjs:82-83`)
-- [x] `catalog:lint` on an entry whose only change is its `CHANGELOG.md` — behaviour is the
-      opposite: wave 4 Finding 1 showed a CHANGELOG-only edit **does** move the entry and fires
-      `entryChangedWithoutBump`; the owner chose to bump rather than weaken the rule. The spec's
-      edge case is therefore **contradicted by the shipped design**, deliberately and on record
-
----
-
-## Gate Check
-
-- **Gate command**: `pnpm check && pnpm test && pnpm test:scripts && pnpm test:coverage &&
-  pnpm catalog:lint && pnpm catalog:typecheck && pnpm template:smoke` (plus `pnpm catalog:check`)
-- **Result**: 8/8 steps **exit 0**. `pnpm test` 620 tests / 90 files · `pnpm test:scripts` 561/561 ·
-  `pnpm test:coverage` 760 tests / 105 files, v8 statements 96.51 / branches 94.42 / functions 94.93 /
-  lines 96.81 — all above the 90 floor, no threshold violation
-- **Test count before feature**: 930 (585/89 + 345/34 at `92b4120`)
-- **Test count after feature**: 1181 (620 + 561) — **delta +251**, no drop
-- **Skipped tests**: none reported
-- **Failures**: none
-
-**Working-tree caveat.** The gate ran on a checkout carrying a concurrent session's uncommitted
-changes (`AGENTS.md.jinja`, `README.md.jinja`, staged `.specs/features/done/**` renames, two
-untracked `handoff-archive.md`). Those files are **not** this feature's and were neither reverted
-nor staged. All 8 steps were green regardless, and **none of the findings below is attributable to
-them** — every finding was derived from `git show 0422727:<path>` or from a file the concurrent
-session does not touch.
-
----
+- [x] `catalog:lint` on a CHANGELOG-only entry change — the shipped design **contradicts** the
+      spec's edge case, deliberately and on record: wave 4 Finding 1 showed a CHANGELOG-only edit
+      does move the entry and fires `entryChangedWithoutBump`; the owner chose to bump rather than
+      weaken the rule
 
 ## Code Quality
 
@@ -144,98 +223,33 @@ session does not touch.
 | Surgical changes | ✅ |
 | No scope creep | ✅ (the `v3.0.0` boundary held — T49–T79 untouched) |
 | Matches patterns | ✅ |
-| Spec-anchored outcome check (asserted values match spec) | ⚠️ 11 requirements proved by gate/inspection where the spec declared `test` |
+| Spec-anchored outcome check | ✅ after round 2 (11 gate/inspection proofs converted to assertions) |
 | Per-layer Coverage Expectation met | ✅ |
 | Every test maps to a spec requirement — no unclaimed tests | ✅ |
 | Documented guidelines followed | ✅ `docs/test/testing.md`, `docs/code-quality.md`, `AGENTS.md.jinja` |
 
 ---
 
-## Fix Plans
-
-### Fix 1: the hygiene gate does not scan pilot-domain vocabulary end to end — **Blocker**
-
-- **Root cause**: `scripts/platform/__tests__/brand-hygiene.test.mjs` defines `OWNER_DOMAIN_TERMS`
-  (`:27-35`) and `domainHits` (`:75-86`), but the end-to-end test (`:183-198`) calls only
-  `brandHits` and `infraHits`. A rendered child carrying `Hospedes`, `Reservas`, `agendamento`,
-  `quartos`, `guests` passes the gate — proven by surviving mutant 6.
-  `docs-no-owner-infra.test.mjs:85-92` does scan domain nouns, but only over 7 named template
-  docs — not the rendered child, not `.claude/**`, not `.github/workflows/**`.
-- **Why it is a gap and not the declared deviation**: wave 6 deviation 3 asked the Verifier to rule
-  whether the AC demands domain coverage end to end. It does — spec § *Success Criteria*: "the
-  brand/domain hygiene gate fails on a seeded reintroduction of the owner's brand, **pilot domain**
-  or infrastructure"; and the P1-brand *Independent Test*: "greps the rendered child for the
-  owner's brand, **pilot-domain vocabulary** and infrastructure nouns and fails on any hit".
-- **Fix task**: add `withoutKnownExceptions(domainHits(text), rel)` to the end-to-end loop; the
-  known blocker is `.claude/hooks/specs-in-english.mjs`, whose illustrative comment quotes domain
-  nouns in Portuguese — either reword it or add a scoped `KNOWN_EXCEPTIONS` entry.
-
-### Fix 2: LOC-01 — `issue-tracker.md.jinja` still hardcodes the locale — **Blocker**
-
-- **Root cause**: `docs/agents/issue-tracker.md.jinja:21` reads "Issue titles and bodies are in
-  **pt-BR** (same language rule as [`communication.md`](communication.md))". LOC-01 names this file
-  as one of the four the locale must thread through, and it is a `.jinja` file, so it can
-  interpolate. A `product_locale=en` child is told to file issues in pt-BR.
-- **Fix task**: replace the literal with `{{ product_locale }}`, or point the sentence at the
-  canonical statement the way `code-quality.md:12,47` and `communication.md:9` already do; add the
-  assertion LOC-01 lacks.
-
-### Fix 3: seven requirements shipped with the proof the spec declared downgraded — **Major**
-
-- **Root cause**: the spec's traceability declares `test` for RUN-02, LOC-02, LOC-06, SEAM-07,
-  TOOL-09, TOOL-10 and (partly) BRAND-06; `tasks.md` gave T7, T9, T10, T14, T15, T24, T32 and T38
-  `Tests: none · Gate: build`. Each outcome is correct on disk today (verified by inspection, cited
-  in the AC table) but nothing fails if it regresses.
-- **Fix task**: one guard assertion per requirement — the Redis credential match, the
-  single-language-home reference set, the favicon route, the `main.ts` ownership row, the
-  workflow/deploy doc-vs-pipeline cross-check, the four-source platform matrix, and the compose /
-  `docker-entrypoint.dev.sh` half of the backfill scan.
-
-### Fix 4: three ACs half-guarded — **Minor**
-
-- **BRAND-03**: the `gh label list` discovery placeholder satisfies the AC's shipped shape (wave-1
-  deviation 1 adjudicated), but nothing asserts the placeholder mechanism or the closed-list rule.
-- **SEAM-03**: `registerAppGuard` is tested; the "no edit to `shell.tsx`/`main.tsx`/
-  `app-providers.tsx`" claim lives only in `catalog/identity/single-tenant/README.md:315,375`.
-- **TOOL-07**: `hook-references.test.mjs` walks hooks only; the AC also says "or handbook".
-
-### Fix 5: this feature's web seams exist only in the Vite shell — **Major, cross-feature**
-
-- **Root cause**: `copier.yml:154-158` `web_stack` (default `vite`, choices `[vite, next]`) landed
-  from the sibling `web-stack-next` while T23–T27 built the seams in `apps/web-vite`.
-  `apps/web-next` has no favicon (`public/.gitkeep` only), no `product-routes.tsx`, no
-  `registerProtectedRoute`, and no `VITE_APP_NAME`/`VITE_LOCALE` equivalent
-  (`apps/web-next/src/shared/config/routes.ts:6` tells the product to edit `routes.ts` directly).
-- **Impact**: a `web_stack=next` child does not get LOC-03, LOC-06 or SEAM-04. The default path is
-  unaffected. Ownership sits on the boundary between the two features — route it deliberately.
-
-### Fix 6: TOOL-12 — **Minor, informational**
-
-- `tasks.md:718` declares TOOL-12 "half-refuted" and T31 Done-when 2 keeps the documented
-  500-not-503 exclusion deliberately, so only one pg literal is matched where the AC says both. The
-  latency half is mitigated by a 2000 ms margin (`application-pool.int-spec.ts:305-317`), not
-  eliminated. Recorded so the `v3.0.0` pass does not re-litigate it as new.
-
----
-
 ## Summary
 
-**Overall**: ❌ Not Ready — two blockers before the `v2.4.0` tag
+**Overall**: ✅ Ready
 
-**Spec-anchored check**: 30/43 covered · 1 failed · 12 flagged (11 proof/coverage, 1 owner-gated)
-**Sensor**: 5/6 killed — mutation 6 survived
-**Gate**: 8/8 steps exit 0, 1181 tests, +251, coverage above the 90 floor
+**Spec-anchored check**: 41/43 covered with evidence · 0 failed · 2 flagged (CAT-05 owner-gated,
+TOOL-12 spec-adjudicated)
+**Sensor**: round 2 7/7 killed · cumulative 12/13, the single round-1 survivor now dead
+**Gate**: 8/8 exit 0 · 1212 tests (930 pre-feature, +282) · coverage ≥ 90 on all four axes
 
-**What works**: the whole platform-scripts surface (CLI-01..03, TOOL-01..06, TOOL-08, TOOL-11,
-TOOL-13) is tightly asserted and discriminates — four of four code mutations died on their scoped
-gates. The catalog version/advisory machinery (CAT-01..04) is the strongest area in the feature.
-The kernel seams (SEAM-01, SEAM-02, SEAM-04) carry real value assertions, not spy counts. BRAND-04
-closed its own wave-1 `SPEC_DEVIATION`, and the hygiene gate genuinely catches owner infrastructure
-in a rendered child.
+**What works**: the two round-1 blockers are closed and both closures are proven by mutation, not
+asserted. The hygiene gate now catches pilot-domain vocabulary end to end, and its new seeded-noun
+test shares the exact code path as the end-to-end scan — the pattern that let round 1's mutant
+survive cannot recur. Every one of the seven Fix-3 guards derives its expected value from a second
+source (compose vs `.env.example`, `lefthook.yml` vs the doc, `ci.yml` job keys vs the doc) rather
+than restating a literal, so they discriminate rather than duplicate. FT12's handbook guard caught
+a genuine stale reference on its first run.
 
-**Issues found**: the hygiene gate is blind to the pilot-domain half it was built to catch (Fix 1);
-`issue-tracker.md.jinja` still ships a hardcoded locale (Fix 2); seven requirements have no
-regression assertion (Fix 3); the web seams do not reach a `web_stack=next` child (Fix 5).
+**Issues found**: none blocking. Three items are routed to the owner: the `booking` exception's
+one-line reword, Fix 5's cross-feature ruling on `apps/web-next`, and CAT-05's tag at hand-off
+point 2.
 
-**Next steps**: Fixes 1 and 2 before the tag — both are small and both are proven, not suspected.
-Fix 3 and Fix 5 should be tasks before pass 2. CAT-05 stays open until owner hand-off point 2.
+**Next steps**: owner hand-off point 2 — dispatch the `v2.4.0` release and cut the
+`catalog/<name>@x.y.z` tags CAT-05 observes. Waves 8–14 (`v3.0.0`) start after that tag exists.

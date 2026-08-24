@@ -2,7 +2,14 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import indexHtml from "../../../index.html?raw"
 
-import { pageTitle, resolveLocale } from "./shell"
+import {
+  appLayoutRoute,
+  isUnauthorizedExempt,
+  pageTitle,
+  registerAppGuard,
+  registerUnauthorizedExemption,
+  resolveLocale,
+} from "./shell"
 
 afterEach(() => {
   vi.unstubAllEnvs()
@@ -37,6 +44,49 @@ describe("configuração de nome e locale", () => {
   it("usa VITE_LOCALE quando definido", () => {
     vi.stubEnv("VITE_LOCALE", "en")
     expect(resolveLocale()).toBe("en")
+  })
+})
+
+describe("registerAppGuard", () => {
+  it("instala um beforeLoad em appLayoutRoute que chama o guard registrado", async () => {
+    const guard = vi.fn()
+    registerAppGuard(guard)
+    const queryClient = {}
+
+    await appLayoutRoute.options.beforeLoad?.({
+      context: { queryClient },
+      location: { pathname: "/inicio" },
+    } as never)
+
+    expect(guard).toHaveBeenCalledWith({ queryClient, pathname: "/inicio" })
+  })
+
+  it("um novo registro substitui o guard anterior", async () => {
+    const first = vi.fn()
+    const second = vi.fn()
+    registerAppGuard(first)
+    registerAppGuard(second)
+
+    await appLayoutRoute.options.beforeLoad?.({
+      context: { queryClient: {} },
+      location: { pathname: "/inicio" },
+    } as never)
+
+    expect(second).toHaveBeenCalledOnce()
+    expect(first).not.toHaveBeenCalled()
+  })
+})
+
+describe("registerUnauthorizedExemption / isUnauthorizedExempt", () => {
+  it("sem registro, nenhum 401 é isento", () => {
+    expect(isUnauthorizedExempt({ url: "/qualquer" })).toBe(false)
+  })
+
+  it("isenta apenas o 401 que casa o critério registrado", () => {
+    registerUnauthorizedExemption((ctx) => ctx.url === "/session/probe")
+
+    expect(isUnauthorizedExempt({ url: "/session/probe" })).toBe(true)
+    expect(isUnauthorizedExempt({ url: "/outra" })).toBe(false)
   })
 })
 

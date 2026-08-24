@@ -1,12 +1,8 @@
 name: Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Version to tag, without the leading 'v' (must match the latest ## vX.Y.Z in docs/dev/template-changelog.md)"
-        required: true
-        type: string
+  push:
+    branches: [main]
 
 concurrency: release
 
@@ -14,16 +10,31 @@ permissions:
   contents: read
 
 jobs:
+  marker:
+    name: Marker
+    runs-on: ubuntu-latest
+    if: >-
+      startsWith(github.event.head_commit.message, 'chore(release):')
+      || contains(join(github.event.commits.*.message, '|'), 'chore(release):')
+    outputs:
+      release: ${{ steps.decide.outputs.release }}
+      version: ${{ steps.decide.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - name: Decide the release from the pushed commit range
+        id: decide
+        env:
+          MARKER_BEFORE_SHA: ${{ github.event.before }}
+        run: node scripts/platform/lib/release-marker.mjs --decide
+
   verify:
     name: Verify
+    needs: marker
+    if: needs.marker.outputs.release == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Guard against dispatch from a non-main ref
-        run: |
-          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
-            echo "::error::release dispatched from '${{ github.ref }}', but tags can only be cut from refs/heads/main" >&2
-            exit 1
-          fi
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
@@ -33,7 +44,7 @@ jobs:
           node-version-file: ".nvmrc"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: node scripts/platform/release-preflight.mjs "${{ inputs.version }}"
+      - run: node scripts/platform/release-preflight.mjs "${{ needs.marker.outputs.version }}"
       - run: pnpm check
       - run: pnpm test
       - run: pnpm test:scripts
@@ -42,7 +53,8 @@ jobs:
 
   catalog:
     name: "catalog:check (${{ matrix.entry }})"
-    needs: verify
+    needs: [marker, verify]
+    if: needs.marker.outputs.release == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -87,7 +99,7 @@ jobs:
 
   tag:
     name: Tag and push
-    needs: [verify, catalog]
+    needs: [marker, verify, catalog]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -103,7 +115,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Create and push the annotated tag
         env:
-          VERSION: ${{ inputs.version }}
+          VERSION: ${{ needs.marker.outputs.version }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

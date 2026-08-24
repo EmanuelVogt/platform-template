@@ -552,3 +552,25 @@ to close.
 `format:check` uses a *glob*. The two agents did not disagree about the file — they disagreed about
 what the gate *is*. **A gate's behaviour is confirmed by running the shipped command, never by
 reconstructing its input set.**
+
+| 5 | T13 | `259ac55` | quick exit 0 | `.claude/settings.local.json` out of the checked set |
+| 5 | T9 | `6d0c6b2` + `edde664` | quick exit 0 | pre-commit format-and-re-stage, pathspec-limited |
+| 5 | T10 | `a2839ff` | quick exit 0 (453) | `format.yml` template-only; `_exclude`; both-direction delivery test; `template-smoke` path check |
+| 5 | T11 | `60a011a` | `catalog:lint` 0 | item 7 inside the existing `## v2.3.0` |
+| 5 | **Build gate** | — | **folded into the Final gate** | last wave: the Verifier's Final gate is a strict superset and runs independently. Recorded here deliberately, not skipped |
+
+**Defect found in wave 5 by manual verification, not by a test.** T9's first version used
+`glob: "**/*.{ext}"`, copied from the shape prettier's own CLI glob uses. **Lefthook's `**/*` does not
+match repository-root files**; prettier's does. The hook therefore ignored `package.json`,
+`copier.yml`, `docker-compose.yml` and every other root file — the gate would have been armed with a
+hole in it and nothing red to show for it. Fixed in `edde664` (`{*,**/*}.{ext}`) and verified by
+running `pnpm exec lefthook run pre-commit` against disposable files: covered extensions reformatted
+and re-staged (`git show :<file>` matched the working tree), an uncovered `.txt` untouched, root and
+nested paths both matched. This is the second instance of the wave-4 lesson in the same feature — the
+behaviour of a gate was wrong in exactly the way reading its configuration could not reveal.
+
+**Deliberate non-delivery, T11.** `docs/agents/harness.md` was left untouched. The task said to add a
+line "**if** the pre-commit gate warrants one"; the worker judged it does not, because that document
+scopes itself to Claude Code mechanisms and this is a plain git hook with no agent-specific
+behaviour — its own "Off-pattern" section excludes it. Recorded as a judgement the task permitted,
+not as an omission. The Verifier should confirm FMT-09 is still satisfied by the changelog entry alone.

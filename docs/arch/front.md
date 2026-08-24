@@ -169,8 +169,8 @@ leaks stack, SQL or paths; the `correlationId` is shown in support and toast sur
   `shared/lib/`: a pt-BR label per value (mandatory), a badge color (optional); the full record
   makes a new contract member break the build. Divergence is `.override()`, a subset is
   `.pick()` — never a second map. Local schemas use `z.enum(generatedConst)`; pure-UI closed
-  sets stay local literals. Gate: the `contract-enums` conformance spec (pre-push and CI), with
-  the `contract-enum` harness hook warning at edit time; declared exceptions live in the spec.
+  sets stay local literals. Gate: review, with the `contract-enum` harness hook warning at edit
+  time when a hand-written list matches a contract enum exactly.
 - A select shows a label, never an id. The kit's `Select` is closed: it takes `items`
   (`{ value, label }` lists, never a record) and renders them itself, so the list on screen and
   the list that resolves the label are the same. A value missing from `items` is resolved by
@@ -216,7 +216,7 @@ leaks stack, SQL or paths; the `correlationId` is shown in support and toast sur
 20. Shared id types are branded and live in `shared/types/ids.ts`.
 21. `useForm<Input, Context, Output>` whenever the schema has `.transform()` or `.coerce.*`.
 22. One form per entity for create and edit (mode by optional entity prop); short form in a drawer, long or multi-step on its own route.
-23. A contract enum is never retyped and has one descriptor, on the owning entity, derived from `models/*`; `.override()` to diverge, `.pick()` for a subset. Gate: `contract-enums` spec.
+23. A contract enum is never retyped and has one descriptor, on the owning entity, derived from `models/*`; `.override()` to diverge, `.pick()` for a subset. Gate: review.
 24. Form fields come from `shared/ui/form/` (`Rhf*`), controlled, no `field.ref` in render; native date/time inputs are forbidden.
 25. A select shows a label, never an id; the kit's `Select` is closed over `items`; fallback text is pt-BR, never the identifier.
 26. `sr-only` requires a positioned ancestor (`isolate` does not count). Gate: lint rule `platform/sr-only-requires-positioned-ancestor`.

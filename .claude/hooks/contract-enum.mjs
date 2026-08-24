@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // PostToolUse: warns when an edit in apps/web hand-writes a set of values that
-// openapi.json already defines (ADR 0076). Early feedback — the real gate is
-// apps/web/test/contract-enums.test.ts, which runs on pre-push and on CI.
+// openapi.json already defines (ADR 0076). Early feedback only — enforcement
+// is human review, per docs/arch/front.md § Contract enums and selects.
 // The match has to be exact: a partial slice of a list does not fire.
 // Harness tooling — not app code.
 import { readFileSync } from "node:fs"
@@ -112,9 +112,8 @@ ${sample}
 
 The edit was ALREADY APPLIED to the file — do NOT retry the same Edit (old_string no longer matches).
 Action: make a NEW Edit deriving from the generated const in @platform/api-client/models/*:
-  select/filter list → enumOptions(generatedConst, { …pt-BR labels })  (shared/lib/select-options.ts)
-  local schema       → z.enum(generatedConst)
-  label / badge      → Record<GeneratedType, string>
+  local schema  → z.enum(generatedConst)
+  label / badge → Record<GeneratedType, string>
 A set that does NOT exist in the contract (map layer, scale, tab) is pure UI: keep it literal.
 `
 )

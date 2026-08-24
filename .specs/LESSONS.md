@@ -8,7 +8,11 @@
 
 Corroborated across multiple features. Safe to apply as guidance.
 
-_none_
+### L-027 — An AC that requires a doc file to state specific content, declared Proof: test, needs an actual grep-style assertion on that file's text — correct prose with no assertion guarding it is zero evidence and can drift silently.
+- signal: `spec_precision_gap` · recurrence: 2 feature(s) · scope: `docs` · harmful: 0
+- features: template-update-contract, audit-2026-08-23-remediation
+- evidence: DOC-03 / docs/advisories/README.md (docs) (+1 more)
+- last seen: 2026-08-24T21:39:14Z
 
 ## Candidates (under observation — do NOT load as guidance yet)
 
@@ -170,12 +174,6 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: REL-02 (ci)
 - last seen: 2026-08-23T20:38:43Z
 
-### L-027 — An AC that requires a doc file to state specific content, declared Proof: test, needs an actual grep-style assertion on that file's text — correct prose with no assertion guarding it is zero evidence and can drift silently.
-- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `docs` · harmful: 0
-- features: template-update-contract
-- evidence: DOC-03 / docs/advisories/README.md (docs)
-- last seen: 2026-08-23T20:38:43Z
-
 ### L-028 — A control that is real but does not sit where the work actually passes through does not fail loudly — it fails as a plausible-looking success: a per-task gate that runs the test command but not the lint command lets a whole wave pass green and hands the failure to the next gate downstream; a Touches list retyped into a worker payload instead of copied verbatim from tasks.md comes back as a polite 'not mine' indistinguishable from good judgement, with no hook comparing plan to payload; a formatting standard specified before its pre-commit enforcement lands ships unformatted files with nothing to catch them. Place the control where the change actually happens, or verify it did.
 - signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `execute-process` · harmful: 0
 - features: release-marker-commit
@@ -223,6 +221,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - features: web-stack-next
 - evidence: d74104c (.gitignore:13) — git ls-files apps/web-next/.next still 237 at HEAD 0e08d3d (repo)
 - last seen: 2026-08-23T17:42:44Z
+
+### L-036 — A hygiene guard that defines a term list but never calls it in the end-to-end scan is dead weight: assert every declared term family against the real tree, or a seeded reintroduction of that family passes green while the self-tests stay 100%.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `scripts/platform` · harmful: 0
+- features: audit-2026-08-23-remediation
+- evidence: scripts/platform/__tests__/brand-hygiene.test.mjs:183-198 (mutant 6) (scripts/platform)
+- last seen: 2026-08-24T21:39:14Z
+
+### L-037 — When a copier variable replaces a hardcoded value, sweep every .jinja file the AC names in the same task — one file left with the literal silently pins the old default for every product that overrides it.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `docs` · harmful: 0
+- features: audit-2026-08-23-remediation
+- evidence: docs/agents/issue-tracker.md.jinja:21 (LOC-01) (docs)
+- last seen: 2026-08-24T21:39:14Z
 
 ## Quarantined (failed when applied — ignore)
 

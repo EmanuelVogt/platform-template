@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 36,
+  "next_id": 38,
   "lessons": [
     {
       "id": "L-001",
@@ -480,17 +480,19 @@
       "text": "An AC that requires a doc file to state specific content, declared Proof: test, needs an actual grep-style assertion on that file's text — correct prose with no assertion guarding it is zero evidence and can drift silently.",
       "signal": "spec_precision_gap",
       "scope": "docs",
-      "status": "candidate",
+      "status": "confirmed",
       "features": [
-        "template-update-contract"
+        "template-update-contract",
+        "audit-2026-08-23-remediation"
       ],
-      "recurrence": 1,
+      "recurrence": 2,
       "harmful": 0,
       "evidence": [
-        "DOC-03 / docs/advisories/README.md (docs)"
+        "DOC-03 / docs/advisories/README.md (docs)",
+        "RUN-02, LOC-02, LOC-06, SEAM-07, TOOL-09, TOOL-10 vs tasks.md Tests: none (spec)"
       ],
       "created": "2026-08-23T20:38:43Z",
-      "last_seen": "2026-08-23T20:38:43Z"
+      "last_seen": "2026-08-24T21:39:14Z"
     },
     {
       "id": "L-028",
@@ -635,6 +637,42 @@
       ],
       "created": "2026-08-23T17:42:44Z",
       "last_seen": "2026-08-23T17:42:44Z"
+    },
+    {
+      "id": "L-036",
+      "key": "surviving_mutant::a hygiene guard that defines a term list but never calls it in the end to end scan is dead weight assert every declared term family against the real tree or a seeded reintroduction of that family passes green while the self tests stay 100",
+      "text": "A hygiene guard that defines a term list but never calls it in the end-to-end scan is dead weight: assert every declared term family against the real tree, or a seeded reintroduction of that family passes green while the self-tests stay 100%.",
+      "signal": "surviving_mutant",
+      "scope": "scripts/platform",
+      "status": "candidate",
+      "features": [
+        "audit-2026-08-23-remediation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "scripts/platform/__tests__/brand-hygiene.test.mjs:183-198 (mutant 6) (scripts/platform)"
+      ],
+      "created": "2026-08-24T21:39:14Z",
+      "last_seen": "2026-08-24T21:39:14Z"
+    },
+    {
+      "id": "L-037",
+      "key": "ac_gap::when a copier variable replaces a hardcoded value sweep every jinja file the ac names in the same task one file left with the literal silently pins the old default for every product that overrides it",
+      "text": "When a copier variable replaces a hardcoded value, sweep every .jinja file the AC names in the same task — one file left with the literal silently pins the old default for every product that overrides it.",
+      "signal": "ac_gap",
+      "scope": "docs",
+      "status": "candidate",
+      "features": [
+        "audit-2026-08-23-remediation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "docs/agents/issue-tracker.md.jinja:21 (LOC-01) (docs)"
+      ],
+      "created": "2026-08-24T21:39:14Z",
+      "last_seen": "2026-08-24T21:39:14Z"
     }
   ]
 }

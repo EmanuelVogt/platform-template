@@ -21,7 +21,9 @@ export default defineConfig({
     exclude: [
       // Amostra proposital de branch descoberta (contrato de cobertura).
       ...(runsCoverageFixture ? [] : ["**/if-else.sample.uncovered.spec.ts"]),
-      // Árvore gerada pelo `catalog:typecheck`, fora de `src/`.
+      // Árvore gerada pelo `catalog:typecheck`, fora de `src/`. O tier de
+      // `catalog/**` roda à parte, em `vitest.catalog.config.mts` (`pnpm
+      // catalog:test`), que re-gera esta árvore antes de coletar.
       ".catalog-stage/**",
       "**/node_modules/**",
     ],

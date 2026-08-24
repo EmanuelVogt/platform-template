@@ -30,6 +30,7 @@
     "catalog:check": "node scripts/platform/catalog-check.mjs",
     "catalog:lint": "node scripts/platform/catalog-lint.mjs",
     "catalog:typecheck": "node scripts/platform/catalog-stage.mjs",
+    "catalog:test": "node scripts/platform/catalog-stage.mjs --keep && vitest run --config vitest.catalog.mts",
     "test:scripts": "node --test scripts/platform/__tests__/*.test.mjs",
     "clean": "turbo clean && rm -rf node_modules"
   },

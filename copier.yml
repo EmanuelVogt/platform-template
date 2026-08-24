@@ -76,7 +76,7 @@ _tasks:
   # update. A lista espelha os scripts que dependem de `catalog/`
   # (`scripts/platform/__tests__/child-manifest.test.mjs` barra divergência).
   - command: >-
-      node -e "const fs=require('fs'),f='package.json',p=JSON.parse(fs.readFileSync(f,'utf8'));p.name='{{ project_slug }}';for(const k of ['catalog:check','catalog:lint','catalog:typecheck','template:smoke','test:scripts'])delete p.scripts[k];fs.writeFileSync(f,JSON.stringify(p,null,2)+'\n')"
+      node -e "const fs=require('fs'),f='package.json',p=JSON.parse(fs.readFileSync(f,'utf8'));p.name='{{ project_slug }}';for(const k of ['catalog:check','catalog:lint','catalog:test','catalog:typecheck','template:smoke','test:scripts'])delete p.scripts[k];fs.writeFileSync(f,JSON.stringify(p,null,2)+'\n')"
     when: "{{ not _copier_conf.pretend }}"
   - command: git init -q
     when: "{{ _copier_operation == 'copy' and not _copier_conf.pretend }}"

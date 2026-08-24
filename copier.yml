@@ -65,6 +65,9 @@ _skip_if_exists:
   - .specs/
   - .platform-modules.lock
   - docs/advisories/APPLIED.md
+  # seam do produto (main.ts chama depois de mountDocs) — o produto sobrescreve
+  # para plugar extensões de boot; um update não pode pisar na customização
+  - apps/api/src/bootstrap.product.ts
 
 _tasks:
   # O manifest é copiado literal: `_exclude` casa pelo caminho de DESTINO, então um
@@ -79,18 +82,27 @@ _tasks:
     when: "{{ _copier_operation == 'copy' and not _copier_conf.pretend }}"
   - command: ln -sfn AGENTS.md CLAUDE.md
     when: "{{ not _copier_conf.pretend }}"
+  # só na geração — em `copier update`, _apply_update roda run_copy (e portanto
+  # _tasks) três vezes: old_copy e new_copy são renders efêmeros pra diff, e o
+  # próprio destino real roda ANTES do merge três-vias ser aplicado. Sem esta
+  # guarda, install/sync rodavam duas vezes num diretório descartável (minutos +
+  # rede) e uma terceira vez contra o manifesto pré-diff — a skill
+  # template-update já roda `pnpm install` depois do merge de verdade
   - command: pnpm install
-    when: "{{ not _copier_conf.pretend }}"
+    when: "{{ _copier_operation == 'copy' and not _copier_conf.pretend }}"
   - command: pnpm skills:sync
-    when: "{{ not _copier_conf.pretend }}"
+    when: "{{ _copier_operation == 'copy' and not _copier_conf.pretend }}"
 
 _message_after_copy: |
   Projeto {{ project_name }} gerado a partir do platform-template.
 
+  Suportado: macOS, Linux, WSL2 no Windows. Windows nativo não é suportado
+  (symlinks e scripts do harness assumem shell POSIX).
+
   Próximos passos:
     1. cp apps/api/.env.example apps/api/.env  (preencha segredos)
     2. docker compose up -d                     (Postgres + Redis)
-    3. pnpm --filter api db:migrate:run && pnpm --filter api db:bootstrap
+    3. pnpm --filter api db:migrate:run
     4. pnpm dev
   Atualizar a plataforma depois: `copier update` na raiz deste repositório.
 
@@ -125,3 +137,10 @@ app_domain:
   type: str
   help: Subdomínio base da aplicação (front em <app_domain>, api em api.<app_domain>)
   default: "app.{{ root_domain }}"
+
+product_locale:
+  type: str
+  help: >-
+    Locale das strings voltadas ao usuário final — comentários, erros,
+    e-mails, `<html lang>` (BCP 47, ex. pt-BR, en-US)
+  default: "pt-BR"

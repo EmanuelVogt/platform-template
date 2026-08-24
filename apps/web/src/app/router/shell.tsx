@@ -5,6 +5,7 @@ import {
   createRoute,
   redirect,
 } from "@tanstack/react-router"
+import { useEffect } from "react"
 
 import { ErrorPage } from "@/pages/error/ui/error-page"
 import { HomePage } from "@/pages/home/ui/home-page"
@@ -17,10 +18,19 @@ import type { QueryClient } from "@tanstack/react-query"
 
 type RouterContext = { queryClient: QueryClient }
 
-const APP_NAME = "Platform"
+// Nome e idioma vêm de `VITE_APP_NAME` / `VITE_LOCALE` — sem default, o produto
+// enxerga exatamente o comportamento de hoje (pt-BR, "Platform").
+function resolveAppName(): string {
+  return import.meta.env.VITE_APP_NAME || "Platform"
+}
+
+export function resolveLocale(): string {
+  return import.meta.env.VITE_LOCALE || "pt-BR"
+}
 
 export function pageTitle(label?: string): string {
-  return label ? `${label} · ${APP_NAME}` : APP_NAME
+  const appName = resolveAppName()
+  return label ? `${label} · ${appName}` : appName
 }
 
 export const rootRoute = createRootRouteWithContext<RouterContext>()({
@@ -30,6 +40,10 @@ export const rootRoute = createRootRouteWithContext<RouterContext>()({
 })
 
 function RootDocument() {
+  useEffect(() => {
+    document.documentElement.lang = resolveLocale()
+  }, [])
+
   return (
     <>
       <HeadContent />

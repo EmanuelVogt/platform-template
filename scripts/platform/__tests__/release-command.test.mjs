@@ -21,10 +21,13 @@ const CHANGELOG = [
   "",
 ].join("\n")
 
-function buildFixtureDir() {
+// `catalog/` é o que distingue o template de um produto gerado: sem ele o
+// comando se recusa a rodar, então a fixture do caminho feliz precisa tê-lo.
+function buildFixtureDir({ template = true } = {}) {
   const root = mkdtempSync(path.join(tmpdir(), "release-command-fixture-"))
   mkdirSync(path.join(root, "docs/dev"), { recursive: true })
   writeFileSync(path.join(root, "docs/dev/template-changelog.md"), CHANGELOG)
+  if (template) mkdirSync(path.join(root, "catalog"), { recursive: true })
   return root
 }
 
@@ -41,6 +44,7 @@ function fakeExec({
   lsRemote = "",
   diffStatus = () => 0,
   showAt = () => undefined,
+  pushStatus = 0,
 } = {}) {
   const calls = []
   const exec = (command, args) => {
@@ -63,6 +67,7 @@ function fakeExec({
         : { status: 0, stdout: content }
     }
     if (sub === "commit") return { status: 0, stdout: "" }
+    if (sub === "push") return { status: pushStatus, stdout: "" }
     throw new Error(`unexpected git subcommand in test: ${sub}`)
   }
   exec.calls = calls
@@ -197,7 +202,7 @@ test("MARK-11: repassa o exit code exato do preflight e a mensagem original sem 
   }
 })
 
-test("MARK-12: no sucesso cria exatamente um commit vazio, sem tag e sem push", async () => {
+test("MARK-12: no sucesso, sem --push, cria exatamente um commit vazio, sem tag e sem push", async () => {
   const dir = buildFixtureDir()
   try {
     const exec = fakeExec()
@@ -228,6 +233,107 @@ test("MARK-12: no sucesso cria exatamente um commit vazio, sem tag e sem push", 
       false
     )
     assert.deepEqual(logs, ["git push origin main"])
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("child-safety: num produto gerado (sem catalog/) recusa antes de tudo, mesmo com --push", async () => {
+  const dir = buildFixtureDir({ template: false })
+  try {
+    const exec = fakeExec()
+    const preflight = stubPreflight(EXIT_CODES.OK)
+    const logs = []
+    const exitCode = await planRelease({
+      version: "3.0.0",
+      push: true,
+      cwd: dir,
+      exec,
+      runPreflight: preflight,
+      log: (line) => logs.push(line),
+    })
+    assert.equal(exitCode, EXIT_CODES.USAGE_ERROR)
+    assert.match(logs.join("\n"), /exclusivo do template/)
+    assert.equal(preflight.calls.length, 0)
+    for (const sub of ["commit", "push", "tag"]) {
+      assert.equal(
+        exec.calls.some((c) => c.args[0] === sub),
+        false
+      )
+    }
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("MARK-12b: com --push, empurra origin main uma vez, depois do commit, e nunca cria tag", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec()
+    const preflight = stubPreflight(EXIT_CODES.OK)
+    const exitCode = await planRelease({
+      version: "3.0.0",
+      push: true,
+      cwd: dir,
+      exec,
+      runPreflight: preflight,
+      log: () => {},
+    })
+    assert.equal(exitCode, EXIT_CODES.OK)
+
+    const subcommands = exec.calls.map((c) => c.args[0])
+    const pushCalls = exec.calls.filter((c) => c.args[0] === "push")
+    assert.equal(pushCalls.length, 1)
+    assert.deepEqual(pushCalls[0].args, ["push", "origin", "main"])
+    assert.ok(subcommands.indexOf("commit") < subcommands.indexOf("push"))
+    assert.equal(
+      exec.calls.some((c) => c.args[0] === "tag"),
+      false
+    )
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("MARK-12b: push que falha devolve PUSH_FAILED e não se anuncia como sucesso", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec({ pushStatus: 1 })
+    const preflight = stubPreflight(EXIT_CODES.OK)
+    const logs = []
+    const exitCode = await planRelease({
+      version: "3.0.0",
+      push: true,
+      cwd: dir,
+      exec,
+      runPreflight: preflight,
+      log: (line) => logs.push(line),
+    })
+    assert.equal(exitCode, EXIT_CODES.PUSH_FAILED)
+    assert.notEqual(exitCode, EXIT_CODES.OK)
+    assert.match(logs.join("\n"), /nenhuma tag foi disparada/)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("MARK-13: --push não contorna as recusas — árvore suja não empurra nada", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec({ statusOutput: " M some-file.txt\n" })
+    const preflight = stubPreflight(EXIT_CODES.OK)
+    const exitCode = await planRelease({
+      push: true,
+      cwd: dir,
+      exec,
+      runPreflight: preflight,
+      log: () => {},
+    })
+    assert.equal(exitCode, EXIT_CODES.USAGE_ERROR)
+    assert.equal(
+      exec.calls.some((c) => c.args[0] === "push"),
+      false
+    )
   } finally {
     cleanup(dir)
   }

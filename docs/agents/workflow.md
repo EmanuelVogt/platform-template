@@ -134,6 +134,12 @@ push = deploy ([`../dev/deploy.md`](../dev/deploy.md#deploy-flow), operational a
 [`infra.md`](infra.md)). An agent never pushes `main` on its own and never moves a deploy
 branch — those are the user's acts; the agent stops at the local commit and says so.
 
-**Tags.** The user runs `pnpm platform release`, reviews the empty marker commit
-`chore(release): vX.Y.Z`, and pushes it; the push cuts the tag. The agent still never tags or
-pushes on its own — `pnpm platform release` commits locally and stops.
+**Tags.** Platform releases are cut **in the template repository, never here.** `pnpm platform
+release` ships with the CLI but refuses to run in a product (it probes for `catalog/`, which only
+the template has) — a product consumes versions with `copier update`, it does not publish them.
+The rule above stands unchanged in this repository: an agent never pushes `main`.
+
+In the template, the command composes the empty marker commit `chore(release): vX.Y.Z` and stops;
+the push is what cuts the tag. `--push` does both, and an agent may run it there when the owner
+asks for the release. The tag itself is never local: `release.yml` cuts it after the full gate, so
+a tag that exists was green.

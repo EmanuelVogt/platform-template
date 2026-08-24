@@ -334,7 +334,8 @@ deps + a thin `*Command` returning `EXIT_CODES`); `runPreflight` from `release-p
 - [ ] **MARK-10** — no argument → version = `readLatestChangelogVersion`; an explicit argument overrides it
 - [ ] **MARK-13** — refuses when `git rev-parse --abbrev-ref HEAD` is not `main`, or `git status --porcelain` is non-empty. **Both checks run before anything else**, so no commit can exist when it refuses
 - [ ] **MARK-11** — calls `runPreflight({ version })` and, on non-zero, returns that **exact** exit code and lets the preflight's own message stand. Do not translate or rewrite it: local and CI must be indistinguishable
-- [ ] **MARK-12** — on success runs `git commit --allow-empty -m "chore(release): v<version>"` exactly once, creates no tag, pushes nothing, and prints `git push origin main` as the operator's next act
+- [ ] **MARK-12** — on success runs `git commit --allow-empty -m "chore(release): v<version>"` exactly once and creates no tag. **By default** it pushes nothing and prints `git push origin main` as the operator's next act
+- [ ] **MARK-12b** (amended 2026-08-24, owner's call) — under an explicit `--push`, and only then, it also runs `git push origin main` once, after the commit; a failed push returns `EXIT_CODES.PUSH_FAILED` rather than reporting success, because the marker is then local and no tag was triggered. `--push` never bypasses MARK-13's refusals. The no-tag half of MARK-12 is unconditional: the tag is always the CI's act (AD-006/AD-034)
 - [ ] `exec` and `log` are injectable; every test runs without touching a real repository or the network
 - [ ] Tests assert the Independent Test: a temp fixture with a stale changelog exits non-zero and `git log` is unchanged
 - [ ] Tests assert the ordering guarantee: for every refusal path, no `git commit` call was ever issued

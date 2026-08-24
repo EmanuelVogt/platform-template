@@ -70,7 +70,7 @@ export function getActor(): Actor | null {
 /**
  * Escrita one-shot simétrica a `setActor`: null→valor uma vez por escopo;
  * segunda chamada lança. Quem grava é a middleware de tenancy do módulo que
- * resolve o tenant (ex.: identity) — o kernel só guarda.
+ * resolve o tenant — o kernel só guarda.
  */
 export function setTenant(tenantId: string): void {
   const store = requireStore()

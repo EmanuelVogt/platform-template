@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { NOTIFICATION_TYPES } from "../../api/events/notification-requested.event"
 
@@ -138,7 +138,62 @@ describe("notificationCatalog", () => {
     )
   })
 
-  it("formatDateTime lê o locale do kernel (DEFAULT_LOCALE) e reproduz a formatação de hoje por padrão", () => {
-    expect(formatDateTime("2026-06-10T18:30:00.000Z")).toBe("10/06/2026, 15:30")
+  it("formatDateTime usa o locale entry-owned (DEFAULT_LOCALE) e reproduz a formatação de hoje por padrão", () => {
+    const original = process.env.DEFAULT_LOCALE
+    delete process.env.DEFAULT_LOCALE
+    try {
+      expect(formatDateTime("2026-06-10T18:30:00.000Z")).toBe(
+        "10/06/2026, 15:30"
+      )
+    } finally {
+      if (original === undefined) delete process.env.DEFAULT_LOCALE
+      else process.env.DEFAULT_LOCALE = original
+    }
+  })
+
+  it("formatDateTime honra um DEFAULT_LOCALE não padrão", () => {
+    const original = process.env.DEFAULT_LOCALE
+    process.env.DEFAULT_LOCALE = "en-US"
+    try {
+      expect(formatDateTime("2026-06-10T18:30:00.000Z")).toBe(
+        "6/10/26, 3:30 PM"
+      )
+    } finally {
+      if (original === undefined) delete process.env.DEFAULT_LOCALE
+      else process.env.DEFAULT_LOCALE = original
+    }
+  })
+
+  // Regressão: T39 lia o locale via env(), a validação fail-fast de TODO o
+  // ambiente do kernel, memoizada na 1ª chamada — quem chamasse formatDateTime
+  // exigia DATABASE_URL/REDIS_URL/WEB_ORIGIN válidos e quebrava dentro da
+  // transação no child renderizado. `vi.resetModules` + reimport garantem uma
+  // instância nova de env.ts (cache ainda não memoizado por outro teste deste
+  // arquivo), senão o teste passaria mesmo com o defeito presente.
+  it("formatDateTime não exige um ambiente validado — não lança sem DATABASE_URL/REDIS_URL/WEB_ORIGIN", async () => {
+    const saved = {
+      DATABASE_URL: process.env.DATABASE_URL,
+      REDIS_URL: process.env.REDIS_URL,
+      WEB_ORIGIN: process.env.WEB_ORIGIN,
+    }
+    delete process.env.DATABASE_URL
+    delete process.env.REDIS_URL
+    delete process.env.WEB_ORIGIN
+    try {
+      vi.resetModules()
+      const fresh = await import("./notification-catalog.js")
+      expect(() =>
+        fresh.formatDateTime("2026-06-10T18:30:00.000Z")
+      ).not.toThrow()
+      expect(fresh.formatDateTime("2026-06-10T18:30:00.000Z")).toBe(
+        "10/06/2026, 15:30"
+      )
+    } finally {
+      for (const [key, value] of Object.entries(saved)) {
+        if (value === undefined) delete process.env[key]
+        else process.env[key] = value
+      }
+      vi.resetModules()
+    }
   })
 })

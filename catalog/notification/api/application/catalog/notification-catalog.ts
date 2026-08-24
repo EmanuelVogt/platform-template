@@ -1,7 +1,5 @@
 import { z } from "zod"
 
-import { env } from "../../../../shared/config/env"
-
 import type { NOTIFICATION_TYPES } from "../../api/events/notification-requested.event"
 
 export type NotificationCategory =
@@ -47,8 +45,19 @@ const isoDate = z.iso.datetime()
 // expuser um fuso do produto (APP_TIMEZONE, T53); hoje reproduz o valor atual.
 const NOTIFICATION_TIMEZONE = "America/Sao_Paulo"
 
+// Locale único do entry — mesma razão do fuso acima. O kernel expõe
+// DEFAULT_LOCALE via env() (env.ts:66), mas env() é loadEnv() memoizada,
+// validação fail-fast de todo o ambiente (env.ts:104-119): chamá-la aqui
+// exigiria um DATABASE_URL válido só para formatar uma data. Lê a variável
+// bruta com o mesmo default do kernel (vazio conta como ausente, nunca
+// lança); vira config quando o kernel expuser um acessor de locale que não
+// force a validação completa.
+function notificationLocale(): string {
+  return process.env.DEFAULT_LOCALE || "pt-BR"
+}
+
 function formatDateTime(iso: string): string {
-  return new Intl.DateTimeFormat(env().DEFAULT_LOCALE, {
+  return new Intl.DateTimeFormat(notificationLocale(), {
     dateStyle: "short",
     timeStyle: "short",
     timeZone: NOTIFICATION_TIMEZONE,

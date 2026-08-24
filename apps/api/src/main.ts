@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser"
 import helmet from "helmet"
 
 import { AppModule } from "./app.module"
+import { bootstrapProduct } from "./bootstrap.product"
 import { mountDocs, shouldMountDocs } from "./docs/docs"
 import { buildOpenApiDocument } from "./openapi/openapi-config"
 import { env } from "./shared/config/env"
@@ -27,12 +28,22 @@ export function applySecurity(app: INestApplication): void {
   http.set?.("trust proxy", config.TRUST_PROXY_HOPS)
 }
 
-async function bootstrap(): Promise<void> {
+/**
+ * Monta o app até o ponto anterior a `listen` — inclui o seam do produto.
+ * Exportado para o e2e reconstruir o mesmo boot sem abrir porta real.
+ */
+export async function createApp(): Promise<INestApplication> {
   // Sem os níveis informativos do logger embutido: o mapa de rotas dele são 480
   // linhas por boot, com escapes ANSI crus, que só encurtam a retenção do log do
   // container. Falha de bootstrap sai em `error`/`warn` e continua visível; o
   // que a aplicação tem a dizer sai pelo LoggerFactory, em JSON.
-  const app = await NestFactory.create(AppModule, { logger: ["error", "warn"] })
+  // rawBody: true preserva o corpo cru no request — produtos que verificam
+  // assinatura de webhook (ex.: gateway de pagamento) precisam dele intacto,
+  // antes do parse do body-parser.
+  const app = await NestFactory.create(AppModule, {
+    logger: ["error", "warn"],
+    rawBody: true,
+  })
 
   app.enableShutdownHooks()
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
@@ -54,6 +65,15 @@ async function bootstrap(): Promise<void> {
   if (shouldMountDocs(env())) {
     await mountDocs(app, buildOpenApiDocument(app))
   }
+
+  // Seam do produto: depois de mountDocs, antes de listen (bootstrap.product.ts).
+  await bootstrapProduct(app)
+
+  return app
+}
+
+async function bootstrap(): Promise<void> {
+  const app = await createApp()
 
   // O flush dos spans OTel no shutdown roda via TracingModule
   // (onApplicationShutdown), disparado pelo enableShutdownHooks em SIGTERM/SIGINT.

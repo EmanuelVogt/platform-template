@@ -20,7 +20,8 @@ fix: "summary + link to the changelog"
 parity: "path/to/the.parity.spec.ts"
 ```
 
-Body in pt-BR: context, impact, steps.
+Body in the product's language (see [`AGENTS.md`](../../AGENTS.md), Two standing rules):
+context, impact, steps.
 
 `module: kernel` is for defects in the template itself — the kernel, the platform
 scripts, the harness hooks, copier — not in a catalog entry. Its `affects` matches

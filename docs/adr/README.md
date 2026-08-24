@@ -4,7 +4,8 @@ One record per decision, format `NNNN-title.md`. Line = ADR title.
 
 ## How to write an ADR
 
-Four blocks, in this order, in pt-BR. Ceiling: **~30 lines**; going beyond it requires that the
+Four blocks, in this order, in the product's language (see [`AGENTS.md`](../../AGENTS.md),
+Two standing rules). Ceiling: **~30 lines**; going beyond it requires that the
 excess be decision, never narrative.
 
 ```markdown

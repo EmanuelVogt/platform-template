@@ -5,16 +5,16 @@ error messages follow [`../code-quality.md`](../code-quality.md) as always.
 
 ## Language
 
-- **Replies to the user: pt-BR**, with correct orthography and diacritics.
-- **Internal work — thinking, subagent prompts, scratch notes: English.** pt-BR is for
-  what the user reads, nothing else: Portuguese tokenizes ~30% heavier than English, and
-  a long session pays that surcharge on every thinking block.
+- **Replies to the user vs. internal work (thinking, subagent prompts, scratch notes):**
+  see [`AGENTS.md`](../../AGENTS.md) (Two standing rules) — replies use correct orthography
+  and diacritics; only what the user reads pays the tokenizer surcharge of a non-English
+  reply.
 - **Agent-facing docs: English** — this file, everything under `docs/agents/`, and
   everything born in `.specs/`.
-- **Human handbooks: English too** — the rest of `docs/`. The user is addressed in pt-BR;
-  the docs are not.
-- Product strings quoted from the UI (screen labels, error messages) stay in pt-BR inside
-  English text.
+- **Human handbooks: English too** — the rest of `docs/`. The user is addressed per the Two
+  standing rules; the docs are not.
+- Product strings quoted from the UI (screen labels, error messages) stay in the product's
+  language inside English text.
 
 ## Explain from the business side, not the technical side
 

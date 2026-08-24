@@ -51,7 +51,7 @@ error, imports inside the same slice are free. The one declared exception is
 invalidation crosses domains (Golden Rule 7). FSD's `@x` folders do not exist here: without
 barrels there is nothing to re-export, every other entity-to-entity import is rejected, and a
 reference to another entity's id uses a branded type in `shared/types/`. `import-x` covers
-ordering, cycles, self-imports and duplicates; no-barrel is review. A pt-BR JSDoc on an export
+ordering, cycles, self-imports and duplicates; no-barrel is review. A JSDoc on an export
 consumed outside its slice only when the contract is not obvious from the signature.
 
 ## Data layer and state

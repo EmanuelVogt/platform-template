@@ -128,7 +128,7 @@ process fork (`isolate: true`, the default), so the heap does not pile up across
   written against those defaults; turning them on is a `test-suite-refactor` candidate, not a
   migration one.
 - No database mock in integration/e2e — always a real testcontainer.
-- pt-BR in `describe`/`it`; identifiers in English.
+- `describe`/`it` text follows the code-quality language convention; identifiers in English.
 - On the back, never `@/` in a test — relative imports only.
 - On the `web`, import `@testing-library/jest-dom/vitest` for the DOM matchers
   (`toBeInTheDocument`, …) — the package name is historical, it does not name the runner.

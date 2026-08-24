@@ -3,6 +3,54 @@ import { DomainError } from "../../../shared/kernel/errors/domain.error"
 const TYPE_BASE = "https://errors.example.com/identity"
 
 /**
+ * Tabela única de mensagens do entry identity — title/detail de cada erro.
+ * Ponto único de swap quando o produto tiver um pacote não-pt-BR; hoje
+ * reproduz exatamente as strings anteriores.
+ */
+const MESSAGES = {
+  invalidCredentials: "Credenciais inválidas",
+  weakPassword: "Senha fraca",
+  invalidResetToken: "Token inválido ou expirado",
+  sessionNotFound: "Sessão não encontrada",
+  userNotFound: "Usuário não encontrado",
+  rateLimited: "Muitas tentativas. Tente novamente mais tarde.",
+  invalidAccessLink: "Link de acesso inválido ou expirado",
+  emailAlreadyInUse: "Já existe um usuário com este e-mail",
+  userNotInTrash: "Usuário não está na lixeira",
+  accessLinkNotResendable: "Link de acesso não pode ser reenviado",
+  profileImageStoreMissingTitle: "Imagem de perfil indisponível",
+  profileImageStoreMissingDetail:
+    "Nenhum armazenamento de imagem de perfil está registrado.",
+  invalidAccountState: "Estado de conta inválido",
+  invalidBirthDate: "Data de nascimento inválida",
+  cannotRevokeCurrentDevice:
+    "Não é possível encerrar o dispositivo atual. Use o logout.",
+  invalidPermissionSet: "Conjunto de permissões inválido",
+  invalidProfessionalScope: "Áreas ou serviços de atuação inválidos",
+  invalidSchedulingAreas: "Áreas de agendamento inválidas",
+  professionalHasCommitmentsTitle: "A pessoa ainda tem compromisso marcado",
+  professionalHasCommitmentsDetail:
+    "Remarque os atendimentos e conduções listados antes de tirá-la do atendimento a clientes.",
+  permissionTemplateNotFound: "Modelo de permissões não encontrado",
+  permissionTemplateNameInUse:
+    "Já existe um modelo de permissões com este nome",
+  emailUnchanged: "O novo e-mail é igual ao atual",
+  invalidEmailChangeToken: "Link de confirmação inválido ou expirado",
+  avatarFileRequired: "Arquivo de avatar é obrigatório",
+  permissionGrantNotAllowedTitle: "Acesso negado",
+  permissionGrantNotAllowedDetail:
+    "Não é possível conceder permissões que você não possui.",
+  passwordHashingSaturatedTitle: "Serviço temporariamente indisponível",
+  passwordHashingSaturatedDetail:
+    "Muitas verificações de senha em andamento. Tente novamente em instantes.",
+  breachCheckUnavailableTitle: "Serviço temporariamente indisponível",
+  breachCheckUnavailableDetail:
+    "Não foi possível verificar se a senha foi vazada. Tente novamente em instantes.",
+} as const
+
+export { MESSAGES as IDENTITY_MESSAGES }
+
+/**
  * Falha de autenticação. UMA única classe para TODOS os caminhos de login
  * (user inexistente, senha errada, conta bloqueada, email não verificado).
  * Mesma mensagem, status e type — o campo `type` do RFC 7807 é legível, então
@@ -13,7 +61,7 @@ export class InvalidCredentialsError extends DomainError {
   readonly type = `${TYPE_BASE}/invalid-credentials`
 
   constructor() {
-    super("Credenciais inválidas")
+    super(MESSAGES.invalidCredentials)
   }
 }
 
@@ -23,7 +71,7 @@ export class WeakPasswordError extends DomainError {
   readonly type = `${TYPE_BASE}/weak-password`
 
   constructor(detail?: string) {
-    super("Senha fraca", detail)
+    super(MESSAGES.weakPassword, detail)
   }
 }
 
@@ -33,7 +81,7 @@ export class InvalidResetTokenError extends DomainError {
   readonly type = `${TYPE_BASE}/invalid-reset-token`
 
   constructor() {
-    super("Token inválido ou expirado")
+    super(MESSAGES.invalidResetToken)
   }
 }
 
@@ -43,7 +91,7 @@ export class SessionNotFoundError extends DomainError {
   readonly type = `${TYPE_BASE}/session-not-found`
 
   constructor() {
-    super("Sessão não encontrada")
+    super(MESSAGES.sessionNotFound)
   }
 }
 
@@ -53,7 +101,7 @@ export class UserNotFoundError extends DomainError {
   readonly type = `${TYPE_BASE}/user-not-found`
 
   constructor() {
-    super("Usuário não encontrado")
+    super(MESSAGES.userNotFound)
   }
 }
 
@@ -64,7 +112,7 @@ export class RateLimitedError extends DomainError {
   override readonly retryAfterSeconds: number
 
   constructor(retryAfterSeconds: number) {
-    super("Muitas tentativas. Tente novamente mais tarde.")
+    super(MESSAGES.rateLimited)
     this.retryAfterSeconds = retryAfterSeconds
   }
 }
@@ -75,7 +123,7 @@ export class InvalidAccessLinkError extends DomainError {
   readonly type = `${TYPE_BASE}/invalid-access-link`
 
   constructor() {
-    super("Link de acesso inválido ou expirado")
+    super(MESSAGES.invalidAccessLink)
   }
 }
 
@@ -85,7 +133,7 @@ export class EmailAlreadyInUseError extends DomainError {
   readonly type = `${TYPE_BASE}/email-already-in-use`
 
   constructor() {
-    super("Já existe um usuário com este e-mail")
+    super(MESSAGES.emailAlreadyInUse)
   }
 }
 
@@ -95,7 +143,7 @@ export class UserNotInTrashError extends DomainError {
   readonly type = `${TYPE_BASE}/user-not-in-trash`
 
   constructor() {
-    super("Usuário não está na lixeira")
+    super(MESSAGES.userNotInTrash)
   }
 }
 
@@ -105,7 +153,7 @@ export class AccessLinkNotResendableError extends DomainError {
   readonly type = `${TYPE_BASE}/access-link-not-resendable`
 
   constructor(detail?: string) {
-    super("Link de acesso não pode ser reenviado", detail)
+    super(MESSAGES.accessLinkNotResendable, detail)
   }
 }
 
@@ -120,8 +168,8 @@ export class ProfileImageStoreMissingError extends DomainError {
 
   constructor() {
     super(
-      "Imagem de perfil indisponível",
-      "Nenhum armazenamento de imagem de perfil está registrado."
+      MESSAGES.profileImageStoreMissingTitle,
+      MESSAGES.profileImageStoreMissingDetail
     )
   }
 }
@@ -132,7 +180,7 @@ export class InvalidAccountStateError extends DomainError {
   readonly type = `${TYPE_BASE}/invalid-account-state`
 
   constructor() {
-    super("Estado de conta inválido")
+    super(MESSAGES.invalidAccountState)
   }
 }
 
@@ -142,7 +190,7 @@ export class InvalidBirthDateError extends DomainError {
   readonly type = `${TYPE_BASE}/invalid-birth-date`
 
   constructor() {
-    super("Data de nascimento inválida")
+    super(MESSAGES.invalidBirthDate)
   }
 }
 
@@ -152,7 +200,7 @@ export class CannotRevokeCurrentDeviceError extends DomainError {
   readonly type = `${TYPE_BASE}/cannot-revoke-current-device`
 
   constructor() {
-    super("Não é possível encerrar o dispositivo atual. Use o logout.")
+    super(MESSAGES.cannotRevokeCurrentDevice)
   }
 }
 
@@ -162,7 +210,7 @@ export class InvalidPermissionSetError extends DomainError {
   readonly type = `${TYPE_BASE}/invalid-permission-set`
 
   constructor(detail?: string) {
-    super("Conjunto de permissões inválido", detail)
+    super(MESSAGES.invalidPermissionSet, detail)
   }
 }
 
@@ -173,7 +221,7 @@ export class InvalidProfessionalScopeError extends DomainError {
   readonly type = `${TYPE_BASE}/invalid-professional-scope`
 
   constructor(detail?: string) {
-    super("Áreas ou serviços de atuação inválidos", detail)
+    super(MESSAGES.invalidProfessionalScope, detail)
   }
 }
 
@@ -183,7 +231,7 @@ export class InvalidSchedulingAreasError extends DomainError {
   readonly type = `${TYPE_BASE}/invalid-scheduling-areas`
 
   constructor(detail?: string) {
-    super("Áreas de agendamento inválidas", detail)
+    super(MESSAGES.invalidSchedulingAreas, detail)
   }
 }
 
@@ -199,8 +247,8 @@ export class ProfessionalHasCommitmentsError extends DomainError {
 
   constructor(commitments: readonly ProfessionalCommitmentOffender[]) {
     super(
-      "A pessoa ainda tem compromisso marcado",
-      "Remarque os atendimentos e conduções listados antes de tirá-la do atendimento a clientes."
+      MESSAGES.professionalHasCommitmentsTitle,
+      MESSAGES.professionalHasCommitmentsDetail
     )
     this.extensions = { commitments }
   }
@@ -221,7 +269,7 @@ export class PermissionTemplateNotFoundError extends DomainError {
   readonly type = `${TYPE_BASE}/permission-template-not-found`
 
   constructor() {
-    super("Modelo de permissões não encontrado")
+    super(MESSAGES.permissionTemplateNotFound)
   }
 }
 
@@ -231,7 +279,7 @@ export class PermissionTemplateNameInUseError extends DomainError {
   readonly type = `${TYPE_BASE}/permission-template-name-in-use`
 
   constructor() {
-    super("Já existe um modelo de permissões com este nome")
+    super(MESSAGES.permissionTemplateNameInUse)
   }
 }
 
@@ -241,7 +289,7 @@ export class EmailUnchangedError extends DomainError {
   readonly type = `${TYPE_BASE}/email-unchanged`
 
   constructor() {
-    super("O novo e-mail é igual ao atual")
+    super(MESSAGES.emailUnchanged)
   }
 }
 
@@ -251,7 +299,7 @@ export class InvalidEmailChangeTokenError extends DomainError {
   readonly type = `${TYPE_BASE}/invalid-email-change-token`
 
   constructor() {
-    super("Link de confirmação inválido ou expirado")
+    super(MESSAGES.invalidEmailChangeToken)
   }
 }
 
@@ -261,7 +309,7 @@ export class AvatarFileRequiredError extends DomainError {
   readonly type = `${TYPE_BASE}/avatar-file-required`
 
   constructor() {
-    super("Arquivo de avatar é obrigatório")
+    super(MESSAGES.avatarFileRequired)
   }
 }
 
@@ -272,8 +320,8 @@ export class PermissionGrantNotAllowedError extends DomainError {
 
   constructor() {
     super(
-      "Acesso negado",
-      "Não é possível conceder permissões que você não possui."
+      MESSAGES.permissionGrantNotAllowedTitle,
+      MESSAGES.permissionGrantNotAllowedDetail
     )
   }
 }
@@ -290,8 +338,8 @@ export class PasswordHashingSaturatedError extends DomainError {
 
   constructor() {
     super(
-      "Serviço temporariamente indisponível",
-      "Muitas verificações de senha em andamento. Tente novamente em instantes."
+      MESSAGES.passwordHashingSaturatedTitle,
+      MESSAGES.passwordHashingSaturatedDetail
     )
   }
 }
@@ -308,8 +356,8 @@ export class BreachCheckUnavailableError extends DomainError {
 
   constructor() {
     super(
-      "Serviço temporariamente indisponível",
-      "Não foi possível verificar se a senha foi vazada. Tente novamente em instantes."
+      MESSAGES.breachCheckUnavailableTitle,
+      MESSAGES.breachCheckUnavailableDetail
     )
   }
 }

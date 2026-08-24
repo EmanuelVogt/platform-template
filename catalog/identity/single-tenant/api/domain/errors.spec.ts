@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { DomainError } from "../../../shared/kernel/errors/domain.error"
 
 import {
+  IDENTITY_MESSAGES,
   InvalidCredentialsError,
   WeakPasswordError,
   InvalidResetTokenError,
@@ -115,6 +116,14 @@ describe("errors de domínio identity", () => {
       "https://errors.example.com/identity/permission-grant-not-allowed"
     )
     expect(err.retryAfterSeconds).toBeUndefined()
+  })
+
+  it("os erros lêem a tabela única de mensagens do entry, inalterada por padrão", () => {
+    expect(IDENTITY_MESSAGES.invalidCredentials).toBe("Credenciais inválidas")
+    expect(new InvalidCredentialsError().title).toBe(
+      IDENTITY_MESSAGES.invalidCredentials
+    )
+    expect(new WeakPasswordError().title).toBe(IDENTITY_MESSAGES.weakPassword)
   })
 
   it("os três types novos são únicos entre si e distintos dos existentes", () => {

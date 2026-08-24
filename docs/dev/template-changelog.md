@@ -4,6 +4,25 @@ Version truth = git tag + this entry (AD-006); `package.json` is not bumped on
 release. Each version lists the contract-breaking changes and the steps for the child
 to apply on `copier update`.
 
+## v2.4.0
+
+A release can no longer be cut by accident: the `release` subcommand rejects the flags
+it does not know instead of ignoring them.
+
+### Changes
+
+1. **`platform release` refuses unknown flags** (`lib/commands/release.mjs` + `cli.mjs`):
+   the argument parser accepts any `--x` silently, so a flag the subcommand did not know
+   — `--help` among them — was dropped, the version fell back to the changelog's latest
+   section, and the empty marker commit was created anyway. An allow-list now runs before
+   the command touches git: `--help` prints the usage and exits `0`, any other unknown
+   flag exits `2` (`USAGE_ERROR`). Only `release` is guarded — it is the one subcommand
+   where an unknown flag has a destructive default.
+
+### Child migration steps
+
+None — copier update is enough.
+
 ## v2.3.0
 
 The update contract: a tag only ships green, the kernel carries advisories like any

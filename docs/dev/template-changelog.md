@@ -27,6 +27,14 @@ catalog entry, and the product reads them before updating instead of after.
    `lib/dev-servers.mjs`): `SubagentStart`/`SubagentStop` terminate what an agent booted
    and never killed; `kill-orphan-dev-servers.mjs` (`SessionEnd`) becomes the backstop and
    now sees the API (`nest start --watch`) and the watchers, not only Vite.
+7. **Format gate** (`.prettierrc` + `lefthook-local.yml` + `format.yml`, template-only):
+   `pnpm format:check` runs again (the Tailwind plugin it named is gone); a `pre-commit`
+   job formats and re-stages staged files instead of failing the commit; CI checks
+   `main`/PRs. The five entries the reformat rewrote (`attachment`, `audit`,
+   `notification`, `tag`, `identity/single-tenant`) went `2.0.0` -> `2.0.1`, mechanical
+   formatting only, no behaviour change. A child gains a `.prettierrc` that loads — not
+   the gate; opt in by copying the `format` job into a local lefthook file and
+   `format.yml` into `.github/workflows/`.
 
 ### Child migration steps
 

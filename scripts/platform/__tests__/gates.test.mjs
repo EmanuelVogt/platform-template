@@ -182,7 +182,10 @@ test("CI-06: todo job que roda catalog:*, test:scripts ou template:smoke depende
     const runs = (job.steps ?? []).map((step) => step.run).filter(Boolean)
     if (!runs.some((run) => gatedCommandPattern.test(run))) continue
     const needsList = Array.isArray(job.needs) ? job.needs : [job.needs]
-    assert.ok(needsList.includes("detect"), `${jobName} deveria depender de detect`)
+    assert.ok(
+      needsList.includes("detect"),
+      `${jobName} deveria depender de detect`
+    )
     assert.ok(
       typeof job.if === "string" &&
         job.if.includes("needs.detect.outputs.template"),
@@ -199,7 +202,8 @@ test("regressão AD-033: detect.if do ci.yml contém refs/heads/main", () => {
 test("gates job mantém fetch-depth: 0 no checkout (lintEntryBump precisa da tag anterior)", () => {
   const { jobs } = readYaml(CI_WORKFLOW_PATH)
   const checkoutStep = jobs.gates.steps.find(
-    (step) => typeof step.uses === "string" && step.uses.startsWith("actions/checkout")
+    (step) =>
+      typeof step.uses === "string" && step.uses.startsWith("actions/checkout")
   )
   assert.equal(checkoutStep.with?.["fetch-depth"], 0)
 })

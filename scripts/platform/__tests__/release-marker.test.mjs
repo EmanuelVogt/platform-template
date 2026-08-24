@@ -75,10 +75,7 @@ test("isMarkerSubject é false para um assunto não relacionado", () => {
 })
 
 test("isMarkerSubject é false quando o texto do marcador só aparece fora do prefixo", () => {
-  assert.equal(
-    isMarkerSubject("docs: mention chore(release): usage"),
-    false
-  )
+  assert.equal(isMarkerSubject("docs: mention chore(release): usage"), false)
 })
 
 test("decideRelease: skip quando nenhum subject é marcador (filtro frouxo do CI bateu no corpo)", () => {
@@ -241,7 +238,10 @@ test("writeGithubOutput: $GITHUB_OUTPUT ausente não lança", () => {
 test("writeGithubOutput: release grava release=true e version=<x.y.z>", () => {
   withTempOutputFile((outputPath) => {
     writeGithubOutput({ action: "release", version: "2.4.0" }, outputPath)
-    assert.equal(readFileSync(outputPath, "utf8"), "release=true\nversion=2.4.0\n")
+    assert.equal(
+      readFileSync(outputPath, "utf8"),
+      "release=true\nversion=2.4.0\n"
+    )
   })
 })
 

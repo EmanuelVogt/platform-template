@@ -136,7 +136,10 @@ test("MARK-13: recusa quando HEAD não está em main, e nenhum commit é criado"
     assert.equal(exitCode, EXIT_CODES.USAGE_ERROR)
     assert.match(logs.join("\n"), /não está em "main"/)
     assert.equal(preflight.calls.length, 0)
-    assert.equal(exec.calls.some((c) => c.args[0] === "commit"), false)
+    assert.equal(
+      exec.calls.some((c) => c.args[0] === "commit"),
+      false
+    )
   } finally {
     cleanup(dir)
   }
@@ -157,7 +160,10 @@ test("MARK-13: recusa quando a árvore tem alterações não commitadas, e nenhu
     assert.equal(exitCode, EXIT_CODES.USAGE_ERROR)
     assert.match(logs.join("\n"), /alterações não commitadas/)
     assert.equal(preflight.calls.length, 0)
-    assert.equal(exec.calls.some((c) => c.args[0] === "commit"), false)
+    assert.equal(
+      exec.calls.some((c) => c.args[0] === "commit"),
+      false
+    )
   } finally {
     cleanup(dir)
   }
@@ -169,7 +175,8 @@ test("MARK-11: repassa o exit code exato do preflight e a mensagem original sem 
     const exec = fakeExec()
     const logs = []
     const preflight = stubPreflight(EXIT_CODES.MIGRATION_FAILURE, {
-      log: (log) => log("release-preflight — passo 1 não é executável por máquina"),
+      log: (log) =>
+        log("release-preflight — passo 1 não é executável por máquina"),
     })
     const exitCode = await planRelease({
       cwd: dir,
@@ -181,7 +188,10 @@ test("MARK-11: repassa o exit code exato do preflight e a mensagem original sem 
     assert.deepEqual(logs, [
       "release-preflight — passo 1 não é executável por máquina",
     ])
-    assert.equal(exec.calls.some((c) => c.args[0] === "commit"), false)
+    assert.equal(
+      exec.calls.some((c) => c.args[0] === "commit"),
+      false
+    )
   } finally {
     cleanup(dir)
   }
@@ -209,7 +219,10 @@ test("MARK-12: no sucesso cria exatamente um commit vazio, sem tag e sem push", 
       "-m",
       "chore(release): v3.0.0",
     ])
-    assert.equal(exec.calls.some((c) => c.args[0] === "tag"), false)
+    assert.equal(
+      exec.calls.some((c) => c.args[0] === "tag"),
+      false
+    )
     assert.equal(
       exec.calls.some((c) => c.args.join(" ").includes("push")),
       false
@@ -228,7 +241,10 @@ test("Independent Test: changelog desatualizado (versão já tagueada) — exit 
     const exec = fakeExec({ tagList: "v3.0.0\n" })
     const exitCode = await planRelease({ cwd: dir, exec, log: () => {} })
     assert.notEqual(exitCode, EXIT_CODES.OK)
-    assert.equal(exec.calls.some((c) => c.args[0] === "commit"), false)
+    assert.equal(
+      exec.calls.some((c) => c.args[0] === "commit"),
+      false
+    )
   } finally {
     cleanup(dir)
   }
@@ -240,10 +256,7 @@ test("caminho feliz com o preflight real: changelog limpo, sem tag prévia, cria
     const exec = fakeExec()
     const exitCode = await planRelease({ cwd: dir, exec, log: () => {} })
     assert.equal(exitCode, EXIT_CODES.OK)
-    assert.equal(
-      exec.calls.filter((c) => c.args[0] === "commit").length,
-      1
-    )
+    assert.equal(exec.calls.filter((c) => c.args[0] === "commit").length, 1)
   } finally {
     cleanup(dir)
   }
@@ -253,7 +266,10 @@ test("garantia de ordenação: em todo caminho de recusa, nenhuma chamada de git
   const dir = buildFixtureDir()
   try {
     const scenarios = [
-      { exec: fakeExec({ branch: "other" }), preflight: stubPreflight(EXIT_CODES.OK) },
+      {
+        exec: fakeExec({ branch: "other" }),
+        preflight: stubPreflight(EXIT_CODES.OK),
+      },
       {
         exec: fakeExec({ statusOutput: "M x\n" }),
         preflight: stubPreflight(EXIT_CODES.OK),
@@ -268,7 +284,10 @@ test("garantia de ordenação: em todo caminho de recusa, nenhuma chamada de git
         log: () => {},
       })
       assert.notEqual(exitCode, EXIT_CODES.OK)
-      assert.equal(exec.calls.some((c) => c.args[0] === "commit"), false)
+      assert.equal(
+        exec.calls.some((c) => c.args[0] === "commit"),
+        false
+      )
     }
   } finally {
     cleanup(dir)

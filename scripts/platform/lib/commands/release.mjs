@@ -43,9 +43,7 @@ export async function planRelease({
 
   const resolvedVersion =
     version ??
-    readLatestChangelogVersion(
-      path.join(cwd, "docs/dev/template-changelog.md")
-    )
+    readLatestChangelogVersion(path.join(cwd, "docs/dev/template-changelog.md"))
 
   const preflightExit = await runPreflight({
     version: resolvedVersion,

@@ -61,6 +61,9 @@ const envSchema = z
     OTEL_EXPORTER_OTLP_ENDPOINT: z.union([z.url(), z.literal("")]).optional(),
     DOCS_ENABLED: z.stringbool().default(false),
     OUTBOX_DEAD_RETENTION_DAYS: z.coerce.number().int().positive().default(30),
+    // Seleciona o pacote de mensagens do kernel (shared/kernel/i18n). O
+    // default reproduz as strings de hoje sem nenhuma mudança.
+    DEFAULT_LOCALE: z.string().min(1).default("pt-BR"),
 
     // --- rede / proxy (consumido pelo app shell: CORS, trust proxy) ---
     // Cada módulo declara num config próprio o que ele consome; aqui só entra

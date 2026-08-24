@@ -6,7 +6,9 @@ import {
 } from "@nestjs/common"
 import { ZodValidationException } from "nestjs-zod"
 
+import { env } from "../../config/env"
 import { RequestContext } from "../context/request-context"
+import { messagePackFor } from "../i18n/message-pack"
 import { type AppLogger, LoggerFactory } from "../logging/logger.factory"
 
 import { DomainError } from "./domain.error"
@@ -50,6 +52,7 @@ function toProblem(
   instance: string,
   correlationId: string | null
 ): ProblemDetails {
+  const messages = messagePackFor(env().DEFAULT_LOCALE)
   if (exception instanceof DomainError) {
     return {
       ...(exception.extensions ?? {}),
@@ -64,9 +67,9 @@ function toProblem(
   if (exception instanceof ZodValidationException) {
     return {
       type: "https://errors.example.com/validation",
-      title: "Erro de validação",
+      title: messages.validationTitle,
       status: 400,
-      detail: "Payload inválido",
+      detail: messages.validationDetail,
       instance,
       correlationId,
       errors: extractIssues(exception.getZodError()),
@@ -92,7 +95,7 @@ function toProblem(
   }
   return {
     type: "https://errors.example.com/internal",
-    title: "Erro interno",
+    title: messages.internalTitle,
     status: 500,
     instance,
     correlationId,

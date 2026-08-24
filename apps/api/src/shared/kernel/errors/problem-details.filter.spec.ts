@@ -464,6 +464,26 @@ describe("ProblemDetailsFilter — log do que é 5xx", () => {
   })
 })
 
+describe("ProblemDetailsFilter — DEFAULT_LOCALE (pacote de mensagens)", () => {
+  it("validação: pacote pt-BR padrão reproduz as strings atuais sem mudança", () => {
+    const { exception } = zodFailure()
+    const r = runWith(exception)
+    const body = bodyOf(r)
+    expect(body.title).toBe("Erro de validação")
+    expect(body.detail).toBe("Payload inválido")
+  })
+
+  it("erro interno: pacote pt-BR padrão reproduz a string atual sem mudança", () => {
+    const r = runWith(new Error("boom"))
+    expect(bodyOf(r).title).toBe("Erro interno")
+  })
+
+  it("DomainError não passa pelo pacote — title continua pass-through do próprio erro", () => {
+    const r = runWith(new FakeConflictError())
+    expect(bodyOf(r).title).toBe("Conflito de agenda")
+  })
+})
+
 describe("ProblemDetailsFilter — fallback do Retry-After", () => {
   it("DomainError 429 sem retryAfterSeconds cai em 60", () => {
     const r = runWith(new FakeThrottledError())

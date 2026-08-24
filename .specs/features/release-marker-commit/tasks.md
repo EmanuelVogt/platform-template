@@ -681,7 +681,43 @@ committing.** Wave 1's payloads did not, which is an orchestrator defect, not a 
 `npx prettier --check` exit 0 on all four; `node --test` over the three test files exit 0 at 50
 tests (16 + 24 + 10), so the reformat changed no behaviour.
 
-### Wave 2 — HELD, awaiting the owner's ordering ruling
+### Wave 2 — DONE, 2026-08-24
+
+Owner ruled this feature goes first on `copier.yml`. Reasoning, recorded because it is the
+transferable part: either order works mechanically, but handing the one-line `_exclude` deletion
+to the sibling's T41 would make **CI-01 unprovable inside this feature's own commit range** —
+turning an acceptance criterion into a cross-feature dependency for one line. The sibling session
+agreed and T41 now inherits a settled file.
+
+| Cluster | Tier | Task | Commit | Result |
+| --- | --- | --- | --- | --- |
+| C5 | sonnet | T3 drop the `catalog.yml` exclusion | `7e5a43e` | 10 tests, exit 0 |
+
+Build gate: **`pnpm check` exit 0** (it was exit 1 at wave 1 for the foreign `apps/**` reason,
+since repaired by the sibling session) · `pnpm test:scripts` **454 / 49**. The `copier.yml` diff
+is exactly one removed line, verified by `git show`.
+
+### Wave 3 — DONE, 2026-08-24
+
+| Cluster | Tier | Task | Commit | Result |
+| --- | --- | --- | --- | --- |
+| C6 | orchestrator | T12 amend AD-034, record AD-036 | `b9afc82` | no code — decision log |
+
+### Verification — PASS (round 2), 2026-08-24
+
+`validation.md`. Round 1 returned FAIL on a single Minor gap: the MARK-08 emptiness guard's
+mutant (`changedFiles.length > 0` → `> 1`) survived, because the suite exercised 0 and 2 changed
+files but never **exactly 1**. Fixed in `9820444` — test-only; the Verifier independently
+confirmed `release-marker.mjs:60` is absent from that commit's diff and was already correct, so
+the new test closes a gap rather than papering over a defect.
+
+Round 2: **25/25 ACs**, sensor **3 injected / 3 killed** (M3 re-injected post-fix and killed).
+Final gate: `pnpm check` 5/5, `pnpm test` 614/614, `pnpm test:scripts` 454/454, `catalog:lint`
+clean. `catalog:typecheck` and `template:smoke` failed and were root-caused by `git blame` to
+foreign commits `35c8a4f` / `5f89723`, outside this feature's 15-commit range — **real, and
+someone's, but not this feature's**. Lessons L-028 / L-029 recorded.
+
+### Wave 4 — ⛔ still BLOCKED, the only open work
 
 T3 (`copier.yml`) collides with `audit-2026-08-23-remediation` T41, a declared single-editor
 task on the same file. The edit here is one line. The owner rules the order; no peer can decide

@@ -24,7 +24,6 @@ const HANDBOOK_EXCLUDED = [
 // paths. Named, not silently swallowed — `scripts/lessons.py` should read
 // `.agents/skills/tlc-spec-driven/scripts/lessons.py`.
 const KNOWN_HANDBOOK_EXCEPTIONS = [
-  { file: "docs/test/testing.md", reference: "scripts/lessons.py" },
   {
     file: "docs/advisories/README.md",
     reference: "path/to/the.parity.spec.ts",

@@ -21,7 +21,7 @@ features). They apply to any test in the monorepo, inside or outside the spec fl
 - **Assert values that only exist as data passed along** — inline `style`, props of a mocked child.
   Without the assert, deleting the value breaks nothing (L-010).
 
-A new lesson is born from the Verifier, not from here: `scripts/lessons.py` +
+A new lesson is born from the Verifier, not from here: `.agents/skills/tlc-spec-driven/scripts/lessons.py` +
 `.specs/lessons-vocabulary.md`.
 
 ## Commands

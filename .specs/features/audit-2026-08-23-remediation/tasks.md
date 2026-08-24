@@ -3231,3 +3231,57 @@ permanent debt inside the guard that was written to catch it.
       stale reference, and its exception is the correct answer
 - [ ] Gate passes: `pnpm test:scripts`
 **Gate**: quick · **Commit**: `fix(docs): name the real lessons.py path in testing.md`
+
+### Fix Round 1 — GATED GREEN (2026-08-24)
+
+Authored after Verifier pass 1 FAIL. Three clusters, 13 atomic commits, `ac679f5..bace8cc`.
+
+| Cluster | Tasks | Commits | Worker's own gate |
+| --- | --- | --- | --- |
+| CF1 (sonnet) | FT1 → FT8 | `be83c29`, `f25c6d7`, `cfaa67d`, `6642416`, `0af4f1f`, `a78f80b`, `ae02a10`, `b69eb3a` | `pnpm test:scripts` 592/592 |
+| CF2 (sonnet) | FT9 → FT12 | `8ea4a96`, `4dadc14`, `6e17d14`, `41e1e83` | `pnpm test:scripts` exit 0 |
+| CF3 (haiku) | FT13 | `bace8cc` | `pnpm test:scripts` 592/592 |
+
+**Build gate 5/5 GREEN** at `bace8cc`: `check` (7/7 turbo tasks) · `test:scripts` **592/592**
+(**+31** vs wave 7's 561) · `catalog:typecheck` (5 entries) · `catalog:lint` · `format:check`.
+
+**Both blockers are closed.**
+
+- **FT1 (`be83c29`) kills surviving mutant 6.** The end-to-end loop now runs
+  `withoutKnownExceptions(domainHits(text), rel)` beside the brand and infra scans, and a new test
+  seeds all five nouns (`Hospedes`, `Reservas`, `agendamento`, `quartos`, `guests`) and asserts the
+  gate fails on every one. **This resolves wave-6 deviation 3 the way the Verifier ruled it** — the
+  AC did demand domain coverage end to end.
+- **FT9 (`8ea4a96`) closes LOC-01.** `docs/agents/issue-tracker.md.jinja:21` now points at the
+  canonical rule in `AGENTS.md` instead of hardcoding `pt-BR` — the shape `code-quality.md:12,47`
+  and `communication.md:9` already used, not a third invention. The new `locale-threading.test.mjs`
+  covers all four LOC-01 files, two of them by render, and proves **no string moves at
+  `product_locale=pt-BR`** (the locale-default rule from the Verifier notes).
+
+**Every new assertion was proven by hand-reverting the shipped outcome and watching it go red**,
+across all 13 tasks — mutation-style proof, not assumption.
+
+#### Deviations recorded in Fix Round 1 (input to the Verifier)
+
+1. **FT1 — `docs/dev/template-changelog.md` added to `KNOWN_EXCEPTIONS`.** Switching the domain scan
+   on end to end produced one genuine hit: the word *"booking"*. The file is a meta-document about
+   the template's own history, not shipped product prose, so it was excepted rather than reworded.
+   **Judge the exception, not just the fix** — it is the one place the new scan is deliberately
+   blind.
+2. **FT12 surfaced two pre-existing stale handbook references**, both parked as named
+   `KNOWN_HANDBOOK_EXCEPTIONS`. **FT13 (`bace8cc`) fixed the real one** —
+   `docs/test/testing.md:24` named `scripts/lessons.py` whose real path is
+   `.agents/skills/tlc-spec-driven/scripts/lessons.py` — and removed its exception, so the guard now
+   covers that file for real. The second, `docs/advisories/README.md:20`, is a YAML-example
+   placeholder; its exception stays and is correct.
+3. **FT11 proves SEAM-03 statically.** A full `module add` needs `pnpm install` + `pnpm contract`
+   and costs minutes, so the guard asserts instead that the identity entry ships no `shell.tsx` /
+   `main.tsx` / `app-providers.tsx` and that `webRootFor` never resolves there.
+
+**Not fixed in this round, by decision:** *Fix 5* (this feature's web seams exist only in the Vite
+shell, so a `web_stack=next` child loses LOC-03/LOC-06/SEAM-04) — the Verifier marked it
+*cross-feature* and asked for it to be routed deliberately; `apps/web-next` is the sibling feature's
+surface and gates no blocker, the default `web_stack=vite` path being unaffected. **It needs an
+owner ruling.** *Fix 6* (TOOL-12) is informational and was recorded, not worked.
+
+**Next:** Verifier pass 1, round 2 — the same Verifier resumed with the fix range `ac679f5..bace8cc`.

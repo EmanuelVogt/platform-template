@@ -2851,8 +2851,25 @@ returns something; the agent never tags and never pushes (AD-006/AD-034).**
 This run is **pre-merge, T39a+T40 scope only.** A sibling is fast-forwarding `main` to the integrated tree
 (`62330b6`), which brings `web-stack-next` in and renames `apps/web` → `apps/web-vite` + `apps/web-next`
 (L-025: never hardcode `apps/web`). **The integrated tree is what gets tagged `v2.3.0`, so it is the one that
-must be gated.** The wave-3 Build gate re-runs there; *that* run is the one of record. This entry is not proof
-of the tagged tree.
+must be gated.** This entry is not proof of the tagged tree.
+
+> **Amended the same day — the integrated tree IS gated, and no re-run by this session is needed.**
+> `platform-template-3e` closed **nine** gates at exit 0 against `62330b6` (the integrated tree): `format:check` ·
+> `check` · `test` **616/616** · `test:scripts` **510/510** · `catalog:test` **875/875 / 118 files** ·
+> `catalog:lint` · `catalog:typecheck` · `template:smoke` ("the four checks are green") · **`catalog:check` 0,
+> `OK: notification, identity/single-tenant, tag, audit, attachment`**. That set is a **superset of this wave's
+> eight** — same commands plus `template:smoke` — so the wave-3 Build gate requirement is satisfied on the tree
+> that gets tagged. Do not schedule another run for it.
+>
+> **`032dff5` is therefore VERIFIED, not pending.** In that run the child's `pnpm check` passed 5/5 with the
+> strings `prefer-nullish-coalescing` and `no-dynamic-delete` absent from the whole log, and the child's
+> `test:db` genuinely ran — **71 files / 513 tests green, 66s** (child `test`: 224 files / 1593). A sweep for
+> `notification-requested.handler.int-spec`, `Configuração de ambiente inválida`, `DATABASE_URL`, `REDIS_URL`,
+> `WEB_ORIGIN`, `formatDateTime`, `FAIL` and `error TS` returned **zero occurrences**. The env crash is dead on
+> the tree that ships.
+>
+> The Docker contention rule below stands as **policy for future concurrent runs**, but it was never exercised:
+> both runs passed, so there was no red to adjudicate.
 
 **Docker contention rule, agreed with the integrating session.** Both `catalog:check` runs raise Postgres via
 testcontainers for the child's `test:db`. If **only one** of two concurrent runs fails at `test:db` and the
@@ -2875,4 +2892,4 @@ separates that *loud* failure mode from the *silent* one, which is the dangerous
 cause of one case, **not the mechanism that hid it** — the next check that fails will fail mutely. Same family
 as § 0.8, and worse: a gate that knows what went wrong and does not say.
 
-**Next:** re-gate on the integrated tree, then wave 4 (T42, exclusive).
+**Next:** wave 4 (T42, exclusive). The integrated-tree gate is already satisfied — see the amendment above.

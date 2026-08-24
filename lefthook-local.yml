@@ -16,6 +16,13 @@ pre-commit:
       # toda entrada tem de aceitar no kernelRange (issue #9)
       glob: "{catalog/**,docs/advisories/**,docs/dev/template-changelog.md}"
       run: node scripts/platform/catalog-lint.mjs
+    format:
+      # formata e re-adiciona em vez de barrar o commit: com outras sessões
+      # trabalhando neste mesmo checkout, um hook que falha apareceria pra elas como
+      # erro sem contexto. {staged_files} limita o `git add` aos arquivos que este
+      # próprio hook formatou — nunca varre edição alheia em andamento
+      glob: "**/*.{ts,tsx,mts,mjs,cjs,js,jsx,json,yml,yaml,css}"
+      run: pnpm exec prettier --write {staged_files} && git add {staged_files}
 
 commit-msg:
   commands:

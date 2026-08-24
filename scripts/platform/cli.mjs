@@ -5,6 +5,7 @@ import { adoptCommand } from "./lib/commands/adopt.mjs"
 import { detectCommand } from "./lib/commands/advisory.mjs"
 import { feedbackCommand } from "./lib/commands/feedback.mjs"
 import { listCommand } from "./lib/commands/list.mjs"
+import { releaseCommand } from "./lib/commands/release.mjs"
 import { statusCommand } from "./lib/commands/status.mjs"
 import { templateMigrateCommand } from "./lib/commands/template-migrate.mjs"
 
@@ -66,6 +67,10 @@ registerCommand("module", async ({ positionals, options, deps }) => {
 
 registerCommand("status", async ({ options, deps }) =>
   statusCommand({ options, ...deps })
+)
+
+registerCommand("release", async ({ positionals, deps }) =>
+  releaseCommand({ version: positionals[0], ...deps })
 )
 
 registerCommand("feedback", async ({ positionals, options, deps }) =>

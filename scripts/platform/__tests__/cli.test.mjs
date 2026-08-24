@@ -856,3 +856,29 @@ test("status (texto) permanece byte-idêntico ao formato atual quando não há t
       "advisories: nenhuma pendente\n"
   )
 })
+
+test("pnpm platform release resolve para o handler registrado, passando positionals[0] como a versão", async () => {
+  const calls = []
+  const exec = (command, args) => {
+    calls.push({ command, args })
+    if (args[0] === "rev-parse") return { status: 0, stdout: "main\n" }
+    if (args[0] === "status") return { status: 0, stdout: "" }
+    return { status: 0, stdout: "" }
+  }
+  const runPreflight = async () => EXIT_CODES.OK
+  const logs = []
+  const exitCode = await run(["release", "1.2.3"], {
+    exec,
+    runPreflight,
+    log: (line) => logs.push(line),
+  })
+
+  assert.equal(exitCode, EXIT_CODES.OK)
+  const commitCall = calls.find((c) => c.args[0] === "commit")
+  assert.match(commitCall.args.join(" "), /chore\(release\): v1\.2\.3/)
+})
+
+test("um comando de nível superior desconhecido continua retornando EXIT_CODES.USAGE_ERROR", async () => {
+  const exitCode = await run(["not-a-real-command"], {})
+  assert.equal(exitCode, EXIT_CODES.USAGE_ERROR)
+})

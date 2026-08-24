@@ -2610,3 +2610,30 @@ is the generalisation worth keeping over any of the individual findings: **the c
 point where the work happens.** A per-task gate that ran the test command but not the lint command; a Build
 gate that ran four commands but not the catalog ones; and a sibling's pre-commit glob that was configured
 correctly and covered nothing. The third was findable only by mutating the config, never by reading it.
+
+#### RUN-04 is now genuinely satisfied-by-sibling (2026-08-24)
+
+**`prettier-format-gate` closed — Verifier PASS round 2, 9/9 ACs, 0 precision gaps, sensor 4/4 killed.**
+Its Final gate ran whole at exit 0: `check` 5/5 · `test` 614/614 · `test:scripts` 462/462 · `catalog:lint` 0 ·
+`catalog:typecheck` 0 · `format:check` 0 diffs repo-wide.
+
+**Evidence commits for this feature's Verifier to cite for RUN-04** — do not re-derive them: `266d2fd`…
+`60a011a` (the `.prettierrc` repair and the two whole-tree reformats), `8816705` / `2fa2977` / `fd6b41e`
+(the proofs its own Verifier demanded on round 1). RUN-04's condition was never "the reformat happened" but
+"`pnpm format:check` is green at HEAD **and** something fails if it stops being" — both now hold.
+
+**Three standing facts for waves 3-14:**
+
+- **The pre-commit `format` job in `lefthook-local.yml` is live**, in auto-fix mode, re-staging
+  **pathspec-limited to the files it formatted** — never `git add -A`. Workers should never notice it. **If a
+  worker ever reports a commit that mutated a file it did not edit, that is the pathspec limit leaking and
+  the sibling session must be told immediately** — it would sweep one cluster's in-flight edits into another
+  worker's commit.
+- **`scripts/platform/__tests__/format-gate.test.mjs` is new** and asserts the hook's glob matches root-level
+  files — the exact defect its wave-5 worker found by hand. It is deliberately class-level, so a legitimate
+  edit to `lefthook-local.yml` should survive it. **Any task of this feature that touches `lefthook-local.yml`
+  must keep that test green**; a failure there is a regression to the root-glob defect, not a stale assertion.
+- **T48 is unchanged and still blocked.** The sibling's gate lift never transferred: `v2.3.0` remains untagged
+  and tagging is the owner's act (AD-006/AD-034 — the agent never tags and never pushes). When it happens the
+  five entries are at `2.0.1` and the sibling's item 7 sits inside the existing `v2.3.0` section, so
+  `release-preflight` should accept it.

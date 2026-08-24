@@ -307,13 +307,20 @@ describe("ApplicationPool (integração)", () => {
      * `max: 1` com o único client retido: quem chega depois espera na fila e
      * estoura `connectionTimeoutMillis` — o timeout de aquisição de verdade,
      * que é o caso a embrulhar em 503 (falha de conexão real fica de fora).
+     * `connectionTimeoutMillis` governa as DUAS pontas do pg-pool: a conexão
+     * física real que abre `held` (varia com a carga do host/Docker) e o
+     * temporizador puro que rejeita quem fica na fila. Um valor apertado (ex.:
+     * 150ms) corre risco de derrubar a própria conexão real sob host lento —
+     * flake por velocidade do host, não pela saturação que o teste quer
+     * provar. Uma folga confortável tira a corrida: a conexão real sempre
+     * cabe, e o temporizador da fila segue determinístico (não é I/O).
      */
     function saturatedPool(logger: AppLogger): ApplicationPool {
       return new ApplicationPool(
         {
           connectionString: testDatabaseUrl(),
           max: 1,
-          connectionTimeoutMillis: 150,
+          connectionTimeoutMillis: 2000,
         },
         { maxWaiting: 20, acquireWarnMs: 5000, logger }
       )

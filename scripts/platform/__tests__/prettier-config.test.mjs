@@ -49,3 +49,54 @@ test("every .prettierrc plugin resolves from the root node_modules", () => {
     )
   }
 })
+
+function checkedExtensions(formatCheckScript) {
+  const braceGroup = formatCheckScript.match(/\{([^{}]+)\}/)
+  assert.ok(
+    braceGroup,
+    `format:check should name a brace-expanded extension set: ${formatCheckScript}`
+  )
+  return new Set(braceGroup[1].split(","))
+}
+
+test("package.json's format:check covers the spec-required extensions and excludes markdown", () => {
+  const pkg = JSON.parse(
+    fs.readFileSync(path.join(ROOT, "package.json"), "utf8")
+  )
+  const extensions = checkedExtensions(pkg.scripts["format:check"])
+  for (const ext of [
+    "ts",
+    "tsx",
+    "mts",
+    "mjs",
+    "cjs",
+    "js",
+    "jsx",
+    "json",
+    "yml",
+    "yaml",
+    "css",
+  ]) {
+    assert.ok(extensions.has(ext), `format:check should cover .${ext}`)
+  }
+  assert.ok(!extensions.has("md"), "format:check should not cover .md")
+})
+
+test(".prettierignore lists the paths FMT-05 requires excluded", () => {
+  const lines = fs
+    .readFileSync(path.join(ROOT, ".prettierignore"), "utf8")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+  for (const entry of [
+    "*.jinja",
+    "docs/platform_template/",
+    "packages/api-client/generated/",
+    "openapi.json",
+    ".worktrees/",
+    ".specs/",
+    ".claude/settings.local.json",
+  ]) {
+    assert.ok(lines.includes(entry), `.prettierignore should list ${entry}`)
+  }
+})

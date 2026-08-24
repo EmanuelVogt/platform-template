@@ -3214,3 +3214,20 @@ the four the locale must thread through, and it is a `.jinja` file, so it can in
 without editing `apps/web*/**` or a catalog entry's source, STOP and report instead of expanding** —
 that is a plan decision, not a worker's.
 **Gate**: quick · **Commit**: `test(<area>): guard <AC-ID>`
+
+### Cluster CF3 — FT13: the stale handbook reference the new guard found (haiku)
+
+**What**: FT12's guard, run against real repo content, surfaced two pre-existing stale handbook
+references and parked both as named `KNOWN_HANDBOOK_EXCEPTIONS`. One is a genuine defect:
+`docs/test/testing.md:24` names `scripts/lessons.py`, whose real path is
+`.agents/skills/tlc-spec-driven/scripts/lessons.py`. Leaving it excepted turns a real defect into
+permanent debt inside the guard that was written to catch it.
+**Where**: `docs/test/testing.md:24`
+**Touches**: `docs/test/testing.md`, `scripts/platform/__tests__/hook-references.test.mjs`
+**Done when**:
+- [ ] `docs/test/testing.md:24` names the path that exists on disk — confirm it before writing
+- [ ] That file's `KNOWN_HANDBOOK_EXCEPTIONS` entry is **removed**, so the guard covers it for real
+- [ ] The `docs/advisories/README.md:20` entry **stays** — it is a YAML-example placeholder, not a
+      stale reference, and its exception is the correct answer
+- [ ] Gate passes: `pnpm test:scripts`
+**Gate**: quick · **Commit**: `fix(docs): name the real lessons.py path in testing.md`

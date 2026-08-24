@@ -485,3 +485,18 @@ Filled by the orchestrator during Execute — one row per task, plus the Build g
 | 1 | **Build gate** | — | **PASS** | `pnpm check` exit 0 · `pnpm test:scripts` 378/378 · worker: 1× sonnet · no deviations |
 | 2 | T6 | `16a9e92` | quick exit 0 (378) | `prettier-plugin-tailwindcss` gone; `pnpm install --frozen-lockfile` exit 0 |
 | 2 | **Build gate** | — | **PASS** | `pnpm check` exit 0 · `pnpm test:scripts` 378/378 · worker: 1× sonnet · no deviations. `format:check` reports 548 diffs, no crash — T7/T8 own that |
+| 3 | T7 | `4088235` | quick exit 0 (378) | 206 files, +10820 / -6911, outside `catalog/**` |
+| 3 | **Build gate** | — | **PASS** | `pnpm check` 0 · `test:scripts` 378/378 · **`pnpm test` 585/585, unchanged from pre-feature** · prettier outside `catalog/**` 0 diffs, idempotent on re-run · worker: 1× sonnet |
+
+**Deviation, wave 3 (accepted by the orchestrator).** T7 changed one non-whitespace line:
+`scripts/platform/__tests__/add-web-test-script.test.mjs:24`. The reformat wrapped the
+`["vitest","run","--project","web",webRootFor(...)]` array across lines with a trailing comma, and the
+test matched the source's exact single-line shape. The regex was widened by exactly `\s*` after `[`
+and an optional `,?` before `]`. Verified by the orchestrator: all five tokens still required in the
+same order, so it still fails on any real change to the call — no weakening. Its untouched sibling at
+`:13` already used `\s*` between tokens, so this is the file's own idiom.
+**Finding for the Verifier (pre-existing, out of scope):** that test asserts on the *source text* of
+`add.mjs` rather than on behaviour, which is brittle against any formatter by construction.
+**Also noted:** `apps/api/src/shared/kernel/transactional/transaction-manager.int-spec.ts` needed two
+`prettier --write` passes (non-idempotency on a generic-typed chained call); the gate re-ran the check
+twice and confirmed it settles at 0.

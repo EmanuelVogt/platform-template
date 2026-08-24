@@ -105,6 +105,17 @@ function checkPrettierConfigPaths({ childDir, log }) {
   return null
 }
 
+function checkFormatCheck({ childDir, run, log }) {
+  const result = run("pnpm", ["format:check"], { cwd: childDir })
+  if (result.status !== 0) {
+    log(
+      `template:smoke — "pnpm format:check" falhou no child (código ${result.status})`
+    )
+    return EXIT_CODES.TEST_FAILURE
+  }
+  return null
+}
+
 export function parseSchemaList(stdout) {
   return stdout
     .split("\n")
@@ -458,6 +469,10 @@ export async function runTemplateSmoke({
     )
     const prettierConfigExit = checkPrettierConfigPaths({ childDir, log })
     if (prettierConfigExit !== null) return prettierConfigExit
+
+    log("template:smoke — checagem extra: pnpm format:check no child")
+    const formatCheckExit = checkFormatCheck({ childDir, run, log })
+    if (formatCheckExit !== null) return formatCheckExit
 
     log("template:smoke — checagem 1/4: pnpm check && pnpm test")
     const gate = runGates(run, { cwd: childDir })

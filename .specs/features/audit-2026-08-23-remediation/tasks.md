@@ -97,6 +97,25 @@ Files this plan must **never** touch (sibling-owned): `.prettierrc`, `.prettieri
 `scripts/platform/__tests__/prettier-config.test.mjs`,
 `catalog/notification/api/infrastructure/mailer/email-theme.ts`.
 
+### 0.5 Wave-3 plan corrections (verified on disk at HEAD `616fd71`, before dispatch)
+
+`.github/workflows/catalog.yml` **no longer exists**: commit `6b99461` deleted it and merged its jobs
+into `.github/workflows/ci.yml` behind a `detect` job. Three consequences, settled here:
+
+| Plan said | On disk | Effect |
+| --- | --- | --- |
+| T35 edits `.github/workflows/catalog.yml:14-31` to add `fetch-depth: 0` on `gates` | the `gates` job is `ci.yml:94`, and its `actions/checkout` **already sets `fetch-depth: 0`** (`ci.yml:100-102`) | **T35 is satisfied by a prior commit.** It becomes verify-only: confirm the two Done-when bullets against `ci.yml`, emit **no edit and no commit**, report the evidence. `Where`/`Touches` retargeted to `ci.yml` |
+| T34 corrects `ADV-20260822-02:6` but its `Touches` omits that file | the Done-when needs `docs/advisories/ADV-20260822-02.md` | added to T34's `Touches` (and to C7's union). T42 (wave 4, exclusive) touches the same file — different wave, so no sibling race, and T42 still owns the `affects` field |
+| T36 wires `contract:check` into `ci.yml` | the `gates` job is **template-only** (`ci.yml:98`, `if: needs.detect.outputs.template == 'true'`) | a step added to `gates` would never run in a child, contradicting T36's own AC ("survives `module add`", "must ship to the child"). T36 picks a job **without** that condition — `quality` (`:47`) or `test-unit` (`:63`) |
+
+Two further citation drifts, verified: `copier.yml`'s `pnpm install` / `skills:sync` tasks are at
+`:82-85` (not `:74,78,80`), each gated only on `not pretend`; `feedback-triage.yml`'s first API URL is
+at `:37` (not `:41`). T41 works from the disk, not from those numbers.
+
+`contract:check` is **not** added to `copier.yml`'s manifest-prune list (`:75-77`) — that list is an
+allowlist of *deletions*, so leaving the key out of it is exactly what ships it to the child. C7
+therefore never touches `copier.yml`; C9 owns it.
+
 ---
 
 ## Test Coverage Matrix
@@ -165,7 +184,7 @@ wave, and the major's waves start only after the minor's Verifier passes and the
 | 2 | C4 | T17 → T18 → T19 → T20 → T21 → T22 | `scripts/platform/lib/apply.mjs`, `scripts/platform/lib/plan.mjs`, `scripts/platform/lib/commands/add.mjs`, `scripts/platform/lib/commands/advisory.mjs`, `scripts/platform/lib/exit-codes.mjs`, `scripts/platform/lib/advisories.mjs`, `.claude/hooks/pending-advisories.mjs`, `docs/advisories/README.md`, `docs/advisories/ADV-20260822-04.md`, `.agents/skills/port-module-update/SKILL.md`, `scripts/platform/__tests__/lock-paths.test.mjs`, `scripts/platform/__tests__/rollback.test.mjs`, `scripts/platform/__tests__/advisory-exit-codes.test.mjs`, `scripts/platform/__tests__/pending-advisories-hook.test.mjs`, `scripts/platform/__tests__/compute-pending-catalogref.test.mjs` | lock / rollback / advisory truth · gate: scoped |
 | 2 | C5 | T23 → T24 → T25 → T26 → T27 | `apps/web/index.html`, `apps/web/public/`, `apps/web/nginx.conf`, `apps/web/src/app/router/shell.tsx`, `apps/web/src/main.tsx`, `apps/web/src/app/providers/app-providers.tsx`, `apps/web/src/shared/config/routes.ts`, `apps/web/src/shared/lib/last-location.ts`, `apps/web/src/shared/lib/auth-redirect.ts`, `apps/web/src/app/config/zod-locale.ts`, `apps/web/src/app/router/route-pending.tsx`, `apps/web/src/pages/not-found/ui/not-found-page.tsx`, `apps/web/src/pages/error/ui/error-page.tsx`, `apps/web/src/app/router/shell.test.tsx`, `apps/web/src/shared/config/routes.test.ts`, `apps/web/src/shared/lib/last-location.test.ts`, `catalog/identity/single-tenant/README.md` | web locale + route/guard seams · gate: **full-unit** (`apps/web/src/shared/**` is kernel surface) |
 | 2 | C6 | T28 → T29 → T30 → T31 → T32 | `apps/api/src/shared/kernel/errors/problem-details.filter.ts`, `apps/api/src/shared/kernel/errors/problem-details.filter.spec.ts`, `apps/api/src/shared/kernel/errors/domain.error.ts`, `apps/api/src/shared/kernel/i18n/`, `apps/api/src/main.ts`, `apps/api/src/bootstrap.product.ts`, `apps/api/src/shared/kernel/context/request-context.ts`, `apps/api/src/shared/kernel/context/request-context.spec.ts`, `apps/api/src/shared/kernel/context/request-context.middleware.ts`, `apps/api/src/shared/infra/database/application-pool.int-spec.ts`, `docs/dev/template.md`, `apps/api/test/bootstrap-product.e2e-spec.ts` | API kernel locale + boot/tenant seams · gate: **full-unit** (kernel) |
-| 3 | C7 | T33 → T34 → T35 → T36 | `scripts/platform/lib/lint.mjs`, `scripts/platform/catalog-lint.mjs`, `scripts/platform/release-preflight.mjs`, `.github/workflows/catalog.yml`, `.github/workflows/ci.yml`, `package.json`, `docs/arch/back.md`, `scripts/platform/__tests__/entry-bump-lint.test.mjs`, `scripts/platform/__tests__/advisory-path-scope.test.mjs`, `scripts/platform/__tests__/contract-check-ci.test.mjs` | catalog version gate + contract drift gate · gate: scoped |
+| 3 | C7 | T33 → T34 → T35 → T36 | `scripts/platform/lib/lint.mjs`, `scripts/platform/catalog-lint.mjs`, `scripts/platform/release-preflight.mjs`, `docs/advisories/ADV-20260822-02.md`, `.github/workflows/ci.yml`, `package.json`, `docs/arch/back.md`, `scripts/platform/__tests__/entry-bump-lint.test.mjs`, `scripts/platform/__tests__/advisory-path-scope.test.mjs`, `scripts/platform/__tests__/contract-check-ci.test.mjs` | catalog version gate + contract drift gate · gate: scoped (§ 0.5) |
 | 3 | C8 | T37 → T38 → T39 → T40 | `docs/code-quality.md`, `docs/agents/communication.md`, `docs/agents/issue-tracker.md.jinja`, `AGENTS.md.jinja`, `docs/arch/front.md`, `docs/adr/README.md`, `docs/advisories/README.md`, `docs/test/testing.md`, `catalog/identity/single-tenant/api/api/contracts/identity.contract.ts`, `catalog/identity/single-tenant/api/application/access-policy.ts`, `catalog/identity/single-tenant/api/domain/ports/user.repository.ts`, `catalog/identity/single-tenant/api/application/use-cases/update-user.use-case.ts`, `catalog/identity/single-tenant/api/domain/errors.ts`, `catalog/notification/api/application/templates/base-template-sources.ts`, `catalog/notification/api/application/catalog/notification-catalog.ts`, `catalog/notification/api/infrastructure/mailer/templates/layout.hbs`, `catalog/audit/api/application/services/activity-area-resolver.ts`, `catalog/tag/api/domain/errors.ts`, `catalog/attachment/api/domain/errors.ts` | locale single source + per-entry message tables · gate: **full-unit** (catalog entries) |
 | 3 | C9 | T41 | `copier.yml`, `.github/workflows/feedback-triage.yml`, `scripts/platform/__tests__/copier-questions.test.mjs` | `copier.yml` wiring task — one owner for a file four requirements edit · gate: scoped |
 | 4 (exclusive) | C10 | T42 | `catalog/identity/single-tenant/module.json`, `catalog/attachment/module.json`, `catalog/audit/module.json`, `catalog/notification/module.json`, `catalog/tag/module.json`, `catalog/identity/single-tenant/CHANGELOG.md`, `catalog/attachment/CHANGELOG.md`, `catalog/audit/CHANGELOG.md`, `catalog/notification/CHANGELOG.md`, `catalog/tag/CHANGELOG.md`, `docs/advisories/ADV-20260822-01.md`, `docs/advisories/ADV-20260822-02.md`, `docs/advisories/ADV-20260822-03.md`, `docs/advisories/ADV-20260822-05.md` | five entry bumps + `affects` corrections — alone · gate: full-unit |
@@ -1005,7 +1024,7 @@ steps** (AD-034). Anything that would force a child decision belongs to `v3.0.0`
 
 **What**: An advisory whose `detect` or `parity` path starts with `catalog/` can never match in a child, because `copier.yml:30` excludes that tree.
 **Where**: `scripts/platform/lib/lint.mjs`
-**Touches**: `scripts/platform/lib/lint.mjs`, `scripts/platform/catalog-lint.mjs`, `scripts/platform/__tests__/advisory-path-scope.test.mjs`
+**Touches**: `scripts/platform/lib/lint.mjs`, `scripts/platform/catalog-lint.mjs`, `scripts/platform/__tests__/advisory-path-scope.test.mjs`, `docs/advisories/ADV-20260822-02.md`, `docs/advisories/ADV-20260822-01.md`, `docs/advisories/ADV-20260822-03.md`, `docs/advisories/ADV-20260822-04.md`, `docs/advisories/ADV-20260822-05.md` — the last four **`detect`/`parity` paths only**; `affects` stays T42's (see the note below, and § 0.5)
 **Depends on**: T33
 **Exclusive**: no
 **Reuses**: `lintAdvisoryFrontmatter:129` / `lintAdvisoryModule:139` shape, aggregated by `lintAdvisories` at `catalog-lint.mjs:82`
@@ -1028,8 +1047,8 @@ steps** (AD-034). Anything that would force a child decision belongs to `v3.0.0`
 ### T35: CI gives the bump gate a baseline
 
 **What**: `fetch-depth: 0` on the `gates` job so `lintEntryBump` can resolve the previous stable tag.
-**Where**: `.github/workflows/catalog.yml:14-31`
-**Touches**: `.github/workflows/catalog.yml`
+**Where**: `.github/workflows/ci.yml` — the `gates` job (`catalog.yml` was deleted by `6b99461` and merged here; see § 0.5)
+**Touches**: `.github/workflows/ci.yml` — **verify-only**, see § 0.5
 **Depends on**: T33
 **Exclusive**: no
 **Reuses**: the existing `catalog:lint` invocation — unchanged

@@ -12,6 +12,7 @@ import {
   extractContractHeadings,
   lintAdvisoryFrontmatter,
   lintAdvisoryModule,
+  lintAdvisoryPathScope,
   lintChangelogVersion,
   lintEntryBump,
   lintKernelRange,
@@ -115,10 +116,14 @@ function lintAdvisories(dir, entryNames) {
       errors.push(...frontmatterErrors.map((error) => `${filePath}: ${error}`))
       continue
     }
+    const advisory = parseAdvisory(content, filePath)
     errors.push(
-      ...lintAdvisoryModule(parseAdvisory(content, filePath), entryNames).map(
+      ...lintAdvisoryModule(advisory, entryNames).map(
         (error) => `${filePath}: ${error}`
       )
+    )
+    errors.push(
+      ...lintAdvisoryPathScope(advisory).map((error) => `${filePath}: ${error}`)
     )
   }
   return errors

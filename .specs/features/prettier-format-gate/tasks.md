@@ -574,3 +574,25 @@ line "**if** the pre-commit gate warrants one"; the worker judged it does not, b
 scopes itself to Claude Code mechanisms and this is a plain git hook with no agent-specific
 behaviour — its own "Off-pattern" section excludes it. Recorded as a judgement the task permitted,
 not as an omission. The Verifier should confirm FMT-09 is still satisfied by the changelog entry alone.
+
+| 6 | T14 | `8816705` | quick exit 0 | 3 tests; **mutant killed** — reverted glob produced `not ok 1 ... at the repo root`, `expected: true actual: false` |
+| 6 | T15 | `2fa2977` | quick exit 0 | 2 tests; the **literal** AC, not the fallback — `installChild` already runs `pnpm install`, so the rendered child runs real `pnpm format:check` |
+| 6 | T16 | `fd6b41e` | quick exit 0 | 2 tests; extension/ignore membership asserted as a class, not string equality |
+| 6 | fix-up | `583c758` | quick exit 0 | disclosed deviation: a JSON-escape artifact wrote a literal NUL byte into the new test file, making it diff as binary |
+| 6 | **Build gate** | — | **folded into the Final gate** | `test:scripts` 461/461 · `format:check` exit 0 |
+
+**Verifier round 1 — FAIL, and worth recording why it was the useful kind.** All three gaps were
+*missing proof*, not broken behaviour: the feature did what it promised and could not show it would
+keep doing so. The decisive one came from the sensor, not from reading code — reverting
+`lefthook-local.yml:24` to the historical root-glob defect left all 454 tests green. A feature whose
+stated purpose is "it cannot rot again" had no net at the exact place it had already rotted once.
+The wave-5 worker found that defect by hand, fixed it, and did not write the test; T14 is that test.
+
+**Sibling breakage, resolved.** `catalog:typecheck` failed during round 1's Final gate. The Verifier
+traced it out of this feature's range to `35c8a4f` (sibling feature) before judging, ruling out the
+reformat by confirming `git show 4088235 -- scripts/template-smoke.mjs` was mechanical on those lines.
+Reported across, repaired there at `36f1f9f`. Root cause worth keeping: `catalog-stage.mjs` stages via
+`KERNEL_STAGE_PATHS` in `scripts/platform/lib/child-layout.mjs:7-17`, a file that was not in the
+sibling task's `Touches` — the task was not completable as written. Same family as the gaps that
+forced T12 and T13 into this plan: a `Touches` list that omits the file the change structurally
+requires.

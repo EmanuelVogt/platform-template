@@ -569,6 +569,7 @@ function webShellSurfaceRoots(): string[] {
       resolve(srcDir, "app"),
       resolve(srcDir, "_app"),
       resolve(srcDir, "shared"),
+      resolve(srcDir, "pages"),
     ]
   })
 }
@@ -577,12 +578,24 @@ const KERNEL_SURFACE: readonly string[] = [
   SHARED_DIR,
   resolve(SRC_DIR, "app.module.ts"),
   resolve(SRC_DIR, "db", "schema.ts"),
+  resolve(SRC_DIR, "openapi"),
+  resolve(SRC_DIR, "docs"),
+  resolve(SRC_DIR, "..", "test"),
   ...webShellSurfaceRoots(),
 ]
 
-// Fixture de teste é o único lugar onde um nome de módulo pode aparecer: ela
-// existe justamente para simular a entrada que não está instalada.
-const TOKEN_ALLOWLIST = /(?:^|\/)shared\/test\/.*\.fixture\.ts$/
+// Um nome de módulo sobrevive em três lugares deliberados. (1) A fixture de
+// teste: existe para simular a entrada que não está instalada. (2) O harness
+// de truncamento (test-db.ts): precisa do schema de cada entry instalada para
+// truncar suas tabelas entre testes; `identity.professional_default_hours`
+// sai daqui só quando a fatia profissional deixa o entry (T72, IDENT-01,
+// v3.0.0), não antes. (3) SPEC_DEVIATION: openapi-config.ts:29 nomeia a
+// entrada `identity` na descrição OpenAPI publicada — T45 (BRAND-07) só
+// alarga a varredura e não tem essa linha em `Touches`; T49 (BRAND-01,
+// v3.0.0) é quem mexe nela. Reason: sem esta entrada o teste vermelho exigiria
+// editar um arquivo fora do escopo de T45.
+const TOKEN_ALLOWLIST =
+  /(?:^|\/)shared\/test\/.*\.fixture\.ts$|(?:^|\/)apps\/api\/test\/setup\/test-db\.ts$|(?:^|\/)apps\/api\/src\/openapi\/openapi-config\.ts$/
 
 function isScannedFile(path: string): boolean {
   return (
@@ -653,6 +666,41 @@ describe("module-boundaries — RULE C: o vocabulário do kernel não conhece m�
       expect(KERNEL_SURFACE).toContain(resolve(root, "src", "app"))
       expect(KERNEL_SURFACE).toContain(resolve(root, "src", "_app"))
     }
+  })
+
+  it("KERNEL_SURFACE inclui apps/api/test, src/openapi e src/docs (BRAND-07)", () => {
+    expect(KERNEL_SURFACE).toContain(resolve(SRC_DIR, "openapi"))
+    expect(KERNEL_SURFACE).toContain(resolve(SRC_DIR, "docs"))
+    expect(KERNEL_SURFACE).toContain(resolve(SRC_DIR, "..", "test"))
+  })
+
+  it("KERNEL_SURFACE inclui src/pages de cada casca web (BRAND-07)", () => {
+    for (const root of webShellRoots()) {
+      expect(KERNEL_SURFACE).toContain(resolve(root, "src", "pages"))
+    }
+  })
+
+  it("a varredura alcança de fato apps/api/test e apps/api/src/openapi", () => {
+    const files = kernelSurfaceFiles().map(toPosix)
+    expect(files).toContain(
+      toPosix(resolve(SRC_DIR, "..", "test", "setup", "unit-env.ts"))
+    )
+    expect(files).toContain(
+      toPosix(resolve(SRC_DIR, "..", "test", "setup", "e2e-env.ts"))
+    )
+    expect(
+      files.some((file) =>
+        file.endsWith("/apps/api/src/openapi/openapi-config.spec.ts")
+      )
+    ).toBe(true)
+  })
+
+  it("test-db.ts mantém identity.professional_default_hours (T72 apaga em v3.0.0), mas sai da varredura de token", () => {
+    const testDbPath = resolve(SRC_DIR, "..", "test", "setup", "test-db.ts")
+    expect(readFileSync(testDbPath, "utf8")).toMatch(
+      /identity\.professional_default_hours/
+    )
+    expect(kernelSurfaceFiles().map(toPosix)).not.toContain(toPosix(testDbPath))
   })
 
   it("nenhum token de módulo sobrevive na casca do template", () => {

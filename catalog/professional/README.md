@@ -60,6 +60,12 @@ sete tabelas movidas mantêm as FKs que já tinham para o usuário, agora cruzan
 As migrações são geradas **no filho** pelo `module add` a partir das tabelas TS (AD-015); o
 template versiona apenas o TS e o SQL manual de `migrations/custom/*.sql`.
 
+`migrations/custom/01_audit_attach_professional.sql` declara `professional.attach_audit()` com
+as **oito** tabelas (as sete movidas mais `professional_profile`) e a `PERFORM`a sob o guard de
+`pg_proc`: quem executa o hook é `audit.attach_module_hooks()`, no fim da instalação do audit
+(AD-032). `professional_profile` entra na lista porque recebeu `serves_clients` e `birth_date` de
+`identity.users`, que já era auditada — deixá-la de fora perderia trilha que o filho tinha.
+
 ## Decisões
 
 - **Corte no agregado, não na tabela** (AD-035). `servesClients` e `birthDate` saem da entidade
@@ -71,6 +77,24 @@ template versiona apenas o TS e o SQL manual de `migrations/custom/*.sql`.
   (AD-025 narrows AD-021/AD-024; RULE C do `module-boundaries.spec.ts` continua valendo).
 - **`kernelRange` nasce `>=2.0.0 <3.0.0`.** O range acompanha a versão mais recente do
   `docs/dev/template-changelog.md` (AD-033); abre junto com o heading do próximo major.
+
+### Débito herdado do `identity` — declarado, não novo
+
+Os dois itens abaixo **já existiam** no recorte enquanto ele morava no `identity`. Eles
+atravessam a extração intactos: nada aqui os cria e nada aqui os resolve.
+
+1. **Um consumidor que não existe.** O `professional-assignment.module.ts` do `identity` se
+   documentava como "superfície leaf para o `ServiceModule`", e o `ProfessionalAssignmentFacade`
+   descreve política que "mora no consumidor". Não existe entrada `service` no catálogo: esse
+   consumidor **não é distribuído em lugar nenhum**. A facade continua publicada porque um
+   produto pode montar o seu; a entrada não ganhou um módulo leaf separado — `ProfessionalModule`
+   é a única superfície, e o texto que apontava para o `ServiceModule` some com o arquivo.
+2. **Duas referências penduradas.** `user_professional_services.service_id` e
+   `user_professional_areas.area_id`/`user_scheduling_areas.area_id` são `text` **sem FK**,
+   apontando por id para `service.services` e `service.areas` — tabelas de um schema que
+   nenhuma entrada do catálogo cria. A validação é de use-case, via `ProfessionalScope`, cujo
+   null object aceita tudo quando o produto não está montado. As colunas foram movidas
+   verbatim: mudá-las aqui seria uma migração de dados fora do escopo da extração.
 
 ## Paridade
 

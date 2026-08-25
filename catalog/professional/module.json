@@ -22,7 +22,7 @@
     "modules/professional/infrastructure/tables/user-professional-schedule-config.table",
     "modules/professional/infrastructure/tables/professional-default-hours.table"
   ],
-  "customMigrations": [],
+  "customMigrations": ["01_audit_attach_professional.sql"],
   "env": [],
   "absorbs": []
 }

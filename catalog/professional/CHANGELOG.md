@@ -37,3 +37,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   `UserRepository` do identity), `ProfessionalAssignmentFacade` e `professional-tables.facade`.
 - `ProfessionalModule.forRoot({ product })` monta portas, adapters e facades e abre o slot de
   produto para `ProfessionalScope`/`ProfessionalCommitments`, com null objects por padrão.
+- `migrations/custom/01_audit_attach_professional.sql`: a entrada declara e `PERFORM`a a própria
+  `professional.attach_audit()` sob o guard de `pg_proc` (AD-032), cobrindo as oito tabelas.
+- README registra o débito herdado do `identity`: o consumidor `ServiceModule`/`service` que não
+  é distribuído por nenhuma entrada, e `area_id`/`service_id` como `text` sem FK.

@@ -8,10 +8,11 @@ import { webRootFor } from "../lib/child-layout.mjs"
 
 // SEAM-03 (spec.md AC3): "WHEN the identity entry is installed THEN no edit
 // to shell.tsx, main.tsx or app-providers.tsx SHALL be required." The claim
-// is prose-only today (catalog/identity/single-tenant/README.md:318,378);
-// these assertions make the two structural facts that back it fail loudly if
-// either ever stops holding, without paying for a full `module add` install
-// (pnpm install + `pnpm contract`, minutes, network-dependent).
+// is prose-only today (catalog/identity/single-tenant/README.md, in the
+// TanStack Router guard recipe); these assertions make the two structural
+// facts that back it fail loudly if either ever stops holding, without
+// paying for a full `module add` install (pnpm install + `pnpm contract`,
+// minutes, network-dependent).
 
 const TESTS_DIR = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(TESTS_DIR, "..", "..", "..")
@@ -62,18 +63,17 @@ test("SEAM-03 — webRootFor always lands under apps/web/src/entities/<name>, ne
   }
 })
 
-test("SEAM-03 — the README's no-edit claim is still on disk at the cited lines", () => {
+test("SEAM-03 — the README's no-edit claim text is still on disk", () => {
   const readme = readFileSync(
     path.join(REPO_ROOT, "catalog", "identity", "single-tenant", "README.md"),
     "utf8"
   )
-  const lines = readme.split("\n")
   assert.match(
-    lines[317],
+    readme,
     /`shell\.tsx`, `main\.tsx`, `app-providers\.tsx`\) precisa ser editado/
   )
   assert.match(
-    lines[377],
+    readme,
     /exige editar `shell\.tsx`, `main\.tsx` ou `app-providers\.tsx`\./
   )
 })

@@ -59,21 +59,21 @@ const BRAND_TOKENS = [/rit_/, /rit-/, /__Host-rit/]
 // renomear os literais em código (design.md § BRAND-07 ↔ IDENT-01).
 const SCAN_ROOTS = ["docs", ".claude", ".github/workflows"]
 
-// SPEC_DEVIATION: docs/dev/template-changelog.md tem duas ocorrências que
-// este teste não pode corrigir editando o arquivo — está fora de `Touches`
-// tanto de T46 quanto de FT1 (CF1 possui apenas scripts/platform/__tests__/**
-// e .claude/hooks/specs-in-english.mjs).
+// SPEC_DEVIATION: docs/dev/template-changelog.md tem uma ocorrência que este
+// teste não pode corrigir editando o arquivo — está fora de `Touches` de T46
+// (CF1 possui apenas scripts/platform/__tests__/** e
+// .claude/hooks/specs-in-english.mjs).
 //   - "Cloudflare"/"Traefik" (:228) — exemplo genérico de cadeia de proxy pra
 //     explicar TRUST_PROXY_HOPS, não a infra do dono (exceção pré-existente
 //     de T46).
-//   - "booking" (:67) — o changelog descreve, em prosa própria, que a prosa
-//     da entrada identity foi *retirada* de vocabulário de booking; não é o
-//     vocabulário sobrevivendo no child.
-// Reason: reescrever qualquer uma das linhas exige editar um arquivo fora do
-// escopo desta task; sem a exceção o teste vermelho bloquearia por um
-// arquivo que nem T46 nem FT1 podem tocar.
+// A antiga entrada "booking" (:67) foi removida por GT5: a linha foi
+// reescrita para não citar o termo de domínio, então o scan end-to-end volta
+// a cobrir o arquivo de verdade em vez de crescer a exceção a cada release.
+// Reason: reescrever a linha do Cloudflare/Traefik exige editar um arquivo
+// fora do escopo desta task; sem a exceção o teste vermelho bloquearia por um
+// arquivo que T46 não pode tocar.
 const KNOWN_EXCEPTIONS = {
-  "docs/dev/template-changelog.md": ["Cloudflare", "Traefik", "booking"],
+  "docs/dev/template-changelog.md": ["Cloudflare", "Traefik"],
 }
 
 function withoutKnownExceptions(hits, rel) {

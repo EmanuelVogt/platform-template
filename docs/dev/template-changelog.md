@@ -64,7 +64,7 @@ one in its own README and AGENTS.
     `catalog/notification/api/application/catalog/notification-catalog.ts`): `product_locale`
     threads the language convention through every doc restating it; each catalog entry owns
     its own message table instead of sharing one; the identity entry's prose is retired of
-    booking-specific vocabulary.
+    the pilot's business vocabulary.
 11. **`copier.yml` gets a single owner** (`copier.yml`): the requirements editing it
     independently now go through one task, closing the gap that made each acceptance
     criterion unprovable in isolation.

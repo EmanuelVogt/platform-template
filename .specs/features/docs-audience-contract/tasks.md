@@ -206,6 +206,71 @@ Wave 3:  [C5: T8 → T9 → T10 → T11 → T12]
 
 ---
 
+## Execution Record
+
+### Wave 1 — DONE, Build gate GREEN (2026-08-25)
+
+Gate: `pnpm format:check` exit 0 · `pnpm test:scripts` **639 pass / 0 fail**.
+Pre-feature floor was **630 pass / 0 fail** at `aae08e6`; the delta includes commits from a parallel
+session sharing this checkout, not this feature alone.
+
+| Cluster | Task | Commit | Note |
+| ------- | ---- | ------ | ---- |
+| C1 | T1 | `aea599b` | 2 inline waivers in `docs/catalog/catalog.md:5,:25` |
+| C1 | T2 | `aaa203d` | |
+| C2 | T3 | `89c165f` | see correction 3 |
+| C2 | T4 | `2f3ac8d` | `front.md:184` `packages/ui` → `shared/ui/` |
+| C2 | — | `68f01d1` | **regression repair, not one of the 12 tasks** — see correction 4 |
+| C3 | T5 | `6dd7c14` | |
+| C3 | T6 | `44f53d6` | 3 inline waivers in `ADV-20260821-01:45,:59`, `ADV-20260823-02:16` |
+
+### Corrections this wave forced on the plan
+
+**1. T12's premise is void — `v2.4.1` is tagged.** A parallel session pushed the marker commit
+`3bef437 chore(release): v2.4.1` to `origin/main` *during wave 1*, and the tag `v2.4.1` now exists.
+The owner ruling of 2026-08-25 ("append to `v2.4.1`, it is the only untagged section") rested on a
+fact that no longer holds — **every** changelog section is now tagged. T12 must open a **new**
+section above `v2.4.1`. Version: T7 ships as `feat(template):` and a doc leaving the shipped set is
+delivered by `copier update` with no manual step, so the mechanical read is **`v2.5.0`**, non-major,
+no advisory (spec § Assumptions, AD-034). **Confirm with the owner before T12 runs** — this reopens
+a ruling, it does not merely apply one.
+
+**2. T6's finding count was 9, not 10.** The task body claims "10 REAL"; only 9 distinct citations
+are enumerated in it. All 9 were closed and the eight target files were swept for further dead
+paths. A count slip in the plan, not a missed finding.
+
+**3. T3 left `.worktrees/` in the shipped half, deliberately — and this changes what T11 may
+assert.** The task table said the `.worktrees/` shared-checkout rule (`:36-60`) moves wholesale.
+C2 moved the shared-checkout *framing*, the no-PR policy and the `origin/main` anecdote, but kept
+the `.worktrees/<slug>` naming convention and the `.claude/hooks/branch-only-in-worktree.mjs` lock
+in the child's doc, because `docs/agents/harness.md` and `AGENTS.md.jinja` cross-reference them and
+the child has both. That is the right call — the child really does use worktrees — but it means
+**AUD-09/T11 must assert the absence of the shared-checkout *rule*, not the absence of the string
+`.worktrees/`**. A literal `assert(!shipped.includes(".worktrees/"))` will fail against a correct
+tree. Pick the four assertion strings from what `docs/platform/workflow.md` actually holds at
+`89c165f`, not from the spec's prose.
+
+**4. The feature created one instance of its own defect class, and it is repaired.** T3's move left
+`docs/agents/issue-tracker.md.jinja:62-63` telling the child "our own work never opens a PR … See
+workflow.md" while the no-PR policy had moved to the unshipped `docs/platform/workflow.md`. C2
+flagged it rather than widening scope on its own; the orchestrator ruled it **in scope** — the
+spec's accepted "misaddressed prose" residual covers instances that *pre-existed* the feature, and
+shipping a fresh one would contradict the feature's whole purpose. Repaired in `68f01d1`.
+
+**5. Out-of-feature, for the record:** `seam-no-edit.test.mjs` SEAM-03 went red mid-wave when a
+parallel session's `2004f8a` shifted lines in `catalog/identity/single-tenant/README.md`, which the
+test indexed by hardcoded position. It was fixed **twice** — `dcc10c8` (parallel session) and
+`a2716e7` (a worker this session dispatched). Redundant work: the breaking commit's owner was
+already on it. Both are green; nothing in this feature touches `catalog/**`.
+
+### Wave 2 readiness
+
+`copier.yml` is **free**: its declared single owner, `audit-2026-08-23-remediation` T41, is DONE at
+`0dd2348`, and the prior `web_stack` × `product_locale` conflict resolution was accepted. Re-verify
+immediately before dispatch — this checkout is shared and a parallel session commits into it.
+
+---
+
 ## Task Breakdown
 
 ### T1: Move the catalog README contract into `docs/platform/`

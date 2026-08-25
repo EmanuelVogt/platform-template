@@ -12,8 +12,8 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 ---
 
-**Design**: `.specs/features/test-suite-refactor/design.md`
-**Status**: Draft
+**Design**: `.specs/features/test-suite-refactor/design.md` — **Approved 2026-08-24**, reconciled to § *Scope cut* below
+**Status**: Execute — wave 1 dispatched 2026-08-24
 
 ## Test Coverage Matrix
 
@@ -28,7 +28,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 | Cross-entry facade | unit | the shape each consumer relies on | `catalog/<entry>/api/api/facades/*.facade.spec.ts` | `pnpm catalog:check` |
 | ESLint local rule | unit (RuleTester) | reported and exempt cases both | `packages/eslint-config/rules/*.test.js` | `pnpm --filter @platform/eslint-config test` |
 | Lint configuration | unit | resolved severities for an api and a web test file | `packages/eslint-config/*.config.test.js` | `pnpm --filter @platform/eslint-config test` |
-| Web component / hook | vitest | rendered outcome or navigation target, never existence | `apps/web/src/**/*.test.ts(x)` | `pnpm vitest run --project web <path>` |
+| Web component / hook | vitest | rendered outcome or navigation target, never existence | `apps/web-vite/src/**/*.test.ts(x)` **and** `apps/web-next/src/**/*.test.ts(x)` (GA-8) | `pnpm vitest run --project web <path>` |
 | Repo tooling (`it-count`, gates) | node:test | exit codes and the reported drop | `scripts/platform/__tests__/*.test.mjs` | `pnpm test:scripts` |
 
 ## Gate Check Commands
@@ -115,10 +115,11 @@ parallelism the old plan bought there is not worth the merge surface for three t
 
 **Done when**:
 
-- [ ] The pre-flight fails loudly if `catalog/` lacks any of the five entries or `apps/api/src/modules/` holds a module directory
+- [ ] The pre-flight fails loudly if `catalog/` lacks any of the five entries — `attachment`, `audit`, `identity/single-tenant`, `notification`, `tag` (`catalog/schema` is the JSON schema, **not** an entry) — or if `apps/api/src/modules/` holds anything besides `module-boundaries.spec.ts`
 - [ ] `--write` records `{ titles, count }` per test file; `--check` exits non-zero on a drop and names file, expected, actual
 - [ ] Split files are matched by preserved `it` title, so a split is not read as a loss
-- [ ] `baseline.json` committed with the counts of the current tree
+- [ ] `baseline.json` committed with the counts **re-measured from the current tree** — the numbers in `design.md` § *Spike results* predate `v2.4.0` and are never to be copied (GA-7). Sanity check: the tree measures ~317 test files / ~2074 `it(`+`test(` sites on 2026-08-24; a baseline materially below that means the walk is missing an area (`apps/web-next` is easy to miss)
+- [ ] The walk covers all four areas — `apps/api/**`, `catalog/**`, `apps/web-vite/**`, `apps/web-next/**` — and excludes `node_modules`, `dist`, `coverage`, `apps/api/.catalog-stage/**`
 - [ ] `node --test scripts/platform/__tests__/it-count.test.mjs` passes
 
 **Tests**: node:test · **Gate**: quick
@@ -167,12 +168,14 @@ parallelism the old plan bought there is not worth the merge surface for three t
 - [ ] Kernel int-specs use `withTestDb`; no `createTestPool()` inside an `it` body in this scope
 - [ ] `pnpm test:int` green
 
+**Scope note (UNT-02)**: the two *entry* int-specs that boot their own `GenericContainer` — `catalog/notification/api/infrastructure/realtime/realtime.int-spec.ts` and `catalog/identity/single-tenant/api/infrastructure/rate-limit/redis-rate-limiter.int-spec.ts` — are **not** migrated here. Entry unit and int specs left scope with the cut; they enter the GA-9 hygiene baseline under T33's `GenericContainer` ban.
+
 **Tests**: integration · **Gate**: scoped
 **Commit**: `test(api): int harness — withTestDb, resetDb by schema, shared redis`
 
 ### T4: E2E harness and the kernel e2e
 
-**What**: the single app factory and the HTTP/outbox/problem vocabulary; migrate the two kernel e2e onto it.
+**What**: the single app factory and the HTTP/outbox/problem vocabulary; migrate the kernel e2e onto it — **five files today**, not the two the 2026-08-19 audit recorded: `bootstrap-product`, `health`, `openapi-contract`, `runner-env`, `security-bootstrap`.
 **Where**: `apps/api/src/shared/test/e2e/{app,http,outbox,wait-for,problem,constants,index}.ts`, `apps/api/test/{openapi-contract,security-bootstrap}.e2e-spec.ts`
 **Touches**: `apps/api/src/shared/test/e2e/**`, `apps/api/test/*.e2e-spec.ts`
 **Depends on**: T3
@@ -187,7 +190,7 @@ parallelism the old plan bought there is not worth the merge surface for three t
 - [ ] `createE2eApp` covers the three app shapes through `middleware` and `rateLimiter`; `middleware: "none"` still silences the logger and returns a closable app
 - [ ] `drainOutbox` takes `dispatchers` as a `Pollable[]` option — no module dispatcher named in the kernel (RULE C) — and rejects with the timeout in the message
 - [ ] `expectProblem`, `waitFor`, `cookieValue`, `cookieHeader`, `withE2ePool`, `E2E_ORIGIN` exported and specced
-- [ ] The two kernel e2e boot through the factory and own no pool of their own
+- [ ] **All five** kernel e2e under `apps/api/test/*.e2e-spec.ts` boot through the factory and own no pool of their own (`runner-env` and `health` may legitimately need `middleware: "none"`)
 - [ ] `pnpm test:e2e` green
 
 **Tests**: e2e + unit (helpers) · **Gate**: scoped
@@ -208,8 +211,10 @@ parallelism the old plan bought there is not worth the merge surface for three t
 **Done when**:
 
 - [ ] `app-factory.ts`, `cookies.ts`, `test-db.ts`, `test-logger.ts` no longer exist under `test/setup/`; nothing imports them
+- [ ] **`test/setup/test-db.int-spec.ts` moves with its subject** into the int harness — a spec may not live under `test/setup/`, and T33's allow-list ban will fail on it otherwise
 - [ ] `unit-env.ts` imports the shared env block instead of duplicating `e2e-env.ts`
-- [ ] `vitest.coverage.mts` `exclude` covers `**/shared/test/**`, `apps/api/src/modules/*/testing/**`, test files, `*.d.ts`, `apps/api/src/main.ts` (the first, third, fourth and fifth are already there — AD-027)
+- [ ] `vitest.coverage.mts` `exclude` covers `**/shared/test/**`, `apps/api/src/modules/*/testing/**`, test files, `*.d.ts`, `apps/api/src/main.ts` (the first, third, fourth and fifth are already there — AD-027; **the entry-barrel one is the only live gap**, and it is a no-op here and load-bearing in the child, where the barrels land inside the `apps/api/src/**` include glob)
+- [ ] The floors in `vitest.coverage.mts` are **not touched** — the ratchet left scope (AD-027 stands at a flat 90). `pnpm test:coverage` re-run and the post-exclude numbers reported in the commit body
 - [ ] All three tiers still discover and run the same file set as before the change
 
 **Tests**: none (config) · **Gate**: full-unit
@@ -238,26 +243,31 @@ parallelism the old plan bought there is not worth the merge surface for three t
 **Tests**: none of its own (exercised by C3) · **Gate**: scoped
 **Commit**: `test(identity): testing barrel — seed, login, builders, config fixture`
 
-### T7: Web harness additions
+### T7: Web harness additions — **both shells (GA-8)**
 
-**What**: the missing web helpers, and the deletion of the unused one.
-**Where**: `apps/web/src/shared/test/{create-query-wrapper,mock-router,reset-auth-state,index}.ts(x)`
-**Touches**: `apps/web/src/shared/test/**`
+**What**: the missing web helpers and the deletion of the unused one, in `web-vite` **and** `web-next`.
+**Where**: `apps/web-vite/src/shared/test/{create-query-wrapper,mock-router,reset-auth-state,index}.ts(x)` and the identical relative paths under `apps/web-next/src/shared/test/`
+**Touches**: `apps/web-vite/src/shared/test/**`, `apps/web-next/src/shared/test/**`
 **Depends on**: None
 **Exclusive**: no
-**Reuses**: `render-with-providers.tsx`, `msw-server.ts`
+**Reuses**: `render-with-providers.tsx`, `msw-server.ts` — present in both shells and **byte-identical today** (verified 2026-08-24)
 **Requirement**: WEB-01
 
 **Tools**: MCP NONE · Skill NONE
 
 **Done when**:
 
-- [ ] `createQueryWrapper`, `mockRouter` (one `vi.hoisted` shape), `resetAuthState`, `useMswServer`, `makeTestQueryClient` exported from one index
-- [ ] `fixed-clock.ts` deleted and nothing references it
+- [ ] `createQueryWrapper`, `mockRouter` (one `vi.hoisted` shape), `resetAuthState`, `useMswServer`, `makeTestQueryClient` exported from one index **in each shell**, at the identical relative path
+- [ ] The shell-agnostic half — `renderWithProviders`, `makeTestQueryClient`, `createQueryWrapper`, `resetAuthState`, `useMswServer` — is **byte-identical between the two shells**; `diff` proves it and the result goes in the commit body
+- [ ] `mockRouter` is the **only** divergent file: `@tanstack/react-router` in `web-vite`, the Next router in `web-next`
+- [ ] `fixed-clock.ts` deleted from **both** shells and nothing references it
 - [ ] Each helper typed, no `as unknown as` outside the folder
+- [ ] `pnpm vitest run --project web` green for both shells
+
+**Note**: every `apps/web/**` path in `spec.md` P1 § *Web harness adoption* reads as both shells here (`spec.md:27-33`, GA-8). AC3 (a current-user fixture from the identity entry's web testing barrel) has **no owner in the cut scope** — no web `testing/` barrel task survived; if the fixture is needed, keep it local and report it in the summary rather than inventing a barrel.
 
 **Tests**: unit · **Gate**: quick
-**Commit**: `test(web): harness — router mock, query wrapper, auth reset`
+**Commit**: `test(web): harness in both shells — router mock, query wrapper, auth reset`
 
 ### T17: Notification `testing/` barrel
 
@@ -316,6 +326,7 @@ parallelism the old plan bought there is not worth the merge surface for three t
 **Done when**:
 
 - [ ] `makeTag`/`seedTag` and `makeAuditEntry`/`seedAuditEntry` exported, typed, no `any`
+- [ ] **`catalog/audit/api/testing/` already exists** with `reattach-identity-tables.ts` and `reattach-tag-tables.ts` (the 2026-08-19 audit recorded the folder as absent — it is not). Both files have live consumers: **keep them and re-export them from the index**, do not replace them. Only `catalog/tag/api/testing/` is created from nothing
 - [ ] `module.json.files` lists `testing/**` for both; `pnpm catalog:check` green for both
 - [ ] Neither barrel names another entry's vocabulary except along `dependsOn`
 
@@ -448,7 +459,8 @@ parallelism the old plan bought there is not worth the merge surface for three t
 - [ ] On top of the existing `quality`, `test-unit` and `test-coverage` jobs: a `contract` job that fails on a dirty `openapi.json`, and `sequence.shuffle` on the `api-e2e` project in CI
 - [ ] The Docker-bound job (`test-coverage`, which carries int and e2e) declares its services; jobs are independent so one red job never masks another
 - [ ] `turbo.json` stays free of any `test*` task (AD-028) — tests run outside Turbo
-- [ ] `catalog.yml` is untouched and no job is duplicated between the two files
+- [ ] **`catalog.yml` no longer exists** (the workflows are `ci.yml`, `release.yml`, `format.yml`) — the stale Done-when about it is void. The live constraint is the opposite one: **any job added to `ci.yml` must also reach `release.yml`**. `release-gate-parity.test.mjs` derives the release's required jobs from the `ci.yml` jobs carrying a `web_stack` leg, so a CI-only job fails `pnpm test:scripts` by design — two gates over one tree with the weaker one holding the tag is how `v2.4.0` shipped broken (`GT10`, `186ccb3`)
+- [ ] `pnpm test:scripts` green, `release-gate-parity` included
 - [ ] The workflow runs green on the feature branch (run URL in the commit body)
 
 **Tests**: none (CI config) · **Gate**: scoped

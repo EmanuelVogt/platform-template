@@ -19,7 +19,9 @@
 > - **The AD-012 ratchet has no active decision behind it.** AD-012 (pre-push 95 % S/B/F/L) is
 >   *superseded by AD-027* since 2026-08-22. The live bar is a flat 90, global plus one floor per glob,
 >   in `vitest.coverage.mts:57-76`. Raising it is a **new decision on AD-027**, not a revival of AD-012 —
->   and it is nearly free today (see next row). T39/C10 still own the file.
+>   and it is nearly free today (see next row). **Superseded by the scope cut below: T39/C10 no
+>   longer exist. Nobody owns the ratchet in this feature; `vitest.coverage.mts`'s *floors* are
+>   touched by no task. Its *denominator* is owned by T5.**
 > - **COV-11's measured gap is CLOSED.** The 2026-08-22 measurement in P2 § *Coverage bar* AC5 (24
 >   statements, 76 branches, 15 lines short of 90) was overtaken by `audit-2026-08-23-remediation`:
 >   v2.4.0's Final gate reports **96.5 / 94.4 / 94.9 / 96.8** over the 90 floor, 1212 tests against a
@@ -37,7 +39,8 @@
 > - **COV-04's harness exclusion is half in place.** `vitest.coverage.mts:51` already excludes
 >   `**/shared/test/**`. The entry-barrel exclusion is **not** — moot here (`catalog/` is outside
 >   `include`) and live in the child, where the barrels land at `apps/api/src/modules/<entry>/testing/**`,
->   inside the `apps/api/src/**` include glob. T39/C10 must add that exclude.
+>   inside the `apps/api/src/**` include glob. **That exclude is owned by T5** (the scope cut moved
+>   COV-04's denominator half there when T39/C10 were removed — `tasks.md` § *Requirement mapping*).
 > - **RULE D is still unimplemented.** `module-boundaries.spec.ts` carries RULE A and RULE C only. T34
 >   remains its sole owner.
 > - **The `it`-count baselines in `tasks.md` predate v2.4.0.** GA-7's non-weakening probe must re-record
@@ -103,7 +106,7 @@ The test *setup* is strong (unit / int / e2e tiers on testcontainers, per-worker
 | **GA-8 web shell** (new, 2026-08-24) | the web harness lands in **both** shells at the identical relative path `src/shared/test/` — `apps/web-vite/` and `apps/web-next/` here, `apps/web/` in the child. The shell-agnostic half (`renderWithProviders`, `makeTestQueryClient`, `createQueryWrapper`, `resetAuthState`, `useMswServer`) is byte-identical; **the router helper is the only permitted divergence** (`mockRouter` over `@tanstack/react-router` vs the Next router), and the guard spec asserts that parity so the two cannot drift | a rendered child has exactly **one** web app, so a seam built in one shell only is a seam a `web_stack=next` child silently loses — the failure v2.4.0's Fix 5 names. Both shells are live surfaces today (own `vitest.config.ts`, 24 and 18 test files), so neither is a stub that can be deferred. A shared package was rejected: it would be copied into the child carrying the other shell's dead code | **y (delegated 2026-08-24)** |
 | **GA-9 enforcement baseline** (new, 2026-08-24 — the decision the scope cut rests on) | every new rule ships **at full strength immediately**, measured against a *generated* baseline of the violations that already exist: `eslint.suppressions.json` for the lint rules (native to ESLint 10, which this repo is on — `eslint@10.4.0`) and `harness-hygiene-baseline.json` for the guard spec. A violation **not** in the baseline fails. A baseline entry that no longer matches **also** fails, so the file can only shrink — a fixed violation must be removed from it in the same commit | it is what makes the 250-file sweep unnecessary instead of merely postponed. The old plan put enforcement last (wave 3 of 5) for a real reason — a rule switched on early turns the repository red mid-flight — but that is only true when you enforce retroactively in one step. Baselined, enforcement lands early and holds forever, and the migration becomes opportunistic: whoever touches a file pays for that file. Rejected alternative: scoping the rules to changed files via the pre-commit hook — it is invisible to CI, silently skipped by `--no-verify`, and depends on git context a fresh clone lacks | **y (delegated 2026-08-24)** |
 | Bans are enforced by a guard spec, not by greps | `apps/api/src/shared/test/hygiene/harness-hygiene.spec.ts` scans `apps/api/**` and `catalog/**` test files | a spec is a gate that survives the feature; a grep in a review is not (also keeps the feature within the ≤3-probe budget) | **y (delegated 2026-08-24)** — scan widened to both web shells for the GA-8 parity assertion |
-| Coverage denominator | excludes test files, `*.d.ts`, `main.ts(x)`, `apps/api/src/shared/test/**`, `catalog/*/api/testing/**` (child: `apps/api/src/modules/*/testing/**`), generated client | inherits COV-04 + GA-2 | **y (delegated 2026-08-24)** — `**/shared/test/**` is already excluded at `vitest.coverage.mts:51`; the entry-barrel exclude is the piece T39/C10 still owes the child |
+| Coverage denominator | excludes test files, `*.d.ts`, `main.ts(x)`, `apps/api/src/shared/test/**`, `catalog/*/api/testing/**` (child: `apps/api/src/modules/*/testing/**`), generated client | inherits COV-04 + GA-2 | **y (delegated 2026-08-24)** — `**/shared/test/**` is already excluded at `vitest.coverage.mts:51`; the entry-barrel exclude is the piece still owed to the child, and **T5 owns it** (T39/C10 were removed by the scope cut) |
 | Ordered `it` chains | split into independent `it`s sharing a `beforeEach` seed; the "seed master" pseudo-test is removed | it asserts nothing — the only removal allowed in this feature | **y (delegated 2026-08-24)** |
 | Redis in int-specs | the two container-booting int-specs move to the global container (`testRedisUrl()` + `flushRedis()`) | one runtime, ~60 s per file saved | **y (delegated 2026-08-24)** |
 

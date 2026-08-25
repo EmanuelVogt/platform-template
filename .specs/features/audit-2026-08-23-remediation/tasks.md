@@ -1596,6 +1596,30 @@ steps** (AD-034). Anything that would force a child decision belongs to `v3.0.0`
 Every task below genuinely forces a child decision, which is what makes it a major (AD-031/AD-034).
 Each ships its half of the idempotent `scripts/platform/migrations/v3.0.0.mjs` (T73).
 
+> **WAVE 8 IS BLOCKED ON A PLAN GAP — MEASURED 2026-08-24, NOT INFERRED.** C14 edits four
+> `catalog/**` files (`identity.config.ts`, `api/guards/cookie.ts`, `drizzle-usage-stats.reader.ts`,
+> `drizzle-activity-stats.reader.ts`) and **no task in waves 8–14 pays the toll they incur**:
+>
+> 1. `advisory-required.mjs:11` matches `catalog/<entry>/{api,web,migrations,parity}/` — all four
+>    files hit it, for entries `identity/single-tenant` **and** `audit`. It runs on `commit-msg`
+>    with no glob and self-filters. Satisfied only by a **staged** `docs/advisories/ADV-*.md` whose
+>    `module` frontmatter covers the entry (read from the index, `:37-41`) or by an
+>    `Advisory: none — <reason>` trailer (`TRAILER_RE`, `:13`).
+> 2. Both entries are at `version 2.0.2` and `git diff v2.4.0..HEAD -- catalog/` is **empty**, so
+>    `entryChangedWithoutBump` returns `false` today. T50's first commit flips that: the rule then
+>    fires in the pre-commit hook (`PLATFORM_ENTRY_BUMP_STATE=staged`, `lefthook-local.yml`) *and*
+>    in `pnpm catalog:lint` (`head`). Same class of lock-up as `51daeb3`.
+> 3. Searched and absent: **no** wave 8–14 task bumps `catalog/identity/single-tenant/module.json`
+>    or `catalog/audit/module.json` for these changes. T72 (wave 11) bumps identity for the
+>    **professional split** (IDENT-01/02); T65/T66 (wave 10) author `ADV-20260824-0{1,2}` for
+>    **IDENT-03**. Neither covers BRAND-01, BRAND-02, SEAM-06 or TZ-01.
+>
+> **The design decision is the owner's, not a worker's**: whether the bump + advisory lives inside
+> C14 (a new first task, before T50 touches an entry), or as its own exclusive cluster; and whether
+> a `v3.0.0` kernel implies `3.0.0` on the two entries or a `2.1.0` minor. **A worker must not
+> improvise it — least of all with an `Advisory: none` trailer**, which is the one escape that
+> silently discards the child's notice of a breaking cookie rename.
+
 ### T49: Neutral cookie and storage-key defaults — kernel and web
 
 **What**: `__Host-app_session`, `app_csrf`, `app-last-location`, `app-auth-logout` replace the brand-prefixed literals everywhere the kernel and web own them.

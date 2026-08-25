@@ -13,7 +13,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/test-suite-refactor/design.md` — **Approved 2026-08-24**, reconciled to § *Scope cut* below
-**Status**: Execute — waves 1 and 2 DONE, both Build gates `full-unit` green. Next: wave 3 (C4 ∥ C5 ∥ C6).
+**Status**: Execute — waves 1, 2 and 3 DONE, all three Build gates green. Next: wave 4 (C7 = T40, exclusive), then the Verifier.
 
 ### Execution log
 
@@ -29,11 +29,77 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 | 2 | C3 (sonnet) | T17 | DONE | `7bcd56d` |
 | 2 | C3 | T18 | DONE | `0b1a601` |
 | 2 | C3 | T23 | DONE | `fb38c5e` |
+| 3 | C4 (opus) | T31 | DONE | `00a08ba` |
+| 3 | C4 | T32 | DONE | `fd050c7` |
+| 3 | C4 | T33 | DONE | `53b0d72` + `54779f9` (RULE C fixtures) + `1a7588b` (the TS2532 the Build gate caught) |
+| 3 | C4 | T34 | DONE | `ef9f9f8` |
+| 3 | C5 (sonnet) | T37 | DONE | `8cf4686` |
+| 3 | C5 | T38 | DONE | `9fa3910` (the pre-push order fix T38 needed to be able to assert anything) + `5fc3877` |
+| 3 | C6 (sonnet) | T35 | DONE | `2004f8a` + `c3d0362` (REL-04 bumps) + `dcc10c8` (SEAM-03 citation) |
 
 **Build gates.** Wave 1: `pnpm check` 0, `pnpm test` 0 — 104 files / 672 tests. Wave 2:
 the same two at 0, plus `it-count.mjs --check` at 0 (335 files / 2146 tests, no drop). The unit
 totals do not move between the waves because an entry's specs only run inside a rendered child;
 wave 2 is certified by `pnpm catalog:check` per entry, run green by the worker on all five.
+
+**Wave 3 Build gate: green on the second run, and the first run is the interesting one.**
+Five commands, `full-unit` widened to the gates the wave itself modifies: `pnpm check` 0, `pnpm test` 0
+(106 files / 711 tests), `pnpm test:scripts` 0 (639/639), `pnpm catalog:lint` 0, `it-count.mjs --check` 0
+(337 files / 2185 tests, no drop). The first run failed three of the five, and **all three were wave-3
+defects that two workers had reported as pre-existing** — the `git log --oneline -- <path>` the runner was
+asked to attach is what separated the hypotheses:
+
+- `harness-hygiene.spec.ts(26,27)` TS2532 — `baseline[file] ??= {}` does not narrow under
+  `noUncheckedIndexedAccess`. **This one is an orchestrator defect, not C4's**: the C4 payload said
+  "no project-wide typecheck", so no cluster gate could have caught it. Fixed in `1a7588b` by binding the
+  inner record before mutating — no cast, no `!`, no `any`; `HYGIENE_BASELINE=write` re-emits the baseline
+  byte-identical, which is what proves the rewrite behaviour-preserving.
+- `catalog:lint` × 5 "mudou desde v2.4.1 sem bump de versão" — `2004f8a` edited all five entry READMEs.
+  REL-04 is not about code: an entry's codebase is immutable per version (`ecba436`), README included.
+  Fixed in `c3d0362`, 2.1.0 → 2.1.1 with CHANGELOG entries (patch, doc-only).
+- `seam-no-edit.test.mjs` SEAM-03 — the same commit shifted the identity README and the test pins raw
+  array indices. Fixed in `dcc10c8` by re-pointing the citation, assertion untouched. **Recorded for
+  whoever owns that test next: pinning `lines[N]` is brittle to any earlier edit in the file; a
+  marker-based lookup is the right shape, and reshaping it is not this feature's charge.**
+
+**Plan corrections this wave forced** (the Wave Plan's `Touches` were short in three places):
+
+- **C5 gained `.github/workflows/release.yml`** at dispatch — T37 adds a CI job and
+  `release-gate-parity.test.mjs` derives the release's required jobs from `ci.yml`, so a CI-only job fails
+  `test:scripts` by design (`GT10`). Granted up front rather than paid as a `blocked-by-ownership`.
+- **C5 gained `lefthook.yml` and `lefthook-local.yml`** mid-cluster. T38's Done-when attributes the order
+  `migrations → typecheck → catalog-typecheck → test-coverage` to **AD-027, which decides no such thing**
+  (`.specs/STATE.md:35`: the coverage gate, its Docker dependency and the flat-90 floors — no ordering).
+  The cheap-first intent is in `lefthook.yml`'s own comment, and the executed order had drifted to
+  alphabetical (`catalog-typecheck → migrations → test-coverage → typecheck`, measured live) because no
+  `priority` was set — putting the Docker-bound step ahead of `typecheck`. `9fa3910` sets the priorities
+  in both files (the child never sees `lefthook-local.yml`, so its order is fixed independently); T38 then
+  asserts an order that is true, citing the config's intent and AD-027 only for the Docker-bound step.
+- **C6 gained `catalog/*/module.json`, `catalog/*/CHANGELOG.md` and `seam-no-edit.test.mjs`** to repair
+  its own fallout.
+
+**C4 deviations, accepted.** (1) A single root `eslint.suppressions.json` is **impossible**: turbo runs
+three separate `eslint` invocations, suppression keys are cwd-relative and ESLint fails on any entry the
+current run does not use. GA-9 ships as three per-app baselines at ESLint's default auto-discovered
+location — 21 entries, no flag, no CI change, and a stale count exits 2, so the file can still only shrink.
+(2) The package is `@workspace/eslint-config`, not `@platform/eslint-config` as the Test Coverage Matrix
+says. (3) The guard's own directory is excluded from its own scan — it names every banned token by
+construction — asserted explicitly in `scan.spec.ts`. New files outside the declared `Touches`, no sibling
+collision: `apps/{api,web-vite,web-next}/eslint-suppressions.json`,
+`scripts/platform/__tests__/catalog-testing-imports.test.mjs`, `pnpm-lock.yaml`.
+
+**T37 deviations, accepted.** No standalone `contract` job: `contract-env.test.mjs` and
+`contract-check-ci.test.mjs` (pre-existing, not this feature's) require exactly one job — `quality` —
+running `pnpm contract:check`, so AC1's contract check stays satisfied by that unchanged step; the shuffle
+landed as a `pnpm test:e2e -- --sequence.shuffle` step, mirrored into `release.yml` for parity. No static
+`services:` block: `apps/api/test/setup/global-setup.ts` self-provisions Postgres and Redis via
+testcontainers, so a declared block would be dead weight that drifts. **T37's last Done-when — "the
+workflow runs green on the feature branch (run URL in the commit body)" — is NOT satisfied**: nothing is
+pushed during Execute. It is the one open bullet of this wave and the Verifier must judge it as such.
+
+Note for the Verifier: a **concurrent session** staged eight files (`docs/advisories/**`,
+`docs/dev/local-environment.md`) in this checkout during wave 3. They belong to `docs-audience-contract`,
+no wave-3 commit touched them, and the tree is clean again as of the re-gate.
 
 The C1 worker died mid-T6 on 2026-08-24 and was re-dispatched from `git log` on 2026-08-25; its
 transcript did not survive, so the continuation kept the C1 label per the orchestrator card.

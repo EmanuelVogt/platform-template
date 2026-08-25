@@ -1,9 +1,9 @@
 import { PgDialect } from "drizzle-orm/pg-core"
 import { describe, expect, it } from "vitest"
 
-import { DrizzleUsageStatsReader } from "./drizzle-usage-stats.reader"
-
 import { TransactionManager } from "../../../../shared/kernel/transactional/transaction-manager"
+
+import { DrizzleUsageStatsReader } from "./drizzle-usage-stats.reader"
 
 import type { SQL } from "drizzle-orm"
 
@@ -36,7 +36,7 @@ describe("DrizzleUsageStatsReader", () => {
       to: new Date("2026-08-31T00:00:00Z"),
     })
 
-    const query = new PgDialect().sqlToQuery(captured.bucket as SQL)
+    const query = new PgDialect().sqlToQuery(captured.bucket!)
     expect(query.sql).toContain("AT TIME ZONE 'UTC'")
     expect(query.params).toEqual([])
   })

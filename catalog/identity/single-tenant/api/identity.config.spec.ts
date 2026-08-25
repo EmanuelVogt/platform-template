@@ -193,6 +193,7 @@ describe("parseIdentityConfig", () => {
 
   it("não exige API_ORIGIN fora de COOKIE_SAMESITE=none", () => {
     const c = parseIdentityConfig({ ...BASE, COOKIE_SAMESITE: "lax" })
+    expect(c.COOKIE_SAMESITE).toBe("lax")
     expect(c.API_ORIGIN).toBeUndefined()
   })
 

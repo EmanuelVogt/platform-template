@@ -23,6 +23,18 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 - `COOKIE_SAMESITE=none` com a API em host diferente do host de `WEB_ORIGIN` passa a ser
   recusado no boot, em vez de emitir um cookie que o browser descarta.
 
+### Fixed
+
+- `drizzle-usage-stats.reader.spec.ts`: o import de `TransactionManager` vinha depois do import
+  irmão do leitor e o `captured.bucket as SQL` removia `undefined` por asserção de tipo
+  (`import-x/order`, `@typescript-eslint/non-nullable-type-assertion-style`).
+- `identity.config.spec.ts`: o teste "não exige API_ORIGIN fora de COOKIE_SAMESITE=none"
+  afirmava só `toBeUndefined()` — passava sob um parse que ignorasse `COOKIE_SAMESITE`. Agora
+  afirma também o `lax` que o parse devolve (`platform/no-existence-only-assert`, L-007).
+- Os três reprovavam o `pnpm check` de todo filho que instala a entrada: `catalog/` está fora de
+  toda invocação de ESLint do template, então o desvio só aparece no filho. Ver
+  `ADV-20260825-02`.
+
 ## [2.1.3]
 
 ### Fixed

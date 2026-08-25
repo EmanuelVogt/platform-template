@@ -717,7 +717,7 @@ those three forms still keeps `pnpm catalog:lint` and `` `catalog/` `` out of it
 
 ### T12: Changelog entry
 
-**What**: append an item to the untagged `v2.4.1` section.
+**What**: open a new `## v2.5.0` section above `v2.4.1` and add the item to it.
 **Where**: `docs/dev/template-changelog.md`
 **Touches**: `docs/dev/template-changelog.md`
 **Depends on**: T11
@@ -725,19 +725,30 @@ those three forms still keeps `pnpm catalog:lint` and `` `catalog/` `` out of it
 **Reuses**: `docs/dev/template-changelog.md:7-36` — the section's existing item shape
 **Requirement**: spec § Assumptions (Changelog)
 
-**Owner ruling 2026-08-25: the entry goes into `v2.4.1`, not a new section.** `v2.3.0` and `v2.4.0`
-are now tagged; `v2.4.1` is the only untagged section. Opening `v2.5.0` above it would make `v2.4.1`
-permanently untaggable, which the spec explicitly warns against and AD-034 enforces
-(`release-preflight` keys on the latest section).
+**The 2026-08-25 ruling is VOID — superseded 2026-08-25 during wave 1.** That ruling said "append
+to `v2.4.1`, not a new section" because `v2.4.1` was then the only untagged section and opening one
+above it would strand it. While wave 1 ran, a parallel session pushed `3bef437 chore(release):
+v2.4.1` to `origin/main` and the tag `v2.4.1` now exists. Every changelog section is tagged, so the
+reason to append is gone and appending to a *released* section would misreport what shipped in it.
+
+**Decision taken by the orchestrator, owner asleep, under a standing instruction to finish all waves
+without stopping: the new section is `v2.5.0`.** The reasoning, so it can be reverted in one edit if
+the owner disagrees: T7 lands as `feat(template):`, which is a minor under conventional commits; the
+spec's Assumptions row rules the child impact non-major with no manual migration step (a doc leaving
+the shipped set is deleted by `copier update`), and AD-034 forbids a manual step on a non-major. A
+patch (`v2.4.2`) would understate a change to what the template delivers. **If the owner prefers
+`v2.4.2`, only the section heading changes — no other task is affected.**
 
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
 
-- [ ] One item added under `## v2.4.1` → `### Changes`, naming `docs/platform/` and the guard
+- [ ] A new `## v2.5.0` section sits directly above `## v2.4.1`, matching the shape of the sections
+      already in the file (same subsection headings, same item style)
+- [ ] One item under its `### Changes`, naming `docs/platform/` and the guard
 - [ ] `### Child migration steps` stays `None` — a doc leaving the shipped set is deleted by
       `copier update` with no manual step, and AD-034 forbids a manual step on a non-major
-- [ ] No other version section is touched
+- [ ] No other version section is touched — `v2.4.1` and below are released history now
 - [ ] No advisory is filed: nothing under `catalog/**` changes, so the `commit-msg` hook does not apply
 - [ ] Gate passes: `pnpm test:scripts`
 

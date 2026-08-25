@@ -45,7 +45,29 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: node scripts/platform/release-preflight.mjs "${{ needs.marker.outputs.version }}"
-      - run: pnpm check
+      # Os quatro steps abaixo são os do job `quality` do ci.yml, literalmente —
+      # release-gate-parity.test.mjs compara o texto do comando, então `pnpm check`
+      # (o alias de `turbo lint typecheck`) não serviria: o gate do release tem de
+      # rodar o mesmo comando, não um equivalente.
+      - run: pnpm turbo lint typecheck
+      - run: pnpm --filter api build:emit
+      - run: pnpm turbo build --filter=web
+      # Mesmos placeholders do ci.yml e pela mesma razão: o export monta o grafo
+      # Nest inteiro e o boot valida env fail-fast. Nenhum abre conexão.
+      - run: pnpm contract:check
+        env:
+          NODE_ENV: test
+          DATABASE_SSL: disable
+          TRUST_PROXY_HOPS: "0"
+          BREACH_CHECK_ENABLED: "false"
+          WEB_ORIGIN: http://localhost:3000
+          R2_ACCOUNT_ID: placeholder
+          R2_ACCESS_KEY_ID: placeholder
+          R2_SECRET_ACCESS_KEY: placeholder
+          R2_BUCKET: placeholder
+          R2_ENDPOINT: https://placeholder.r2.example.com
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+          REDIS_URL: redis://localhost:6379
       - run: pnpm test
       - run: pipx install 'copier==9.17.2'
       - run: pnpm test:scripts
@@ -123,9 +145,27 @@ jobs:
         run: pnpm --filter web-next exec vitest run --coverage
       - run: pnpm template:smoke --web-stack ${{ matrix.web_stack }}
 
+  coverage:
+    name: "Coverage gate (api int + e2e, testcontainers)"
+    needs: [marker, verify]
+    if: needs.marker.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Espelha o job `test-coverage` do ci.yml: ubuntu-latest já provê o Docker
+      # daemon do testcontainers, e test:coverage funde unit+int+e2e num processo
+      # Vitest só e aplica os thresholds por glob.
+      - run: pnpm test:coverage
+
   tag:
     name: Tag and push
-    needs: [marker, verify, catalog, smoke]
+    needs: [marker, verify, catalog, smoke, coverage]
     runs-on: ubuntu-latest
     permissions:
       contents: write

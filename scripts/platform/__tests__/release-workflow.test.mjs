@@ -136,7 +136,13 @@ test("verify roda o release-preflight (com a versão do marker) antes de qualque
     "release-preflight.mjs não encontrado nos passos de verify, ou não usa needs.marker.outputs.version"
   )
   const gatePatterns = [
-    /^pnpm check$/,
+    // GT10: `pnpm check` deu lugar a `pnpm turbo lint typecheck` — o mesmo
+    // comando que o ci.yml roda, porque release-gate-parity.test.mjs compara o
+    // texto e um alias equivalente não satisfaz a paridade.
+    /^pnpm turbo lint typecheck$/,
+    /^pnpm --filter api build:emit$/,
+    /^pnpm turbo build --filter=web$/,
+    /^pnpm contract:check$/,
     /^pnpm test$/,
     /^pnpm test:scripts$/,
     /^pnpm catalog:lint$/,

@@ -361,7 +361,7 @@ wave, and the major's waves start only after the minor's Verifier passes and the
 | 5 (exclusive) | C11 | T43 | `.agents/skills/tlc-spec-driven/SKILL.md`, `.agents/skills/tlc-spec-driven/references/validate.md`, `.agents/skills/tlc-spec-driven/references/sub-agents.md`, `.agents/skills/tlc-spec-driven/references/cards/orchestrator.md`, `.agents/skills/repo-discovery/SKILL.md`, `.claude/agents/spec-verifier.md`, `.claude/hooks/subagent-model-required.mjs`, `docs/agents/harness.md`, `scripts/platform/__tests__/harness-taxonomy.test.mjs` | BRAND-04 — **edits the rules this workflow runs under**; alone, last · gate: scoped |
 | 6 | C12 | T44 → T45 → T46 → T47 | `.claude/hooks/contract-enum.mjs`, `.claude/hooks/edit-reminders.mjs`, `docs/arch/front.md`, `apps/api/src/modules/module-boundaries.spec.ts`, `apps/api/test/setup/test-db.ts`, `apps/api/test/setup/unit-env.ts`, `apps/api/test/setup/e2e-env.ts`, `scripts/platform/__tests__/brand-hygiene.test.mjs`, `scripts/platform/__tests__/hook-references.test.mjs`, `catalog/identity/single-tenant/README.md`, `.specs/features/done/v0-2-product-slots/coverage-sweep.md` | hooks truth + guard scan + the hygiene gate · gate: **full-unit** (test harness) |
 | 7 (owner-gated) | C13 | T48 | `docs/dev/template-changelog.md` | **BLOCKED** until `git tag -l v2.3.0` is non-empty · gate: scoped |
-| 8 | C14 | T49 → T50 → T51 → T52 → T53 | `apps/api/src/openapi/openapi-config.ts`, `apps/api/src/openapi/openapi-config.spec.ts`, `apps/web/src/app/config/api-client.ts`, `apps/web/src/shared/lib/last-location.ts`, `apps/web/src/shared/store/auth.store.ts`, `apps/api/test/setup/unit-env.ts`, `apps/api/test/setup/e2e-env.ts`, `catalog/identity/single-tenant/api/identity.config.ts`, `catalog/identity/single-tenant/api/api/guards/cookie.ts`, `packages/api-client/src/client.ts`, `apps/api/src/shared/kernel/clock/bucket-sql.ts`, `apps/api/src/shared/kernel/clock/bucket-sql.spec.ts`, `apps/api/src/shared/config/env.ts`, `catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-usage-stats.reader.ts`, `catalog/audit/api/infrastructure/repositories/drizzle-activity-stats.reader.ts` | brand major: cookies, CSRF seam, SameSite, timezone · gate: **full-unit** (kernel + contract inputs) |
+| 8 | C14 | T49 → T50 → T51 → T52 → T53 | `apps/api/src/openapi/openapi-config.ts`, `apps/api/src/openapi/openapi-config.spec.ts`, `apps/web/src/app/config/api-client.ts`, `apps/web/src/shared/lib/last-location.ts`, `apps/web/src/shared/store/auth.store.ts`, `apps/api/test/setup/unit-env.ts`, `apps/api/test/setup/e2e-env.ts`, `catalog/identity/single-tenant/api/identity.config.ts`, `catalog/identity/single-tenant/api/api/guards/cookie.ts`, `packages/api-client/src/client.ts`, `apps/api/src/shared/kernel/clock/bucket-sql.ts`, `apps/api/src/shared/kernel/clock/bucket-sql.spec.ts`, `apps/api/src/shared/config/env.ts`, `catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-usage-stats.reader.ts`, `catalog/audit/api/infrastructure/repositories/drizzle-activity-stats.reader.ts`, `apps/api/src/modules/module-boundaries.spec.ts` | brand major: cookies, CSRF seam, SameSite, timezone · gate: **full-unit** (kernel + contract inputs) |
 | 8 | C15 | T54 → T55 → T56 | `apps/api/src/shared/infra/storage/storage.config.ts`, `apps/api/src/shared/infra/storage/storage.module.ts`, `apps/api/src/shared/infra/storage/s3-storage.adapter.ts`, `apps/api/src/shared/infra/storage/null-storage.adapter.ts`, `apps/api/src/shared/infra/storage/null-storage.adapter.spec.ts`, `apps/api/src/shared/infra/storage/storage-unavailable.error.ts`, `apps/api/src/app.module.ts`, `apps/api/.env.example`, `docs/dev/local-environment.md`, `scripts/platform/__tests__/brand-hygiene.test.mjs` | storage seam + hygiene-gate extension + env wiring · gate: **full-unit** |
 | 9 (exclusive) | C16 | T57 | `openapi.json`, `packages/api-client/src/` | contract regen after the cookie rename — alone · gate: full-unit |
 | 10 | C17 | T58 → T59 → T60 → T61 → T62 → T63 | `catalog/professional/` | new `professional` entry (AD-035) · gate: **full-unit** |
@@ -1600,7 +1600,7 @@ Each ships its half of the idempotent `scripts/platform/migrations/v3.0.0.mjs` (
 
 **What**: `__Host-app_session`, `app_csrf`, `app-last-location`, `app-auth-logout` replace the brand-prefixed literals everywhere the kernel and web own them.
 **Where**: `apps/api/src/openapi/openapi-config.ts:26,29,48,51,53,101`
-**Touches**: `apps/api/src/openapi/openapi-config.ts`, `apps/api/src/openapi/openapi-config.spec.ts`, `apps/web/src/app/config/api-client.ts`, `apps/web/src/shared/lib/last-location.ts`, `apps/web/src/shared/store/auth.store.ts`, `apps/api/test/setup/unit-env.ts`, `apps/api/test/setup/e2e-env.ts`
+**Touches**: `apps/api/src/openapi/openapi-config.ts`, `apps/api/src/openapi/openapi-config.spec.ts`, `apps/web/src/app/config/api-client.ts`, `apps/web/src/shared/lib/last-location.ts`, `apps/web/src/shared/store/auth.store.ts`, `apps/api/test/setup/unit-env.ts`, `apps/api/test/setup/e2e-env.ts`, `apps/api/src/modules/module-boundaries.spec.ts`
 **Depends on**: None
 **Exclusive**: no
 **Reuses**: the `COOKIE_NAME` / `DEVICE_COOKIE_NAME` env seam — two of three cookies already have it
@@ -1611,8 +1611,9 @@ Each ships its half of the idempotent `scripts/platform/migrations/v3.0.0.mjs` (
 **Done when**:
 - [ ] No `rit_` / `rit-` / `__Host-rit` literal survives in `apps/**` or `packages/**`
 - [ ] `last-location.ts:5` and `auth.store.ts:5` use `app-*`
-- [ ] Gate passes: `pnpm vitest run --project api apps/api/src/openapi` and `pnpm vitest run --project web apps/web/src`
-- [ ] Test count: 6 new/updated tests pass
+- [ ] **The wave-6 `SPEC_DEVIATION` is closed**: `openapi-config.ts:29` stops naming the `identity` entry token (describe the guard's provider without the module name — `:27` already says *"a entrada de identidade"* and is the precedent), and the `apps/api/src/openapi/openapi-config\.ts$` branch is **deleted** from `TOKEN_ALLOWLIST` (`apps/api/src/modules/module-boundaries.spec.ts:597-598`) together with its explaining comment. The other two branches (`shared/test/*.fixture.ts`, `apps/api/test/setup/test-db.ts`) stay. `v3.0.0` must not ship a RULE C guard carrying an exemption for a file that no longer needs it.
+- [ ] Gate passes: `pnpm vitest run --project api apps/api/src/openapi apps/api/src/modules/module-boundaries.spec.ts` and `pnpm vitest run --project web apps/web/src`
+- [ ] Test count: 6 new/updated tests pass; RULE C stays green **with the allowlist branch gone**, not because of it
 
 **Tests**: unit · **Gate**: quick
 
@@ -2570,6 +2571,7 @@ cap**: the widest wave holds 3 clusters.
 | `scripts/platform/lib/commands/add.mjs` | T3 (C1, wave 1), T17, T18, T19 (C4, wave 2) | different waves |
 | `scripts/platform/__tests__/docs-no-owner-infra.test.mjs` | T16 (C3, wave 1), T43 (C11, wave 5) | different waves — T43 removes the `harness.md` exclusion T16 had to leave behind |
 | `scripts/platform/__tests__/brand-hygiene.test.mjs` | T46 (wave 6), T55 (wave 8) | different waves |
+| `apps/api/src/modules/module-boundaries.spec.ts` | T45 (C12, wave 6), T49 (C14, wave 8) | different waves — T49 deletes the `TOKEN_ALLOWLIST` branch T45 had to leave behind |
 | `docs/arch/front.md` | T38 (C8, wave 3), T44 (C12, wave 6) | different waves |
 | `openapi.json`, `packages/api-client/src/` | T57 (wave 9), T76 (wave 12) | both exclusive, different waves |
 | `docs/dev/template-changelog.md` | T48 (wave 7), T79 (wave 14) | different waves, both owner-gated |

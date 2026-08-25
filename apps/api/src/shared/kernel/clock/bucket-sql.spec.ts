@@ -1,5 +1,5 @@
 import { PgDialect, pgTable, timestamp } from "drizzle-orm/pg-core"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { appTimeZone, bucketOf, resolveTimeZone } from "./bucket-sql"
 
@@ -12,8 +12,12 @@ function render(unit: "day" | "week"): { sql: string; params: unknown[] } {
 }
 
 describe("appTimeZone", () => {
-  // Primeiro teste do arquivo de propósito: a resolução é memoizada por
-  // processo, e é essa memoização que faz o aviso sair uma única vez.
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  // Primeiro teste do arquivo de propósito: o aviso é memoizado por processo, e
+  // é ele — não o valor — que só pode ser observado antes da primeira chamada.
   it("cai em UTC sem APP_TIMEZONE e avisa uma única vez no processo", () => {
     const first = vi.fn()
     const second = vi.fn()
@@ -24,6 +28,14 @@ describe("appTimeZone", () => {
     expect(first).toHaveBeenCalledTimes(1)
     expect(first).toHaveBeenCalledWith("UTC")
     expect(second).not.toHaveBeenCalled()
+  })
+
+  it("relê APP_TIMEZONE a cada chamada, sem memoizar o valor", () => {
+    vi.stubEnv("APP_TIMEZONE", "America/Sao_Paulo")
+    expect(appTimeZone(vi.fn())).toBe("America/Sao_Paulo")
+
+    vi.unstubAllEnvs()
+    expect(appTimeZone(vi.fn())).toBe("UTC")
   })
 })
 

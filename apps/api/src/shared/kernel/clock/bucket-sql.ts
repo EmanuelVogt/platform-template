@@ -1,6 +1,5 @@
 import { sql } from "drizzle-orm"
 
-import { env } from "../../config/env"
 import { createRootLogger } from "../logging/logger.factory"
 
 import type { SQL } from "drizzle-orm"
@@ -45,17 +44,27 @@ export function resolveTimeZone(
   return configured
 }
 
-let resolved: string | null = null
+let warned = false
 
 /**
- * Fuso da aplicação, resolvido uma única vez por processo — é o que faz o aviso
- * de fallback sair no boot e não a cada query.
+ * Fuso da aplicação. Lê `APP_TIMEZONE` de `process.env` sem passar pelo schema
+ * do kernel de propósito: `bucketOf` roda também fora de um processo botado
+ * (harness de integração, script avulso), onde `env()` exigiria
+ * `DATABASE_URL`/`REDIS_URL`/`WEB_ORIGIN` que ninguém tem.
+ *
+ * Memoizado é o AVISO, não o valor — reler a variável a cada chamada é o que
+ * deixa um teste declarar o fuso que assevera sem depender da ordem dos arquivos.
  */
 export function appTimeZone(
   onFallback: (fallback: string) => void = warnFallback
 ): string {
-  resolved ??= resolveTimeZone(env().APP_TIMEZONE, onFallback)
-  return resolved
+  return resolveTimeZone(process.env.APP_TIMEZONE, (fallback) => {
+    if (warned) {
+      return
+    }
+    warned = true
+    onFallback(fallback)
+  })
 }
 
 function warnFallback(fallback: string): void {

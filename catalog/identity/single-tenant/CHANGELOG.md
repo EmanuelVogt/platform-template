@@ -4,6 +4,22 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 [semver](https://semver.org/lang/pt-BR/). Toda versão que leva código lista os advisories
 (`docs/advisories/ADV-*.md`) que carrega.
 
+## [3.0.0]
+
+### Breaking
+
+- Requer o kernel 3.x: a entrada deixa de suportar o kernel 2.x — o `kernelRange` abre
+  para `>=3.0.0 <4.0.0` no corte da `v3.0.0`, e um child em kernel 2.x não instala mais
+  esta versão.
+- Nomes de cookie neutros: `COOKIE_NAME` passa a `__Host-app_session`,
+  `DEVICE_COOKIE_NAME` a `__Host-app_device` e o cookie de CSRF a `app_csrf` — este
+  último deixa de ser literal e passa a sair da configuração da entrada. Trocar o nome
+  invalida toda sessão viva no deploy; ver `ADV-20260824-03`.
+- `CLINIC_TZ` some da entrada: a agregação por dia/semana lê `APP_TIMEZONE` (IANA,
+  default `UTC`).
+- `COOKIE_SAMESITE=none` com a API em host diferente do host de `WEB_ORIGIN` passa a ser
+  recusado no boot, em vez de emitir um cookie que o browser descarta.
+
 ## [2.1.1]
 
 ### Fixed
@@ -68,7 +84,7 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 ### Breaking
 
 - Specs migradas de Jest para Vitest via `node scripts/platform/jest-to-vitest.mjs
-  catalog/identity/single-tenant` (ADV-20260821-03): `jest.*` → `vi.*`, `jest.requireActual` →
+catalog/identity/single-tenant` (ADV-20260821-03): `jest.*` → `vi.*`, `jest.requireActual` →
   `await vi.importActual`, tipos `jest.Mock*`/`jest.SpyInstance` → `Mock`/`Mocked`/
   `MockedFunction`/`MockInstance` de `"vitest"`. `dependsOn` notification sobe para
   `>=2.0.0 <3.0.0`. Filhos em `>=1.0.0 <2.0.0` precisam rodar o codemod antes de atualizar.

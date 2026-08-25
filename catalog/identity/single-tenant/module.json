@@ -1,7 +1,7 @@
 {
   "name": "identity",
   "variant": "single-tenant",
-  "version": "2.1.1",
+  "version": "3.0.0",
   "description": "Autenticação e autorização de tenant único: login por cookie de sessão, dispositivos, tokens de e-mail/senha, perfis de acesso e catálogo de permissões. Liga a porta ACCESS_POLICY do kernel.",
   "kernelRange": ">=2.0.0 <3.0.0",
   "dependsOn": [{ "name": "notification", "range": ">=2.0.0 <3.0.0" }],

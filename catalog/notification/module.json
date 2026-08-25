@@ -1,6 +1,6 @@
 {
   "name": "notification",
-  "version": "2.1.1",
+  "version": "3.0.0",
   "description": "Feed de notificações (listar, marcar lida/vista, arquivar, stream SSE) e entrega por e-mail via canal e mailer transport-only.",
   "kernelRange": ">=2.0.0 <3.0.0",
   "dependsOn": [],

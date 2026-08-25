@@ -2,6 +2,17 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [3.0.0]
+
+### Breaking
+
+- Requer o kernel 3.x: a entrada deixa de suportar o kernel 2.x — o `kernelRange` abre
+  para `>=3.0.0 <4.0.0` no corte da `v3.0.0`, e um child em kernel 2.x não instala mais
+  esta versão.
+- `CLINIC_TZ` some do leitor de estatísticas: os buckets por dia/semana leem
+  `APP_TIMEZONE` (IANA, default `UTC`). Um child que dependia do fuso fixo muda de
+  recorte; ver `ADV-20260824-04`.
+
 ## [2.1.1]
 
 ### Changed
@@ -55,7 +66,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 ### Breaking
 
 - Specs migradas de Jest para Vitest via `node scripts/platform/jest-to-vitest.mjs
-  catalog/audit` (ADV-20260821-02): `jest.*` → `vi.*`, `jest.requireActual` →
+catalog/audit` (ADV-20260821-02): `jest.*` → `vi.*`, `jest.requireActual` →
   `await vi.importActual`, tipos `jest.Mock*`/`jest.SpyInstance` → `Mock`/`Mocked`/
   `MockedFunction`/`MockInstance` de `"vitest"`. `dependsOn` identity sobe para
   `>=2.0.0 <3.0.0`. Filhos em `>=1.0.0 <2.0.0` precisam rodar o codemod antes de atualizar.

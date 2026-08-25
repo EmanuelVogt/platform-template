@@ -154,25 +154,12 @@ describe("CreateUserUseCase", () => {
     await t.uc.execute({
       name: "Pro Cross",
       email: "pro.cross@example.com",
-      accessProfile: "professional",
+      accessProfile: "admin",
       permissions: ["admin.users.read"],
     })
     expect(t.users.replacePermissions).toHaveBeenCalledWith(
       expect.any(String),
       ["admin.users.read"]
-    )
-  })
-  it("perfil sem piso de permissão aceita conjunto vazio", async () => {
-    const t = makeDeps()
-    await t.uc.execute({
-      name: "Pro Vazio",
-      email: "pro.vazio@example.com",
-      accessProfile: "professional",
-      permissions: [],
-    })
-    expect(t.users.replacePermissions).toHaveBeenCalledWith(
-      expect.any(String),
-      []
     )
   })
 })

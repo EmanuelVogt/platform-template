@@ -11,7 +11,7 @@ type SeedUserOptions = {
   password: string
   name?: string
   emailVerified?: boolean
-  accessProfile?: "master" | "admin" | "professional"
+  accessProfile?: "master" | "admin"
   permissions?: string[]
 }
 

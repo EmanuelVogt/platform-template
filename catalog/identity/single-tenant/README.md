@@ -135,26 +135,6 @@ Migrações manuais (`migrations/custom/`, aplicadas nesta ordem, depois das tab
 
 Sucessoras locais das decisões que viviam no `STATE.md` do template (AD-014 as moveu para cá).
 
-### AD-002 (local) — o perfil `professional` fica dentro da entrada
-
-**Contexto**: `professional` é um perfil de acesso com dados próprios (áreas de atuação,
-serviços, escala, horários padrão) que a v0.2 mantinha no módulo identity.
-**Decisão**: o recorte inteiro (`user_professional_*`, `professional_default_hours`,
-`ProfessionalDirectoryFacade`, `ProfessionalAssignmentFacade` e o slot
-`professional-assignment.module.ts`) fica nesta entrada, não vira entrada separada.
-**Consequência**: um child que não tem profissionais herda tabelas vazias; removê-las é uma
-edição na cópia dele, sem impacto no catálogo. Uma variante futura sem `professional` é uma
-entrada nova (`identity/single-tenant-lite`), não um flag.
-
-### AD-003 (local) — `servesClients` não deriva do perfil
-
-**Contexto**: "quem atende cliente" e "qual o perfil de acesso" foram tratados como a mesma
-coisa até recepção e agendista também passarem a atender.
-**Decisão**: `identity.users.serves_clients` é coluna própria, `boolean not null default false`,
-independente de `access_profile`.
-**Consequência**: seletores, mapas e escala filtram por `servesClients`; nenhuma regra pode
-inferir atendimento a partir do perfil. Coberto por `parity/profiles.parity.spec.ts`.
-
 ### AD-004 (local) — perfis de acesso são enum do banco
 
 **Contexto**: o perfil precisa ser válido no banco, não só no TypeScript.

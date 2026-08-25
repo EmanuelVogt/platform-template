@@ -29,9 +29,9 @@ describe("can", () => {
     expect(can(user, "admin.users.delete")).toBe(false)
   })
 
-  it("nega qualquer chave para o perfil professional sem permissões", () => {
+  it("nega qualquer chave para perfil não-master sem permissões", () => {
     const user = makeCurrentUser({
-      accessProfile: "professional",
+      accessProfile: "admin",
       permissions: [],
     })
 

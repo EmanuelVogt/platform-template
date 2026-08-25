@@ -303,12 +303,12 @@ describe("User.updateProfile", () => {
     })
     const now = new Date("2026-06-12T12:00:00Z")
     const updated = user.updateProfile(
-      { name: " Bia ", accessProfile: "professional" },
+      { name: " Bia ", accessProfile: "master" },
       now
     )
     expect(updated).not.toBe(user)
     expect(updated.props.name).toBe("Bia")
-    expect(updated.props.accessProfile).toBe("professional")
+    expect(updated.props.accessProfile).toBe("master")
     expect(updated.props.updatedAt).toBe(now)
     expect(user.props.accessProfile).toBe("admin")
   })

@@ -231,66 +231,6 @@ describe("Fluxo de criação de usuário (e2e)", () => {
       })
       .expect(400)
   })
-
-  it("master cria Profissional com áreas/serviços; listagem não vaza a system perm", async () => {
-    // Sem módulo de produto montado o slot profissional usa os adapters nulos:
-    // área/serviço são referências opacas, validadas por quem preencher o slot.
-    await e2e.http
-      .post("/v1/admin/users")
-      .set("Origin", E2E_ORIGIN)
-      .set("Cookie", masterCookie)
-      .set("Idempotency-Key", "create-user-pro")
-      .send({
-        name: "Pedro Profissional",
-        email: "pedro@example.com",
-        accessProfile: "professional",
-        permissions: [],
-      })
-      .expect(201)
-
-    const list = await e2e.http
-      .get("/v1/admin/users")
-      .set("Cookie", masterCookie)
-      .query({ q: "pedro@example.com" })
-      .expect(200)
-
-    const pedro = list.body.data.find(
-      (u: { email: string }) => u.email === "pedro@example.com"
-    )
-    expect(pedro).toBeDefined()
-    expect(pedro.accessProfile).toBe("professional")
-    expect(pedro.permissions).toEqual([])
-  })
-
-  it("cria profissional com permissão de outro módulo", async () => {
-    const res = await e2e.http
-      .post("/v1/admin/users")
-      .set("Origin", E2E_ORIGIN)
-      .set("Cookie", masterCookie)
-      .set("Idempotency-Key", "create-user-pro-admin")
-      .send({
-        name: "Pro Admin",
-        email: "pro.admin@example.com",
-        accessProfile: "professional",
-        permissions: ["admin.users.read"],
-      })
-      .expect(201)
-
-    expect(res.status).toBe(201)
-
-    const list = await e2e.http
-      .get("/v1/admin/users")
-      .set("Cookie", masterCookie)
-      .query({ q: "pro.admin@example.com" })
-      .expect(200)
-
-    const proadmin = list.body.data.find(
-      (u: { email: string }) => u.email === "pro.admin@example.com"
-    )
-    expect(proadmin).toBeDefined()
-    expect(proadmin.accessProfile).toBe("professional")
-    expect(proadmin.permissions).toContain("admin.users.read")
-  })
   // GA-7: o pseudo-teste "seed master e promoção via SQL" (um
   // `expect(masterId).toBeTruthy()` sobre o seed) saiu com a quebra da cadeia
   // ordenada — é a única remoção que este refactor autoriza. O que ele

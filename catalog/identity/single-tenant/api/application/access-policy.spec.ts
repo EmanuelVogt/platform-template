@@ -69,22 +69,12 @@ describe("assertProfileFloor (piso do perfil)", () => {
       assertProfileFloor("admin", [])
     }).toThrow(InvalidPermissionSetError)
   })
-
-  it("professional é isento (o piso vem do slot de produto, não do catálogo)", () => {
-    expect(() => {
-      assertProfileFloor("professional", [])
-    }).not.toThrow()
-    expect(() => {
-      assertProfileFloor("admin", [])
-    }).toThrow(InvalidPermissionSetError)
-  })
-
   describe("o piso sai da def registrada, não de chave literal", () => {
     const exempt = BASE_ACCESS_PROFILES.filter((def) => !def.permissionFloor)
     const enforced = BASE_ACCESS_PROFILES.filter((def) => def.permissionFloor)
 
     it("perfil com permissionFloor false aceita set vazio", () => {
-      expect(exempt.map((def) => def.key)).toEqual(["master", "professional"])
+      expect(exempt.map((def) => def.key)).toEqual(["master"])
       for (const def of exempt) {
         expect(() => {
           assertProfileFloor(def.key, [])

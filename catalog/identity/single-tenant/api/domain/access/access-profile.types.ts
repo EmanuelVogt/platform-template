@@ -13,10 +13,4 @@ export const BASE_ACCESS_PROFILES = [
     assignable: true,
     permissionFloor: true,
   },
-  {
-    key: "professional",
-    label: "Profissional",
-    assignable: true,
-    permissionFloor: false,
-  },
 ] as const satisfies readonly AccessProfileDef[]

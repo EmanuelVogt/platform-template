@@ -18,7 +18,7 @@ describe("IDENTITY_ROUTE_ACCESS", () => {
 
   it("reproduz requireAccess: logado sem permissão alguma ainda alcança o início", () => {
     const user = makeCurrentUser({
-      accessProfile: "professional",
+      accessProfile: "admin",
       permissions: [],
     })
 

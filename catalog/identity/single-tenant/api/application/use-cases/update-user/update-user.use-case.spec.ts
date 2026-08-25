@@ -77,7 +77,7 @@ describe("UpdateUserUseCase", () => {
     const { uc, users } = makeDeps({
       users: {
         findByIdWithPermissions: vi.fn().mockResolvedValue({
-          user: makeUser({ accessProfile: "professional" }),
+          user: makeUser(),
           permissions: [],
         }),
         update: vi.fn().mockResolvedValue(undefined),
@@ -194,27 +194,6 @@ describe("UpdateUserUseCase", () => {
     await expect(uc.execute(BASE_INPUT)).rejects.toThrow(ForbiddenError)
     expect(users.update).not.toHaveBeenCalled()
   })
-
-  it("auto-edição de perfil → ForbiddenError", async () => {
-    const { uc, users } = makeDeps({
-      users: {
-        findByIdWithPermissions: vi.fn().mockResolvedValue({
-          user: makeUser({ accessProfile: "professional" }),
-          permissions: ["admin.users.read"],
-        }),
-        update: vi.fn(),
-        replacePermissions: vi.fn(),
-      },
-      ctx: fakeRequestContext(() => ({
-        correlationId: "c1",
-        locale: "pt-BR",
-        userId: "u-target",
-      })),
-    })
-    await expect(uc.execute(BASE_INPUT)).rejects.toThrow(ForbiddenError)
-    expect(users.update).not.toHaveBeenCalled()
-  })
-
   it("auto-edição de permissões → ForbiddenError", async () => {
     const { uc, users } = makeDeps({
       users: {

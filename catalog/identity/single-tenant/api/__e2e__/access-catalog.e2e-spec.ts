@@ -49,7 +49,6 @@ describe("Catálogo de acesso — GET /access-catalog (e2e)", () => {
     expect(body.profiles).toEqual([
       { key: "master", label: "Master", assignable: false },
       { key: "admin", label: "Administrador", assignable: true },
-      { key: "professional", label: "Profissional", assignable: true },
     ])
   })
 

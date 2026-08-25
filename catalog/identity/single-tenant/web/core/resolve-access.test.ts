@@ -24,7 +24,7 @@ describe("resolveAccess", () => {
 
   it("permite rota autenticada para qualquer usuário logado", () => {
     const user = makeCurrentUser({
-      accessProfile: "professional",
+      accessProfile: "admin",
       permissions: [],
     })
 

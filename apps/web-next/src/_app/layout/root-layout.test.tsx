@@ -55,4 +55,8 @@ describe("RootLayout", () => {
   it("exporta metadata com título", () => {
     expect(metadata.title).toBe("Platform")
   })
+
+  it("exporta metadata.icons apontando para o favicon servido por public/", () => {
+    expect(metadata.icons).toEqual({ icon: "/favicon.ico" })
+  })
 })

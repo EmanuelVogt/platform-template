@@ -24,8 +24,8 @@ function mapStorageError(error: unknown): never {
   throw error
 }
 
-/** Adapter R2 (S3-compat). `region: "auto"` é o exigido pelo R2. */
-export class R2StorageAdapter implements ObjectStoragePort {
+/** Adapter S3-compat genérico (AWS S3, R2 e equivalentes). */
+export class S3StorageAdapter implements ObjectStoragePort {
   private readonly client: S3Client
   private readonly bucket: string
   private readonly requestTimeoutMs: number
@@ -33,12 +33,12 @@ export class R2StorageAdapter implements ObjectStoragePort {
   constructor(cfg: StorageConfig) {
     this.requestTimeoutMs = cfg.STORAGE_REQUEST_TIMEOUT_MS
     this.client = new S3Client({
-      region: "auto",
-      endpoint: cfg.R2_ENDPOINT,
+      region: cfg.STORAGE_REGION,
+      endpoint: cfg.STORAGE_ENDPOINT,
       forcePathStyle: true,
       credentials: {
-        accessKeyId: cfg.R2_ACCESS_KEY_ID,
-        secretAccessKey: cfg.R2_SECRET_ACCESS_KEY,
+        accessKeyId: cfg.STORAGE_ACCESS_KEY_ID,
+        secretAccessKey: cfg.STORAGE_SECRET_ACCESS_KEY,
       },
       requestHandler: {
         requestTimeout: cfg.STORAGE_REQUEST_TIMEOUT_MS,
@@ -49,7 +49,7 @@ export class R2StorageAdapter implements ObjectStoragePort {
         }),
       },
     })
-    this.bucket = cfg.R2_BUCKET
+    this.bucket = cfg.STORAGE_BUCKET
   }
 
   async put(key: string, body: Buffer, contentType: string): Promise<void> {

@@ -3,7 +3,7 @@ import { Readable } from "node:stream"
 import { S3Client } from "@aws-sdk/client-s3"
 import { type Mock, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { R2StorageAdapter } from "./r2-storage.adapter"
+import { S3StorageAdapter } from "./s3-storage.adapter"
 import { StorageUnavailableError } from "./storage-unavailable.error"
 
 import type { StorageConfig } from "./storage.config"
@@ -28,11 +28,11 @@ vi.mock("@aws-sdk/client-s3", async () => {
 })
 
 const cfg: StorageConfig = {
-  R2_ACCOUNT_ID: "acc",
-  R2_ACCESS_KEY_ID: "key-id",
-  R2_SECRET_ACCESS_KEY: "secret",
-  R2_BUCKET: "bucket-test",
-  R2_ENDPOINT: "https://r2.example.com",
+  STORAGE_ACCESS_KEY_ID: "key-id",
+  STORAGE_SECRET_ACCESS_KEY: "secret",
+  STORAGE_BUCKET: "bucket-test",
+  STORAGE_ENDPOINT: "https://s3.example.com",
+  STORAGE_REGION: "us-east-1",
   STORAGE_REQUEST_TIMEOUT_MS: 30_000,
   STORAGE_MAX_SOCKETS: 50,
 }
@@ -43,26 +43,26 @@ function timeoutError(): Error {
   return error
 }
 
-describe("R2StorageAdapter", () => {
-  let adapter: R2StorageAdapter
+describe("S3StorageAdapter", () => {
+  let adapter: S3StorageAdapter
   let sendMock: Mock
   const S3ClientMock = S3Client as unknown as Mock
 
   beforeEach(() => {
     S3ClientMock.mockClear()
-    adapter = new R2StorageAdapter(cfg)
+    adapter = new S3StorageAdapter(cfg)
     const client = S3ClientMock.mock.results[0]?.value as { send: Mock }
     sendMock = client.send
   })
 
-  it("configura o client R2 (region auto, path-style, credenciais, requestHandler com timeout/maxSockets)", () => {
+  it("configura o client com a região explícita da config (sem 'auto' hard-coded), path-style, credenciais, requestHandler com timeout/maxSockets", () => {
     expect(S3ClientMock).toHaveBeenCalledWith({
-      region: "auto",
-      endpoint: cfg.R2_ENDPOINT,
+      region: cfg.STORAGE_REGION,
+      endpoint: cfg.STORAGE_ENDPOINT,
       forcePathStyle: true,
       credentials: {
-        accessKeyId: cfg.R2_ACCESS_KEY_ID,
-        secretAccessKey: cfg.R2_SECRET_ACCESS_KEY,
+        accessKeyId: cfg.STORAGE_ACCESS_KEY_ID,
+        secretAccessKey: cfg.STORAGE_SECRET_ACCESS_KEY,
       },
       requestHandler: {
         requestTimeout: cfg.STORAGE_REQUEST_TIMEOUT_MS,

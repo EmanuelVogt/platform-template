@@ -252,3 +252,11 @@ test("o mapa de entradas vem do catálogo de verdade, não de uma lista embutida
     "tag",
   ])
 })
+
+test("o diretório da entrada, sem arquivo, também resolve pós-`module add`", () => {
+  assert.deepEqual(auditText("Veja `apps/api/src/modules/identity`."), [])
+  assert.equal(
+    auditText("Veja `apps/api/src/modules/entrada-fantasma`.").length,
+    1
+  )
+})

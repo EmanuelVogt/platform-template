@@ -244,7 +244,7 @@ const isChildCreated = (token) =>
 // não enxerga esse destino, então um doc que cita corretamente o caminho pós-instalação virava
 // achado falso. Resolvido CONTRA o catálogo, não isentado: entrada inexistente ou arquivo que a
 // entrada não tem continua sendo achado.
-const INSTALLED_MODULE = /^apps\/api\/src\/modules\/([^/]+)\/(.+)$/
+const INSTALLED_MODULE = /^apps\/api\/src\/modules\/([^/]+)(?:\/(.+))?$/
 
 export const catalogEntryDirs = ({ tracked = trackedFiles() } = {}) => {
   const dirs = new Map()
@@ -262,7 +262,8 @@ export const isInstalledModulePath = (token, entryDirs) => {
   if (match === null) return false
   const dir = entryDirs.get(match[1])
   if (dir === undefined) return false
-  return existsSync(path.join(ROOT, "catalog", dir, "api", match[2]))
+  const under = path.join(ROOT, "catalog", dir, "api")
+  return existsSync(match[2] === undefined ? under : path.join(under, match[2]))
 }
 
 // Gramática fixada com o dono antes da onda 1: `<!-- audience-contract: <token> — <razão> -->`

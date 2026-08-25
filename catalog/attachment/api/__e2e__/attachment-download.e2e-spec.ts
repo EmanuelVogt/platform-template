@@ -1,88 +1,41 @@
 import http from "node:http"
 import { Readable } from "node:stream"
 
-import { type INestApplication, VersioningType } from "@nestjs/common"
-import { Test } from "@nestjs/testing"
 import request from "supertest"
 import { ulid } from "ulid"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import {
-  createTestPool,
-  truncateAttachment,
-  truncateIdentity,
-  truncateKernel,
-} from "../../../../test/setup/test-db"
-import { AppModule } from "../../../app.module"
-import { applySecurity } from "../../../main"
 import { loadEnv } from "../../../shared/config/env"
 import { OBJECT_STORAGE } from "../../../shared/infra/storage/object-storage.port"
-import { RequestContext } from "../../../shared/kernel/context/request-context"
-import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
 import { LoggerFactory } from "../../../shared/kernel/logging/logger.factory"
-import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
-import { seedUser } from "../../identity/testing/seed-user"
+import { createE2eApp, withE2ePool } from "../../../shared/test/e2e/app"
+import { resetDb } from "../../../shared/test/int/db"
+import { seedUser } from "../../identity/testing"
+import { inMemoryStorage, PNG_1PX } from "../testing"
 
 import type { ObjectStoragePort } from "../../../shared/infra/storage/object-storage.port"
+import type { InMemoryStorage } from "../testing"
+import type { INestApplication } from "@nestjs/common"
 import type { Server } from "node:http"
 import type { Pool } from "pg"
 
 const ORIGIN = "http://localhost:5173"
 
-const allowAll = {
-  consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
-  reset: () => Promise.resolve(),
-}
-
-// 1x1 PNG válido (assinatura 0x89 'PNG').
-const PNG_1PX = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
-  "base64"
-)
-
 /**
- * Storage em memória: substitui o adapter R2 no teste (sem IO externo).
- * `getStream` conta chamadas — o que prova que 304 nunca toca o storage.
+ * Decora o `inMemoryStorage()` do barril contando chamadas de `getStream` —
+ * o que prova que 304 nunca toca o storage.
  */
-function makeInMemoryStorage(): {
+function withCallCount(base: InMemoryStorage): {
   storage: ObjectStoragePort
   getStreamCallCount: () => number
 } {
-  const objects = new Map<string, { body: Buffer; contentType: string }>()
   let callCount = 0
+  const originalGetStream = base.getStream.bind(base)
   const storage: ObjectStoragePort = {
-    put: (key, body, contentType) => {
-      objects.set(key, { body, contentType })
-      return Promise.resolve()
-    },
+    ...base,
     getStream: (key) => {
       callCount += 1
-      const o = objects.get(key)
-      if (o === undefined) throw new Error(`objeto inexistente: ${key}`)
-      return Promise.resolve(Readable.from(o.body))
-    },
-    head: (key) => {
-      const o = objects.get(key)
-      return Promise.resolve(
-        o === undefined
-          ? null
-          : {
-              contentType: o.contentType,
-              sizeBytes: o.body.byteLength,
-              etag: "",
-            }
-      )
-    },
-    delete: (key) => {
-      objects.delete(key)
-      return Promise.resolve()
-    },
-    putStream: async (key, body, contentType) => {
-      const chunks: Buffer[] = []
-      for await (const chunk of body) {
-        chunks.push(chunk as Buffer)
-      }
-      objects.set(key, { body: Buffer.concat(chunks), contentType })
+      return originalGetStream(key)
     },
   }
   return { storage, getStreamCallCount: () => callCount }
@@ -158,33 +111,21 @@ async function ensureListening(server: Server): Promise<void> {
 }
 
 describe("Attachment (e2e): download com ACL", () => {
+  const db = withE2ePool()
   let app: INestApplication
   let pool: Pool
   let storage: ObjectStoragePort
   let getStreamCallCount: () => number
 
   beforeAll(async () => {
-    pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await truncateAttachment(pool)
-    ;({ storage, getStreamCallCount } = makeInMemoryStorage())
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(RATE_LIMITER)
-      .useValue(allowAll)
-      .overrideProvider(OBJECT_STORAGE)
-      .useValue(storage)
-      .compile()
-    app = moduleRef.createNestApplication()
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-    applySecurity(app)
-    app.use(createRequestContextMiddleware(app.get(RequestContext)))
-    await app.init()
+    pool = db.pool
+    await resetDb(pool, ["identity", "_kernel", "attachment"])
+    ;({ storage, getStreamCallCount } = withCallCount(inMemoryStorage()))
+    app = (await createE2eApp({ overrides: [[OBJECT_STORAGE, storage]] })).app
   })
 
   afterAll(async () => {
     await app.close()
-    await pool.end()
   })
 
   it("recurso 'authenticated': download com sessão 200, sem sessão 404, access log registra", async () => {
@@ -598,17 +539,16 @@ describe("Attachment (e2e): download com ACL", () => {
 })
 
 describe("Attachment (e2e): falha do storage depois dos headers (REM-12)", () => {
+  const db = withE2ePool()
   let app: INestApplication
   let pool: Pool
   let storage: ObjectStoragePort
   let errorCalls: { msg: string; bindings: unknown }[]
 
   beforeAll(async () => {
-    pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await truncateAttachment(pool)
-    ;({ storage } = makeInMemoryStorage())
+    pool = db.pool
+    await resetDb(pool, ["identity", "_kernel", "attachment"])
+    storage = inMemoryStorage()
     errorCalls = []
     const loggerFactory = {
       forModule: () => ({
@@ -621,24 +561,18 @@ describe("Attachment (e2e): falha do storage depois dos headers (REM-12)", () =>
       }),
     } as unknown as LoggerFactory
 
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(RATE_LIMITER)
-      .useValue(allowAll)
-      .overrideProvider(OBJECT_STORAGE)
-      .useValue(storage)
-      .overrideProvider(LoggerFactory)
-      .useValue(loggerFactory)
-      .compile()
-    app = moduleRef.createNestApplication()
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-    applySecurity(app)
-    app.use(createRequestContextMiddleware(app.get(RequestContext)))
-    await app.init()
+    app = (
+      await createE2eApp({
+        overrides: [
+          [OBJECT_STORAGE, storage],
+          [LoggerFactory, loggerFactory],
+        ],
+      })
+    ).app
   })
 
   afterAll(async () => {
     await app.close()
-    await pool.end()
   })
 
   it("stream de storage falha depois dos headers: conexão cai, log único, processo segue de pé", async () => {

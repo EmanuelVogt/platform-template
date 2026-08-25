@@ -2,6 +2,23 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [2.1.0]
+
+### Added
+
+- Barril `testing/index.ts`: `inMemoryStorage()` (implementação completa de `ObjectStoragePort`,
+  incluindo `getStream`, com `objects` exposto pra assert), `PNG_1PX` (único arquivo com o
+  literal de bytes) e `seedAttachment` (semeia attachment `ready` + ACL direto no banco).
+  `makeAttachment` (entidade `Attachment` pronta pra spec) também sai daqui. Os quatro e2e da
+  entrada passam a importar do barril em vez de cada um redefinir o próprio storage em memória.
+
+### Changed
+
+- Os quatro e2e (`access-link-avatar-ownership`, `attachment-delete`, `attachment-download`,
+  `attachment-upload`) migrados para o harness de e2e do kernel
+  (`createE2eApp`/`withE2ePool`/`resetDb`) em vez do bootstrap manual ou do
+  `test/setup/app-factory` local.
+
 ## [2.0.2]
 
 ### Changed

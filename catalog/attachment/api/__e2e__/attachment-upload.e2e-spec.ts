@@ -1,7 +1,3 @@
-import { Readable } from "node:stream"
-
-import { type INestApplication, VersioningType } from "@nestjs/common"
-import { Test } from "@nestjs/testing"
 import request from "supertest"
 import {
   type Mock,
@@ -13,102 +9,39 @@ import {
   vi,
 } from "vitest"
 
-import {
-  createTestPool,
-  truncateAttachment,
-  truncateIdentity,
-  truncateKernel,
-} from "../../../../test/setup/test-db"
-import { AppModule } from "../../../app.module"
-import { applySecurity } from "../../../main"
 import { OBJECT_STORAGE } from "../../../shared/infra/storage/object-storage.port"
-import { RequestContext } from "../../../shared/kernel/context/request-context"
-import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
-import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
-import { seedUser } from "../../identity/testing/seed-user"
+import { createE2eApp, withE2ePool } from "../../../shared/test/e2e/app"
+import { resetDb } from "../../../shared/test/int/db"
+import { seedUser } from "../../identity/testing"
 import { UploadGate } from "../api/controllers/multipart-files"
 import { parseAttachmentConfig } from "../attachment.config"
+import { inMemoryStorage, PNG_1PX } from "../testing"
 
 import type { ObjectStoragePort } from "../../../shared/infra/storage/object-storage.port"
+import type { INestApplication } from "@nestjs/common"
+import type { Readable } from "node:stream"
 import type { Pool } from "pg"
 
 const ORIGIN = "http://localhost:5173"
 
-const allowAll = {
-  consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
-  reset: () => Promise.resolve(),
-}
-
-// 1x1 PNG válido (assinatura 0x89 'PNG').
-const PNG_1PX = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
-  "base64"
-)
 const HTML_BYTES = Buffer.from("<html><body>não é imagem</body></html>")
 
-/** Storage em memória: substitui o adapter R2 no teste (sem IO externo). */
-function makeInMemoryStorage(): ObjectStoragePort {
-  const objects = new Map<string, { body: Buffer; contentType: string }>()
-  return {
-    put: (key, body, contentType) => {
-      objects.set(key, { body, contentType })
-      return Promise.resolve()
-    },
-    getStream: (key) => {
-      const o = objects.get(key)
-      if (o === undefined) throw new Error(`objeto inexistente: ${key}`)
-      return Promise.resolve(Readable.from(o.body))
-    },
-    head: (key) => {
-      const o = objects.get(key)
-      return Promise.resolve(
-        o === undefined
-          ? null
-          : {
-              contentType: o.contentType,
-              sizeBytes: o.body.byteLength,
-              etag: "",
-            }
-      )
-    },
-    delete: (key) => {
-      objects.delete(key)
-      return Promise.resolve()
-    },
-    putStream: async (key, body, contentType) => {
-      const chunks: Buffer[] = []
-      for await (const chunk of body) chunks.push(chunk as Buffer)
-      objects.set(key, { body: Buffer.concat(chunks), contentType })
-    },
-  }
-}
-
 describe("Attachment (e2e): upload em lote", () => {
+  const db = withE2ePool()
   let app: INestApplication
   let pool: Pool
 
   beforeAll(async () => {
-    pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await truncateAttachment(pool)
+    pool = db.pool
+    await resetDb(pool, ["identity", "_kernel", "attachment"])
 
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(RATE_LIMITER)
-      .useValue(allowAll)
-      .overrideProvider(OBJECT_STORAGE)
-      .useValue(makeInMemoryStorage())
-      .compile()
-    app = moduleRef.createNestApplication()
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-    applySecurity(app)
-    app.use(createRequestContextMiddleware(app.get(RequestContext)))
-    await app.init()
+    app = (
+      await createE2eApp({ overrides: [[OBJECT_STORAGE, inMemoryStorage()]] })
+    ).app
   })
 
   afterAll(async () => {
     await app.close()
-    await pool.end()
   })
 
   async function loginNewUser(email: string): Promise<string[]> {
@@ -216,40 +149,35 @@ async function loginUser(
   return res.headers["set-cookie"] as unknown as string[]
 }
 
-// REM-14: as três cotas de upload — RATE_LIMITER real (default) prova a
-// wiring do `@RateLimit` na rota; os outros dois blocos usam allowAll pra
-// isolar cada cota sem o 429 interferir.
+// REM-14: as três cotas de upload — este bloco pede `rateLimiter: "real"`
+// pra provar a wiring do `@RateLimit` na rota; os outros dois blocos ficam no
+// allow-all (default do harness) pra isolar cada cota sem o 429 interferir.
 describe("Attachment (e2e): limite de requisições por IP (429)", () => {
+  const db = withE2ePool()
   let app: INestApplication
   let pool: Pool
   let putStream: Mock
 
   beforeAll(async () => {
-    pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await truncateAttachment(pool)
+    pool = db.pool
+    await resetDb(pool, ["identity", "_kernel", "attachment"])
 
-    const base = makeInMemoryStorage()
+    const base = inMemoryStorage()
     putStream = vi.fn((key: string, body: Readable, contentType: string) =>
       base.putStream(key, body, contentType)
     )
     const storage = { ...base, putStream } as unknown as ObjectStoragePort
 
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(OBJECT_STORAGE)
-      .useValue(storage)
-      .compile()
-    app = moduleRef.createNestApplication()
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-    applySecurity(app)
-    app.use(createRequestContextMiddleware(app.get(RequestContext)))
-    await app.init()
+    app = (
+      await createE2eApp({
+        rateLimiter: "real",
+        overrides: [[OBJECT_STORAGE, storage]],
+      })
+    ).app
   })
 
   afterAll(async () => {
     await app.close()
-    await pool.end()
   })
 
   it("estoura o limite de 20 requisições/60s por IP na 21ª (429, Retry-After, corpo não consumido)", async () => {
@@ -279,38 +207,26 @@ describe("Attachment (e2e): limite de requisições por IP (429)", () => {
 })
 
 describe("Attachment (e2e): cota de bytes pendentes do dono (413)", () => {
+  const db = withE2ePool()
   let app: INestApplication
   let pool: Pool
   let putStream: Mock
 
   beforeAll(async () => {
-    pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await truncateAttachment(pool)
+    pool = db.pool
+    await resetDb(pool, ["identity", "_kernel", "attachment"])
 
-    const base = makeInMemoryStorage()
+    const base = inMemoryStorage()
     putStream = vi.fn((key: string, body: Readable, contentType: string) =>
       base.putStream(key, body, contentType)
     )
     const storage = { ...base, putStream } as unknown as ObjectStoragePort
 
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(RATE_LIMITER)
-      .useValue(allowAll)
-      .overrideProvider(OBJECT_STORAGE)
-      .useValue(storage)
-      .compile()
-    app = moduleRef.createNestApplication()
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-    applySecurity(app)
-    app.use(createRequestContextMiddleware(app.get(RequestContext)))
-    await app.init()
+    app = (await createE2eApp({ overrides: [[OBJECT_STORAGE, storage]] })).app
   })
 
   afterAll(async () => {
     await app.close()
-    await pool.end()
   })
 
   it("recusa com 413 quando pendentes do dono + Content-Length estourariam a cota, sem ler o corpo", async () => {
@@ -350,18 +266,17 @@ describe("Attachment (e2e): cota de bytes pendentes do dono (413)", () => {
 })
 
 describe("Attachment (e2e): limite de uploads em voo na instância (503)", () => {
+  const db = withE2ePool()
   let app: INestApplication
   let pool: Pool
   let putStream: Mock
   let gate: UploadGate
 
   beforeAll(async () => {
-    pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await truncateAttachment(pool)
+    pool = db.pool
+    await resetDb(pool, ["identity", "_kernel", "attachment"])
 
-    const base = makeInMemoryStorage()
+    const base = inMemoryStorage()
     putStream = vi.fn((key: string, body: Readable, contentType: string) =>
       base.putStream(key, body, contentType)
     )
@@ -370,24 +285,18 @@ describe("Attachment (e2e): limite de uploads em voo na instância (503)", () =>
       parseAttachmentConfig({ ATTACHMENT_MAX_CONCURRENT_UPLOADS: "1" })
     )
 
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(RATE_LIMITER)
-      .useValue(allowAll)
-      .overrideProvider(OBJECT_STORAGE)
-      .useValue(storage)
-      .overrideProvider(UploadGate)
-      .useValue(gate)
-      .compile()
-    app = moduleRef.createNestApplication()
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-    applySecurity(app)
-    app.use(createRequestContextMiddleware(app.get(RequestContext)))
-    await app.init()
+    app = (
+      await createE2eApp({
+        overrides: [
+          [OBJECT_STORAGE, storage],
+          [UploadGate, gate],
+        ],
+      })
+    ).app
   })
 
   afterAll(async () => {
     await app.close()
-    await pool.end()
   })
 
   it("recusa com 503 quando não há vaga de upload concorrente na instância, sem ler o corpo", async () => {

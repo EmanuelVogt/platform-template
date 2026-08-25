@@ -1,66 +1,21 @@
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
-import { createE2eApp } from "../../../../test/setup/app-factory"
-import { setCookies } from "../../../../test/setup/cookies"
-import {
-  createTestPool,
-  seedEmail,
-  truncateAttachment,
-  truncateIdentity,
-  truncateKernel,
-} from "../../../../test/setup/test-db"
 import { OBJECT_STORAGE } from "../../../shared/infra/storage/object-storage.port"
-import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
-import { allowAllRateLimiter } from "../../identity/testing/allow-all-rate-limiter"
-import { seedUser } from "../../identity/testing/seed-user"
+import { createE2eApp, withE2ePool } from "../../../shared/test/e2e/app"
+import { cookieHeader as setCookies } from "../../../shared/test/e2e/http"
+import { resetDb } from "../../../shared/test/int/db"
+import { seedEmail, seedUser } from "../../identity/testing"
 import { ATTACHMENT_ACCESS_LOG_REPOSITORY } from "../domain/ports/attachment-access-log.repository"
+import { inMemoryStorage, PNG_1PX } from "../testing"
 
-import type { ObjectStoragePort } from "../../../shared/infra/storage/object-storage.port"
 import type { AttachmentAccessLogRepository } from "../domain/ports/attachment-access-log.repository"
+import type { InMemoryStorage } from "../testing"
 import type { INestApplication } from "@nestjs/common"
 import type { Pool } from "pg"
 
 const ORIGIN = "http://localhost:5173"
 const PASSWORD = "Senha-Att-Delete-Muito-Forte-2026!"
-
-// 1x1 PNG válido (assinatura 0x89 'PNG').
-const PNG_1PX = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
-  "base64"
-)
-
-function makeInMemoryStorage(): ObjectStoragePort {
-  const objects = new Map<string, { body: Buffer; contentType: string }>()
-  return {
-    put: (key, body, contentType) => {
-      objects.set(key, { body, contentType })
-      return Promise.resolve()
-    },
-    getStream: () => {
-      throw new Error("não usado nesta suíte")
-    },
-    head: (key) => {
-      const o = objects.get(key)
-      return Promise.resolve(
-        o
-          ? { contentType: o.contentType, sizeBytes: o.body.length, etag: "" }
-          : null
-      )
-    },
-    delete: (key) => {
-      objects.delete(key)
-      return Promise.resolve()
-    },
-    putStream: async (key, body, contentType) => {
-      const chunks: Buffer[] = []
-      for await (const chunk of body) {
-        chunks.push(chunk as Buffer)
-      }
-      objects.set(key, { body: Buffer.concat(chunks), contentType })
-    },
-  }
-}
 
 /**
  * Exercita `DeleteAttachmentUseCase` pelo único caminho de produção que a
@@ -68,9 +23,10 @@ function makeInMemoryStorage(): ObjectStoragePort {
  * `AttachmentFacade.delete(previousAvatarId)` (ver `UploadAvatarUseCase`).
  */
 describe("Attachment delete (e2e): trilha atrelada à tx", () => {
+  const db = withE2ePool()
   let app: INestApplication
   let pool: Pool
-  let storage: ObjectStoragePort
+  let storage: InMemoryStorage
 
   async function login(email: string): Promise<string[]> {
     const res = await request(app.getHttpServer())
@@ -107,24 +63,15 @@ describe("Attachment delete (e2e): trilha atrelada à tx", () => {
   }
 
   beforeAll(async () => {
-    pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await truncateAttachment(pool)
+    pool = db.pool
+    await resetDb(pool, ["identity", "_kernel", "attachment"])
 
-    storage = makeInMemoryStorage()
-    app = await createE2eApp((b) =>
-      b
-        .overrideProvider(RATE_LIMITER)
-        .useValue(allowAllRateLimiter)
-        .overrideProvider(OBJECT_STORAGE)
-        .useValue(storage)
-    )
+    storage = inMemoryStorage()
+    app = (await createE2eApp({ overrides: [[OBJECT_STORAGE, storage]] })).app
   })
 
   afterAll(async () => {
     await app.close()
-    await pool.end()
   })
 
   it("exclusão que commita deixa exatamente uma linha action='delete', outcome='allowed'", async () => {

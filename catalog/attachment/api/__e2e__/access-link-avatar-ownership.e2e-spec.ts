@@ -1,68 +1,20 @@
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { createE2eApp } from "../../../../test/setup/app-factory"
-import {
-  createTestPool,
-  seedEmail,
-  truncateAttachment,
-  truncateIdentity,
-  truncateKernel,
-} from "../../../../test/setup/test-db"
 import { OBJECT_STORAGE } from "../../../shared/infra/storage/object-storage.port"
 import { OutboxDispatcher } from "../../../shared/kernel/outbox/outbox.dispatcher"
-import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
-import { allowAllRateLimiter } from "../../identity/testing/allow-all-rate-limiter"
-import { fakeMailer } from "../../identity/testing/fake-mailer"
-import { seedUser } from "../../identity/testing/seed-user"
+import { createE2eApp, withE2ePool } from "../../../shared/test/e2e/app"
+import { resetDb } from "../../../shared/test/int/db"
+import { fakeMailer, seedEmail, seedUser } from "../../identity/testing"
 import { MAILER } from "../../notification/domain/ports/mailer"
+import { inMemoryStorage, PNG_1PX } from "../testing"
 
-import type { ObjectStoragePort } from "../../../shared/infra/storage/object-storage.port"
 import type { EmailMessage } from "../../notification/domain/ports/mailer"
 import type { INestApplication } from "@nestjs/common"
 import type { Pool } from "pg"
 
 const ORIGIN = "http://localhost:5173"
 const MASTER_PASSWORD = "Senha-Master-Muito-Forte-2026!"
-
-// 1x1 PNG válido (assinatura 0x89 'PNG').
-const PNG_1PX = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
-  "base64"
-)
-
-/** Storage em memória: substitui o adapter R2 no teste (sem IO externo). */
-function makeInMemoryStorage(): ObjectStoragePort {
-  const objects = new Map<string, { body: Buffer; contentType: string }>()
-  return {
-    put: (key, body, contentType) => {
-      objects.set(key, { body, contentType })
-      return Promise.resolve()
-    },
-    getStream: () => {
-      throw new Error("não usado nesta suíte")
-    },
-    head: (key) => {
-      const o = objects.get(key)
-      return Promise.resolve(
-        o
-          ? { contentType: o.contentType, sizeBytes: o.body.length, etag: "" }
-          : null
-      )
-    },
-    delete: (key) => {
-      objects.delete(key)
-      return Promise.resolve()
-    },
-    putStream: async (key, body, contentType) => {
-      const chunks: Buffer[] = []
-      for await (const chunk of body) {
-        chunks.push(chunk as Buffer)
-      }
-      objects.set(key, { body: Buffer.concat(chunks), contentType })
-    },
-  }
-}
 
 /** Extrai o href renderizado no botão de ação do e-mail (link com token). */
 function linkFromHtml(html: string): string {
@@ -96,33 +48,30 @@ async function waitFor(
  * catalog:check identity (Deviation 16, ADV-20260821-03).
  */
 describe("Access-link avatar (e2e): ownership entre identity e attachment", () => {
+  const db = withE2ePool()
   let app: INestApplication
   let pool: Pool
   let mailer: ReturnType<typeof fakeMailer>
   let dispatcher: OutboxDispatcher
 
   beforeAll(async () => {
-    pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await truncateAttachment(pool)
+    pool = db.pool
+    await resetDb(pool, ["identity", "_kernel", "attachment"])
 
     mailer = fakeMailer()
-    app = await createE2eApp((b) =>
-      b
-        .overrideProvider(RATE_LIMITER)
-        .useValue(allowAllRateLimiter)
-        .overrideProvider(MAILER)
-        .useValue(mailer)
-        .overrideProvider(OBJECT_STORAGE)
-        .useValue(makeInMemoryStorage())
-    )
+    app = (
+      await createE2eApp({
+        overrides: [
+          [MAILER, mailer],
+          [OBJECT_STORAGE, inMemoryStorage()],
+        ],
+      })
+    ).app
     dispatcher = app.get(OutboxDispatcher)
   })
 
   afterAll(async () => {
     await app.close()
-    await pool.end()
   })
 
   /** Helper: convida usuário e extrai o token do fakeMailer após poll do outbox. */

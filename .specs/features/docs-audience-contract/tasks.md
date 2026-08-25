@@ -13,7 +13,8 @@ discrimination sensor).
 
 **Spec**: `.specs/features/docs-audience-contract/spec.md`
 **Design**: skipped at Specify (Medium; seam questions closed in the spec's Assumptions)
-**Status**: Draft
+**Status**: Approved 2026-08-25 — inline-waiver grammar pinned below before the first dispatch.
+**Pre-feature test count**: 630 passing (`pnpm test:scripts`, 0 failing, tree clean at `aae08e6`).
 
 ---
 
@@ -152,6 +153,32 @@ it needs the full unit suite.
 
 ---
 
+## Inline waiver — pinned grammar
+
+**Pinned with the owner 2026-08-25, before wave 1, because waves 1 and 3 both depend on it.** T2, T3,
+T5 and T6 *write* waivers; T9 *reads* them. The spelling could not be left to T9's implementation as
+originally drafted: three parallel wave-1 workers would each have invented one.
+
+A waiver is an HTML comment at the **end of the line that carries the token**:
+
+```
+An entry lives in `catalog/`, outside the copier. <!-- audience-contract: catalog/ — named to explain it is not shipped -->
+```
+
+Rules, obeyed by the doc author (T2, T3, T5, T6) and enforced by the guard (T9):
+
+- **Marker prefix exactly `audience-contract:`**, then the token verbatim as it appears in the doc,
+  then ` — `, then the reason.
+- **One token, one line.** The comment names the token literally, so a line carrying two absent
+  tokens needs two comments. A waiver never covers a whole line, a paragraph or a file.
+- **End of the same line only.** A comment on its own line does **not** count: in CommonMark an HTML
+  block interrupts the paragraph it sits inside, so a waiver written that way would silently change
+  how the doc renders. Trailing inline raw HTML renders as nothing and keeps the paragraph intact.
+- **The reason is what a reviewer reads in the diff** — that is the whole argument for this mechanism
+  over an allowlist inside the guard. "see above" is not a reason; name what makes the absence correct.
+
+---
+
 ## Wave Plan
 
 Waves run in order (barrier + Build gate between them). Clusters inside a wave run **in parallel**,
@@ -236,8 +263,8 @@ split, never marked
 **Done when**:
 
 - [ ] The shipped half names no path absent from the shipped set, **except** where it explains the
-      catalog's absence — those mentions carry the inline waiver T9 defines, and the waiver text says
-      why
+      catalog's absence — those mentions carry the inline waiver of § *Inline waiver — pinned grammar*,
+      and the waiver text says why
 - [ ] `:99`'s `docs/advisories/ADV-YYYYMMDD-NN.md` is left as written: it is a naming pattern, not a
       file, and T9's grammar ignores it
 - [ ] `docs/platform/catalog-authoring.md` holds the authoring half and is not in the shipped set
@@ -290,7 +317,8 @@ workflow doc that still carries its branch, commit, worktree and spec rules.
       `workflow.md`, which still ships
 - [ ] The three dependent tests and the hook pass against the new layout
 - [ ] `workflow.md:126`'s `catalog/` and `:48`'s `.claude/worktrees/` are resolved — the first by
-      moving or waiving, the second by the T9 waiver (it is an anti-example, not a pointer)
+      moving or waiving, the second by an inline waiver per § *Inline waiver — pinned grammar* (it is an anti-example, not
+      a pointer)
 - [ ] Gate passes: `pnpm test:scripts`
 
 **Tests**: unit · **Gate**: full
@@ -356,7 +384,8 @@ disambiguate `docs/agents/README.md:9`.
 
 - [ ] `docs/advisories/APPLIED.md` and the `.claude/hooks/pending-advisories.mjs` reference still
       resolve — neither is moved
-- [ ] The shipped half names no absent path except under an inline waiver
+- [ ] The shipped half names no absent path except under an inline waiver (§ *Inline waiver —
+      pinned grammar*)
 - [ ] Gate passes: `pnpm test:scripts`
 
 **Tests**: unit · **Gate**: full
@@ -397,6 +426,7 @@ files (`LOC-*` in `audit-2026-08-23-remediation` owns language) and any `BRAND-*
 **Done when**:
 
 - [ ] Each REAL finding is repaired or carries an inline waiver stating why the path is named
+      (§ *Inline waiver — pinned grammar*)
 - [ ] `local-environment.md:14` is unchanged
 - [ ] No advisory's `Advisory:` frontmatter or ID changes — the `commit-msg` hook and
       `pending-advisories.mjs` key on them
@@ -523,9 +553,10 @@ shipped set, reporting `file:line` and the token.
 - **Child-created allowance** (situation 2): `.specs/`, `.claude/skills/`, `generated/`,
   `.worktrees/`, `apps/api/.env`. One comment per entry naming what creates it. This list is the
   guard's blast radius — a wrong entry blinds it, so each needs a reason, not a shrug.
-- **Inline waiver** (situation 3): a doc may waive one token on one line with a marker whose text
-  states the reason. Pick the spelling at implementation; an HTML comment survives every markdown
-  renderer.
+- **Inline waiver** (situation 3): the grammar is **pinned** in § *Inline waiver — pinned grammar* —
+  a trailing `<!-- audience-contract: <token> — <reason> -->` on the token's own line, one token per
+  comment, reason mandatory. Do not re-pick the spelling here: wave 1 already wrote waivers in it.
+  Parse it, and assert that a comment on its own line does **not** waive the line below it.
 - `docs/dev/template-changelog.md` is exempt as a historical record — it names paths that were correct
   at `v1.x` and exist nowhere now (39 of the 93). Assert the exemption is that one file, so it cannot
   quietly widen.

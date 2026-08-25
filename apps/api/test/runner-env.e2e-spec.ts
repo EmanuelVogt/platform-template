@@ -1,7 +1,7 @@
 import Redis from "ioredis"
 import { describe, expect, it } from "vitest"
 
-import { testRedisUrl } from "./setup/test-db"
+import { testRedisUrl } from "../src/shared/test/int/redis"
 
 async function withRedis<T>(use: (redis: Redis) => Promise<T>): Promise<T> {
   const redis = new Redis(testRedisUrl(), { maxRetriesPerRequest: 1 })

@@ -1,44 +1,38 @@
-import { type INestApplication, VersioningType } from "@nestjs/common"
-import { Test } from "@nestjs/testing"
-import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { AppModule } from "../src/app.module"
-import { applySecurity } from "../src/main"
+import { createE2eApp } from "../src/shared/test/e2e/app"
 
+import type { E2eApp } from "../src/shared/test/e2e/app"
 import type { Express } from "express"
 
 describe("Security bootstrap (e2e)", () => {
-  let app: INestApplication
+  let e2e: E2eApp
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile()
-    app = moduleRef.createNestApplication()
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-    applySecurity(app)
-    // Registrada antes do app.init(): o router do Nest, montado no init,
-    // responde 404 pra qualquer path que ele não conheça — uma rota crua
-    // adicionada depois nunca seria alcançada.
-    const server = app.getHttpAdapter().getInstance() as Express
-    server.get("/__trust-proxy-probe", (req, res) => {
-      res.json({ ip: req.ip })
+    e2e = await createE2eApp({
+      // Registrada antes do app.init(): o router do Nest, montado no init,
+      // responde 404 pra qualquer path que ele não conheça — uma rota crua
+      // adicionada depois nunca seria alcançada.
+      beforeInit: (app) => {
+        const server = app.getHttpAdapter().getInstance() as Express
+        server.get("/__trust-proxy-probe", (req, res) => {
+          res.json({ ip: req.ip })
+        })
+      },
     })
-    await app.init()
   })
 
   afterAll(async () => {
-    await app.close()
+    await e2e.close()
   })
 
   it("envia headers do helmet", async () => {
-    const res = await request(app.getHttpServer()).get("/health")
+    const res = await e2e.http.get("/health")
     expect(res.headers["x-content-type-options"]).toBe("nosniff")
   })
 
   it("ecoa Access-Control-Allow-Origin só para a origin permitida", async () => {
-    const ok = await request(app.getHttpServer())
+    const ok = await e2e.http
       .get("/health")
       .set("Origin", "http://localhost:5173")
     expect(ok.headers["access-control-allow-origin"]).toBe(
@@ -46,14 +40,14 @@ describe("Security bootstrap (e2e)", () => {
     )
     expect(ok.headers["access-control-allow-credentials"]).toBe("true")
 
-    const bad = await request(app.getHttpServer())
+    const bad = await e2e.http
       .get("/health")
       .set("Origin", "http://evil.example")
     expect(bad.headers["access-control-allow-origin"]).toBeUndefined()
   })
 
   it("com TRUST_PROXY_HOPS não definido, req.ip é o endereço do socket e ignora X-Forwarded-For", async () => {
-    const res = await request(app.getHttpServer())
+    const res = await e2e.http
       .get("/__trust-proxy-probe")
       .set("X-Forwarded-For", "203.0.113.7")
 

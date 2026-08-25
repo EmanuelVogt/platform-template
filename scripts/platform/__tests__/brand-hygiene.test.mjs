@@ -94,6 +94,11 @@ const CODE_SCAN_ROOTS = ["apps/api/src"]
 //     `rit_csrf`, `America/Sao_Paulo`) de propósito, como escape hatch pra
 //     quem não pode trocar agora; não é o dono vazando, é o texto que explica
 //     a mudança quebrada.
+//   - docs/advisories/ADV-20260825-03.md, ADV-20260825-04.md (T49f) — mesmo
+//     motivo: a advisory manda o child procurar `rit_session`/`rit_device` nos
+//     specs copiados e declarar `America/Sao_Paulo` no int-spec, então o passo
+//     a passo carrega os literais que o gate bane. Sem citá-los a advisory não
+//     é acionável.
 const KNOWN_EXCEPTIONS = {
   "docs/dev/template-changelog.md": ["Cloudflare", "Traefik"],
   "apps/api/src/openapi/openapi-config.spec.ts": ["rit_", "rit-", "__Host-rit"],
@@ -104,6 +109,8 @@ const KNOWN_EXCEPTIONS = {
   ],
   "docs/advisories/ADV-20260824-03.md": ["rit_", "__Host-rit"],
   "docs/advisories/ADV-20260824-04.md": ["America/Sao_Paulo"],
+  "docs/advisories/ADV-20260825-03.md": ["rit_", "America/Sao_Paulo"],
+  "docs/advisories/ADV-20260825-04.md": ["America/Sao_Paulo"],
 }
 
 function withoutKnownExceptions(hits, rel) {

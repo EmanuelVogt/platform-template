@@ -4,6 +4,11 @@
  * ele prova que algo aconteceu, não *o que* aconteceu. A regra reprova o corpo
  * inteiro, não a asserção isolada: uma checagem de existência antes de uma
  * asserção de valor é legítima. Ver docs/test/testing.md.
+ *
+ * `not.toThrow(<matcher>)` conta como existência junto da forma sem argumento —
+ * não é isenção. No Vitest ele afirma só "não lançou *este* tipo": passa quando
+ * o código lança um erro diferente. É mais fraco que `not.toThrow()`, que
+ * reprova qualquer lançamento.
  */
 
 const TEST_NAMES = new Set(["it", "test"])
@@ -101,11 +106,7 @@ function isExistenceOnly(assertion) {
     return true
   }
 
-  return (
-    assertion.matcher === "toThrow" &&
-    assertion.modifiers.includes("not") &&
-    assertion.call.arguments.length === 0
-  )
+  return assertion.matcher === "toThrow" && assertion.modifiers.includes("not")
 }
 
 export const noExistenceOnlyAssert = {
@@ -118,7 +119,7 @@ export const noExistenceOnlyAssert = {
     schema: [],
     messages: {
       existenceOnly:
-        "Este teste só afirma existência ({{matchers}}): ele passa sob uma implementação errada. Afirme o valor concreto — a linha gravada, o corpo do problema, o alvo do redirect. Se a existência é mesmo tudo que se pode afirmar, declare `expect.assertions(n)` ou passe o matcher esperado a `not.toThrow(...)`.",
+        "Este teste só afirma existência ({{matchers}}): ele passa sob uma implementação errada. Afirme o valor concreto — a linha gravada, o corpo do problema, o alvo do redirect. `not.toThrow(<matcher>)` não resolve: ele passa quando o código lança outro erro — use `not.toThrow()` sem argumento junto de uma asserção sobre o valor produzido. Se a existência é mesmo tudo que se pode afirmar, declare `expect.assertions(n)`.",
     },
   },
 
@@ -137,7 +138,9 @@ export const noExistenceOnlyAssert = {
         ...new Set(
           frame.assertions.map((assertion) =>
             assertion.matcher === "toThrow"
-              ? "not.toThrow()"
+              ? assertion.call.arguments.length === 0
+                ? "not.toThrow()"
+                : "not.toThrow(<matcher>)"
               : `${assertion.matcher}()`
           )
         ),

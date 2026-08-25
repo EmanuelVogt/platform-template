@@ -1,12 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { OutboxDispatcher } from "../../../shared/kernel/outbox/outbox.dispatcher"
 import { createE2eApp, withE2ePool } from "../../../shared/test/e2e/app"
 import { E2E_ORIGIN } from "../../../shared/test/e2e/constants"
 import { drainOutbox } from "../../../shared/test/e2e/outbox"
 import { resetDb } from "../../../shared/test/int/db"
 import { MAILER } from "../../notification/domain/ports/mailer"
-import { DeliveryDispatcher } from "../../notification/infrastructure/delivery/delivery.dispatcher"
+import { DELIVERY_DISPATCHERS } from "../../notification/testing"
 import { fakeMailer, seedUser, TEST_PASSWORD } from "../testing"
 
 import type { E2eApp } from "../../../shared/test/e2e/app"
@@ -54,10 +53,7 @@ describe("Outbox → dispatcher → handler → mailer (e2e)", () => {
 
     // Cutover 2-hop: outbox entrega notification.requested ao handler (enfileira
     // delivery); o DeliveryDispatcher envia via mailer.
-    const dispatchers = [
-      e2e.app.get(OutboxDispatcher),
-      e2e.app.get(DeliveryDispatcher),
-    ]
+    const dispatchers = DELIVERY_DISPATCHERS(e2e.app)
     await drainOutbox(e2e.app, {
       dispatchers,
       until: () => mailer.sent.find((message) => message.to === email),

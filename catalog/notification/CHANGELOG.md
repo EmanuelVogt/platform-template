@@ -2,6 +2,24 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [2.1.0]
+
+### Added
+
+- Barril `testing/index.ts`: `fakeMailer` (único dono — identity reexporta daqui em vez de
+  manter uma segunda implementação), `findSent` (probe de delivery `sent` por tipo, pro `until`
+  do `drainOutbox`), `makeNotification` (entidade `Notification` pronta pra spec) e
+  `DELIVERY_DISPATCHERS(app)` (os dois despachantes — `OutboxDispatcher` do kernel +
+  `DeliveryDispatcher` da entrada — que um e2e de notificação precisa girar). Os e2e da
+  própria entrada e os cruzados em identity passam a importar daqui em vez de redefinir cada
+  helper por arquivo.
+
+### Changed
+
+- `__e2e__/notifications-product-extension.e2e-spec.ts` migrado para o harness de e2e do kernel
+  (`createE2eApp`/`withE2ePool`/`resetDb`/`drainOutbox`) em vez do `test/setup/app-factory`
+  local.
+
 ## [2.0.2]
 
 ### Changed

@@ -1,6 +1,6 @@
 export { allowAllRateLimiter } from "./allow-all-rate-limiter"
 export { emails, seedEmail } from "./emails"
-export { fakeMailer } from "./fake-mailer"
+export { fakeMailer } from "../../notification/testing"
 export { makeIdentityConfig } from "./identity.config.fixture"
 export { loginAs } from "./login"
 export { tokenFromMail, type TokenFromMailOptions } from "./mail"

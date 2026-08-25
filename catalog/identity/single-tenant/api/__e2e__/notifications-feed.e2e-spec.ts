@@ -6,6 +6,7 @@ import { E2E_ORIGIN } from "../../../shared/test/e2e/constants"
 import { drainOutbox } from "../../../shared/test/e2e/outbox"
 import { expectProblem } from "../../../shared/test/e2e/problem"
 import { resetDb } from "../../../shared/test/int/db"
+import { makeNotification } from "../../notification/testing"
 import { loginAs, seedUser, TEST_PASSWORD } from "../testing"
 
 import type { E2eApp } from "../../../shared/test/e2e/app"
@@ -25,20 +26,32 @@ async function seedNotification(
   recipientId: string,
   over: Lifecycle = {}
 ): Promise<string> {
-  const id = ulid()
+  const n = makeNotification({
+    id: ulid(),
+    recipientId,
+    seenAt: over.seenAt ? new Date(over.seenAt) : null,
+    readAt: over.readAt ? new Date(over.readAt) : null,
+    archivedAt: over.archivedAt ? new Date(over.archivedAt) : null,
+  })
   await pool.query(
     `insert into notification.notifications
        (id, recipient_id, type, title, body, actions, metadata, locale, seen_at, read_at, archived_at)
-     values ($1, $2, 'password_changed', 't', 'b', '[]', '{"at":"2026-06-10T00:00:00.000Z"}', 'pt-BR', $3, $4, $5)`,
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
     [
-      id,
-      recipientId,
-      over.seenAt ?? null,
-      over.readAt ?? null,
-      over.archivedAt ?? null,
+      n.props.id,
+      n.props.recipientId,
+      n.props.type,
+      n.props.title,
+      n.props.body,
+      JSON.stringify(n.props.actions),
+      JSON.stringify(n.props.metadata),
+      n.props.locale,
+      n.props.seenAt,
+      n.props.readAt,
+      n.props.archivedAt,
     ]
   )
-  return id
+  return n.props.id
 }
 
 describe("feed de notificações (e2e)", () => {

@@ -1,13 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { OutboxDispatcher } from "../../../shared/kernel/outbox/outbox.dispatcher"
 import { createE2eApp, withE2ePool } from "../../../shared/test/e2e/app"
 import { E2E_ORIGIN } from "../../../shared/test/e2e/constants"
 import { cookieHeader } from "../../../shared/test/e2e/http"
 import { drainOutbox } from "../../../shared/test/e2e/outbox"
 import { resetDb } from "../../../shared/test/int/db"
 import { MAILER } from "../../notification/domain/ports/mailer"
-import { DeliveryDispatcher } from "../../notification/infrastructure/delivery/delivery.dispatcher"
+import { DELIVERY_DISPATCHERS } from "../../notification/testing"
 import {
   fakeMailer,
   loginAs,
@@ -39,10 +38,7 @@ describe("Fluxo de criação de usuário (e2e)", () => {
     e2e = await createE2eApp({ overrides: [[MAILER, mailer]] })
     // 2-hop assíncrono (outbox → handler → delivery): os dois despachantes
     // giram a cada volta, senão o e-mail nunca chega ao fakeMailer.
-    dispatchers = [
-      e2e.app.get(OutboxDispatcher),
-      e2e.app.get(DeliveryDispatcher),
-    ]
+    dispatchers = DELIVERY_DISPATCHERS(e2e.app)
     await seedUser(e2e.app, db.pool, {
       email: MASTER,
       name: "Master",

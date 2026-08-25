@@ -150,3 +150,84 @@ unneutralised foreign defect (`module-boundaries.spec.ts` RULE D) that has nothi
 ## Summary
 
 Spec-anchored coverage is complete and evidenced: 11/11 ACs have `file:line` assertions checking the actual asserted value, including the three flagged scrutiny points (T8's matcher/floor, the two exemptions' blast radius, and the AUD-09/10 four-literal set) — all mutation-confirmed to bite. The discrimination sensor is 3/3 killed. The Final gate is blocked by a pre-existing, unrelated `apps/api` typecheck defect (traced to commit `d5cfcaf`, outside this feature's diff surface) that also breaks `template:smoke`'s rendered child. This is a real blocker for merge/release but not a defect introduced by `docs-audience-contract`; recommend re-running the Final gate once the `apps/api` storage-adapter typecheck is fixed (a different feature's responsibility) rather than opening a fix task against this feature.
+
+---
+
+## Closeout Decision (orchestrator, 2026-08-25)
+
+**Written by the orchestrator, not the Verifier.** The Verifier's verdict above is **FAIL** and stands
+verbatim — nothing in this section rewrites it. What is recorded here is the *disposition*: the feature
+is **accepted and closed** with the Final gate **waived as blocked by a foreign defect**, on the
+reasoning below. No task of this feature was pending at any point; the FAIL is 100% foreign code.
+
+### The waiver, and why it costs no evidence
+
+The single unmet item is a green 4-gate `pnpm template:smoke`. What that command would have added to
+this feature's proof was measured gate by gate against `scripts/template-smoke.mjs` on `main`:
+
+| Gate | What it runs | Bears on this feature's ACs? |
+| --- | --- | --- |
+| 1/4 | `runGates` = `pnpm check && pnpm test` inside the rendered child (`scripts/template-smoke.mjs:530-531`) | No |
+| 2/4 | `db:migrate` against ephemeral Postgres, asserts schemas are exactly `_kernel` + `drizzle` (`:543-553`, body `:336-380`) | No |
+| 3/4 | builds and starts the child API, polls `GET /health` for 200 (`:559-570`, body `:382-435`) | No |
+| 4/4 | RULE C — `vitest run --project api module-boundaries.spec.ts` in the child (`:572-574`, body `:437-458`) | No |
+
+None of the four reads `docs/`, `copier.yml`'s `_exclude`, or the rendered child's documentation tree.
+This corroborates gate by gate what the Verifier had already established by grepping the full smoke log
+(§ *Isolated Worktree Measurement*: "What `template:smoke` itself proves about AUD-01/AUD-03/AUD-09:
+nothing directly"). **A green `template:smoke` would not have added one line of evidence for any of the
+11 ACs.** The doc-path checks that *do* exist in that script — `checkPrettierConfigPaths` (`:118`) and
+`checkFormatCheck` (`:133`) — run as unnumbered extra steps *before* gate 1/4 and were reached and passed.
+
+The proof the plan reserved `template:smoke` for — that the mechanism holds in a real rendered artifact
+and not only in the static shipped-set model — was taken instead by direct inspection of the preserved
+child (`pnpm template:smoke --keep`; the render step precedes every gate and always completes). It
+succeeded on all four counts: `docs/platform/` absent, `docs/` at 33 files matching `git ls-files docs/`
+minus the platform prefixes exactly, the four AUD-09 literals absent from the rendered `workflow.md`,
+all five `docs/agents/README.md` table rows resolving. **AUD-01, AUD-03, AUD-09 and AUD-11 are each
+confirmed twice** — once by live-tree unit test, once by the actual artifact.
+
+### Why option (b) — wait for RULE D — was rejected
+
+The blocker is `apps/api/src/modules/module-boundaries.spec.ts` RULE D failing inside the rendered
+child: `catalogEntries()` returns `[]` in a kernel-only child while `main:928-940` asserts the five
+template entries unconditionally. Waiting was rejected because **the fix already exists and is already
+verified** — it is on branch `tsr-verify` (`f520755`), from the `test-suite-refactor` feature whose own
+Verifier returned PASS in round 4:
+
+- `tsr-verify:module-boundaries.spec.ts:998-1003` — `EXPECTED_CATALOG_ENTRIES` / `EXPECTED_IDENTITY_DEPENDS_ON`
+  are gated on `existsSync(CATALOG_ROOT)`, yielding `[]` / `undefined` in a child.
+- `:971-983` + `:1031-1032` — a child-side scan (`childModuleFiles()`, `childRuleDOffensesIn()`) that
+  runs over `modules/` "sem exigir `catalog/`".
+
+So option (b) was never "wait for someone to write a fix". It was "wait for `tsr-verify` to be merged" —
+a merge chain carrying at least three of its own unresolved owner decisions (the `L-041..L-043` lesson-ID
+collision, CI-01's unpushed workflow proof, and `main`'s deliberate UNT-01 red), **one of which is a
+ruling about this feature's own guard** (`docs/test/testing.md` names `release.yml` in an inline code
+span, which the new shipped-doc guard rejects). Coupling this feature's closeout to that chain would buy
+zero additional evidence, for the reason established above.
+
+### Standing after closeout
+
+- **Proof**: 11/11 ACs with `file:line` assertions, all mutation-confirmed to bite. Sensor 3/3 killed.
+  `pnpm format:check` ✅ · `pnpm check` ✅ · `pnpm test` ✅ 735/735 · `pnpm test:scripts` ✅ 681/0
+  (630 pre-feature floor) — all four measured in the isolated worktree.
+- **Waived**: `pnpm template:smoke` full 4-gate chain, blocked at gate 1/4 by foreign RULE D. Gate 4/4
+  would be blocked by the same defect (it runs the same spec file). Nothing in the chain is evidentiary
+  for this feature.
+- **Not carried by this feature**: the RULE D repair (`tsr-verify`, done), the `apps/api` storage-adapter
+  typecheck (`03e74f2`, done), the harness-hygiene baseline drift from `ab81666`, and `pnpm catalog:check`
+  red on `main` from T49a's 3.0.0 bump against `>=2.0.0 <3.0.0` `dependsOn` ranges (needs a semver-policy
+  ruling, not this feature's).
+- **Reversible, still open, owner's**: T12 wrote a new `## v2.5.0` section in
+  `docs/dev/template-changelog.md:7`. Verified at closeout: **no `v2.5.0` tag exists**, `v2.4.1` is the
+  latest tag and the section is topmost and unreleased — so the number is still reversible to `v2.4.2`
+  in one edit, exactly as recorded when it was chosen. No task depends on it.
+- **Outliving the feature** (`tasks.md` § Execution Record, both recommended for issues): the module
+  installer is a delivery channel with no audience contract (`pnpm platform module add` vendors
+  `catalog/*/README.md` into the child, outside the copier shipped set, so the guard structurally cannot
+  see it); and `5c0ad20`, a second confirmed instance of the addressee defect class, repaired by its
+  owner in `3acbe2f`.
+
+**Disposition**: accepted. Feature moved to `.specs/features/done/docs-audience-contract/`; the
+`## Handoff` bullet archived to `handoff-archive.md` alongside this report.

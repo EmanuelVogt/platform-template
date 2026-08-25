@@ -22,9 +22,9 @@ const violations: Violation[] = scanFiles(REPO_ROOT, files)
 function currentBaseline(): Baseline {
   const baseline: Baseline = {}
   for (const violation of violations) {
-    baseline[violation.file] ??= {}
-    baseline[violation.file][violation.rule] =
-      (baseline[violation.file][violation.rule] ?? 0) + 1
+    const rules = baseline[violation.file] ?? {}
+    rules[violation.rule] = (rules[violation.rule] ?? 0) + 1
+    baseline[violation.file] = rules
   }
   return Object.fromEntries(
     Object.entries(baseline).sort(([a], [b]) => a.localeCompare(b))

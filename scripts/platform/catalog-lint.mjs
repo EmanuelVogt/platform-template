@@ -107,6 +107,10 @@ function lintEntry(entryDir, contractHeadings, kernelVersion) {
 // RULE D (design § RULE D, AD-025): fora de um filho, `catalog-lint` é o único
 // lugar onde a aresta `<entrada> → <outra>/testing` é conferida. Os specifiers
 // do catálogo são escritos para o layout instalado (`modules/<entrada>/...`).
+// Dentro do filho quem cobre a regra é a cópia em
+// `apps/api/src/modules/module-boundaries.spec.ts` (este arquivo não é copiado
+// para lá); `__tests__/catalog-testing-imports.test.mjs` roda as duas sobre o
+// mesmo corpus e reprova divergência.
 const IMPORT_SPECIFIER =
   /\b(?:import|export)\s+[^"';]*?\s*from\s*["']([^"']+)["']/g
 

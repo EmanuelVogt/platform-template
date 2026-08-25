@@ -782,6 +782,11 @@ describe("module-boundaries — RULE C: o vocabulário do kernel não conhece m�
 // `module.json`, e só quando a aresta mantém o grafo acíclico. Os specifiers do
 // catálogo são escritos para o layout do filho (`apps/api/src/modules/<entrada>/`),
 // que é onde `module add` os instala — a resolução abaixo reproduz esse layout.
+// A mesma regra vive em `scripts/platform/catalog-lint.mjs`, que o copier não
+// copia para o filho (`copier.yml` `_exclude`) — por isso as duas cópias. Quem
+// as mantém iguais é a paridade sobre corpus fixo em
+// `scripts/platform/__tests__/catalog-testing-imports.test.mjs`: mexer numa sem
+// mexer na outra fica vermelho.
 const CATALOG_ROOT = resolve(SRC_DIR, "..", "..", "..", "catalog")
 
 type CatalogEntry = {

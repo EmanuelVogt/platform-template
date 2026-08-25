@@ -98,6 +98,11 @@ rodam via `pnpm vitest run --project api apps/api/src/modules/notification` no a
   argumento, e `LogMailer` registra `to`/`subject`/`idempotencyKey`/`links` (hrefs extraídos do
   HTML).
 
+Os helpers de teste da entrada ficam em `api/testing/` — `fakeMailer`, `DELIVERY_DISPATCHERS`,
+`findSent`, `makeNotification` e `sample-templates/`. `identity` importa os quatro por
+`dependsOn: notification` (AD-025) e reexporta `fakeMailer` do próprio `api/testing/index.ts`, para
+que `audit`/`attachment`/`tag` o obtenham sem depender de `notification` diretamente.
+
 ## Dependências
 
 - `dependsOn`: nenhuma, e agora isso vale também para os testes — nenhum arquivo desta entrada,

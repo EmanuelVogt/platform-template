@@ -147,6 +147,12 @@ migrations dos módulos `identity`/`tag`, não a esta entrada (ver `##
 Dados`). Um child que adota `audit` só vê esse int-spec passar depois que os
 módulos donos dessas tabelas chamarem `audit.attach(...)`.
 
+Os helpers de teste da entrada ficam em `api/testing/` — `makeAuditEntry`, `seedAuditEntry` e o
+par `reattachIdentityTables`/`detachIdentityTables` e `reattachTagTables`/`detachTagTables`, que
+os int-specs de trigger usam para reanexar os hooks entre suítes num banco `test:db` compartilhado.
+Nenhuma outra entrada os importa hoje; o e2e desta entrada consome `seedUser`/`seedEmail`/`loginAs`
+de `identity/api/testing/`.
+
 ## Dependências
 
 - `identity` (`>=1.0.0 <2.0.0`) — resolução de nome do ator

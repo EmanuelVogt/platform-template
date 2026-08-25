@@ -185,10 +185,10 @@ em dez use-cases de produção.
 `identity → notification` é a direção do DAG, os quatro e2e cruzados que viviam no
 `notification` (`notifications-email`, `notifications-feed`, `notifications-inapp`,
 `notifications-sse`) passaram para `api/__e2e__/` desta entrada; `audit`, `attachment` e `tag`
-mantêm os seus, porque já dependem do identity. Os helpers que eles compartilham são desta
-entrada e ficam em `api/testing/` (`seed-user.ts`, `allow-all-rate-limiter.ts`,
-`fake-mailer.ts`) — nunca no harness de kernel `apps/api/test/setup/`, que não pode conhecer
-token de entrada.
+mantêm os seus, porque já dependem do identity. Os helpers que eles compartilham ficam em
+`api/testing/` desta entrada (`seed-user.ts`, `allow-all-rate-limiter.ts`) mais `fakeMailer`,
+reexportado de `notification/api/testing/fake-mailer.ts` — nunca no harness de kernel
+`apps/api/test/setup/`, que não pode conhecer token de entrada.
 **Consequência**: `notification` volta a ser raiz limpa do DAG (nenhum arquivo seu, de produção
 ou teste, importa outra entrada) e o grafo fica acíclico incluindo testes. A suíte e2e desta
 entrada pressupõe `notification` instalado — o que já era verdade pelo `fakeMailer` e é
@@ -224,18 +224,20 @@ O que cada suíte garante:
 Além da paridade, a entrada entrega as suítes e2e da v0.2 em `api/__e2e__/` (vão para
 `apps/api/src/modules/identity/__e2e__/`, cobertas pelo projeto `api-e2e` — `pnpm vitest run
 --config vitest.integration.mts --project api-e2e` — do child) e o material de harness em
-`api/testing/` — `seed-user.ts`, `allow-all-rate-limiter.ts`,
-`fake-mailer.ts` e `seeds/` (bootstrap do usuário `master`). `seed-user.ts` e
-`allow-all-rate-limiter.ts` são a superfície que `audit`, `attachment` e `tag` importam por
-`dependsOn` (AD-021/AD-025). O plumbing do runner (containers, env, `test-db`) continua em `apps/api/test/`,
-do kernel.
+`api/testing/` — `seed-user.ts`, `allow-all-rate-limiter.ts` e `seeds/` (bootstrap do usuário
+`master`), mais `fakeMailer` reexportado de `notification/api/testing/fake-mailer.ts`.
+`seed-user.ts` e `allow-all-rate-limiter.ts` são a superfície que `audit`, `attachment` e `tag`
+importam por `dependsOn` (AD-021/AD-025); `fakeMailer` é a mesma superfície para os e2e cruzados
+que precisam de `MAILER` sem depender de `notification` diretamente. O plumbing do runner
+(containers, env, `test-db`) continua em `apps/api/test/`, do kernel.
 
 Duas ressalvas: `docs-login.e2e-spec.ts` da v0.2 não voltou — o kernel passou a montar `/docs`
 sem autenticação e sem acoplamento com módulo, então a rota que a suíte exercia deixou de
 existir; a variante com login vira receita no child, não código da entrada. E os seis e2e de
 e-mail (`access-link-activation`, `auth-outbox-email`, `authz`, `create-user-flow`, `user-trash`,
 `verify-email`) ainda importam a porta `MAILER` da entrada `notification` — coupling de teste
-registrado em `api/testing/fake-mailer.ts` e pendente de mudança fora desta entrada.
+registrado em `notification/api/testing/fake-mailer.ts`, reexportado por `api/testing/index.ts`
+desta entrada, e pendente de mudança fora desta entrada.
 
 Regerar o snapshot depois de mudar rota da entrada: extraia do `openapi.json` do template as
 operações de tags `Auth`, `Session`, `Device`, `Admin` e `Access` e grave em
@@ -269,8 +271,9 @@ titular — o hard delete do usuário já é completo.
 
 A entrada `notification` **é** dependência, declarada no `module.json`.
 Dez casos de uso de produção importam `NotificationRequested` de `modules/notification`, o
-`api/testing/fake-mailer.ts` importa a porta `Mailer`, e os quatro e2e cruzados que chegaram por
-AD-025 importam `MAILER` e `DeliveryDispatcher`. Sob AD-025 a aresta é declarada, não invertida:
+`notification/api/testing/fake-mailer.ts` (reexportado por `api/testing/index.ts` desta entrada)
+importa a porta `Mailer`, e os quatro e2e cruzados que chegaram por AD-025 importam `MAILER` e
+`DeliveryDispatcher`. Sob AD-025 a aresta é declarada, não invertida:
 `identity → notification` é a direção do DAG (`notification` é a raiz e não importa ninguém), e
 promover `NotificationRequested`/`MAILER` a porta do kernel colocaria vocabulário de módulo no
 kernel — o que a RULE C proíbe. O que continua verdade é que **publicar** no outbox não exige

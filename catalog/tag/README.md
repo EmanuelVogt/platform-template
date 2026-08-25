@@ -81,6 +81,10 @@ apps/api/src/modules/tag` no app filho:
   (`findLiveTagIds`, `describeTags`) e `TagUsageRegistry` (`register`, `totalsFor`, vazio quando
   ninguém registrou), usada por futuros consumidores.
 
+Os helpers de teste da entrada ficam em `api/testing/` — `makeTag` e `seedTag`. Nenhuma outra
+entrada os importa hoje; o e2e desta entrada consome `seedUser`/`seedEmail`/`loginAs` de
+`identity/api/testing/` (§ *Dependências*).
+
 ## Dependências
 
 - `dependsOn`: `identity` (`>=1.0.0 <2.0.0`). **A aresta é só de teste**: nenhum arquivo de

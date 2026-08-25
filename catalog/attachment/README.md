@@ -93,6 +93,10 @@ via `pnpm vitest run --project api apps/api/src/modules/attachment` no app filho
 - `access-log.parity.spec.ts` — fixa o contrato de `AttachmentFacade.listAccessLog(attachmentId)`
   e a forma de uma entrada do log de acesso, usado por entradas consumidoras (ex.: `audit`).
 
+Os helpers de teste da entrada ficam em `api/testing/` — `inMemoryStorage`, `makeAttachment`,
+`PNG_1PX` e `seedAttachment`. Nenhuma outra entrada os importa hoje; o e2e desta entrada consome
+`seedUser`/`seedEmail`/`fakeMailer` de `identity/api/testing/` (§ *Dependências*).
+
 ## Dependências
 
 - `dependsOn`: `identity` (`>=2.0.0 <3.0.0`) — `list-attachment-access-log.use-case.ts` injeta

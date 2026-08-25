@@ -74,7 +74,19 @@ The `api` project's `*.spec.ts` also matches `*.parity.spec.ts` — a catalog en
 
 ## The api harness
 
-`apps/api/test/setup/` exists so that no test writes its own bootstrap.
+Two layers — a spec never improvises its own bootstrap.
+
+**Kernel harness** — `apps/api/src/shared/test/{unit,int,e2e}/`, one barrel per tier, imported
+through its `index.ts` only. RULE C: no module vocabulary — a schema is a string, a dispatcher a
+`Pollable[]` option. `unit`: `mockOf`, `fixedClock`, `fakeLogger`, `fakeRequestContext`. `int`:
+`createTestDb`/`createTestPool`, `resetDb`, `truncateKernel`, `withTestDb`, `makeTestLogger`,
+`flushRedis`. `e2e`: `createE2eApp` (the one sanctioned Nest testing-module bootstrap in the repo),
+`allowAllRateLimiter`, `cookieHeader`/`cookieValue`, `drainOutbox` (polls a `Pollable[]`, default
+the kernel's own dispatcher — a module passes its via `DELIVERY_DISPATCHERS(app)`),
+`expectProblem`, `waitFor`. `shared/test/parity/contract-snapshot.ts` exports
+`expectContractSubset`, used by every entry's `contract.parity.spec.ts` (§ *Parity suites*).
+
+**Runner plumbing** — `apps/api/test/setup/`, wires vitest itself; a spec never imports it.
 
 - **`docker-runtime.ts`** — resolves the socket of the active Docker runtime (Colima, Docker
   Desktop, Rancher); called first in `global-setup.ts`, because testcontainers ignores the Docker
@@ -95,6 +107,22 @@ The `api` project's `*.spec.ts` also matches `*.parity.spec.ts` — a catalog en
   runs in the background — without this lock, a flow that triggers an e-mail would actually send it.
 - **`e2e-after-env.ts`** — `flushall` on Redis between tests; the e2e layer runs serially and shares
   the same Redis, so rate-limit state has to be zeroed on every file.
+
+## Entry `testing/` convention, parity suites, RULE D
+
+A catalog entry that ships test helpers keeps them in `catalog/<entry>/api/testing/`, behind one
+`index.ts` barrel — never a bare file import. **RULE D**: a test file may import another entry's
+`testing/` barrel only when that entry is in its own `module.json.dependsOn`, and only when the
+edge keeps the `dependsOn` DAG acyclic (AD-025) — `module-boundaries.spec.ts` inside an installed
+child, `catalog-lint` for an entry checked outside one. `identity/single-tenant` re-exports
+`notification`'s `fakeMailer` so `audit`/`attachment`/`tag` — which depend on `identity`, not
+`notification` — reach it without a direct edge. Each entry README states where that entry's own
+helpers live and what a dependent may import.
+
+`catalog/<entry>/parity/*.parity.spec.ts` + `parity/contract.snapshot.json` travel with the entry
+into `apps/api/src/modules/<entry>/__parity__/` on `module add` and run as an ordinary unit spec of
+the child, never from the template root — pinning the shape a dependent relies on so a later edit
+breaks the suite before it breaks a consumer.
 
 ## The api's three layers
 
@@ -135,10 +163,13 @@ process fork (`isolate: true`, the default), so the heap does not pile up across
 
 ## Lint
 
-`@workspace/eslint-config` includes the test rule set (`@vitest/eslint-plugin` `recommended` +
-twelve error-level rules) on `*.spec.ts`, `*.int-spec.ts`, `*.e2e-spec.ts` and `*.test.{ts,tsx}`.
-It fails the build on a `.only`, `.skip`, assertion-less or duplicate-titled test;
-`max-nested-callbacks: 4`.
+`@workspace/eslint-config` includes the test rule set on `*.spec.ts`, `*.int-spec.ts`,
+`*.e2e-spec.ts` and `*.test.{ts,tsx}`: `@vitest/eslint-plugin` `recommended` plus
+`no-focused-tests`, `no-disabled-tests`, `expect-expect`, `no-conditional-expect` as `error`;
+`eslint-plugin-testing-library` and `eslint-plugin-jest-dom` on the web globs only. The local rule
+`no-existence-only-assert` (L-007) reports a body whose every `expect` ends in
+`toBeDefined`/`toBeUndefined`/`toBeTruthy`/`toBeFalsy`/argument-less `not.toThrow` with no
+concrete-value assertion alongside it. `max-nested-callbacks: 4`.
 
 ## Pre-push gate
 
@@ -150,6 +181,13 @@ step — a coverage floor below the calibrated one included — aborts the push.
 measures the four projects (`api`, `api-int`, `api-e2e`, `web`) in a single pass — which is why
 pre-push and CI need a Docker daemon. `pnpm test` stays on the two unit projects, with no container
 and no floor, so the inner loop does not depend on Docker.
+
+## CI
+
+`.github/workflows/ci.yml` runs the same commands as the pre-push gate, split into independent
+jobs so one red job never masks another: `quality`, `test-unit`, a `contract` job (fails on a dirty
+`openapi.json`) and the Docker-bound `test-coverage` (carries int and e2e, declares its own
+services). `turbo.json` stays free of any `test*` task (AD-028) — tests run outside Turbo.
 
 ## Coverage exclusions (table)
 

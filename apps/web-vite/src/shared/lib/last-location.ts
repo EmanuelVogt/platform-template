@@ -2,7 +2,7 @@ import { toSafeProtectedRoute, type RoutePath } from "@/shared/config/routes"
 
 /** Última rota protegida visitada, persistida para restaurar o destino quando o
  *  usuário reabre o app na raiz ou loga de novo. */
-const LAST_LOCATION_KEY = "rit-last-location"
+const LAST_LOCATION_KEY = "app-last-location"
 
 /** Guarda a rota se for um destino protegido válido. Ignora rotas públicas/auth
  *  (`/entrar`, `/recuperar-senha`…) — só faz sentido restaurar área logada. */

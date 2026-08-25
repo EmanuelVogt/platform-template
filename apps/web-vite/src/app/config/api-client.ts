@@ -8,7 +8,7 @@ type SetupApiClientOptions = {
 }
 
 /** Boot único do api-client. O cookie de sessão trafega via `withCredentials`
- *  (já fixo na instância axios do client); sem isso o `__Host-rit_session`
+ *  (já fixo na instância axios do client); sem isso o `__Host-app_session`
  *  nunca chega à API. */
 export function setupApiClient({
   baseURL,

@@ -15,7 +15,7 @@ describe("last-location", () => {
 
   it("persiste apenas rotas protegidas válidas", () => {
     persistLastLocation("/entrar")
-    expect(localStorage.getItem("rit-last-location")).toBeNull()
+    expect(localStorage.getItem("app-last-location")).toBeNull()
     persistLastLocation(ROUTES.INICIO)
     expect(readLastLocation()).toBe(ROUTES.INICIO)
   })

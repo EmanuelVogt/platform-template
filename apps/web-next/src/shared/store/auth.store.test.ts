@@ -17,7 +17,7 @@ describe("useAuthStore", () => {
 
   it("broadcastLogout grava timestamp no canal cross-tab", () => {
     useAuthStore.getState().broadcastLogout()
-    expect(localStorage.getItem("rit-auth-logout")).toMatch(/^\d+$/)
+    expect(localStorage.getItem("app-auth-logout")).toMatch(/^\d+$/)
   })
 
   it("subscribeCrossTabLogout dispara callback em storage event válido", () => {
@@ -28,7 +28,7 @@ describe("useAuthStore", () => {
 
     window.dispatchEvent(
       new StorageEvent("storage", {
-        key: "rit-auth-logout",
+        key: "app-auth-logout",
         newValue: "123",
       })
     )
@@ -42,7 +42,7 @@ describe("useAuthStore", () => {
     unsubscribe()
     window.dispatchEvent(
       new StorageEvent("storage", {
-        key: "rit-auth-logout",
+        key: "app-auth-logout",
         newValue: "456",
       })
     )

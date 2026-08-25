@@ -14,6 +14,6 @@ export function applySharedTestEnv(): void {
   process.env.CSRF_SECRET = "test-csrf-secret-test-csrf-secret-0123456"
   process.env.COOKIE_SECURE = "false"
   // COOKIE_SECURE=false (dev-over-http) é incompatível com o prefixo __Host-.
-  process.env.COOKIE_NAME = "rit_session"
-  process.env.DEVICE_COOKIE_NAME = "rit_device"
+  process.env.COOKIE_NAME = "app_session"
+  process.env.DEVICE_COOKIE_NAME = "app_device"
 }

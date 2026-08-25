@@ -28,7 +28,7 @@ describe("AppProviders CrossTabLogout", () => {
 
     window.dispatchEvent(
       new StorageEvent("storage", {
-        key: "rit-auth-logout",
+        key: "app-auth-logout",
         newValue: String(Date.now()),
       })
     )

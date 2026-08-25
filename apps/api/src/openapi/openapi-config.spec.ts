@@ -145,12 +145,43 @@ describe("buildOpenApiDocument", () => {
       expect(document.components?.securitySchemes?.cookie).toMatchObject({
         type: "apiKey",
         in: "cookie",
-        name: "__Host-rit_session",
+        name: "__Host-app_session",
       })
     })
 
     it("exige o cookie por default no documento inteiro", () => {
       expect(document.security).toEqual([{ cookie: [] }])
+    })
+  })
+
+  describe("neutralidade de marca do contrato publicado (BRAND-01)", () => {
+    it("documenta o default de COOKIE_NAME como __Host-app_session", () => {
+      const scheme = document.components?.securitySchemes?.cookie as {
+        description?: string
+      }
+
+      expect(scheme.description).toContain(
+        "COOKIE_NAME (default __Host-app_session)"
+      )
+    })
+
+    it("anuncia o cookie de sessão neutro na descrição do documento", () => {
+      expect(document.info.description).toContain("`__Host-app_session`")
+    })
+
+    it("anuncia o cookie de CSRF como app_csrf", () => {
+      expect(document.info.description).toContain("`app_csrf`")
+    })
+
+    it("não publica nenhum literal com o prefixo de marca do dono", () => {
+      expect(JSON.stringify(document)).not.toMatch(/rit_|rit-|__Host-rit/)
+    })
+
+    // O token da entrada em si é varrido pela RULE C de
+    // `module-boundaries.spec.ts`, que passou a enxergar este arquivo: repetir
+    // o literal aqui reprovaria aquela varredura.
+    it("descreve o provedor do CsrfGuard pela função, não pelo nome da entrada", () => {
+      expect(document.info.description).toContain("da entrada de identidade")
     })
   })
 

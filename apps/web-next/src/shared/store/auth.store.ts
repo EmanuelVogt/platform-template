@@ -2,7 +2,7 @@ import { create } from "zustand"
 
 /** Chave de localStorage usada só como canal de broadcast cross-tab de logout.
  *  Não guarda dado de sessão — apenas um timestamp que dispara o storage event. */
-const LOGOUT_CHANNEL_KEY = "rit-auth-logout"
+const LOGOUT_CHANNEL_KEY = "app-auth-logout"
 
 type AuthState = {
   /** Path que o usuário tentou acessar antes de cair no login. */

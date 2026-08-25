@@ -584,18 +584,14 @@ const KERNEL_SURFACE: readonly string[] = [
   ...webShellSurfaceRoots(),
 ]
 
-// Um nome de módulo sobrevive em três lugares deliberados. (1) A fixture de
+// Um nome de módulo sobrevive em dois lugares deliberados. (1) A fixture de
 // teste: existe para simular a entrada que não está instalada. (2) O harness
 // de truncamento (test-db.ts): precisa do schema de cada entry instalada para
 // truncar suas tabelas entre testes; `identity.professional_default_hours`
 // sai daqui só quando a fatia profissional deixa o entry (T72, IDENT-01,
-// v3.0.0), não antes. (3) SPEC_DEVIATION: openapi-config.ts:29 nomeia a
-// entrada `identity` na descrição OpenAPI publicada — T45 (BRAND-07) só
-// alarga a varredura e não tem essa linha em `Touches`; T49 (BRAND-01,
-// v3.0.0) é quem mexe nela. Reason: sem esta entrada o teste vermelho exigiria
-// editar um arquivo fora do escopo de T45.
+// v3.0.0), não antes.
 const TOKEN_ALLOWLIST =
-  /(?:^|\/)shared\/test\/.*\.fixture\.ts$|(?:^|\/)apps\/api\/test\/setup\/test-db\.ts$|(?:^|\/)apps\/api\/src\/openapi\/openapi-config\.ts$/
+  /(?:^|\/)shared\/test\/.*\.fixture\.ts$|(?:^|\/)apps\/api\/test\/setup\/test-db\.ts$/
 
 function isScannedFile(path: string): boolean {
   return (

@@ -10,9 +10,9 @@ import {
 
 describe("notificationCatalog", () => {
   it("cobre todos os tipos do contrato do kernel", () => {
-    for (const type of NOTIFICATION_TYPES) {
-      expect(notificationCatalog[type]).toBeDefined()
-    }
+    expect(Object.keys(notificationCatalog).sort()).toEqual(
+      [...NOTIFICATION_TYPES].sort()
+    )
   })
 
   it("valida data de access_link_sent e rejeita campo faltante", () => {
@@ -77,14 +77,17 @@ describe("notificationCatalog", () => {
   })
 
   it("todo tipo com canal system tem renderInApp e metadata", () => {
-    for (const type of NOTIFICATION_TYPES) {
-      const entry = notificationCatalog[type]
-      // SPEC_DEVIATION: `if` vira early `continue` para tirar o `expect` de dentro do condicional.
-      // Reason: `@vitest/eslint-plugin` (LNT-01) passa a barrar `no-conditional-expect`.
-      if (!entry.channels.includes("system")) continue
-      expect(entry.renderInApp).toBeDefined()
-      expect(entry.metadata).toBeDefined()
-    }
+    const systemTypes = NOTIFICATION_TYPES.filter((type) =>
+      notificationCatalog[type].channels.includes("system")
+    )
+    const wired = systemTypes.filter(
+      (type) =>
+        typeof notificationCatalog[type].renderInApp === "function" &&
+        typeof notificationCatalog[type].metadata === "function"
+    )
+
+    expect(systemTypes).not.toHaveLength(0)
+    expect(wired).toEqual(systemTypes)
   })
 
   it("renderInApp de password_set monta título/corpo pt-BR", () => {

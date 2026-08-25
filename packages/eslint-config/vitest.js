@@ -1,4 +1,5 @@
 import vitest from "@vitest/eslint-plugin"
+import jestDom from "eslint-plugin-jest-dom"
 import testingLibrary from "eslint-plugin-testing-library"
 
 const TEST_FILES = ["**/*.{spec,int-spec,e2e-spec,test}.{ts,tsx}"]
@@ -67,5 +68,9 @@ export const vitestConfig = [
       "testing-library/prefer-explicit-assert": "error",
       "testing-library/prefer-presence-queries": "error",
     },
+  },
+  {
+    ...jestDom.configs["flat/recommended"],
+    files: TEST_FILES,
   },
 ]

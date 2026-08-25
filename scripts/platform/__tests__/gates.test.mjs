@@ -38,6 +38,22 @@ function allRunSteps(jobs) {
   )
 }
 
+// T38: comandos do pre-push mesclados por `priority` — mesma leitura que o
+// lefthook 2.x faz para decidir ordem de execução (confirmado ao vivo com
+// `lefthook run pre-push --verbose`; sem `priority` explícita ele ordena por
+// nome, não pela intenção "mais barato primeiro" do comentário de lefthook.yml).
+function mergedPrePushCommands() {
+  const base = readYaml(LEFTHOOK_PATH)["pre-push"].commands
+  const local = readYaml(LEFTHOOK_LOCAL_PATH)["pre-push"].commands
+  return { ...base, ...local }
+}
+
+function orderByPriority(commands) {
+  return Object.entries(commands)
+    .sort(([, a], [, b]) => a.priority - b.priority)
+    .map(([name]) => name)
+}
+
 test("GAT-03: package.json raiz expõe os seis scripts de teste do AD-028 com o comando exato", () => {
   const { scripts } = readJson(ROOT_PACKAGE_JSON_PATH)
   assert.equal(scripts.test, "vitest run")
@@ -113,6 +129,53 @@ test("GAT-05: lefthook-local.yml mantém catalog-typecheck no pre-push", () => {
     prePush.commands["catalog-typecheck"].run,
     "node scripts/platform/catalog-stage.mjs"
   )
+})
+
+// T38: a ordem "mais barato primeiro" é intenção do próprio lefthook.yml (ver
+// comentário sobre `migrations`), não de AD-027 — AD-027 decide o gate de
+// cobertura (`pnpm test:coverage`, com Docker) e os pisos por glob; não decide
+// ordem de execução do pre-push.
+test("T38: pre-push roda mais barato primeiro — migrations → typecheck → catalog-typecheck → test-coverage", () => {
+  const commands = mergedPrePushCommands()
+  for (const name of [
+    "migrations",
+    "typecheck",
+    "catalog-typecheck",
+    "test-coverage",
+  ]) {
+    assert.equal(
+      typeof commands[name]?.priority,
+      "number",
+      `${name} precisa de priority explícita — sem ela o lefthook 2.x ordena os comandos do pre-push alfabeticamente`
+    )
+  }
+  assert.deepEqual(orderByPriority(commands), [
+    "migrations",
+    "typecheck",
+    "catalog-typecheck",
+    "test-coverage",
+  ])
+})
+
+test("T38: num filho renderizado (sem lefthook-local.yml) a ordem continua mais barato primeiro — migrations → typecheck → test-coverage", () => {
+  const { "pre-push": prePush } = readYaml(LEFTHOOK_PATH)
+  assert.deepEqual(orderByPriority(prePush.commands), [
+    "migrations",
+    "typecheck",
+    "test-coverage",
+  ])
+})
+
+// AD-027: `pnpm test:coverage` é o gate de cobertura ligado a Docker
+// (testcontainers); os outros três comandos do pre-push não abrem container.
+test("AD-027: test-coverage é o único comando do pre-push ligado a Docker", () => {
+  const commands = mergedPrePushCommands()
+  const dockerBound = Object.entries(commands)
+    .filter(([, command]) =>
+      /\bpnpm test:(coverage|int|e2e|db)\b/.test(command.run)
+    )
+    .map(([name]) => name)
+  assert.deepEqual(dockerBound, ["test-coverage"])
 })
 
 test("GAT-06: ci.yml test-unit e test-coverage rodam após detect e quality", () => {

@@ -14,7 +14,7 @@ at the root.
 - `apps/api/.env` copied from `apps/api/.env.example` (`cp apps/api/.env.example apps/api/.env`
   if it does not exist yet). Since the v2.1.0 kernel changes, `NODE_ENV` and `DATABASE_SSL`
   have no code default — the boot fails fast without them — and `.env.example` already sets
-  both for local dev (`development` / `disable`). If a module in `catalog/` declares its own
+  both for local dev (`development` / `disable`). If an installed module declares its own
   required variable with no default (e.g. `identity`'s `BREACH_CHECK_ENABLED`), `module add`
   appends it to `.env.example` and it needs a real value before the app boots.
 

@@ -14,6 +14,12 @@ Corroborated across multiple features. Safe to apply as guidance.
 - evidence: DOC-03 / docs/advisories/README.md (docs) (+1 more)
 - last seen: 2026-08-24T21:39:14Z
 
+### L-030 — A spec that also runs inside a rendered child must derive its expected paths from the directories it finds, never from the template's own directory names
+- signal: `ac_gap` · recurrence: 2 feature(s) · scope: `gates` · harmful: 0
+- features: web-stack-next, test-suite-refactor
+- evidence: apps/api/src/modules/module-boundaries.spec.ts:615,632,639 (gates) (+1 more)
+- last seen: 2026-08-25T07:13:32Z
+
 ## Candidates (under observation — do NOT load as guidance yet)
 
 Seen once or not yet corroborated. Tracked, not trusted.
@@ -186,12 +192,6 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: scripts/platform/lib/release-marker.mjs:60 (release-marker)
 - last seen: 2026-08-24T03:20:44Z
 
-### L-030 — A spec that also runs inside a rendered child must derive its expected paths from the directories it finds, never from the template's own directory names
-- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `gates` · harmful: 0
-- features: web-stack-next
-- evidence: apps/api/src/modules/module-boundaries.spec.ts:615,632,639 (gates)
-- last seen: 2026-08-23T17:11:55Z
-
 ### L-031 — When a lockfile bump upgrades the linter, re-run lint over catalog/** as well — an entry's spec is only linted inside a rendered child
 - signal: `gate_fail` · recurrence: 1 feature(s) · scope: `catalog` · harmful: 0
 - features: web-stack-next
@@ -251,6 +251,30 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - features: audit-2026-08-23-remediation
 - evidence: .github/workflows/ci.yml:132 pipx install copier vs copier-questions.test.mjs:78 (ci)
 - last seen: 2026-08-25T01:19:12Z
+
+### L-041 — Shipping a new lint rule as error is only safe once the code it will govern is lint-clean: catalog/** is never linted in the template (turbo lint covers only the apps), so a rule green here turns pnpm check red in every child that installs an entry — lint catalog/** in the same commit that adds the rule.
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `catalog` · harmful: 0
+- features: test-suite-refactor
+- evidence: pnpm catalog:check — 38 platform/no-existence-only-assert errors in the rendered child (catalog)
+- last seen: 2026-08-25T07:13:32Z
+
+### L-042 — Vitest's v8 coverage defaults reportOnFailure:false, so one failing test silently suppresses the whole coverage report — set it true, or a coverage-floor gate reports nothing on exactly the runs where you most need the number.
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `gates` · harmful: 0
+- features: test-suite-refactor
+- evidence: vitest.coverage.mts — no coverage emitted on stage 2 failure (gates)
+- last seen: 2026-08-25T07:13:32Z
+
+### L-043 — When one rule is implemented twice (template-side script and the child-shipped spec), a mutation kills only the copy the suite exercises and the other passes green — share the implementation or add a parity spec, or the two drift silently.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `catalog` · harmful: 0
+- features: test-suite-refactor
+- evidence: catalog-lint.mjs:134-149 vs module-boundaries.spec.ts:803-808 (catalog)
+- last seen: 2026-08-25T07:13:32Z
+
+### L-044 — expect(fn).not.toThrow(SomeError) PASSES when fn throws a different error, so converting an argument-less not.toThrow() to the parameterised form to satisfy a lint rule silently drops the 'does not blow up' guarantee — assert a value instead, and never let a rule exempt the parameterised form.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: test-suite-refactor
+- evidence: LNT-02 AC2; catalog/identity/single-tenant/api/application/access-policy.spec.ts:25 (testing)
+- last seen: 2026-08-25T08:26:06Z
 
 ## Quarantined (failed when applied — ignore)
 

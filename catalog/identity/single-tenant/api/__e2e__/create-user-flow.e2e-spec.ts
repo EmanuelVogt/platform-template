@@ -1,199 +1,236 @@
-import { type INestApplication, VersioningType } from "@nestjs/common"
-import { Test } from "@nestjs/testing"
-import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { setCookies } from "../../../../test/setup/cookies"
-import {
-  createTestPool,
-  truncateIdentity,
-  truncateKernel,
-} from "../../../../test/setup/test-db"
-import { AppModule } from "../../../app.module"
-import { applySecurity } from "../../../main"
-import { RequestContext } from "../../../shared/kernel/context/request-context"
-import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
 import { OutboxDispatcher } from "../../../shared/kernel/outbox/outbox.dispatcher"
-import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
+import { createE2eApp, withE2ePool } from "../../../shared/test/e2e/app"
+import { E2E_ORIGIN } from "../../../shared/test/e2e/constants"
+import { cookieHeader } from "../../../shared/test/e2e/http"
+import { drainOutbox } from "../../../shared/test/e2e/outbox"
+import { resetDb } from "../../../shared/test/int/db"
 import { MAILER } from "../../notification/domain/ports/mailer"
 import { DeliveryDispatcher } from "../../notification/infrastructure/delivery/delivery.dispatcher"
-import { fakeMailer } from "../testing/fake-mailer"
-import { seedUser } from "../testing/seed-user"
+import {
+  fakeMailer,
+  loginAs,
+  seedUser,
+  TEST_PASSWORD,
+  tokenFromMail,
+} from "../testing"
 
-import type { EmailMessage } from "../../notification/domain/ports/mailer"
+import type { E2eApp } from "../../../shared/test/e2e/app"
+import type { Pollable } from "../../../shared/test/e2e/outbox"
 
-const ORIGIN = "http://localhost:5173"
-
-const allowAll = {
-  consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
-  reset: () => Promise.resolve(),
-}
-
-/** Extrai o href renderizado no botão de ação do e-mail (link com token). */
-function linkFromHtml(html: string): string {
-  const match = /href="([^"]+)"/.exec(html)
-  if (!match) throw new Error("link não encontrado no e-mail")
-  return match[1]!
-}
-
-async function waitFor(
-  predicate: () => boolean,
-  timeoutMs = 4000
-): Promise<void> {
-  const start = Date.now()
-  while (!predicate()) {
-    if (Date.now() - start > timeoutMs) {
-      throw new Error("timeout esperando a condição")
-    }
-    await new Promise((resolve) => setTimeout(resolve, 25))
-  }
-}
+const MASTER = "master@example.com"
+const SESSION_COOKIE = "rit_session"
 
 describe("Fluxo de criação de usuário (e2e)", () => {
-  let app: INestApplication
-  let dispatcher: OutboxDispatcher
+  const db = withE2ePool()
+  let e2e: E2eApp
   let mailer: ReturnType<typeof fakeMailer>
+  let dispatchers: Pollable[]
 
-  // Preenchido por um `it` e consumido pelos seguintes: a suíte é
-  // ordem-dependente de propósito.
+  // Fixture compartilhada e só de leitura: o master é semeado uma vez e nenhum
+  // `it` o altera. Semear um master POR teste rebaixaria o anterior (índice
+  // único de master), que é justamente a dependência de ordem que sumiu daqui.
   let masterCookie: string[]
-  let accessToken: string
-  let anaCookie: string[]
 
   beforeAll(async () => {
-    const pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await pool.query(
-      "truncate table notification.notifications, notification.notification_deliveries"
-    )
-    await pool.end()
-
+    await resetDb(db.pool, ["identity", "_kernel", "notification"])
     mailer = fakeMailer()
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
+    e2e = await createE2eApp({ overrides: [[MAILER, mailer]] })
+    // 2-hop assíncrono (outbox → handler → delivery): os dois despachantes
+    // giram a cada volta, senão o e-mail nunca chega ao fakeMailer.
+    dispatchers = [
+      e2e.app.get(OutboxDispatcher),
+      e2e.app.get(DeliveryDispatcher),
+    ]
+    await seedUser(e2e.app, db.pool, {
+      email: MASTER,
+      name: "Master",
+      password: TEST_PASSWORD,
+      accessProfile: "master",
     })
-      .overrideProvider(RATE_LIMITER)
-      .useValue(allowAll)
-      .overrideProvider(MAILER)
-      .useValue(mailer)
-      .compile()
-    app = moduleRef.createNestApplication()
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-    applySecurity(app)
-    app.use(createRequestContextMiddleware(app.get(RequestContext)))
-    await app.init()
-    dispatcher = app.get(OutboxDispatcher)
+    masterCookie = await loginAs(e2e.http, MASTER)
   })
 
   afterAll(async () => {
-    await app.close()
+    await e2e.close()
   })
 
-  it("seed master e promoção via SQL", async () => {
-    const pool = createTestPool()
-    const masterId = await seedUser(app, pool, {
-      email: "master@example.com",
-      name: "Master",
-      password: "Senha-Master-Muito-Forte-2026!",
-    })
-    await pool.query(
-      "UPDATE identity.users SET access_profile = 'master' WHERE id = $1",
-      [masterId]
-    )
-    await pool.end()
-    expect(masterId).toBeTruthy()
-  })
-
-  it("login do master retorna cookie de sessão", async () => {
-    const res = await request(app.getHttpServer())
-      .post("/v1/auth/login")
-      .set("Origin", ORIGIN)
-      .send({
-        email: "master@example.com",
-        password: "Senha-Master-Muito-Forte-2026!",
-      })
-      .expect(200)
-    masterCookie = setCookies(res)
-    expect(masterCookie).toBeDefined()
-  })
-
-  it("master cria usuário Ana via rota autenticada (201)", async () => {
-    await request(app.getHttpServer())
+  async function inviteUser(
+    email: string,
+    name: string,
+    idempotencyKey: string
+  ): Promise<void> {
+    await e2e.http
       .post("/v1/admin/users")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .set("Cookie", masterCookie)
-      .set("Idempotency-Key", "create-user-ana")
+      .set("Idempotency-Key", idempotencyKey)
       .send({
-        name: "Ana",
-        email: "ana@example.com",
+        name,
+        email,
         accessProfile: "admin",
         permissions: ["admin.users.read"],
       })
       .expect(201)
+  }
+
+  // Casa pelo destinatário, não por índice: o login do master dispara um
+  // `device_new_login` que deslocaria a posição de quem lesse `sent[0]`.
+  async function inviteAndCollectToken(
+    email: string,
+    name: string,
+    idempotencyKey: string
+  ): Promise<string> {
+    await inviteUser(email, name, idempotencyKey)
+    await drainOutbox(e2e.app, {
+      dispatchers,
+      until: () => mailer.sent.find((message) => message.to === email),
+    })
+    return tokenFromMail(mailer, email)
+  }
+
+  it("login do master retorna cookie de sessão", async () => {
+    const res = await e2e.http
+      .post("/v1/auth/login")
+      .set("Origin", E2E_ORIGIN)
+      .send({ email: MASTER, password: TEST_PASSWORD })
+      .expect(200)
+
+    const cookies = cookieHeader(res)
+    expect(
+      cookies.some((cookie) => cookie.startsWith(`${SESSION_COOKIE}=`))
+    ).toBe(true)
+    // "É cookie de sessão" só é verdade se autenticar: o Set-Cookie sozinho
+    // passaria mesmo com um token que o AuthMiddleware recusa.
+    const session = await e2e.http
+      .get("/v1/auth/session")
+      .set("Cookie", cookies)
+      .expect(200)
+    expect(session.body.user.email).toBe(MASTER)
+  })
+
+  it("master cria usuário Ana via rota autenticada (201)", async () => {
+    const email = "ana-create@example.com"
+    await inviteUser(email, "Ana", "create-user-ana")
+
+    const { rows } = await db.pool.query<{ name: string; status: string }>(
+      "SELECT name, status FROM identity.users WHERE email = $1",
+      [email]
+    )
+    expect(rows[0]?.name).toBe("Ana")
+    expect(rows[0]?.status).toBe("pending")
   })
 
   it("outbox + delivery dispatcher disparam sendAccessLink com token", async () => {
-    await dispatcher.poll()
-    await app.get(DeliveryDispatcher).poll()
-    // Casa pelo destinatário: o login do master pode disparar um e-mail de
-    // device_new_login antes do access-link, deslocando o índice.
-    const sentToAna = (): EmailMessage | undefined =>
-      mailer.sent.find((message) => message.to === "ana@example.com")
-    await waitFor(() => sentToAna() !== undefined)
-
-    const token = new URL(linkFromHtml(sentToAna()!.html)).searchParams.get(
-      "token"
+    const email = "ana-outbox@example.com"
+    const token = await inviteAndCollectToken(
+      email,
+      "Ana",
+      "create-user-ana-outbox"
     )
     expect(token).toBeTruthy()
-    // Persiste o token para os its seguintes.
-    accessToken = token!
   })
 
   it("GET /v1/auth/access-link com token válido retorna dados do usuário criado", async () => {
-    const res = await request(app.getHttpServer())
+    const email = "ana-link@example.com"
+    const token = await inviteAndCollectToken(
+      email,
+      "Ana",
+      "create-user-ana-link"
+    )
+
+    const res = await e2e.http
       .get("/v1/auth/access-link")
-      .query({ token: accessToken })
+      .query({ token })
       .expect(200)
     expect(res.body).toEqual({
       name: "Ana",
-      email: "ana@example.com",
+      email,
       avatarAttachmentId: null,
     })
   })
 
   it("POST /v1/auth/set-password ativa conta, retorna usuário atualizado e cookie de auto-login", async () => {
-    const res = await request(app.getHttpServer())
+    const email = "ana-setpwd@example.com"
+    const token = await inviteAndCollectToken(
+      email,
+      "Ana",
+      "create-user-ana-setpwd"
+    )
+
+    const res = await e2e.http
       .post("/v1/auth/set-password")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .send({
-        token: accessToken,
+        token,
         name: "Ana Maria",
         birthDate: "1990-05-20",
         password: "Senha-Ana-Muito-Forte-2026!",
       })
       .expect(200)
-    expect(res.body.user).toMatchObject({
-      name: "Ana Maria",
-      email: "ana@example.com",
-    })
-    anaCookie = setCookies(res)
-    expect(anaCookie).toBeDefined()
+    expect(res.body.user).toMatchObject({ name: "Ana Maria", email })
+
+    const anaCookie = cookieHeader(res)
+    expect(
+      anaCookie.some((cookie) => cookie.startsWith(`${SESSION_COOKIE}=`))
+    ).toBe(true)
+
+    const { rows } = await db.pool.query<{ status: string }>(
+      "SELECT status FROM identity.users WHERE email = $1",
+      [email]
+    )
+    expect(rows[0]?.status).toBe("active")
   })
 
   it("cookie de ativação autentica a sessão de Ana sem login manual", async () => {
-    await request(app.getHttpServer())
-      .get("/v1/auth/session")
-      .set("Cookie", anaCookie)
+    const email = "ana-session@example.com"
+    const token = await inviteAndCollectToken(
+      email,
+      "Ana",
+      "create-user-ana-session"
+    )
+    const activation = await e2e.http
+      .post("/v1/auth/set-password")
+      .set("Origin", E2E_ORIGIN)
+      .send({
+        token,
+        name: "Ana Maria",
+        birthDate: "1990-05-20",
+        password: "Senha-Ana-Muito-Forte-2026!",
+      })
       .expect(200)
+
+    const res = await e2e.http
+      .get("/v1/auth/session")
+      .set("Cookie", cookieHeader(activation))
+      .expect(200)
+    expect(res.body.user.email).toBe(email)
   })
 
   it("reuso do token já consumido retorna 400", async () => {
-    await request(app.getHttpServer())
+    const email = "ana-reuse@example.com"
+    const token = await inviteAndCollectToken(
+      email,
+      "Ana",
+      "create-user-ana-reuse"
+    )
+    await e2e.http
       .post("/v1/auth/set-password")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .send({
-        token: accessToken,
+        token,
+        name: "Ana Maria",
+        birthDate: "1990-05-20",
+        password: "Senha-Ana-Muito-Forte-2026!",
+      })
+      .expect(200)
+
+    await e2e.http
+      .post("/v1/auth/set-password")
+      .set("Origin", E2E_ORIGIN)
+      .send({
+        token,
         name: "Ana",
         birthDate: "1990-05-20",
         password: "Outra-Senha-Forte-2026!",
@@ -207,9 +244,9 @@ describe("Fluxo de criação de usuário (e2e)", () => {
     const areaId = "area-e2e-pro"
     const serviceId = "svc-e2e-pro"
 
-    await request(app.getHttpServer())
+    await e2e.http
       .post("/v1/admin/users")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .set("Cookie", masterCookie)
       .set("Idempotency-Key", "create-user-pro")
       .send({
@@ -223,7 +260,7 @@ describe("Fluxo de criação de usuário (e2e)", () => {
       })
       .expect(201)
 
-    const list = await request(app.getHttpServer())
+    const list = await e2e.http
       .get("/v1/admin/users")
       .set("Cookie", masterCookie)
       .query({ q: "pedro@example.com" })
@@ -243,9 +280,9 @@ describe("Fluxo de criação de usuário (e2e)", () => {
   it("cria profissional com permissão de outro módulo", async () => {
     const areaId = "area-e2e-pro-admin"
 
-    const res = await request(app.getHttpServer())
+    const res = await e2e.http
       .post("/v1/admin/users")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .set("Cookie", masterCookie)
       .set("Idempotency-Key", "create-user-pro-admin")
       .send({
@@ -261,7 +298,7 @@ describe("Fluxo de criação de usuário (e2e)", () => {
 
     expect(res.status).toBe(201)
 
-    const list = await request(app.getHttpServer())
+    const list = await e2e.http
       .get("/v1/admin/users")
       .set("Cookie", masterCookie)
       .query({ q: "pro.admin@example.com" })
@@ -279,9 +316,9 @@ describe("Fluxo de criação de usuário (e2e)", () => {
   it("master cria usuário com áreas de agendamento; listagem devolve as áreas", async () => {
     const areaId = "area-e2e-sched"
 
-    await request(app.getHttpServer())
+    await e2e.http
       .post("/v1/admin/users")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .set("Cookie", masterCookie)
       .set("Idempotency-Key", "create-user-sched")
       .send({
@@ -293,7 +330,7 @@ describe("Fluxo de criação de usuário (e2e)", () => {
       })
       .expect(201)
 
-    const list = await request(app.getHttpServer())
+    const list = await e2e.http
       .get("/v1/admin/users")
       .set("Cookie", masterCookie)
       .query({ q: "sofia@example.com" })
@@ -307,4 +344,10 @@ describe("Fluxo de criação de usuário (e2e)", () => {
     expect(sofia.schedulingAreaIds).toEqual([areaId])
     expect(sofia.areaIds).toEqual([])
   })
+
+  // GA-7: o pseudo-teste "seed master e promoção via SQL" (um
+  // `expect(masterId).toBeTruthy()` sobre o seed) saiu com a quebra da cadeia
+  // ordenada — é a única remoção que este refactor autoriza. O que ele
+  // "cobria" virou pré-condição do `beforeAll`, e a promoção a master é hoje
+  // contrato do próprio `seedUser` (testing/seed-user.ts), não deste arquivo.
 })

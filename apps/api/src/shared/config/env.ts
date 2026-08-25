@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-/** Compartilhado com módulos que declaram a mesma variável (ex.: identity.config.ts). */
+/** Compartilhado com as entradas que declaram a mesma variável no config delas. */
 export const webOriginSchema = z.url()
 
 /** Compartilhado com módulos que precisam do mesmo enum (ex.: notification.config.ts). */

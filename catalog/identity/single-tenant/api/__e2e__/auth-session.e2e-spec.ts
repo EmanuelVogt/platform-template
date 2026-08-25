@@ -1,41 +1,23 @@
-import { type INestApplication, VersioningType } from "@nestjs/common"
-import { Test } from "@nestjs/testing"
-import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import {
-  createTestPool,
-  truncateIdentity,
-  truncateKernel,
-} from "../../../../test/setup/test-db"
-import { AppModule } from "../../../app.module"
-import { applySecurity } from "../../../main"
-import { RequestContext } from "../../../shared/kernel/context/request-context"
-import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
+import { createE2eApp, withE2ePool } from "../../../shared/test/e2e/app"
+import { E2E_ORIGIN } from "../../../shared/test/e2e/constants"
+import { cookieHeader } from "../../../shared/test/e2e/http"
+import { resetDb } from "../../../shared/test/int/db"
 
-const ORIGIN = "http://localhost:5173"
+import type { E2eApp } from "../../../shared/test/e2e/app"
 
 describe("Sessão — rota protegida (e2e)", () => {
-  let app: INestApplication
+  const db = withE2ePool()
+  let e2e: E2eApp
 
   beforeAll(async () => {
-    const pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await pool.end()
-
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile()
-    app = moduleRef.createNestApplication()
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-    applySecurity(app)
-    app.use(createRequestContextMiddleware(app.get(RequestContext)))
-    await app.init()
+    await resetDb(db.pool, ["identity", "_kernel"])
+    e2e = await createE2eApp({ rateLimiter: "real" })
   })
 
   afterAll(async () => {
-    await app.close()
+    await e2e.close()
   })
 
   // SPEC_DEVIATION: cookie inválido no lugar de "sem cookie" no cenário de
@@ -48,23 +30,20 @@ describe("Sessão — rota protegida (e2e)", () => {
   // gate de DB tier por entrada (AC3) rodou pela 1ª vez e expôs a asserção
   // errada.
   it("rota protegida sem cookie → 401 sem Set-Cookie de limpeza", async () => {
-    const res = await request(app.getHttpServer())
+    const res = await e2e.http
       .get("/v1/auth/session")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .expect(401)
-    expect(res.headers["set-cookie"]).toBeUndefined()
+    expect(cookieHeader(res)).toEqual([])
   })
 
   it("rota protegida com cookie inválido → 401 + Set-Cookie de limpeza", async () => {
-    const res = await request(app.getHttpServer())
+    const res = await e2e.http
       .get("/v1/auth/session")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .set("Cookie", "rit_session=nao-e-um-token-de-sessao-valido")
       .expect(401)
-    const setCookie = res.headers["set-cookie"] as string[] | string | undefined
-    const joined = Array.isArray(setCookie)
-      ? setCookie.join(";")
-      : (setCookie ?? "")
+    const joined = cookieHeader(res).join(";")
     // e2e-env usa COOKIE_NAME=rit_session (sem prefixo __Host-, que exige Secure).
     expect(joined).toContain("rit_session=;")
     expect(joined).toMatch(/Max-Age=0/i)

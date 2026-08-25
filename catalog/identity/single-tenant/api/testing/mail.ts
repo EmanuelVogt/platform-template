@@ -33,7 +33,7 @@ export function tokenFromMail(
       `tokenFromMail: nenhum e-mail para ${to}${opts.subject ? ` com assunto "${opts.subject}"` : ""}. Enviados: ${seen || "nenhum"}`
     )
   }
-  const link = LINK.exec(message.html ?? "")?.[0]
+  const link = LINK.exec(message.html)?.[0]
   if (link === undefined) {
     throw new Error(`tokenFromMail: o e-mail para ${to} não tem link`)
   }

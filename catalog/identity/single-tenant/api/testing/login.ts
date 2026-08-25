@@ -1,5 +1,5 @@
-import { cookieHeader } from "../../../shared/test/e2e/http"
 import { E2E_ORIGIN, TEST_PASSWORD } from "../../../shared/test/e2e/constants"
+import { cookieHeader } from "../../../shared/test/e2e/http"
 
 import type request from "supertest"
 

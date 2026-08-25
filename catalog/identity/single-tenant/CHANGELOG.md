@@ -24,6 +24,14 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
   do barril) nos specs que a usam.
 - `allow-all-rate-limiter.ts` virou reexport do limiter do harness do kernel
   (`shared/test/e2e/app`) — implementação uma só.
+- Os e2e da entrada (`api/__e2e__/**`) bootam pelo `createE2eApp` do harness do
+  kernel e usam `resetDb`, `withE2ePool`, `drainOutbox`, `expectProblem`,
+  `cookieValue` e o barril `testing/` no lugar do bootstrap, do limiter, do
+  login, do extrator de cookie, do `linkFromHtml` e do `waitFor` que cada
+  arquivo redefinia. **Migração no filho:** um e2e local copiado da entrada
+  continua funcionando; para adotar o harness, trocar
+  `Test.createTestingModule(...)` por `await createE2eApp()` e
+  `truncateIdentity(pool)` por `resetDb(pool, ["identity", "_kernel"])`.
 
 ## [2.0.2]
 

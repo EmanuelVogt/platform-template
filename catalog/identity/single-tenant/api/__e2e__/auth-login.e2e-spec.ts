@@ -1,73 +1,49 @@
-import { type INestApplication, VersioningType } from "@nestjs/common"
-import { Test } from "@nestjs/testing"
-import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import {
-  createTestPool,
-  truncateIdentity,
-  truncateKernel,
-} from "../../../../test/setup/test-db"
-import { AppModule } from "../../../app.module"
-import { applySecurity } from "../../../main"
-import { RequestContext } from "../../../shared/kernel/context/request-context"
-import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
 import { InMemoryRateLimiter } from "../../../shared/kernel/rate-limit/in-memory-rate-limiter"
 import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
-import { allowAllRateLimiter } from "../testing/allow-all-rate-limiter"
-import { seedUser } from "../testing/seed-user"
+import { createE2eApp, withE2ePool } from "../../../shared/test/e2e/app"
+import { E2E_ORIGIN } from "../../../shared/test/e2e/constants"
+import { cookieHeader } from "../../../shared/test/e2e/http"
+import { expectProblem } from "../../../shared/test/e2e/problem"
+import { resetDb } from "../../../shared/test/int/db"
+import { seedUser, TEST_PASSWORD } from "../testing"
 
-const ORIGIN = "http://localhost:5173"
+import type { E2eApp } from "../../../shared/test/e2e/app"
+
 const EMAIL = "login-cookie@example.com"
-const PASSWORD = "Senha-Muito-Forte-2026!"
 const BRUTE_EMAIL = "login-brute@example.com"
 
+const db = withE2ePool()
+
 describe("Login — cookie de sessão (e2e)", () => {
-  let app: INestApplication
+  let e2e: E2eApp
 
   beforeAll(async () => {
-    const pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await pool.end()
-
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
-    })
-      .overrideProvider(RATE_LIMITER)
-      .useValue(allowAllRateLimiter)
-      .compile()
-    app = moduleRef.createNestApplication()
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-    applySecurity(app)
-    app.use(createRequestContextMiddleware(app.get(RequestContext)))
-    await app.init()
-
-    const seedPool = createTestPool()
-    await seedUser(app, seedPool, {
+    await resetDb(db.pool, ["identity", "_kernel"])
+    e2e = await createE2eApp()
+    await seedUser(e2e.app, db.pool, {
       email: EMAIL,
       name: "Login Cookie",
-      password: PASSWORD,
+      password: TEST_PASSWORD,
     })
-    await seedPool.end()
   })
 
   afterAll(async () => {
-    await app.close()
+    await e2e.close()
   })
 
   it("login retorna 200 com user e Set-Cookie __Host- httpOnly SameSite", async () => {
-    const res = await request(app.getHttpServer())
+    const res = await e2e.http
       .post("/v1/auth/login")
-      .set("Origin", ORIGIN)
-      .send({ email: EMAIL, password: PASSWORD, rememberMe: true })
+      .set("Origin", E2E_ORIGIN)
+      .send({ email: EMAIL, password: TEST_PASSWORD, rememberMe: true })
       .expect(200)
 
     expect(res.body.user.email).toBe(EMAIL)
     expect(res.body.user.id).toBeDefined()
 
-    const setCookie = res.headers["set-cookie"]
-    const cookie = Array.isArray(setCookie) ? setCookie[0] : setCookie
+    const cookie = cookieHeader(res)[0]
     // e2e-env usa COOKIE_NAME=rit_session (sem prefixo __Host-, que exige Secure).
     expect(cookie).toContain("rit_session=")
     expect(cookie).toMatch(/HttpOnly/i)
@@ -79,48 +55,36 @@ describe("Login — cookie de sessão (e2e)", () => {
 })
 
 describe("Login — força bruta distribuída por conta (e2e)", () => {
-  let app: INestApplication
+  let e2e: E2eApp
 
   beforeAll(async () => {
-    const pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await pool.end()
-
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
-    })
+    await resetDb(db.pool, ["identity", "_kernel"])
+    e2e = await createE2eApp({
       // Limiter real (em memória): o bucket por conta precisa contar de verdade.
-      .overrideProvider(RATE_LIMITER)
-      .useValue(new InMemoryRateLimiter())
-      .compile()
-    app = moduleRef.createNestApplication()
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-    applySecurity(app)
-    // TRUST_PROXY_HOPS é 0 por padrão; sem confiar em um hop o teste não
-    // conseguiria variar o IP de origem, que é o ponto do caso.
-    app.getHttpAdapter().getInstance().set("trust proxy", 1)
-    app.use(createRequestContextMiddleware(app.get(RequestContext)))
-    await app.init()
-
-    const seedPool = createTestPool()
-    await seedUser(app, seedPool, {
+      rateLimiter: "real",
+      overrides: [[RATE_LIMITER, new InMemoryRateLimiter()]],
+      // TRUST_PROXY_HOPS é 0 por padrão; sem confiar em um hop o teste não
+      // conseguiria variar o IP de origem, que é o ponto do caso.
+      beforeInit: (app) => {
+        app.getHttpAdapter().getInstance().set("trust proxy", 1)
+      },
+    })
+    await seedUser(e2e.app, db.pool, {
       email: BRUTE_EMAIL,
       name: "Login Brute",
-      password: PASSWORD,
+      password: TEST_PASSWORD,
     })
-    await seedPool.end()
   })
 
   afterAll(async () => {
-    await app.close()
+    await e2e.close()
   })
 
   it("11ª falha na mesma conta, vinda de dois IPs, responde 429 com Retry-After", async () => {
     const attempt = (ip: string) =>
-      request(app.getHttpServer())
+      e2e.http
         .post("/v1/auth/login")
-        .set("Origin", ORIGIN)
+        .set("Origin", E2E_ORIGIN)
         .set("X-Forwarded-For", ip)
         .send({
           email: BRUTE_EMAIL,
@@ -137,10 +101,8 @@ describe("Login — força bruta distribuída por conta (e2e)", () => {
       )
     }
     const last = responses[10]!
-    expect(last.status).toBe(429)
+    expectProblem(last, { status: 429, type: "/identity/rate-limited" })
     expect(last.headers["retry-after"]).toBeDefined()
-    expect(last.headers["content-type"]).toMatch(/application\/problem\+json/)
-    expect(last.body.status).toBe(429)
     expect(responses.slice(0, 10).map((res) => res.status)).toEqual(
       Array(10).fill(401)
     )
@@ -148,25 +110,23 @@ describe("Login — força bruta distribuída por conta (e2e)", () => {
 
   it("senha correta depois de falhas limpa o bucket da conta", async () => {
     const email = "login-brute-reset@example.com"
-    const seedPool = createTestPool()
-    await seedUser(app, seedPool, {
+    await seedUser(e2e.app, db.pool, {
       email,
       name: "Login Brute Reset",
-      password: PASSWORD,
+      password: TEST_PASSWORD,
     })
-    await seedPool.end()
 
     const login = (password: string) =>
-      request(app.getHttpServer())
+      e2e.http
         .post("/v1/auth/login")
-        .set("Origin", ORIGIN)
+        .set("Origin", E2E_ORIGIN)
         .set("X-Forwarded-For", "203.0.113.8")
         .send({ email, password, rememberMe: false })
 
     for (let i = 0; i < 9; i++) {
       await login("senha-errada")
     }
-    await login(PASSWORD).expect(200)
+    await login(TEST_PASSWORD).expect(200)
 
     // Bucket zerado: outras 9 falhas ainda não estouram o teto de 10.
     for (let i = 0; i < 9; i++) {

@@ -1,48 +1,31 @@
-import { type INestApplication, VersioningType } from "@nestjs/common"
-import { Test } from "@nestjs/testing"
-import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import {
-  createTestPool,
-  truncateIdentity,
-  truncateKernel,
-} from "../../../../test/setup/test-db"
-import { AppModule } from "../../../app.module"
-import { applySecurity } from "../../../main"
-import { RequestContext } from "../../../shared/kernel/context/request-context"
-import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
+import { createE2eApp, withE2ePool } from "../../../shared/test/e2e/app"
+import { E2E_ORIGIN } from "../../../shared/test/e2e/constants"
+import { expectProblem } from "../../../shared/test/e2e/problem"
+import { resetDb } from "../../../shared/test/int/db"
 
-const ORIGIN = "http://localhost:5173"
+import type { E2eApp } from "../../../shared/test/e2e/app"
 
 describe("Rate-limit — 429 RFC 7807 (e2e)", () => {
-  let app: INestApplication
+  const db = withE2ePool()
+  let e2e: E2eApp
 
   beforeAll(async () => {
-    const pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await pool.end()
-
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile()
-    app = moduleRef.createNestApplication()
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-    applySecurity(app)
-    app.use(createRequestContextMiddleware(app.get(RequestContext)))
-    await app.init()
+    await resetDb(db.pool, ["identity", "_kernel"])
+    // O único e2e que precisa do limiter de verdade: é o comportamento sob teste.
+    e2e = await createE2eApp({ rateLimiter: "real" })
   })
 
   afterAll(async () => {
-    await app.close()
+    await e2e.close()
   })
 
   it("estouro do limite de forgot-password (3/min) responde 429 problem+json", async () => {
     const fire = (i: number) =>
-      request(app.getHttpServer())
+      e2e.http
         .post("/v1/auth/forgot-password")
-        .set("Origin", ORIGIN)
+        .set("Origin", E2E_ORIGIN)
         .set("Idempotency-Key", `forgot-${i}`)
         .send({ email: "rate@example.com" })
 
@@ -53,10 +36,7 @@ describe("Rate-limit — 429 RFC 7807 (e2e)", () => {
       last = await fire(i + 1)
     }
 
-    expect(last.status).toBe(429)
+    expectProblem(last, { status: 429, type: "/too-many-requests" })
     expect(last.headers["retry-after"]).toBeDefined()
-    expect(last.headers["content-type"]).toMatch(/application\/problem\+json/)
-    expect(last.body.status).toBe(429)
-    expect(last.body.type).toBeDefined()
   })
 })

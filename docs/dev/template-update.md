@@ -9,7 +9,7 @@ visible.
 
 - The `release` workflow runs the full gate (`check`, `test`, `test:scripts`,
   `catalog:lint`, `catalog:typecheck`, `catalog:check` per entry) before it tags — a tag
-  that exists was green.
+  that exists was green. <!-- audience-contract: release — names the template's own release workflow and explains why an existing tag is trustworthy; it does not instruct the child to run or look at anything -->
 - Every non-major version documents `### Child migration steps` in
   [`template-changelog.md`](template-changelog.md): the literal sentence
   `None — copier update is enough.`, or a numbered list whose steps start with a

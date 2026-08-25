@@ -115,22 +115,14 @@ test("uma isenção inline no fim da linha fecha o achado", () => {
   )
 })
 
-// SPEC_DEVIATION: one live finding is pinned instead of repaired.
-// Reason: `docs/dev/template-update.md:10` ("The `release` workflow runs the full gate")
-// is a REAL instance of AUD-06 that no wave repaired — the prototype could not see it,
-// because the stem rule this task introduces did not exist when the tree was measured. The
-// file belongs to no task in this cluster, so the one-line fix (an inline waiver, the doc
-// is telling the child what the UPSTREAM promises) is the owner's to write. Pinning it is a
-// ratchet, not an allowlist: the day the waiver lands this assertion goes red and has to
-// shrink to [].
-test("a árvore viva tem exatamente um achado pendente, nominal", () => {
+// O achado que `docs/dev/template-update.md:10` carregava foi fechado por uma isenção
+// inline em `:12` — a sentença descreve a maquinaria do próprio template (por que uma tag
+// existente é confiável), não instrui o filho a rodar ou olhar nada. Ratchet fechado: a
+// árvore viva não pode mais ter achado nenhum de AUD-06.
+test("a árvore viva não tem achado pendente de AUD-06", () => {
   assert.deepEqual(
-    auditWorkflowNames().map((finding) => [
-      finding.file,
-      finding.line,
-      finding.token,
-    ]),
-    [["docs/dev/template-update.md", 10, "release"]],
-    "achado REAL pendente de reparo por quem é dono do arquivo; qualquer OUTRO achado é regressão"
+    auditWorkflowNames(),
+    [],
+    "qualquer achado aqui é regressão — a árvore viva precisa estar limpa"
   )
 })

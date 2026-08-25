@@ -16,6 +16,15 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   `APP_TIMEZONE` (IANA, default `UTC`). Um child que dependia do fuso fixo muda de
   recorte; ver `ADV-20260824-04`.
 
+## [2.1.2]
+
+### Fixed
+
+- `list-audit-entries.use-case.spec.ts`: o teste "sem table não passa tables" afirmava só
+  `toBeUndefined()` e passava sob uma implementação errada. Agora afirma o argumento inteiro
+  recebido pelo repositório. Sem a correção, `platform/no-existence-only-assert` (a regra de
+  lint nova do kernel) reprovava `pnpm check` em todo filho que instala a entrada.
+
 ## [2.1.1]
 
 ### Changed

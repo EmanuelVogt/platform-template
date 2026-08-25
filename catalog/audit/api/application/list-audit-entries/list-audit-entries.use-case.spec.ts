@@ -144,6 +144,11 @@ describe("ListAuditEntriesUseCase", () => {
   it("sem table não passa tables", async () => {
     const { useCase, list } = makeUseCase([], new Map())
     await useCase.execute({ page: 1, pageSize: 20 })
+    expect(list).toHaveBeenCalledWith({
+      page: 1,
+      pageSize: 20,
+      tables: undefined,
+    })
     expect(list.mock.calls[0]?.[0].tables).toBeUndefined()
   })
 

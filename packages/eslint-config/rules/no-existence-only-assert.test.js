@@ -20,9 +20,12 @@ ruleTester.run("no-existence-only-assert", noExistenceOnlyAssert, {
     `it("t", () => { expect(rows.length).toBe(2) })`,
     `it("t", async () => { await expect(run()).resolves.toEqual({ id: 1 }) })`,
     `it("t", async () => { await expect(run()).rejects.toThrow(ConflictError) })`,
-    `it("t", () => { expect(() => parse("x")).not.toThrow(SyntaxError) })`,
+    // `not.toThrow(<matcher>)` acompanhado de um valor concreto continua
+    // legítimo — o corpo prova o que aconteceu, não só que nada explodiu.
+    `it("t", () => { expect(() => parse("x")).not.toThrow(SyntaxError); expect(parse("x")).toEqual({ ok: true }) })`,
     // A declaração explícita é a saída documentada quando só há existência.
     `it("t", () => { expect.assertions(1); expect(result).toBeDefined() })`,
+    `it("t", () => { expect.assertions(1); expect(() => parse("x")).not.toThrow(SyntaxError) })`,
     // Sem asserção nenhuma: é vitest/expect-expect que fala, não esta regra.
     `it("t", () => { doSomething() })`,
     // describe não é corpo de teste.
@@ -56,6 +59,24 @@ ruleTester.run("no-existence-only-assert", noExistenceOnlyAssert, {
     },
     {
       code: `it("t", () => { expect(() => parse("x")).not.toThrow() })`,
+      errors: existenceOnly,
+    },
+    // Sozinho, `not.toThrow(<matcher>)` prova menos que a forma sem argumento:
+    // passa se o código lançar outro erro. Não isenta o corpo.
+    {
+      code: `it("t", () => { expect(() => parse("x")).not.toThrow(SyntaxError) })`,
+      errors: existenceOnly,
+    },
+    {
+      code: `it("t", () => { expect(() => parse("x")).not.toThrow(/inválido/i) })`,
+      errors: existenceOnly,
+    },
+    {
+      code: `it("t", async () => { await expect(run()).resolves.not.toThrow(ConflictError) })`,
+      errors: existenceOnly,
+    },
+    {
+      code: `it("t", () => { expect(() => a()).not.toThrow(); expect(() => b()).not.toThrow(TypeError) })`,
       errors: existenceOnly,
     },
     {

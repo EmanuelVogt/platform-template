@@ -1,6 +1,6 @@
 import { defineConfig } from "vitest/config"
 
-import { apiDefaults, swcPlugin } from "./vitest.shared.mjs"
+import { API_MAX_WORKERS, apiDefaults, swcPlugin } from "./vitest.shared.mjs"
 
 // SPEC_DEVIATION: o exclude do fixture de branch descoberta é condicional, e
 // não literal como o tasks.md descreve.
@@ -28,7 +28,7 @@ export default defineConfig({
       "**/node_modules/**",
     ],
     setupFiles: ["./test/setup/unit-env.ts"],
-    maxWorkers: 4,
+    maxWorkers: API_MAX_WORKERS,
     // O Vitest recusa projetos com `maxWorkers` diferentes no mesmo grupo; o
     // `web` fica no grupo 0 (default) e os tiers da api vêm depois.
     sequence: { groupOrder: 1 },

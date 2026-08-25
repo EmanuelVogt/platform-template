@@ -288,6 +288,30 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: scripts/platform/__tests__/lib/audience-contract.mjs:172-179 (EXEMPT_DOC_PREFIXES = ['.agents/skills/'], narrowing the plan's wider guard scope) (scripts/platform)
 - last seen: 2026-08-25T07:15:10Z
 
+### L-047 — Shipping a new lint rule as error is only safe once the code it will govern is lint-clean: catalog/** is never linted in the template (turbo lint covers only the apps), so a rule green here turns pnpm check red in every child that installs an entry — lint catalog/** in the same commit that adds the rule.
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `catalog` · harmful: 0
+- features: test-suite-refactor
+- evidence: pnpm catalog:check — 38 platform/no-existence-only-assert errors in the rendered child (catalog)
+- last seen: 2026-08-25T07:13:32Z
+
+### L-048 — Vitest's v8 coverage defaults reportOnFailure:false, so one failing test silently suppresses the whole coverage report — set it true, or a coverage-floor gate reports nothing on exactly the runs where you most need the number.
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `gates` · harmful: 0
+- features: test-suite-refactor
+- evidence: vitest.coverage.mts — no coverage emitted on stage 2 failure (gates)
+- last seen: 2026-08-25T07:13:32Z
+
+### L-049 — When one rule is implemented twice (template-side script and the child-shipped spec), a mutation kills only the copy the suite exercises and the other passes green — share the implementation or add a parity spec, or the two drift silently.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `catalog` · harmful: 0
+- features: test-suite-refactor
+- evidence: catalog-lint.mjs:134-149 vs module-boundaries.spec.ts:803-808 (catalog)
+- last seen: 2026-08-25T07:13:32Z
+
+### L-050 — expect(fn).not.toThrow(SomeError) PASSES when fn throws a different error, so converting an argument-less not.toThrow() to the parameterised form to satisfy a lint rule silently drops the 'does not blow up' guarantee — assert a value instead, and never let a rule exempt the parameterised form.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `testing` · harmful: 0
+- features: test-suite-refactor
+- evidence: LNT-02 AC2; catalog/identity/single-tenant/api/application/access-policy.spec.ts:25 (testing)
+- last seen: 2026-08-25T08:26:06Z
+
 ## Quarantined (failed when applied — ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

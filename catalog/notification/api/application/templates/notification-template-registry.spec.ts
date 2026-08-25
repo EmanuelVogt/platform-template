@@ -26,22 +26,34 @@ const SYSTEM_ONLY_TYPES = ["device_revoked", "password_set"] as const
 describe("NotificationTemplateSourceRegistry", () => {
   it("semeia os 10 tipos base no construtor", () => {
     const registry = new NotificationTemplateSourceRegistry()
-    for (const type of NOTIFICATION_TYPES) {
-      expect(registry.find(type)).toBeDefined()
-    }
+    expect(NOTIFICATION_TYPES.map((type) => registry.find(type)?.type)).toEqual(
+      [...NOTIFICATION_TYPES]
+    )
   })
 
   it("os 8 tipos de e-mail têm binding `email`", () => {
     const registry = new NotificationTemplateSourceRegistry()
-    for (const type of EMAIL_TYPES) {
-      expect(registry.find(type)?.email).toBeDefined()
-    }
+    expect(
+      EMAIL_TYPES.map((type) => registry.find(type)?.email?.template)
+    ).toEqual([
+      "access-link",
+      "verify",
+      "reset",
+      "lockout",
+      "password-changed",
+      "device-new-login",
+      "email-change",
+      "email-change-notice",
+    ])
   })
 
   it("os 2 tipos só-sistema não têm binding `email`", () => {
     const registry = new NotificationTemplateSourceRegistry()
     for (const type of SYSTEM_ONLY_TYPES) {
-      expect(registry.find(type)?.email).toBeUndefined()
+      expect(Object.keys(registry.find(type) ?? {}).sort()).toEqual([
+        "catalog",
+        "type",
+      ])
     }
   })
 

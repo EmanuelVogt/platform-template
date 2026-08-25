@@ -51,7 +51,7 @@ describe("identity.contract", () => {
   })
 
   it("DTOs expõem o schema (createZodDto)", () => {
-    expect(LoginDto).toBeDefined()
+    expect(LoginDto.schema).toBe(loginSchema)
   })
 
   it("email aceita 254 caracteres e recusa 255", () => {

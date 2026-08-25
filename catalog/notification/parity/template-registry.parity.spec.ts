@@ -41,6 +41,7 @@ describe("notification — fonte de template registrada (AD-007)", () => {
     const source = BASE_TEMPLATE_SOURCES.find(
       (s) => s.type === "email_verification"
     )
+    expect(source?.email?.template).toBe("verify")
     expect(source?.email?.templateDir).toBeUndefined()
   })
 

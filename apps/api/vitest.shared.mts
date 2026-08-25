@@ -24,6 +24,14 @@ export const swcPlugin = () =>
     },
   })
 
+/**
+ * Paralelismo dos tiers unitário e de integração. Um número só porque o Vitest
+ * recusa projetos com `maxWorkers` diferentes no mesmo `sequence.groupOrder`, e
+ * porque é ele que o `globalSetup` usa para saber quantos `test_wN` clonar — o
+ * tier de integração exige um clone por worker vivo.
+ */
+export const API_MAX_WORKERS = 4
+
 /** Base dos três tiers da api: Node puro, sem globais implícitos. */
 export const apiDefaults: InlineConfig = {
   environment: "node",

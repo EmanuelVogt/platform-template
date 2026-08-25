@@ -168,8 +168,11 @@ process fork (`isolate: true`, the default), so the heap does not pile up across
 `no-focused-tests`, `no-disabled-tests`, `expect-expect`, `no-conditional-expect` as `error`;
 `eslint-plugin-testing-library` and `eslint-plugin-jest-dom` on the web globs only. The local rule
 `no-existence-only-assert` (L-007) reports a body whose every `expect` ends in
-`toBeDefined`/`toBeUndefined`/`toBeTruthy`/`toBeFalsy`/argument-less `not.toThrow` with no
-concrete-value assertion alongside it. `max-nested-callbacks: 4`.
+`toBeDefined`/`toBeUndefined`/`toBeTruthy`/`toBeFalsy`/`not.toThrow` — with or without a matcher
+argument — and has no concrete-value assertion alongside it, unless the body declares
+`expect.assertions(n)`. In Vitest `expect(fn).not.toThrow(X)` passes when a different error is
+thrown, so a matcher argument makes the assertion weaker, not stronger — the rule treats it the
+same as the no-argument form. `max-nested-callbacks: 4`.
 
 ## Pre-push gate
 

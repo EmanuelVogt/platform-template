@@ -646,17 +646,18 @@ describe("assertValidBirthDate — ramos internos via activate()", () => {
   }
 
   it("data válida no passado próximo é aceita sem lançar", () => {
-    expect(() =>
-      pendingUser().activate(
-        {
-          passwordHash: "h",
-          name: "Ana",
-          birthDate: "1990-01-01",
-          avatarAttachmentId: null,
-        },
-        now
-      )
-    ).not.toThrow()
+    const activated = pendingUser().activate(
+      {
+        passwordHash: "h",
+        name: "Ana",
+        birthDate: "1990-01-01",
+        avatarAttachmentId: null,
+      },
+      now
+    )
+
+    expect(activated.props.birthDate).toBe("1990-01-01")
+    expect(activated.props.status).toBe("active")
   })
 
   it("data com dia inválido para o mês (29/02 em ano não-bissexto) lança InvalidBirthDateError", () => {

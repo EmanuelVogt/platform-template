@@ -125,7 +125,9 @@ describe("Fluxo de criação de usuário (e2e)", () => {
       "Ana",
       "create-user-ana-outbox"
     )
-    expect(token).toBeTruthy()
+
+    expect(mailer.sent.map((message) => message.to)).toContain(email)
+    expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/)
   })
 
   it("GET /v1/auth/access-link com token válido retorna dados do usuário criado", async () => {

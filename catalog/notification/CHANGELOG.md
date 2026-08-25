@@ -11,6 +11,18 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   esta versão.
 - Nenhuma mudança de código nesta entrada: a versão se move só por esse motivo.
 
+## [2.1.2]
+
+### Fixed
+
+- Asserções de existência trocadas pelo valor que cada teste queria provar, em
+  `notification-catalog.spec.ts` (conjunto de chaves do catálogo; tipos com canal `system` com
+  `renderInApp`/`metadata` de fato ligados), `notification-template-registry.spec.ts` (os 10
+  tipos semeados, os 8 templates de e-mail por nome, o shape dos 2 tipos só-sistema) e
+  `template-registry.parity.spec.ts` (`template: "verify"` ao lado do `templateDir` ausente).
+  Sem a correção, `platform/no-existence-only-assert` reprovava `pnpm check` em todo filho que
+  instala a entrada.
+
 ## [2.1.1]
 
 ### Changed

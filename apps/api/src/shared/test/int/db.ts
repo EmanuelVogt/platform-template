@@ -6,6 +6,8 @@ import { parseEnv } from "../../config/env"
 import { ApplicationPool } from "../../infra/database/application-pool"
 import { poolConfig } from "../../infra/database/connection-config"
 
+import { claimWorkerDatabaseIndex, workerDatabaseCount } from "./worker-db"
+
 import type { Env } from "../../config/env"
 import type { Pool } from "pg"
 
@@ -13,7 +15,7 @@ export function testDatabaseUrl(): string {
   const base = containerPostgresUri()
   if (process.env.TEST_DB_PER_WORKER !== "1") return base
   const url = new URL(base)
-  url.pathname = `/test_w${process.env.VITEST_POOL_ID ?? "1"}`
+  url.pathname = `/test_w${claimWorkerDatabaseIndex(base, workerDatabaseCount())}`
   return url.toString()
 }
 

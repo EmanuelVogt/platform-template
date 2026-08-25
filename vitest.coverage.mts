@@ -27,6 +27,9 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json-summary", "html", "lcov"],
       reportsDirectory: "coverage",
+      // Sem isto o Vitest engole o relatório quando um teste falha, e o run que
+      // mais precisa dos números — o vermelho — é o único que não os emite.
+      reportOnFailure: true,
       // `include` explícito é o que faz arquivo sem teste entrar na conta: o
       // `coverage.all` do Vitest 3 não existe mais.
       include: ["apps/api/src/**/*.ts", `${WEB_DIR}/src/**/*.{ts,tsx}`],

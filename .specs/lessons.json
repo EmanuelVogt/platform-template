@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 47,
+  "next_id": 51,
   "lessons": [
     {
       "id": "L-001",
@@ -837,6 +837,78 @@
       ],
       "created": "2026-08-25T07:15:10Z",
       "last_seen": "2026-08-25T07:15:10Z"
+    },
+    {
+      "id": "L-047",
+      "key": "gate_fail::shipping a new lint rule as error is only safe once the code it will govern is lint clean catalog is never linted in the template turbo lint covers only the apps so a rule green here turns pnpm check red in every child that installs an entry lint catalog in the same commit that adds the rule",
+      "text": "Shipping a new lint rule as error is only safe once the code it will govern is lint-clean: catalog/** is never linted in the template (turbo lint covers only the apps), so a rule green here turns pnpm check red in every child that installs an entry — lint catalog/** in the same commit that adds the rule.",
+      "signal": "gate_fail",
+      "scope": "catalog",
+      "status": "candidate",
+      "features": [
+        "test-suite-refactor"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "pnpm catalog:check — 38 platform/no-existence-only-assert errors in the rendered child (catalog)"
+      ],
+      "created": "2026-08-25T07:13:32Z",
+      "last_seen": "2026-08-25T07:13:32Z"
+    },
+    {
+      "id": "L-048",
+      "key": "gate_fail::vitest s v8 coverage defaults reportonfailure false so one failing test silently suppresses the whole coverage report set it true or a coverage floor gate reports nothing on exactly the runs where you most need the number",
+      "text": "Vitest's v8 coverage defaults reportOnFailure:false, so one failing test silently suppresses the whole coverage report — set it true, or a coverage-floor gate reports nothing on exactly the runs where you most need the number.",
+      "signal": "gate_fail",
+      "scope": "gates",
+      "status": "candidate",
+      "features": [
+        "test-suite-refactor"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "vitest.coverage.mts — no coverage emitted on stage 2 failure (gates)"
+      ],
+      "created": "2026-08-25T07:13:32Z",
+      "last_seen": "2026-08-25T07:13:32Z"
+    },
+    {
+      "id": "L-049",
+      "key": "surviving_mutant::when one rule is implemented twice template side script and the child shipped spec a mutation kills only the copy the suite exercises and the other passes green share the implementation or add a parity spec or the two drift silently",
+      "text": "When one rule is implemented twice (template-side script and the child-shipped spec), a mutation kills only the copy the suite exercises and the other passes green — share the implementation or add a parity spec, or the two drift silently.",
+      "signal": "surviving_mutant",
+      "scope": "catalog",
+      "status": "candidate",
+      "features": [
+        "test-suite-refactor"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "catalog-lint.mjs:134-149 vs module-boundaries.spec.ts:803-808 (catalog)"
+      ],
+      "created": "2026-08-25T07:13:32Z",
+      "last_seen": "2026-08-25T07:13:32Z"
+    },
+    {
+      "id": "L-050",
+      "key": "surviving_mutant::expect fn not tothrow someerror passes when fn throws a different error so converting an argument less not tothrow to the parameterised form to satisfy a lint rule silently drops the does not blow up guarantee assert a value instead and never let a rule exempt the parameterised form",
+      "text": "expect(fn).not.toThrow(SomeError) PASSES when fn throws a different error, so converting an argument-less not.toThrow() to the parameterised form to satisfy a lint rule silently drops the 'does not blow up' guarantee — assert a value instead, and never let a rule exempt the parameterised form.",
+      "signal": "surviving_mutant",
+      "scope": "testing",
+      "status": "candidate",
+      "features": [
+        "test-suite-refactor"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "LNT-02 AC2; catalog/identity/single-tenant/api/application/access-policy.spec.ts:25 (testing)"
+      ],
+      "created": "2026-08-25T08:26:06Z",
+      "last_seen": "2026-08-25T08:26:06Z"
     }
   ]
 }

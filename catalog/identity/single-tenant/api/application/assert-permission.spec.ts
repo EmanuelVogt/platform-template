@@ -53,6 +53,12 @@ describe("assertPermission", () => {
         isMaster: false,
       })
     ).not.toThrow()
+    expect(
+      check("admin.users.trash.purge", {
+        permissions: ["admin.users.read", "admin.users.trash.read"],
+        isMaster: false,
+      })
+    ).toThrow(ForbiddenError)
   })
 
   it("nega com 403 quando o ator não tem a chave", () => {
@@ -75,6 +81,9 @@ describe("assertPermission", () => {
     expect(
       check("admin.users.trash.read", { permissions: [], isMaster: true })
     ).not.toThrow()
+    expect(
+      check("admin.users.trash.read", { permissions: [], isMaster: false })
+    ).toThrow(ForbiddenError)
   })
 
   it("sem contexto de acesso no request nega, nunca passa", () => {

@@ -4,8 +4,10 @@ import { resolve } from "node:path"
 import { beforeAll, describe, expect, it } from "vitest"
 
 import {
+  canonicalKey,
   collectScanFiles,
   compareToBaseline,
+  entriesOf,
   HYGIENE_RULES,
   scanFiles,
   type Baseline,
@@ -22,9 +24,10 @@ const violations: Violation[] = scanFiles(REPO_ROOT, files)
 function currentBaseline(): Baseline {
   const baseline: Baseline = {}
   for (const violation of violations) {
-    const rules = baseline[violation.file] ?? {}
+    const key = canonicalKey(violation.file)
+    const rules = baseline[key] ?? {}
     rules[violation.rule] = (rules[violation.rule] ?? 0) + 1
-    baseline[violation.file] = rules
+    baseline[key] = rules
   }
   return Object.fromEntries(
     Object.entries(baseline).sort(([a], [b]) => a.localeCompare(b))
@@ -49,7 +52,17 @@ describe("harness-hygiene — os bans de duplicação sobre a árvore", () => {
     expect(files.length).toBeGreaterThan(200)
     expect(files.filter((file) => file.includes(".catalog-stage"))).toEqual([])
     expect(files).toContain("apps/api/src/shared/test/e2e/app.ts")
-    expect(files).toContain("catalog/attachment/api/testing/index.ts")
+  })
+
+  it("a varredura alcança o barrel de toda entrada presente, no layout que esta árvore tiver", () => {
+    const keys = files.map(canonicalKey)
+    // No template as entradas moram em `catalog/<entrada>/api/`; num filho, em
+    // `apps/api/src/modules/<entrada>/`. Um filho kernel-only não tem entrada
+    // alguma e o laço é vazio de propósito — os dois layouts estão cobertos
+    // contra fixtures em `scan.spec.ts`.
+    for (const entry of entriesOf(files)) {
+      expect(keys).toContain(`module:${entry}/testing/index.ts`)
+    }
   })
 
   it("todo ban do scanner tem um it neste arquivo", () => {
@@ -72,7 +85,8 @@ describe("harness-hygiene — os bans de duplicação sobre a árvore", () => {
     const { unrecorded, stale } = compareToBaseline(
       "single-testing-module",
       violations,
-      loadBaseline()
+      loadBaseline(),
+      files
     )
     expect(unrecorded).toEqual([])
     expect(stale).toEqual([])
@@ -82,7 +96,8 @@ describe("harness-hygiene — os bans de duplicação sobre a árvore", () => {
     const { unrecorded, stale } = compareToBaseline(
       "no-local-helper",
       violations,
-      loadBaseline()
+      loadBaseline(),
+      files
     )
     expect(unrecorded).toEqual([])
     expect(stale).toEqual([])
@@ -92,7 +107,8 @@ describe("harness-hygiene — os bans de duplicação sobre a árvore", () => {
     const { unrecorded, stale } = compareToBaseline(
       "no-harness-literal",
       violations,
-      loadBaseline()
+      loadBaseline(),
+      files
     )
     expect(unrecorded).toEqual([])
     expect(stale).toEqual([])
@@ -102,7 +118,8 @@ describe("harness-hygiene — os bans de duplicação sobre a árvore", () => {
     const { unrecorded, stale } = compareToBaseline(
       "pool-owned-by-harness",
       violations,
-      loadBaseline()
+      loadBaseline(),
+      files
     )
     expect(unrecorded).toEqual([])
     expect(stale).toEqual([])
@@ -112,7 +129,8 @@ describe("harness-hygiene — os bans de duplicação sobre a árvore", () => {
     const { unrecorded, stale } = compareToBaseline(
       "typed-deps",
       violations,
-      loadBaseline()
+      loadBaseline(),
+      files
     )
     expect(unrecorded).toEqual([])
     expect(stale).toEqual([])
@@ -122,7 +140,8 @@ describe("harness-hygiene — os bans de duplicação sobre a árvore", () => {
     const { unrecorded, stale } = compareToBaseline(
       "no-unsafe-cast",
       violations,
-      loadBaseline()
+      loadBaseline(),
+      files
     )
     expect(unrecorded).toEqual([])
     expect(stale).toEqual([])
@@ -132,7 +151,8 @@ describe("harness-hygiene — os bans de duplicação sobre a árvore", () => {
     const { unrecorded, stale } = compareToBaseline(
       "no-from-props",
       violations,
-      loadBaseline()
+      loadBaseline(),
+      files
     )
     expect(unrecorded).toEqual([])
     expect(stale).toEqual([])
@@ -142,7 +162,8 @@ describe("harness-hygiene — os bans de duplicação sobre a árvore", () => {
     const { unrecorded, stale } = compareToBaseline(
       "no-container-in-int-spec",
       violations,
-      loadBaseline()
+      loadBaseline(),
+      files
     )
     expect(unrecorded).toEqual([])
     expect(stale).toEqual([])
@@ -152,7 +173,8 @@ describe("harness-hygiene — os bans de duplicação sobre a árvore", () => {
     const { unrecorded, stale } = compareToBaseline(
       "no-sleep-as-proof",
       violations,
-      loadBaseline()
+      loadBaseline(),
+      files
     )
     expect(unrecorded).toEqual([])
     expect(stale).toEqual([])
@@ -162,7 +184,8 @@ describe("harness-hygiene — os bans de duplicação sobre a árvore", () => {
     const { unrecorded, stale } = compareToBaseline(
       "runner-setup-allowlist",
       violations,
-      loadBaseline()
+      loadBaseline(),
+      files
     )
     expect(unrecorded).toEqual([])
     expect(stale).toEqual([])

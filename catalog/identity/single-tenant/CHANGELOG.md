@@ -23,6 +23,35 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 - `COOKIE_SAMESITE=none` com a API em host diferente do host de `WEB_ORIGIN` passa a ser
   recusado no boot, em vez de emitir um cookie que o browser descarta.
 
+## [2.1.3]
+
+### Fixed
+
+- Os 17 `not.toThrow(<erro>)` que a 2.1.2 colocou nos guards `void` provam menos que a forma
+  sem argumento: no Vitest esse matcher afirma só "não lançou _este_ tipo" e passa quando o
+  código lança outro erro — um `TypeError` no caminho válido de `assertValidPermissionSet`
+  mantinha os quatro testes de aceitação verdes. Cada um passa a usar `not.toThrow()` sem
+  argumento mais a asserção que discrimina a aceitação: a variação mínima da mesma entrada
+  que precisa ser recusada (`assertValidPermissionSet`, `assertProfileFloor`,
+  `assertCanGrant`, `validatePasswordPolicy`, `assertPermission` e a suíte de paridade).
+
+## [2.1.2]
+
+### Fixed
+
+- 31 testes da entrada afirmavam só existência (`toBeDefined`/`toBeUndefined`/`toBeTruthy`/
+  `not.toThrow()`) e passariam sob uma implementação errada. Cada um passa a afirmar o
+  resultado que pretende provar: o `User` ativado (data e status), o `schema` que o
+  `LoginDto` expõe, o `Retry-After` do 429, o token opaco do link de acesso, o aparelho
+  corrente devolvido por `GET /auth/devices`, o `type` do 409 ao revogar o device atual, as
+  chamadas de escrita das solicitações de troca de e-mail fora do cooldown, o vínculo
+  preservado pelo no-op de `removeByServiceIds` e a única chave da feature `usage`. Nos
+  guards `void` (`assertValidPermissionSet`, `assertProfileFloor`, `assertCanGrant`,
+  `validatePasswordPolicy`, `assertPermission`, construtor do `HmacCsrf`) a asserção passa a
+  nomear o erro que não pode ser levantado. Sem a correção,
+  `platform/no-existence-only-assert` reprovava `pnpm check` em todo filho que instala a
+  entrada.
+
 ## [2.1.1]
 
 ### Fixed

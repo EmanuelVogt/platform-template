@@ -23,6 +23,9 @@ describe("assertValidPermissionSet (closure de requires)", () => {
     expect(() => {
       assertValidPermissionSet([])
     }).not.toThrow()
+    expect(() => {
+      assertValidPermissionSet(["admin.users.trash.read"])
+    }).toThrow("admin.users.read")
   })
 
   it("aceita set com cadeia completa", () => {
@@ -33,6 +36,9 @@ describe("assertValidPermissionSet (closure de requires)", () => {
         "admin.users.trash.purge",
       ])
     }).not.toThrow()
+    expect(() => {
+      assertValidPermissionSet(["admin.users.read", "admin.users.trash.purge"])
+    }).toThrow("admin.users.trash.read")
   })
 
   it("rejeita chave sem o requires presente, listando as faltantes", () => {
@@ -53,6 +59,9 @@ describe("assertProfileFloor (piso do perfil)", () => {
     expect(() => {
       assertProfileFloor("master", [])
     }).not.toThrow()
+    expect(() => {
+      assertProfileFloor("admin", [])
+    }).toThrow(InvalidPermissionSetError)
   })
 
   it("admin exige ≥1 chave do módulo admin", () => {
@@ -68,6 +77,9 @@ describe("assertProfileFloor (piso do perfil)", () => {
     expect(() => {
       assertProfileFloor("professional", [])
     }).not.toThrow()
+    expect(() => {
+      assertProfileFloor("admin", [])
+    }).toThrow(InvalidPermissionSetError)
   })
 
   describe("o piso sai da def registrada, não de chave literal", () => {
@@ -287,6 +299,9 @@ describe("assertCanGrant (concessão limitada ao ator)", () => {
         ["admin.users.read"]
       )
     }).not.toThrow()
+    expect(() => {
+      assertCanGrant({ actor: actorOf([]), current: [] }, ["admin.users.read"])
+    }).toThrow(PermissionGrantNotAllowedError)
   })
 
   it("conjunto contido no do ator passa", () => {
@@ -299,6 +314,11 @@ describe("assertCanGrant (concessão limitada ao ator)", () => {
         ["admin.users.read"]
       )
     }).not.toThrow()
+    expect(() => {
+      assertCanGrant({ actor: actorOf(["admin.users.create"]), current: [] }, [
+        "admin.users.read",
+      ])
+    }).toThrow(PermissionGrantNotAllowedError)
   })
 
   it("chave nova fora do conjunto do ator lança", () => {
@@ -319,6 +339,15 @@ describe("assertCanGrant (concessão limitada ao ator)", () => {
         ["admin.tags.read"]
       )
     }).not.toThrow()
+    expect(() => {
+      assertCanGrant(
+        {
+          actor: actorOf(["admin.users.read", "admin.users.update"]),
+          current: ["admin.tags.read"],
+        },
+        []
+      )
+    }).toThrow(PermissionGrantNotAllowedError)
   })
 
   it("revogar chave que o ator não tem lança (a revogação também é edição)", () => {
@@ -343,6 +372,15 @@ describe("assertCanGrant (concessão limitada ao ator)", () => {
         []
       )
     }).not.toThrow()
+    expect(() => {
+      assertCanGrant(
+        {
+          actor: actorOf(["admin.users.update"]),
+          current: ["admin.tags.read"],
+        },
+        []
+      )
+    }).toThrow(PermissionGrantNotAllowedError)
   })
 
   it("conjunto inalterado passa mesmo com chave fora do ator", () => {
@@ -351,6 +389,12 @@ describe("assertCanGrant (concessão limitada ao ator)", () => {
         "admin.tags.read",
       ])
     }).not.toThrow()
+    expect(() => {
+      assertCanGrant({ actor: actorOf([]), current: ["admin.tags.read"] }, [
+        "admin.tags.read",
+        "admin.users.read",
+      ])
+    }).toThrow(PermissionGrantNotAllowedError)
   })
 
   it("troca simultânea cobra as duas pontas do delta", () => {
@@ -381,6 +425,9 @@ describe("assertCanGrant (concessão limitada ao ator)", () => {
         []
       )
     }).not.toThrow()
+    expect(() => {
+      assertCanGrant({ actor: actorOf([]), current: ["admin.tags.read"] }, [])
+    }).toThrow(PermissionGrantNotAllowedError)
   })
 
   it("o 403 carrega o type permission-grant-not-allowed", () => {

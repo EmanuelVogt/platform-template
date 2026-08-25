@@ -1,27 +1,22 @@
 import http from "node:http"
 
-import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { createE2eApp } from "../../../../test/setup/app-factory"
-import {
-  createTestPool,
-  seedEmail,
-  truncateIdentity,
-  truncateKernel,
-} from "../../../../test/setup/test-db"
-import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
+import { createE2eApp, withE2ePool } from "../../../shared/test/e2e/app"
+import { E2E_ORIGIN } from "../../../shared/test/e2e/constants"
+import { resetDb } from "../../../shared/test/int/db"
 import { MAILER } from "../../notification/domain/ports/mailer"
-import { allowAllRateLimiter } from "../testing/allow-all-rate-limiter"
-import { fakeMailer } from "../testing/fake-mailer"
-import { seedUser } from "../testing/seed-user"
+import {
+  emails,
+  fakeMailer,
+  loginAs,
+  seedUser,
+  TEST_PASSWORD,
+} from "../testing"
 
-import type { INestApplication } from "@nestjs/common"
-import type { Pool } from "pg"
+import type { E2eApp } from "../../../shared/test/e2e/app"
 
-const ORIGIN = "http://localhost:5173"
-const PASSWORD = "Senha-Sse-Forte-2026!"
-const SUITE = "sse"
+const mail = emails("sse")
 
 /**
  * Faz a request GET e destrói o socket assim que os headers chegam.
@@ -46,7 +41,7 @@ function probeSSE(
         path,
         method: "GET",
         headers: {
-          Origin: ORIGIN,
+          Origin: E2E_ORIGIN,
           // supertest usa array de cookies; aqui passamos como header único
           Cookie: cookie.map((c) => c.split(";")[0]).join("; "),
         },
@@ -73,56 +68,30 @@ function probeSSE(
 }
 
 describe("SSE handshake /v1/notifications/stream (e2e)", () => {
-  let app: INestApplication
-  let pool: Pool
+  const db = withE2ePool()
+  let e2e: E2eApp
 
   beforeAll(async () => {
-    pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await pool.query(
-      "TRUNCATE TABLE notification.notifications, notification.notification_deliveries"
-    )
-
-    app = await createE2eApp((b) =>
-      b
-        .overrideProvider(RATE_LIMITER)
-        .useValue(allowAllRateLimiter)
-        .overrideProvider(MAILER)
-        .useValue(fakeMailer())
-    )
+    await resetDb(db.pool, ["identity", "_kernel", "notification"])
+    e2e = await createE2eApp({ overrides: [[MAILER, fakeMailer()]] })
     // listen(0) abre numa porta efêmera — necessário para o http nativo conseguir
     // endereçar o servidor fora do ciclo do supertest.
-    await app.getHttpServer().listen(0)
+    await e2e.app.getHttpServer().listen(0)
   })
 
   afterAll(async () => {
-    await app.close()
-    await pool.end()
+    await e2e.close()
   })
 
-  async function login(email: string, password: string): Promise<string[]> {
-    const res = await request(app.getHttpServer())
-      .post("/v1/auth/login")
-      .set("Origin", ORIGIN)
-      .send({ email, password })
-      .expect(200)
-    const setCookie = res.get("Set-Cookie")
-    if (!setCookie) throw new Error("login não retornou Set-Cookie")
-    return setCookie
-  }
-
   it("retorna 200 com content-type text/event-stream quando autenticado", async () => {
-    await seedUser(app, pool, {
-      email: seedEmail(SUITE, "alice"),
-      password: PASSWORD,
-    })
-    const cookie = await login(seedEmail(SUITE, "alice"), PASSWORD)
+    const email = mail("alice")
+    await seedUser(e2e.app, db.pool, { email, password: TEST_PASSWORD })
+    const cookies = await loginAs(e2e.http, email)
 
     const { statusCode, contentType } = await probeSSE(
-      app.getHttpServer(),
+      e2e.app.getHttpServer(),
       "/v1/notifications/stream",
-      cookie
+      cookies
     )
 
     expect(statusCode).toBe(200)
@@ -131,9 +100,9 @@ describe("SSE handshake /v1/notifications/stream (e2e)", () => {
 
   it("retorna 401 sem cookie de sessão", async () => {
     // supertest funciona aqui porque o 401 tem corpo JSON e fecha a conexão
-    await request(app.getHttpServer())
+    await e2e.http
       .get("/v1/notifications/stream")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .expect(401)
   })
 })

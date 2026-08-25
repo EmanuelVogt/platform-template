@@ -1,114 +1,78 @@
-import { type INestApplication, VersioningType } from "@nestjs/common"
-import { Test } from "@nestjs/testing"
-import request from "supertest"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
-import {
-  createTestPool,
-  truncateIdentity,
-  truncateKernel,
-} from "../../../../test/setup/test-db"
-import { AppModule } from "../../../app.module"
-import { applySecurity } from "../../../main"
-import { RequestContext } from "../../../shared/kernel/context/request-context"
-import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
-import { seedUser } from "../testing/seed-user"
+import { createE2eApp, withE2ePool } from "../../../shared/test/e2e/app"
+import { E2E_ORIGIN } from "../../../shared/test/e2e/constants"
+import { cookieHeader, cookieValue } from "../../../shared/test/e2e/http"
+import { resetDb } from "../../../shared/test/int/db"
+import { seedUser, TEST_PASSWORD } from "../testing"
 
-import type { Pool } from "pg"
+import type { E2eApp } from "../../../shared/test/e2e/app"
 
-const ORIGIN = "http://localhost:5173"
 const EMAIL = "devices-e2e@example.com"
-const PASSWORD = "Senha-Muito-Forte-2026!"
 const SESSION_COOKIE = "rit_session"
 const DEVICE_COOKIE = "rit_device"
 
-type Jar = Record<string, string>
 type DeviceItem = { id: string; current: boolean; activeSessionCount: number }
 
-function parseSetCookie(raw: string[] | string | undefined): Jar {
-  const arr = raw === undefined ? [] : Array.isArray(raw) ? raw : [raw]
-  const jar: Jar = {}
-  for (const entry of arr) {
-    const pair = entry.split(";", 1)[0] ?? ""
-    const eq = pair.indexOf("=")
-    if (eq > 0) jar[pair.slice(0, eq)] = pair.slice(eq + 1)
-  }
-  return jar
-}
-
-function cookieHeader(jar: Jar): string {
-  return Object.entries(jar)
-    .map(([k, v]) => `${k}=${v}`)
-    .join("; ")
-}
-
 describe("/auth/devices (e2e)", () => {
-  let app: INestApplication
-  let pool: Pool
+  const db = withE2ePool()
+  let e2e: E2eApp
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile()
-    app = moduleRef.createNestApplication()
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-    applySecurity(app)
-    app.use(createRequestContextMiddleware(app.get(RequestContext)))
-    await app.init()
-    pool = createTestPool()
+    e2e = await createE2eApp({ rateLimiter: "real" })
   })
 
   afterAll(async () => {
-    await pool.end()
-    await app.close()
+    await e2e.close()
   })
 
   beforeEach(async () => {
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await seedUser(app, pool, {
+    await resetDb(db.pool, ["identity", "_kernel"])
+    await seedUser(e2e.app, db.pool, {
       email: EMAIL,
       name: "Devices E2E",
-      password: PASSWORD,
+      password: TEST_PASSWORD,
     })
   })
 
-  async function login(deviceCookie?: string): Promise<Jar> {
-    const req = request(app.getHttpServer())
-      .post("/v1/auth/login")
-      .set("Origin", ORIGIN)
+  /**
+   * Login opcionalmente já vindo de um device conhecido. Devolve a resposta
+   * crua porque a suíte precisa tanto do jar inteiro quanto do valor isolado
+   * do cookie de device — é o assunto do arquivo.
+   */
+  async function loginOnDevice(deviceCookie?: string) {
+    const req = e2e.http.post("/v1/auth/login").set("Origin", E2E_ORIGIN)
     if (deviceCookie) req.set("Cookie", `${DEVICE_COOKIE}=${deviceCookie}`)
-    const res = await req
-      .send({ email: EMAIL, password: PASSWORD, rememberMe: false })
+    return req
+      .send({ email: EMAIL, password: TEST_PASSWORD, rememberMe: false })
       .expect(200)
-    return parseSetCookie(res.headers["set-cookie"])
   }
 
-  function listDevices(jar: Jar) {
-    return request(app.getHttpServer())
+  function listDevices(cookies: string[]) {
+    return e2e.http
       .get("/v1/auth/devices")
-      .set("Origin", ORIGIN)
-      .set("Cookie", cookieHeader(jar))
+      .set("Origin", E2E_ORIGIN)
+      .set("Cookie", cookies)
   }
 
   it("login sem cookie de device → Set-Cookie de device novo", async () => {
-    const jar = await login()
-    expect(jar[DEVICE_COOKIE]).toBeDefined()
-    expect(jar[SESSION_COOKIE]).toBeDefined()
+    const res = await loginOnDevice()
+    expect(cookieValue(res, DEVICE_COOKIE)).toBeDefined()
+    expect(cookieValue(res, SESSION_COOKIE)).toBeDefined()
   })
 
   it("relogin com o MESMO cookie de device → 1 device, 1 sessão; a anterior morre", async () => {
-    const jar1 = await login()
-    const deviceCookie = jar1[DEVICE_COOKIE]
+    const first = await loginOnDevice()
+    const deviceCookie = cookieValue(first, DEVICE_COOKIE)
     expect(deviceCookie).toBeDefined()
-    const jar2 = await login(deviceCookie)
+    const second = await loginOnDevice(deviceCookie)
     // sliding: o mesmo valor de cookie de device volta no 2º login
-    expect(jar2[DEVICE_COOKIE]).toBe(deviceCookie)
+    expect(cookieValue(second, DEVICE_COOKIE)).toBe(deviceCookie)
 
     // o relogin revoga a sessão anterior do device → token antigo não autentica
-    await listDevices(jar1).expect(401)
+    await listDevices(cookieHeader(first)).expect(401)
 
-    const res = await listDevices(jar2).expect(200)
+    const res = await listDevices(cookieHeader(second)).expect(200)
     const devices = res.body.devices as DeviceItem[]
     expect(devices).toHaveLength(1)
     expect(devices[0]?.activeSessionCount).toBe(1)
@@ -116,8 +80,8 @@ describe("/auth/devices (e2e)", () => {
   })
 
   it("DELETE /auth/devices/:id derruba as sessões do outro device", async () => {
-    const jarA = await login()
-    const jarB = await login() // sem cookie de device → device novo
+    const jarA = cookieHeader(await loginOnDevice())
+    const jarB = cookieHeader(await loginOnDevice()) // device novo
 
     const listA = await listDevices(jarA).expect(200)
     const other = (listA.body.devices as DeviceItem[]).find((d) => !d.current)
@@ -126,10 +90,10 @@ describe("/auth/devices (e2e)", () => {
     // só sem `if` dentro do teste.
     expect(other).toBeDefined()
 
-    await request(app.getHttpServer())
+    await e2e.http
       .delete(`/v1/auth/devices/${other!.id}`)
-      .set("Origin", ORIGIN)
-      .set("Cookie", cookieHeader(jarA))
+      .set("Origin", E2E_ORIGIN)
+      .set("Cookie", jarA)
       .expect(204)
 
     const after = await listDevices(jarA).expect(200)
@@ -141,12 +105,12 @@ describe("/auth/devices (e2e)", () => {
   })
 
   it("id de device longo demais → 400, sem chegar ao repositório", async () => {
-    const jar = await login()
+    const jar = cookieHeader(await loginOnDevice())
 
-    const res = await request(app.getHttpServer())
+    const res = await e2e.http
       .delete(`/v1/auth/devices/${"x".repeat(65)}`)
-      .set("Origin", ORIGIN)
-      .set("Cookie", cookieHeader(jar))
+      .set("Origin", E2E_ORIGIN)
+      .set("Cookie", jar)
       .expect(400)
     expect(res.body.type).not.toMatch(/device-not-found$/)
 
@@ -155,7 +119,7 @@ describe("/auth/devices (e2e)", () => {
   })
 
   it("revogar o device atual → 409", async () => {
-    const jar = await login()
+    const jar = cookieHeader(await loginOnDevice())
     const list = await listDevices(jar).expect(200)
     const current = (list.body.devices as DeviceItem[]).find((d) => d.current)
     // SPEC_DEVIATION: expect(...).toBeDefined() + `!` no lugar de `if (!x) throw`.
@@ -163,21 +127,21 @@ describe("/auth/devices (e2e)", () => {
     // só sem `if` dentro do teste.
     expect(current).toBeDefined()
 
-    await request(app.getHttpServer())
+    await e2e.http
       .delete(`/v1/auth/devices/${current!.id}`)
-      .set("Origin", ORIGIN)
-      .set("Cookie", cookieHeader(jar))
+      .set("Origin", E2E_ORIGIN)
+      .set("Cookie", jar)
       .expect(409)
   })
 
   it("DELETE /auth/devices (outros) mantém o atual e derruba os demais", async () => {
-    const jarA = await login()
-    await login() // device B
+    const jarA = cookieHeader(await loginOnDevice())
+    await loginOnDevice() // device B
 
-    await request(app.getHttpServer())
+    await e2e.http
       .delete("/v1/auth/devices")
-      .set("Origin", ORIGIN)
-      .set("Cookie", cookieHeader(jarA))
+      .set("Origin", E2E_ORIGIN)
+      .set("Cookie", jarA)
       .expect(204)
 
     const after = await listDevices(jarA).expect(200)

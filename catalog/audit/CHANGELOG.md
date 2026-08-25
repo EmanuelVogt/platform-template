@@ -9,6 +9,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 - Requer o kernel 3.x: a entrada deixa de suportar o kernel 2.x — o `kernelRange` abre
   para `>=3.0.0 <4.0.0` no corte da `v3.0.0`, e um child em kernel 2.x não instala mais
   esta versão.
+- Exige `identity` 3.x: o `dependsOn` abre para `>=3.0.0 <4.0.0`. As cinco entradas se
+  movem juntas na `v3.0.0`, então um child não instala mais esta versão ao lado de um
+  `identity` 2.x.
 - `CLINIC_TZ` some do leitor de estatísticas: os buckets por dia/semana leem
   `APP_TIMEZONE` (IANA, default `UTC`). Um child que dependia do fuso fixo muda de
   recorte; ver `ADV-20260824-04`.

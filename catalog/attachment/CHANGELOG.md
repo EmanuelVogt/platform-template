@@ -9,7 +9,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 - Requer o kernel 3.x: a entrada deixa de suportar o kernel 2.x — o `kernelRange` abre
   para `>=3.0.0 <4.0.0` no corte da `v3.0.0`, e um child em kernel 2.x não instala mais
   esta versão.
-- Nenhuma mudança de código nesta entrada: a versão se move só por esse motivo.
+- Exige pares 3.x: os `dependsOn` de `identity` e `notification` abrem para
+  `>=3.0.0 <4.0.0`. As cinco entradas se movem juntas na `v3.0.0`, então um child não
+  instala mais esta versão ao lado de um par 2.x.
+- Nenhuma mudança de código nesta entrada: a versão se move só por esses motivos.
 
 ## [2.1.1]
 

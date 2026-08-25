@@ -11,6 +11,9 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 - Requer o kernel 3.x: a entrada deixa de suportar o kernel 2.x — o `kernelRange` abre
   para `>=3.0.0 <4.0.0` no corte da `v3.0.0`, e um child em kernel 2.x não instala mais
   esta versão.
+- Exige `notification` 3.x: o `dependsOn` abre para `>=3.0.0 <4.0.0`. As cinco entradas
+  se movem juntas na `v3.0.0`, então um child não instala mais esta versão ao lado de um
+  `notification` 2.x.
 - Nomes de cookie neutros: `COOKIE_NAME` passa a `__Host-app_session`,
   `DEVICE_COOKIE_NAME` a `__Host-app_device` e o cookie de CSRF a `app_csrf` — este
   último deixa de ser literal e passa a sair da configuração da entrada. Trocar o nome

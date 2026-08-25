@@ -26,12 +26,20 @@ const trackedUnder = (...paths) =>
     .split("\0")
     .filter(Boolean)
 
+// Este arquivo nomeia o caminho antigo para poder asseverar sobre ele: a asserção não é
+// uma referência que mande o leitor para lá.
+const SELF = "scripts/platform/__tests__/docs-audience-contract.test.mjs"
+
 const filesReferencing = (needle) => {
   try {
-    return execFileSync("git", ["grep", "-l", "-F", needle, "--", ":!.specs"], {
-      cwd: ROOT,
-      encoding: "utf8",
-    })
+    return execFileSync(
+      "git",
+      ["grep", "-l", "-F", needle, "--", ":!.specs", `:!${SELF}`],
+      {
+        cwd: ROOT,
+        encoding: "utf8",
+      }
+    )
       .split("\n")
       .filter(Boolean)
   } catch {

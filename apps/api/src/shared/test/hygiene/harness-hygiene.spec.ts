@@ -54,14 +54,20 @@ describe("harness-hygiene — os bans de duplicação sobre a árvore", () => {
     expect(files).toContain("apps/api/src/shared/test/e2e/app.ts")
   })
 
-  it("a varredura alcança o barrel de toda entrada presente, no layout que esta árvore tiver", () => {
+  it("o helper de entrada que a varredura alcança está atrás do barrel, no layout que esta árvore tiver", () => {
     const keys = files.map(canonicalKey)
     // No template as entradas moram em `catalog/<entrada>/api/`; num filho, em
-    // `apps/api/src/modules/<entrada>/`. Um filho kernel-only não tem entrada
-    // alguma e o laço é vazio de propósito — os dois layouts estão cobertos
-    // contra fixtures em `scan.spec.ts`.
+    // `apps/api/src/modules/<entrada>/`. A regra cobrada é a de
+    // `docs/test/testing.md` § *Entry `testing/` convention*: a entrada **que
+    // traz helper de teste** guarda tudo atrás de um `index.ts`, nunca um
+    // import de arquivo solto. Entrada que não traz helper nenhum não deve
+    // barril algum e o laço a pula — como pula um filho kernel-only, sem
+    // entrada alguma. Que os dois layouts (e a variante) colapsem na mesma
+    // chave está coberto contra fixtures em `scan.spec.ts`.
     for (const entry of entriesOf(files)) {
-      expect(keys).toContain(`module:${entry}/testing/index.ts`)
+      const prefix = `module:${entry}/testing/`
+      if (!keys.some((key) => key.startsWith(prefix))) continue
+      expect(keys).toContain(`${prefix}index.ts`)
     }
   })
 

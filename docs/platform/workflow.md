@@ -36,6 +36,8 @@ for `catalog/`, which only the template has) — a product consumes versions wit
 
 In the template, the command composes the empty marker commit `chore(release): vX.Y.Z`
 and stops; the push is what cuts the tag. `--push` does both, and an agent may run it
-here when the owner asks for the release. The tag itself is never local: `release.yml`
+here on its own — the clause reserving tag and push to the owner was lifted on
+2026-08-25 (see the decisions log). That grant is template-only: in a product, push is
+deploy and stays the user's act. The tag itself is never local: `release.yml`
 cuts it after the full gate, so a tag that exists was green; the same job publishes the
 GitHub Release from the changelog section.

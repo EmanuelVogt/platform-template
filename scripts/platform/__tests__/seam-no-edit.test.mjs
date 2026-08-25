@@ -8,7 +8,7 @@ import { webRootFor } from "../lib/child-layout.mjs"
 
 // SEAM-03 (spec.md AC3): "WHEN the identity entry is installed THEN no edit
 // to shell.tsx, main.tsx or app-providers.tsx SHALL be required." The claim
-// is prose-only today (catalog/identity/single-tenant/README.md:315,375);
+// is prose-only today (catalog/identity/single-tenant/README.md:318,378);
 // these assertions make the two structural facts that back it fail loudly if
 // either ever stops holding, without paying for a full `module add` install
 // (pnpm install + `pnpm contract`, minutes, network-dependent).
@@ -69,11 +69,11 @@ test("SEAM-03 — the README's no-edit claim is still on disk at the cited lines
   )
   const lines = readme.split("\n")
   assert.match(
-    lines[314],
+    lines[317],
     /`shell\.tsx`, `main\.tsx`, `app-providers\.tsx`\) precisa ser editado/
   )
   assert.match(
-    lines[374],
+    lines[377],
     /exige editar `shell\.tsx`, `main\.tsx` ou `app-providers\.tsx`\./
   )
 })

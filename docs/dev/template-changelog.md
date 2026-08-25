@@ -19,8 +19,15 @@ Next shell whose comment named Vite variables. Both are fixed.
 2. **The release gate certifies everything the branch gate certifies**
    (`.github/workflows/release.yml`): it ran neither `template:smoke` nor any `web_stack`
    leg of `catalog:check`, so `v2.4.0`'s release was green while `ci.yml` on the same tree
-   was red. `catalog:check` gains the `web_stack` dimension and a two-leg `smoke` job joins
-   `tag.needs`; `release-gate-parity.test.mjs` derives the requirement from `ci.yml` itself.
+   was red. `catalog:check` gains the `web_stack` dimension, a two-leg `smoke` job joins
+   `tag.needs`, a `coverage` job runs the same `test:coverage` gate, and `verify` picks up
+   `contract:check` (with `ci.yml`'s env block), `--filter api build:emit` and
+   `turbo build --filter=web` — running `turbo lint typecheck` literally rather than through
+   the `pnpm check` alias. `release-gate-parity.test.mjs` derives the requirement from
+   `ci.yml` itself: every `pnpm`/`pipx` command CI runs on `push: main` must be run by a
+   release job inside `tag`'s transitive `needs` closure, and every matrix dimension `ci.yml`
+   declares must exist on the same-named release job. Reachability is part of the
+   invariant — a job that runs the command without gating the tag certifies nothing.
 3. **`copier` is pinned to `9.17.2`** (`ci.yml`, `release.yml`): the version
    `copier-questions.test.mjs` derives its guarantee from. Five install sites.
 

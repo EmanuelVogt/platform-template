@@ -224,6 +224,14 @@ session sharing this checkout, not this feature alone.
 | C3 | T5 | `6dd7c14` | |
 | C3 | T6 | `44f53d6` | 3 inline waivers in `ADV-20260821-01:45,:59`, `ADV-20260823-02:16` |
 
+### Wave 2 — DONE, Build gate GREEN (2026-08-25)
+
+Gate: `pnpm format:check` exit 0 · `pnpm test:scripts` **639 pass / 0 fail**.
+
+| Cluster | Task | Commit | Note |
+| ------- | ---- | ------ | ---- |
+| C4 | T7 | `203f448` | `/docs/platform` anchored; the per-file `docs/catalog/README-contract.md` entry removed; `/docs/platform_template` left in place |
+
 ### Corrections this wave forced on the plan
 
 **1. T12's premise is void — `v2.4.1` is tagged.** A parallel session pushed the marker commit

@@ -32,6 +32,10 @@ _exclude:
   # sem a barra inicial casaria qualquer diretório com esse nome em qualquer
   # profundidade; sem a final o diretório-raiz escapa e nasce vazio no filho
   - /docs/platform_template
+  # doc endereçado a quem trabalha no próprio template — mesma âncora do `/catalog`:
+  # sem a barra inicial casaria qualquer diretório com esse nome em qualquer
+  # profundidade; sem a final o diretório-raiz escapa e nasce vazio no filho
+  - /docs/platform
   # gate de tag do próprio template — assume `_copier_conf.answers_file` ausente
   # e o `.copier-answers.yml.jinja` da raiz; no filho seria inerte, mas não deve
   # nem chegar lá. O filho não ganha workflow de atualização nenhum: ele nunca se
@@ -59,7 +63,6 @@ _exclude:
   - scripts/platform/lib/child.mjs
   - scripts/platform/lib/lint.mjs
   - scripts/platform/__tests__
-  - docs/catalog/README-contract.md
 
 _skip_if_exists:
   - README.md

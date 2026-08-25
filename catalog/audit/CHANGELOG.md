@@ -15,6 +15,13 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 - `CLINIC_TZ` some do leitor de estatísticas: os buckets por dia/semana leem
   `APP_TIMEZONE` (IANA, default `UTC`). Um child que dependia do fuso fixo muda de
   recorte; ver `ADV-20260824-04`.
+- O base set da trilha para de registrar as sete tabelas da fatia profissional
+  (`user_professional_areas`, `user_professional_services`, `user_scheduling_areas`,
+  `user_professional_schedule_configs`/`_slots`/`_blocks`, `professional_default_hours`):
+  elas saem do `identity` para a entrada `professional`, que registra as próprias pelo
+  `AuditRegistry`. Um child que instale a entrada nova sem aplicar esta versão lança
+  `DuplicateAuditRegistrationError` no boot — `registerTables` indexa por nome de tabela
+  puro. O alvo de FK `professional_user_id` permanece no base set. Ver `ADV-20260824-02`.
 
 ### Fixed
 

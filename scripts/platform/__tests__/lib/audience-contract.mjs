@@ -291,9 +291,7 @@ const paragraphOf = (lines) => {
   return owner
 }
 
-export const documentTokens = (text, destination, roots) => {
-  const found = []
-  const directory = path.posix.dirname(destination)
+const scannableLines = (text) => {
   const lines = blankFencedBlocks(text.split("\n"))
   const paragraphs = paragraphOf(lines)
   const waivedByParagraph = new Map()
@@ -306,8 +304,18 @@ export const documentTokens = (text, destination, roots) => {
       waivedByParagraph.get(paragraph).add(token)
     }
   })
-  lines.forEach((line, index) => {
-    const waived = waivedByParagraph.get(paragraphs[index])
+  return lines.map((line, index) => ({
+    line,
+    number: index + 1,
+    waived: waivedByParagraph.get(paragraphs[index]),
+  }))
+}
+
+export const documentTokens = (text, destination, roots) => {
+  const found = []
+  const directory = path.posix.dirname(destination)
+  scannableLines(text).forEach(({ line, number, waived }) => {
+    const index = number - 1
     const push = (raw, resolved) => {
       if (waived.has(raw)) return
       found.push({ line: index + 1, token: raw, resolved })
@@ -365,6 +373,57 @@ export const auditShippedDocs = ({
         line: hit.line,
         token: hit.token,
         message: `${doc.destination}:${hit.line} — \`${hit.token}\` não existe no que o filho recebe`,
+      })
+    }
+  }
+  return findings
+}
+
+// --- AUD-06: nenhum doc entregue nomeia um workflow que o `_exclude` remove ---
+
+// A regra é mais larga que a letra de AUD-06 ("exatamente igual ao stem") de propósito: o
+// token de hoje é `` `release.yml` `` (docs/agents/workflow.md), que não é o stem nem um
+// token de caminho — o span não tem `/`. `<stem>`, `<stem>.yml` e `<stem>.yaml` são a mesma
+// intenção com a grafia que o arquivo usa. Igualdade exata contra essas três formas mantém
+// `pnpm catalog:lint` e `catalog/` fora da regra.
+export const workflowNameForms = (stem) => [stem, `${stem}.yml`, `${stem}.yaml`]
+
+export const documentWorkflowNames = (text, stems) => {
+  const forms = new Map()
+  for (const stem of stems) {
+    for (const form of workflowNameForms(stem)) forms.set(form, stem)
+  }
+  const found = []
+  for (const { line, number, waived } of scannableLines(text)) {
+    for (const match of line.matchAll(CODE_SPAN_PATTERN)) {
+      const raw = match[2].trim()
+      const stem = forms.get(raw)
+      if (stem === undefined || waived.has(raw)) continue
+      found.push({ line: number, token: raw, stem })
+    }
+  }
+  return found
+}
+
+export const auditWorkflowNames = ({
+  docs = shippedDocs(),
+  stems = excludedWorkflowStems(),
+  exempt = EXEMPT_DOCS,
+  exemptPrefixes = EXEMPT_DOC_PREFIXES,
+  readDoc = (source) => readFileSync(path.join(ROOT, source), "utf8"),
+} = {}) => {
+  const findings = []
+  for (const doc of docs) {
+    if (exempt.includes(doc.destination)) continue
+    if (exemptPrefixes.some((prefix) => doc.destination.startsWith(prefix))) {
+      continue
+    }
+    for (const hit of documentWorkflowNames(readDoc(doc.source), stems)) {
+      findings.push({
+        file: doc.destination,
+        line: hit.line,
+        token: hit.token,
+        message: `${doc.destination}:${hit.line} — \`${hit.token}\` nomeia o workflow ${hit.stem}, que o \`_exclude\` remove do filho`,
       })
     }
   }

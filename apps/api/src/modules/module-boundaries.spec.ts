@@ -988,11 +988,11 @@ function ruleDOffenses(): string[] {
     : childRuleDOffensesIn(childModuleFiles())
 }
 
-// `catalogEntries()` devolve `[]` sem `catalog/` — no template as cinco entradas
+// `catalogEntries()` devolve `[]` sem `catalog/` — no template as seis entradas
 // do catálogo têm de continuar sendo exigidas, no filho o esperado é o vazio que
 // a ausência do catálogo dita. Mesma função, mesmo teste, esperado do layout.
 const EXPECTED_CATALOG_ENTRIES = existsSync(CATALOG_ROOT)
-  ? ["attachment", "audit", "identity", "notification", "tag"]
+  ? ["attachment", "audit", "identity", "notification", "professional", "tag"]
   : []
 const EXPECTED_IDENTITY_DEPENDS_ON = existsSync(CATALOG_ROOT)
   ? ["notification"]

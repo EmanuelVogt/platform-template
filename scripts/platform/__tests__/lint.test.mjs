@@ -381,7 +381,7 @@ test("lintAdvisoryFrontmatter falha e nomeia o campo obrigatório ausente", () =
   assert.match(errors[0], /parity/)
 })
 
-test("lintAdvisoryModule aceita kernel e cada uma das 5 entradas reais do catálogo", () => {
+test("lintAdvisoryModule aceita kernel e cada uma das 6 entradas reais do catálogo", () => {
   const catalogRoot = path.join(ROOT, "catalog")
   const entryNames = discoverEntries(catalogRoot).map((entryDir) =>
     path.relative(catalogRoot, entryDir).split(path.sep).join("/")
@@ -391,6 +391,7 @@ test("lintAdvisoryModule aceita kernel e cada uma das 5 entradas reais do catál
     "audit",
     "identity/single-tenant",
     "notification",
+    "professional",
     "tag",
   ])
   assert.deepEqual(

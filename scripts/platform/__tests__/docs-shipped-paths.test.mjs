@@ -249,6 +249,7 @@ test("o mapa de entradas vem do catálogo de verdade, não de uma lista embutida
     "audit",
     "identity",
     "notification",
+    "professional",
     "tag",
   ])
 })

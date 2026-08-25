@@ -22,8 +22,8 @@ export const SEEDED = {
   unknownCast: "const repo = {} as unknown as Repo",
   neverCast: "const nope = value as never",
   typedMock: "const repo = mockOf<Repo>()",
-  fromProps: "const tag = Tag.fromProps({ id })",
-  fromPropsInBarrel: "return Tag.fromProps({ id })",
-  makeEntity: "const tag = makeTag({ id })",
+  fromProps: "const sample = Sample.fromProps({ id })",
+  fromPropsInBarrel: "return Sample.fromProps({ id })",
+  makeEntity: "const sample = makeSample({ id })",
   genericContainer: "const container = new GenericContainer('postgres')",
 } as const

@@ -13,11 +13,12 @@ import {
 } from "./scan"
 import { SEEDED } from "./violations.fixture"
 
-const TEMPLATE_SPEC = "catalog/tag/api/application/create-tag.use-case.spec.ts"
+const TEMPLATE_SPEC =
+  "catalog/sample/api/application/create-sample.use-case.spec.ts"
 const CHILD_SPEC =
-  "apps/api/src/modules/tag/application/create-tag.use-case.spec.ts"
-const CHILD_BARREL = "apps/api/src/modules/tag/testing/index.ts"
-const TEMPLATE_BARREL = "catalog/tag/api/testing/index.ts"
+  "apps/api/src/modules/sample/application/create-sample.use-case.spec.ts"
+const CHILD_BARREL = "apps/api/src/modules/sample/testing/index.ts"
+const TEMPLATE_BARREL = "catalog/sample/api/testing/index.ts"
 const HARNESS = "apps/api/src/shared/test/e2e/app.ts"
 
 function rulesOf(file: string, source: string): string[] {
@@ -31,13 +32,16 @@ function fixtureTree(): string {
     mkdirSync(dirname(abs), { recursive: true })
     writeFileSync(abs, source)
   }
-  write("apps/api/src/modules/tag/testing/index.ts", "export const a = 1\n")
-  write("apps/api/src/modules/tag/tag.spec.ts", "export const b = 1\n")
+  write("apps/api/src/modules/sample/testing/index.ts", "export const a = 1\n")
+  write("apps/api/src/modules/sample/sample.spec.ts", "export const b = 1\n")
   write("apps/api/src/node_modules/pkg/index.ts", "export const c = 1\n")
   write("apps/api/src/dist/bundle.ts", "export const d = 1\n")
   write("apps/api/src/coverage/report.ts", "export const e = 1\n")
-  write("apps/api/.catalog-stage/src/modules/tag/tag.spec.ts", "const f = 1\n")
-  write("apps/api/src/modules/tag/README.md", "# tag\n")
+  write(
+    "apps/api/.catalog-stage/src/modules/sample/sample.spec.ts",
+    "const f = 1\n"
+  )
+  write("apps/api/src/modules/sample/README.md", "# sample\n")
   write("apps/api/src/shared/test/hygiene/scan.ts", "const g = 1\n")
   return root
 }
@@ -48,8 +52,8 @@ describe("scan — a varredura de arquivos", () => {
   it("recolhe .ts do layout do produto e ignora node_modules, dist e coverage", () => {
     const files = collectScanFiles(root, ["apps/api/src"])
     expect(files).toEqual([
-      "apps/api/src/modules/tag/tag.spec.ts",
-      "apps/api/src/modules/tag/testing/index.ts",
+      "apps/api/src/modules/sample/sample.spec.ts",
+      "apps/api/src/modules/sample/testing/index.ts",
     ])
   })
 
@@ -145,7 +149,8 @@ describe("scan — cada ban reprova a violação semeada e aceita a forma corret
   })
 
   it("no-container-in-int-spec", () => {
-    const intSpec = "catalog/tag/api/infrastructure/tag.repository.int-spec.ts"
+    const intSpec =
+      "catalog/sample/api/infrastructure/sample.repository.int-spec.ts"
     const source = SEEDED.genericContainer
     expect(rulesOf(intSpec, source)).toEqual(["no-container-in-int-spec"])
     expect(rulesOf(TEMPLATE_SPEC, source)).toEqual([])

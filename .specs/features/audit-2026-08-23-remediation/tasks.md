@@ -3609,6 +3609,156 @@ entry extraction. Both depend on T57 and are now unblocked.
 
 ---
 
+### Wave 10 — CLUSTERS DONE, GATE 7/8, `catalog:check` RED ACROSS THE 10→11 WINDOW (2026-08-25)
+
+| Cluster | Tasks | Commits | Worker's own gate |
+| --- | --- | --- | --- |
+| C17 (opus) | T58 → T59 → T60 → T61 → T62 → T63 | `7883d4f`, `50146dd`, `55aae57`, `a3f9256`, `de547b3`, `a8f12e6` | `catalog:lint` + `catalog:typecheck` exit 0 per task; 11 unit tests |
+| C18 (opus) | T64 → T65 → T66 | `b9991d3`, `e8437da`, `085b957` | `catalog:test` / `catalog:lint` exit 0 |
+| C16a (sonnet) | T57a | `28ffc8a` | `test:scripts` 690/690 |
+| follow-ups | allowlists, harness barrel | `794a10a`, `f199343` | `test` 762/762, `test:scripts` 690/690 |
+
+**Build gate (`full-unit`, eight commands)** — logs under the session scratchpad `gate10/*.log`,
+HEAD `f199343` verified unchanged before and after:
+
+| Command | Exit | Result |
+| --- | --- | --- |
+| `pnpm check` | 0 | turbo 7/7 |
+| `pnpm test` | 0 | 109 files / 762 tests |
+| `pnpm test:scripts` | 0 | 690 / 690 |
+| `pnpm catalog:test` | 0 | 122 files / 898 tests |
+| `pnpm catalog:typecheck` | 0 | **6** entries clean |
+| `pnpm catalog:lint` | 0 | — |
+| `pnpm format:check` | 0 | — |
+| `pnpm catalog:check` | **7** | **FAIL — and NOT the failure this wave predicted. See below.** |
+
+#### The predicted wave-10 failure did not happen; a harder one did, and the difference matters
+
+C18 predicted `catalog:check` would go red *gracefully*: `identity` still creates and attaches the
+seven audit tables that `audit` stopped declaring, so `audit-coverage.int-spec.ts:77` (orphan check)
+and `:102` (undeclared trigger) would fail. **Neither ran.** The log has **zero** `audit-coverage`
+matches — and zero `Parse Error`/`ECONNREFUSED`/`EADDRINUSE`, so this is not the Docker-contention
+false-failure either.
+
+**What actually happens: `module add professional` aborts at the `contract` step with TS2308.**
+`apps/api/src/db/platform-schema.ts:23-27` re-exports both entries' table modules, and
+`catalog/professional/module.json`'s `schemaExports` now declares the same seven tables
+`catalog/identity/**` still declares. Duplicate re-export, hard compile failure, ~20 diagnostics:
+`UserProfessionalAreaRow`/`userProfessionalAreas`, `UserProfessionalServiceRow`/`userProfessionalServices`,
+`UserSchedulingAreaRow`/`userSchedulingAreas`, the six `UserProfessionalScheduleConfig*` symbols,
+`ProfessionalDefaultHoursRow`/`professionalDefaultHours`. The install dies before `audit` is ever
+added, which is why the anticipated int-spec never executes.
+
+**Root cause is the same wave-10/11 gap — the removal from `identity` is T67+ (C19, wave 11) — but
+the shape is worse than planned for.** A graceful assertion tells the next reader what is missing;
+a compile error in a generated aggregator tells them nothing, and it blocks the *whole* gate rather
+than one entry's int-spec. **Anyone running the eight-command gate between wave 10 and wave 11 will
+see this and must not read it as a new defect.** It clears when C19 deletes the duplicated tables
+from `catalog/identity/**`.
+
+#### Finding — `catalog:typecheck` is blind to the collision `catalog:check` dies on
+
+**Command 5 passed with all six entries staged, while command 8 failed to compile the same six.**
+`catalog:typecheck` checks **per entry**; the duplicate re-export only exists in the *merged*
+`platform-schema.ts` that a real install produces. So the cheap, fast, always-run guard cannot see a
+class of defect that only the slow Docker-bound one reaches. **Two entries can each be individually
+valid and still be un-installable together, and nothing short of `catalog:check` says so.**
+
+This is the **sixth** instance of one shape in this feature — a guard pointed at the wrong surface:
+`brand-hygiene` scanning a render a catalog entry never enters; `test:scripts` in no git hook; the
+release gate weaker than the branch gate (GT10); `contract:check` on a directory Kubb does not write
+to (T57a); the harness barrel probe that became a structural contract (`f199343`); and now
+`catalog:typecheck` per-entry versus the merged aggregate. **Each was green while blind.** A task
+that makes per-entry typechecking see the merged schema — or that asserts `schemaExports` sets are
+disjoint across entries — is owed and is not in this plan.
+
+#### Cross-cluster breakages the sixth entry caused, and how they were closed
+
+1. **Three hard-coded five-entry allowlists went red** — `module-boundaries.spec.ts:995`
+   (`EXPECTED_CATALOG_ENTRIES`, RULE D), `docs-shipped-paths.test.mjs:247`, `lint.test.mjs:384,391`.
+   Fixed in `794a10a` by inserting `professional`; **kept hard-coded on purpose** — they are
+   tripwires that *should* force a conscious edit when an entry is born, and that is exactly what
+   they did. Two more of the same style exist and did **not** go red because they build a synthetic
+   tree instead of reading the real catalog: `scripts/platform/it-count.mjs:8-13` and its test
+   fixture. They will need the same edit whenever they are next touched.
+2. **`harness-hygiene.spec.ts` demanded a `testing/` barrel `professional` does not owe** — fixed in
+   `f199343`, **on the spec's side**, with the evidence recorded in its own finding below.
+
+#### Finding — `catalog/tag/` outgrew its own description, and C17 read the description
+
+**T58 told C17 that `catalog/tag/` is the minimal entry with no `api/testing/`. That stopped being
+true in `fb38c5e`, inside this same feature**, which gave `tag` and `audit` their barrels *after*
+`research.md:352` recorded them as having none. So `harness-hygiene.spec.ts:63` — which loops over
+every entry the scanner canonicalizes and demands `module:<entry>/testing/index.ts` — passed for
+`tag` and failed for `professional`, the first entry to ship production `.ts` and no test helpers.
+
+**The spec was the defect, not the entry.** `docs/test/testing.md:113` states the rule
+*conditionally*: an entry **that ships test helpers** keeps them behind one `index.ts`. And the
+assertion's provenance is a scanner-reach probe with a fixed path (`53b0d72`), which `d47ed25`
+turned into a loop to survive the child layout — at which point a probe silently became a structural
+contract nobody decided on. The both-layouts guarantee it stood in for is already covered against
+fixtures at `scan.spec.ts:193-217`. The loop now derives from the tree: an entry with any file under
+`testing/` must expose `index.ts`; an entry with none is skipped. Proved it keeps teeth — a helper
+without a barrel still fails. `professional`'s only test vocabulary is a `seedProfessional` local to
+its own int-spec, unexported; inventing a barrel for it would have been fabricated API.
+
+**Still stale and NOT fixed**: `research.md:352` and `design.md:128` describe `catalog/tag/` as
+shipping no `api/testing/`. Any later task reusing that skeleton description repeats C17's misreading.
+
+#### Plan corrections the workers measured (not guessed)
+
+1. **`catalog/tag/` has 52 files on disk** — not the 48 T58 states, nor the 43 the ledger recorded.
+   Third different number for one directory; stop quoting counts and read the tree.
+2. **The gates T60/T61/T62 declare cannot run.** `pnpm vitest run --project api catalog/professional`
+   collects **zero** files: the `api` project includes `src/**/*.spec.ts` under `apps/api` and
+   explicitly excludes `.catalog-stage/**`. Catalog unit specs run only via `pnpm catalog:test`
+   (`vitest.catalog.mts` → `.catalog-stage/src/modules/**/*.spec.ts`); catalog `*.int-spec.ts` run
+   only inside a rendered child, under `catalog:check`. **T64 has the same defect** — same cause.
+   Every later task quoting a `--project api <catalog path>` gate inherits it.
+3. **`breaking` is a `kind`, not a `severity`.** T65 asks for severity `breaking`; `ALLOWED_SEVERITIES`
+   is `low|medium|high|critical` (`scripts/platform/lib/frontmatter.mjs:15-16`). C18 used
+   `kind: breaking` + `severity: critical` (identity — the release's only data-loss path) and
+   `severity: high` (audit — boot crash, `audit.entries` untouched).
+4. **T63 says seven tables; the entry has eight.** The seven moved plus `professional_profile`, which
+   took `serves_clients`/`birth_date` off an already-audited `identity.users`. All eight attached —
+   omitting it would silently drop audit trail the child already had.
+5. **T64's `Reuses` cites `audit.e2e-spec.ts:178-184`; the seven are at `174-180`.**
+
+#### Deviations recorded for the Verifier — none absorbed
+
+- **C17 used `Advisory: none — …` on all six commits.** Its argument: a brand-new entry at `1.0.0`
+  has no installed base for `affects` to match, and `lintAdvisoryPathScope` forbids `catalog/` paths
+  in `detect`; the child-facing advisory for the split is T65's. **§ 0.8 of this feature barred that
+  trailer in wave 8, and `49824ef` already carries the same unresolved contradiction.** Recorded, not
+  resolved — this is the Verifier's to rule on, and it now has two instances.
+- **T62 added a port + adapter not in the plan** — `domain/ports/professional-directory.reader.ts`
+  and `infrastructure/repositories/drizzle-professional-directory.reader.ts`.
+  `ProfessionalDirectoryFacade` was backed by identity's `USER_REPOSITORY`, whose eight professional
+  reads are exactly what AD-035 removes from `UserRepository`. Keeping the facade's public surface
+  required an entry-local reader; the alternative was silently dropping public methods.
+- **`assignableProfessionalFilters()` no longer reads `users.serves_clients`** — both adapters
+  `innerJoin` `professional.professional_profile`. Semantics preserved: no profile row = not assignable.
+- **No separate `ProfessionalAssignmentModule`** — folded into `ProfessionalModule.forRoot({ product })`
+  (`global: true`, the same trap as `IdentityModule`). The debt the leaf module documented is in the
+  README, not dropped.
+- **`truncateProfessional` lives inside the int-spec**, not beside its siblings in
+  `apps/api/test/setup/test-db.ts` — that file is kernel-owned. Follow-up for whoever owns it.
+- **C18 appended one `### Breaking` bullet to `catalog/audit/CHANGELOG.md`'s existing `## [3.0.0]`**
+  (no second heading, no bump) — outside T66's `Touches` but inside the payload's ownership, so
+  `ADV-20260824-02`'s `fix:` pointer names something real.
+- **`professional_user_id` deliberately kept in `BASE_REF_TARGETS`** (`base-audit-registrations.ts`).
+  `registerRefTargets` keys by *column*; the target `identity.users` stays in the base set, so the
+  new entry re-registering it would throw `DuplicateAuditRegistrationError`.
+- **C17 did not delete identity's copies** — correct; that is C19's in wave 11. `customMigrations`
+  was left empty in T58 and filled only in T63, so no intermediate commit declares a missing SQL file.
+
+**Wave 10 closes with clusters done and one gate command red for a reason wave 11 removes.**
+Next: **wave 11** — `C19` (T67→T72, opus) ∥ `C20` (T73→T75, sonnet). **C19 is the unblocker**: it
+deletes the duplicated tables from `catalog/identity/**`, which is what makes `catalog:check` green
+again. Do not attempt to fix the TS2308 collision any other way.
+
+---
+
 ## Fix Round 1 (`v2.4.0` scope) — authored 2026-08-24 after Verifier pass 1 FAIL
 
 Source: `validation.md` § *Fix Plans*. Two clusters, dispatched in parallel, then one Build gate,

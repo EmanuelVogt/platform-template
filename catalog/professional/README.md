@@ -24,8 +24,22 @@ entradas e pelo módulo do produto através das facades exportadas por `Professi
 
 ## Dados
 
-Schema lógico `professional` (`api/infrastructure/tables/professional.schema.ts`). As tabelas
-chegam nas tasks seguintes do recorte.
+Schema lógico `professional` (`api/infrastructure/tables/professional.schema.ts`). Oito tabelas,
+em seis arquivos:
+
+| Tabela | Arquivo | Origem |
+| --- | --- | --- |
+| `professional_profile` | `professional-profile.table.ts` | nova — recebe `serves_clients` e `birth_date` de `identity.users` |
+| `user_professional_areas` | `user-professional-area.table.ts` | movida do `identity`, colunas inalteradas |
+| `user_professional_services` | `user-professional-service.table.ts` | movida do `identity`, colunas inalteradas |
+| `user_scheduling_areas` | `user-scheduling-area.table.ts` | movida do `identity`, colunas inalteradas |
+| `user_professional_schedule_configs` | `user-professional-schedule-config.table.ts` | movida do `identity`, colunas inalteradas |
+| `user_professional_schedule_config_slots` | `user-professional-schedule-config.table.ts` | movida do `identity`, colunas inalteradas |
+| `user_professional_schedule_config_blocks` | `user-professional-schedule-config.table.ts` | movida do `identity`, colunas inalteradas |
+| `professional_default_hours` | `professional-default-hours.table.ts` | movida do `identity`, colunas inalteradas |
+
+`professional_profile.user_id` é PK e FK para `identity.users.id` com `ON DELETE CASCADE`; as
+sete tabelas movidas mantêm as FKs que já tinham para o usuário, agora cruzando o schema.
 
 As migrações são geradas **no filho** pelo `module add` a partir das tabelas TS (AD-015); o
 template versiona apenas o TS e o SQL manual de `migrations/custom/*.sql`.

@@ -3,13 +3,24 @@
   "version": "1.0.0",
   "description": "Perfil profissional e agenda: vínculos de área/atuação, áreas de agendamento, configuração de horários por usuário e template padrão de horários. Complementa a entrada identity sem alterá-la.",
   "kernelRange": ">=2.0.0 <3.0.0",
-  "dependsOn": [{ "name": "identity", "range": ">=3.0.0 <4.0.0" }],
+  "dependsOn": [
+    {
+      "name": "identity",
+      "range": ">=3.0.0 <4.0.0"
+    }
+  ],
   "apiModule": {
     "export": "ProfessionalModule",
     "path": "modules/professional/professional.module"
   },
   "schemaExports": [
-    "modules/professional/infrastructure/tables/professional.schema"
+    "modules/professional/infrastructure/tables/professional.schema",
+    "modules/professional/infrastructure/tables/professional-profile.table",
+    "modules/professional/infrastructure/tables/user-professional-area.table",
+    "modules/professional/infrastructure/tables/user-professional-service.table",
+    "modules/professional/infrastructure/tables/user-scheduling-area.table",
+    "modules/professional/infrastructure/tables/user-professional-schedule-config.table",
+    "modules/professional/infrastructure/tables/professional-default-hours.table"
   ],
   "customMigrations": [],
   "env": [],

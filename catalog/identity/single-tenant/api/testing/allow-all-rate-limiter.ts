@@ -1,7 +1,3 @@
-import type { RateLimiter } from "../../../shared/kernel/rate-limit/rate-limiter.port"
-
-/** Limiter que nunca bloqueia — para e2e que só precisam de sessão, não de limite. */
-export const allowAllRateLimiter: RateLimiter = {
-  consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
-  reset: () => Promise.resolve(),
-}
+// O limiter que nunca bloqueia é vocabulário do kernel (a porta é dele) — a
+// entrada só reexporta para quem já importa daqui.
+export { allowAllRateLimiter } from "../../../shared/test/e2e/app"

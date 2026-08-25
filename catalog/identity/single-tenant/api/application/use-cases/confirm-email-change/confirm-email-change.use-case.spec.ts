@@ -5,7 +5,7 @@ import {
   EmailAlreadyInUseError,
   InvalidEmailChangeTokenError,
 } from "../../../domain/errors"
-import { makeIdentityConfig } from "../../../identity.config.fixture"
+import { makeIdentityConfig } from "../../../testing/identity.config.fixture"
 import { fakeRequestContext } from "../../request-context.fixture"
 import { CreateSessionService } from "../../services/create-session.service"
 

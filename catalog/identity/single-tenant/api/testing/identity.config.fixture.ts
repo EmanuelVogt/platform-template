@@ -1,6 +1,6 @@
-import { parseIdentityConfig } from "./identity.config"
+import { parseIdentityConfig } from "../identity.config"
 
-import type { IdentityConfig } from "./identity.config"
+import type { IdentityConfig } from "../identity.config"
 
 /**
  * Config de teste derivada do env de `unit-env`, com overrides opcionais.

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { User, type UserProps } from "../../../domain/entities/user.entity"
-import { makeIdentityConfig } from "../../../identity.config.fixture"
+import { makeIdentityConfig } from "../../../testing/identity.config.fixture"
 import { fakeRequestContext } from "../../request-context.fixture"
 
 import { RequestPasswordResetUseCase } from "./request-password-reset.use-case"

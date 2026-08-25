@@ -8,7 +8,7 @@ import {
   InvalidCredentialsError,
   RateLimitedError,
 } from "../../../domain/errors"
-import { makeIdentityConfig } from "../../../identity.config.fixture"
+import { makeIdentityConfig } from "../../../testing/identity.config.fixture"
 import { fakeRequestContext } from "../../request-context.fixture"
 
 import { RequestEmailChangeUseCase } from "./request-email-change.use-case"

@@ -5,7 +5,7 @@ import {
   InvalidPermissionSetError,
   InvalidProfessionalScopeError,
 } from "../../../domain/errors"
-import { makeIdentityConfig } from "../../../identity.config.fixture"
+import { makeIdentityConfig } from "../../../testing/identity.config.fixture"
 import { fakeRequestContext } from "../../request-context.fixture"
 
 import { CreateUserUseCase } from "./create-user.use-case"

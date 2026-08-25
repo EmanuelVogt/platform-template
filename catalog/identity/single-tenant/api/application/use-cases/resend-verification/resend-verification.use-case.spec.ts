@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.error"
 import { User, type UserProps } from "../../../domain/entities/user.entity"
-import { makeIdentityConfig } from "../../../identity.config.fixture"
+import { makeIdentityConfig } from "../../../testing/identity.config.fixture"
 import { fakeRequestContext } from "../../request-context.fixture"
 
 import { ResendVerificationUseCase } from "./resend-verification.use-case"

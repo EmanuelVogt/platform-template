@@ -31,6 +31,13 @@ export async function seedUser(
   const hasher = app.get<PasswordHasher>(PASSWORD_HASHER)
   const passwordHash = await hasher.hash(opts.password)
   const email = opts.email.toLowerCase()
+  if (opts.accessProfile === "master") {
+    // O índice único de master aceita um só: promover sem rebaixar o anterior
+    // falharia no insert, e cada e2e que precisava de master repetia este SQL.
+    await pool.query(
+      "UPDATE identity.users SET access_profile = 'admin' WHERE access_profile = 'master'"
+    )
+  }
   await pool.query(
     `INSERT INTO identity.users
        (id, name, email, email_verified, password_hash, pepper_version, failed_login_attempts, access_profile, serves_clients, created_at, updated_at)

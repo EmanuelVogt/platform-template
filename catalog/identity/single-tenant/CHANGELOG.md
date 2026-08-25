@@ -4,6 +4,27 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 [semver](https://semver.org/lang/pt-BR/). Toda versão que leva código lista os advisories
 (`docs/advisories/ADV-*.md`) que carrega.
 
+## [2.1.0]
+
+### Added
+
+- Barril `testing/index.ts`: `seedUser` (com `accessProfile: "master"` rebaixando
+  o master anterior), `loginAs`, `tokenFromMail`, `makeUser`, `makeIdentityConfig`,
+  `emails`/`seedEmail`, `allowAllRateLimiter`, `fakeMailer` e as constantes
+  `FIXED_NOW`/`TEST_PASSWORD` do harness do kernel. Os specs da entrada e das
+  entradas que dependem dela passam a importar daqui em vez de redefinir cada
+  helper por arquivo.
+
+### Changed
+
+- `identity.config.fixture.ts` passou de `modules/identity/` para
+  `modules/identity/testing/` e é reexportado pelo barril. **Migração no filho:**
+  trocar `from "../../identity.config.fixture"` por
+  `from "../../testing/identity.config.fixture"` (ou importar `makeIdentityConfig`
+  do barril) nos specs que a usam.
+- `allow-all-rate-limiter.ts` virou reexport do limiter do harness do kernel
+  (`shared/test/e2e/app`) — implementação uma só.
+
 ## [2.0.2]
 
 ### Changed

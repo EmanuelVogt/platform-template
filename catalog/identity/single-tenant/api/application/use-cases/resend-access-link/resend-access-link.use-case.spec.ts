@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { AccessLinkNotResendableError } from "../../../domain/errors"
-import { makeIdentityConfig } from "../../../identity.config.fixture"
+import { makeIdentityConfig } from "../../../testing/identity.config.fixture"
 import { fakeRequestContext } from "../../request-context.fixture"
 
 import { ResendAccessLinkUseCase } from "./resend-access-link.use-case"

@@ -13,7 +13,29 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/test-suite-refactor/design.md` — **Approved 2026-08-24**, reconciled to § *Scope cut* below
-**Status**: Execute — wave 1 dispatched 2026-08-24
+**Status**: Execute — wave 1 DONE (Build gate `full-unit` green: `pnpm check` 0, `pnpm test` 0 — 104 files / 672 tests); wave 2 dispatched 2026-08-25
+
+### Execution log
+
+| Wave | Cluster | Task | Status | Commits |
+| --- | --- | --- | --- | --- |
+| 1 | C1 (opus) | T1 | DONE | `d1ba876` |
+| 1 | C1 | T2 | DONE | `2a22919` |
+| 1 | C1 | T3 | DONE | `5bc7d7d` |
+| 1 | C1 | T4 | DONE | `d1ab7d8` |
+| 1 | C1 | T5 | DONE | `8456bec` |
+| 1 | C1 | T6 | DONE | `856adc0` (barrel) + `6320676`, `2d3ac37`, `b36f016`, `4b3e2b8`, `a32fa08`, `b1342bd`, `d86a87a` (the entry e2e migration the Wave Plan amendment adds to T6) |
+| 1 | C2 (sonnet) | T7 | DONE | `8d150c2`, `681a26c` |
+| 2 | C3 (sonnet) | T17 → T18 → T23 | dispatched 2026-08-25 | — |
+
+The C1 worker died mid-T6 on 2026-08-24 and was re-dispatched from `git log` on 2026-08-25; its
+transcript did not survive, so the continuation kept the C1 label per the orchestrator card.
+
+**GA-7 removal accounted for.** `create-user-flow.e2e-spec.ts` lost `"seed master e promoção via
+SQL"` — the pseudo-test that asserted `toBeTruthy()` on a seed — when `d86a87a` split the ordered
+chain. It is the one removal § *Area 7* of `context.md` allows. `baseline.json` records the drop
+(11 → 10) with the reason on the entry, and `it-count.mjs --check` exits 0: 335 files, 2146 tests,
+no loss. T40 inherits this as the "single documented removal".
 
 ## Test Coverage Matrix
 
@@ -286,6 +308,8 @@ parallelism the old plan bought there is not worth the merge surface for three t
 - [ ] `index.ts` exports `FakeMailer`, `findSent`, `makeNotification`, `DELIVERY_DISPATCHERS(app)`
 - [ ] `module.json.files` lists `testing/**`; `pnpm catalog:check` green for notification
 - [ ] The barrel names no other entry's vocabulary
+
+**Touches correction (orchestrator, 2026-08-25)**: T17 also owns `catalog/identity/single-tenant/api/testing/**` and `catalog/identity/single-tenant/api/__e2e__/**`. T6 left identity's local `fake-mailer.ts` in place and deferred the deduplication here ("deleted in T17's favour, or kept only as a re-export — no second implementation"), so the single-owner move cannot land inside `catalog/notification/**` alone. The import crosses identity → notification, the `dependsOn` edge `context.md` § *Declined* already names.
 
 **Tests**: none of its own · **Gate**: quick
 **Commit**: `test(notification): testing barrel — mailer, findSent, dispatchers`

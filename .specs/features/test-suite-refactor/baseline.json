@@ -1,7 +1,7 @@
 {
   "totals": {
     "files": 317,
-    "sites": 2088
+    "sites": 2087
   },
   "files": [
     {
@@ -2178,7 +2178,6 @@
     {
       "file": "catalog/identity/single-tenant/api/__e2e__/create-user-flow.e2e-spec.ts",
       "titles": [
-        "seed master e promoção via SQL",
         "login do master retorna cookie de sessão",
         "master cria usuário Ana via rota autenticada (201)",
         "outbox + delivery dispatcher disparam sendAccessLink com token",
@@ -2190,7 +2189,8 @@
         "cria profissional com permissão de outro módulo",
         "master cria usuário com áreas de agendamento; listagem devolve as áreas"
       ],
-      "count": 11
+      "count": 10,
+      "note": "GA-7 documented removal: the seed-master pseudo-test (expect(masterId).toBeTruthy()) asserted a fixture, not behaviour, and disappeared when the ordered chain was split in T6 (d86a87a). It is the single removal this feature allows; every other title survives verbatim."
     },
     {
       "file": "catalog/identity/single-tenant/api/__e2e__/devices.e2e-spec.ts",

@@ -1,5 +1,8 @@
 import { z } from "zod"
 
+/** Compartilhado com módulos que declaram a mesma variável (ex.: identity.config.ts). */
+export const webOriginSchema = z.url()
+
 /** Compartilhado com módulos que precisam do mesmo enum (ex.: notification.config.ts). */
 export const nodeEnvSchema = z.enum([
   "development",
@@ -81,7 +84,7 @@ const envSchema = z
     // --- rede / proxy (consumido pelo app shell: CORS, trust proxy) ---
     // Cada módulo declara num config próprio o que ele consome; aqui só entra
     // o que a casca do template lê.
-    WEB_ORIGIN: z.url(),
+    WEB_ORIGIN: webOriginSchema,
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
   })
   .superRefine((data, ctx) => {

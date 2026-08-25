@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { webOriginSchema } from "../../shared/config/env"
+
 // env var é sempre string; z.coerce.boolean trataria "false" como true. Este
 // helper interpreta o literal corretamente.
 const boolFromEnv = (def: "true" | "false") =>
@@ -12,15 +14,25 @@ const boolFromEnv = (def: "true" | "false") =>
 const requiredBoolFromEnv = () =>
   z.enum(["true", "false"]).transform((v) => v === "true")
 
+function sameHost(a: string, b: string): boolean {
+  return new URL(a).hostname === new URL(b).hostname
+}
+
 /** Schema das env vars consumidas pelo módulo identity (auth). */
 export const identityConfigSchema = z
   .object({
     // --- rede / cookie ---
-    WEB_ORIGIN: z.url(),
-    COOKIE_NAME: z.string().min(1).default("__Host-rit_session"),
+    // Declarada uma única vez, no env do kernel: as duas fontes divergiam.
+    WEB_ORIGIN: webOriginSchema,
+    // Origin público da própria API. Só é exigida com COOKIE_SAMESITE=none, onde
+    // o SPA precisa ler o cookie de CSRF — ver o refine de host abaixo.
+    API_ORIGIN: z.url().optional(),
+    COOKIE_NAME: z.string().min(1).default("__Host-app_session"),
     COOKIE_SECURE: boolFromEnv("true"),
     COOKIE_SAMESITE: z.enum(["lax", "none", "strict"]).default("lax"),
-    DEVICE_COOKIE_NAME: z.string().min(1).default("__Host-rit_device"),
+    DEVICE_COOKIE_NAME: z.string().min(1).default("__Host-app_device"),
+    // Sem prefixo __Host- (esse exige httpOnly e atrapalha a leitura por JS).
+    CSRF_COOKIE_NAME: z.string().min(1).default("app_csrf"),
     // 400d — teto de cookie persistente no Chrome.
     DEVICE_COOKIE_TTL_SECONDS: z.coerce
       .number()
@@ -127,6 +139,19 @@ export const identityConfigSchema = z
     {
       message: "COOKIE_SAMESITE=none exige CSRF_SECRET definido",
       path: ["CSRF_SECRET"],
+    }
+  )
+  // O cookie de CSRF é host-only (setCsrfCookie não define `domain`): com a API
+  // em outro host o SPA nunca o lê, o header X-CSRF-Token nunca sai e toda
+  // mutação autenticada leva 403. A configuração cai no boot, não em produção.
+  .refine(
+    (c) =>
+      c.COOKIE_SAMESITE !== "none" ||
+      (c.API_ORIGIN !== undefined && sameHost(c.API_ORIGIN, c.WEB_ORIGIN)),
+    {
+      message:
+        "COOKIE_SAMESITE=none exige API_ORIGIN no mesmo host de WEB_ORIGIN: o cookie de CSRF é host-only e o SPA não o lê de outro host — sirva a API sob o host do front (proxy reverso) ou use COOKIE_SAMESITE=lax",
+      path: ["API_ORIGIN"],
     }
   )
   // Prefixos __Host-/__Secure- só são aceitos pelo browser com Secure; sem isso

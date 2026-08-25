@@ -75,8 +75,8 @@ describe("parseIdentityConfig", () => {
     const c = parseIdentityConfig({
       ...BASE,
       COOKIE_SECURE: "false",
-      COOKIE_NAME: "rit_session",
-      DEVICE_COOKIE_NAME: "rit_device",
+      COOKIE_NAME: "app_session",
+      DEVICE_COOKIE_NAME: "app_device",
     })
     expect(c.COOKIE_SECURE).toBe(false)
   })
@@ -86,7 +86,7 @@ describe("parseIdentityConfig", () => {
       parseIdentityConfig({
         ...BASE,
         COOKIE_SECURE: "false",
-        COOKIE_NAME: "rit_session",
+        COOKIE_NAME: "app_session",
       })
     ).toThrow(/COOKIE_SECURE/)
   })
@@ -129,6 +129,71 @@ describe("parseIdentityConfig", () => {
     expect(c.LOGIN_ACCOUNT_MAX_FAILURES).toBe(3)
     expect(c.LOGIN_ACCOUNT_WINDOW_SECONDS).toBe(60)
     expect(c.PASSWORD_HASH_MAX_IN_FLIGHT).toBe(2)
+  })
+
+  it("aplica os nomes de cookie neutros por default (BRAND-01)", () => {
+    const c = parseIdentityConfig(BASE)
+    expect(c.COOKIE_NAME).toBe("__Host-app_session")
+    expect(c.DEVICE_COOKIE_NAME).toBe("__Host-app_device")
+    expect(c.CSRF_COOKIE_NAME).toBe("app_csrf")
+  })
+
+  it("deixa o produto renomear cada um dos três cookies", () => {
+    const c = parseIdentityConfig({
+      ...BASE,
+      COOKIE_NAME: "__Host-produto_session",
+      DEVICE_COOKIE_NAME: "__Host-produto_device",
+      CSRF_COOKIE_NAME: "produto_csrf",
+    })
+    expect(c.COOKIE_NAME).toBe("__Host-produto_session")
+    expect(c.DEVICE_COOKIE_NAME).toBe("__Host-produto_device")
+    expect(c.CSRF_COOKIE_NAME).toBe("produto_csrf")
+  })
+
+  it("rejeita CSRF_COOKIE_NAME vazio (o SPA não teria o que ler)", () => {
+    expect(() =>
+      parseIdentityConfig({ ...BASE, CSRF_COOKIE_NAME: "" })
+    ).toThrow(/CSRF_COOKIE_NAME/)
+  })
+
+  it("aceita COOKIE_SAMESITE=none com a API no mesmo host do front (SEAM-06)", () => {
+    const c = parseIdentityConfig({
+      ...BASE,
+      COOKIE_SAMESITE: "none",
+      API_ORIGIN: "http://localhost:3000",
+    })
+    expect(c.COOKIE_SAMESITE).toBe("none")
+  })
+
+  it("rejeita COOKIE_SAMESITE=none com a API em outro host (SEAM-06)", () => {
+    expect(() =>
+      parseIdentityConfig({
+        ...BASE,
+        COOKIE_SAMESITE: "none",
+        API_ORIGIN: "https://api.exemplo.test",
+      })
+    ).toThrow(/API_ORIGIN no mesmo host de WEB_ORIGIN/)
+  })
+
+  it("rejeita COOKIE_SAMESITE=none sem API_ORIGIN declarado (fail-closed)", () => {
+    expect(() =>
+      parseIdentityConfig({ ...BASE, COOKIE_SAMESITE: "none" })
+    ).toThrow(/API_ORIGIN/)
+  })
+
+  it("a mensagem do refuse diz o que fazer, não só o que está errado", () => {
+    expect(() =>
+      parseIdentityConfig({
+        ...BASE,
+        COOKIE_SAMESITE: "none",
+        API_ORIGIN: "https://api.exemplo.test",
+      })
+    ).toThrow(/proxy reverso|COOKIE_SAMESITE=lax/)
+  })
+
+  it("não exige API_ORIGIN fora de COOKIE_SAMESITE=none", () => {
+    const c = parseIdentityConfig({ ...BASE, COOKIE_SAMESITE: "lax" })
+    expect(c.API_ORIGIN).toBeUndefined()
   })
 
   it("rejeita limite de login zero ou negativo (desligaria o teto em silêncio)", () => {

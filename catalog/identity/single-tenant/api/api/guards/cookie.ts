@@ -74,8 +74,10 @@ export function readDeviceCookie(
   )
 }
 
-// Sem prefixo __Host- (esse exige httpOnly e atrapalha a leitura por JS).
-export const CSRF_COOKIE_NAME = "rit_csrf"
+/** Subconjunto da config lido na emissão do cookie de CSRF. */
+export interface CsrfCookieConfig extends CookieConfig {
+  CSRF_COOKIE_NAME: string
+}
 
 /**
  * Emite o token CSRF (HMAC do sessionId) num cookie legível por JS. httpOnly é
@@ -84,10 +86,10 @@ export const CSRF_COOKIE_NAME = "rit_csrf"
  */
 export function setCsrfCookie(
   res: Response,
-  cfg: CookieConfig,
+  cfg: CsrfCookieConfig,
   token: string
 ): void {
-  res.cookie(CSRF_COOKIE_NAME, token, {
+  res.cookie(cfg.CSRF_COOKIE_NAME, token, {
     httpOnly: false,
     secure: cfg.COOKIE_SECURE,
     sameSite: cfg.COOKIE_SAMESITE,

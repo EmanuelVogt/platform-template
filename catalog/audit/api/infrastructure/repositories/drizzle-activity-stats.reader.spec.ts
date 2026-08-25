@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest"
 
 import { DrizzleActivityStatsReader } from "./drizzle-activity-stats.reader"
 
-import type { TransactionManager } from "../../../../shared/kernel/transactional/transaction-manager"
+import { TransactionManager } from "../../../../shared/kernel/transactional/transaction-manager"
+
 import type { SQL } from "drizzle-orm"
 
 function readerCapturingBucket(captured: { bucket?: SQL }) {
@@ -12,14 +13,16 @@ function readerCapturingBucket(captured: { bucket?: SQL }) {
     where: () => chain,
     groupBy: () => Promise.resolve([]),
   }
-  const tx = {
-    getExecutor: () => ({
-      select: (fields: Record<string, unknown>) => {
-        captured.bucket = fields.bucket as SQL
-        return chain
-      },
-    }),
-  } as unknown as TransactionManager
+  // TransactionManager tem campos privados: nenhum objeto literal satisfaz o
+  // tipo por estrutura, só uma instância real do prototype (UNT-01 bane o
+  // cast de força-bruta que contornaria essa checagem).
+  const tx = Object.create(TransactionManager.prototype)
+  tx.getExecutor = () => ({
+    select: (fields: Record<string, unknown>) => {
+      captured.bucket = fields.bucket as SQL
+      return chain
+    },
+  })
   return new DrizzleActivityStatsReader(tx)
 }
 

@@ -94,3 +94,93 @@ catalog/identity/single-tenant/api/__e2e__/devices.e2e-spec.ts           75   ex
 ## will NOT fix that one; it is a real behaviour question about whether the
 ## clearing cookie still goes out on an invalid session. Do not assume C is
 ## uniformly mechanical.
+
+
+################################################################################
+# SURVEYED 2026-08-25 at HEAD 7aa1c6c — READ THIS BEFORE EDITING ANYTHING ABOVE.
+# Three things the first pass got wrong or under-counted.
+################################################################################
+
+## 1. THE SEAM FIX ALONE DOES NOT CLEAR CAUSE A. 12 -> 8, NOT 12 -> 0.
+##
+## Neither int-spec sets APP_TIMEZONE. Both bake `-03:00` into the EXPECTED
+## bucket instant through a local helper:
+##     function saoPaulo(local) { return new Date(`${local}-03:00`) }
+##   identity int-spec :16-18   ·   audit int-spec :11-13
+## So the assertions are Brasilia-shaped. Once `appTimeZone()` stops throwing,
+## the default is UTC and the literal expectations still miss.
+##
+## Survives the seam fix (asserts [] on absolute-instant grounds, TZ-independent):
+##   identity :154  ignora entrada fora da janela pedida
+##   audit    :113  alteração sem ator identificado
+##   audit    :152  ignora alteração fora da janela pedida
+##   audit    :159  período sem nenhuma alteração devolve lista vazia
+##
+## STILL FAILS after the seam fix — needs APP_TIMEZONE declared by the spec:
+##   identity :88   soma as entradas por dia no fuso de Brasília
+##   identity :117  entrada às 23h fica no dia local  (day-crossing: 23:30-03:00 = 02:30Z)
+##   identity :132  conta só entrada bem-sucedida
+##   identity :170  agrega por semana quando a unidade é semana
+##   audit    :59   soma as alterações por tabela e por dia
+##   audit    :89   alteração de rotina automática fica de fora
+##   audit    :123  alteração às 23h fica no dia local  (day-crossing)
+##   audit    :137  agrega por semana quando a unidade é semana
+##
+## THE FIX these eight want is for the spec to DECLARE the timezone it is
+## testing (APP_TIMEZONE=America/Sao_Paulo), which is also what makes the test
+## names true again. THE TRAP: `resolved ??=` (bucket-sql.ts:48,57) memoises
+## once per PROCESS. Setting process.env in a beforeAll may land after the
+## first resolve, and may leak across files sharing a worker. Settle how the
+## timezone is injected before writing the eight — this is the real design
+## work in cause A, not the one-line seam.
+
+## 2. CAUSE B IS AN ABSENT API_ORIGIN, NOT A CROSS-HOST ONE.
+##
+## `auth-csrf-none.e2e-spec.ts:33-39` spreads `...process.env` and overrides only
+## COOKIE_SAMESITE / COOKIE_SECURE / COOKIE_NAME / CSRF_SECRET. It never sets
+## API_ORIGIN — and `apps/api/src/shared/test/env.ts` sets none either. So the
+## refine fires because API_ORIGIN is MISSING under SAMESITE=none, not because it
+## points at another host. Ruling B (same host) is satisfied by ADDING
+## `API_ORIGIN: "http://localhost:5173"` (the WEB_ORIGIN that `env.ts:10` sets)
+## to that object literal. `afterAll` at :63-65 still needs its guard.
+
+## 3. CORRECTION — `auth-session.e2e-spec.ts:48` IS MECHANICAL AFTER ALL.
+##
+## The first pass flagged the empty Set-Cookie as a behaviour question. It is not.
+## The test SENDS `Cookie: rit_session=...` (:44) while the app's cookie is
+## `app_session`, so `auth.middleware.ts` sees no recognised cookie, takes the
+## early `if (!raw)` return and emits no Set-Cookie at all — precisely what the
+## SPEC_DEVIATION comment at :23-31 documents. Renaming :44 to `app_session=`
+## makes the middleware see an INVALID cookie and emit the clearing header.
+## One rename fixes both :44 and the :48 assertion. No behaviour call is owed.
+
+## 4. THE FULL `rit_*` SITE LIST — 8 MORE THAN THE FIRST PASS COUNTED, AND THERE
+##    IS A THIRD COOKIE NAME (`rit_csrf`).
+##
+## The e2e fixture is ALREADY renamed — `apps/api/src/shared/test/env.ts:17-18`
+## sets COOKIE_NAME=app_session and DEVICE_COOKIE_NAME=app_device. Only the specs
+## are stale. Every site:
+##
+##   auth-csrf-none.e2e-spec.ts   :37  COOKIE_NAME: "rit_session"  (config literal)
+##                                :59  cookieValue(login, "rit_session")
+##                                :60  cookieValue(login, "rit_csrf")     <-- third name
+##                                :67  it("login emite o cookie rit_csrf legível")
+##                                :76  .set("Cookie", `rit_session=${sessionCookie}`)
+##                                :84  idem
+##                                :93  idem
+##                                :102 idem
+##   auth-login.e2e-spec.ts       :47  COMMENT "e2e-env usa COOKIE_NAME=rit_session" (false)
+##                                :48  expect(cookie).toContain("rit_session=")
+##   auth-logout.e2e-spec.ts      :12  const SESSION_COOKIE = "rit_session"
+##   auth-session.e2e-spec.ts     :44  .set("Cookie", "rit_session=nao-e-...")
+##                                :47  COMMENT, same false claim
+##                                :48  expect(joined).toContain("rit_session=;")
+##   create-user-flow.e2e-spec.ts :22  const SESSION_COOKIE = "rit_session"
+##   devices.e2e-spec.ts          :12  const SESSION_COOKIE = "rit_session"
+##                                :13  const DEVICE_COOKIE  = "rit_device"
+##
+## `rit_csrf`: check what the CSRF cookie is actually named after T53 before
+## renaming it — T53 made it configurable (`app_csrf` default) rather than a
+## literal, so :60/:67 may need the config value, not a hardcoded string.
+## BOTH COMMENTS (:47 in auth-login and auth-session) assert something false and
+## must be deleted or corrected, not just left beside a renamed literal.

@@ -63,6 +63,7 @@ describe("harness-hygiene — os bans de duplicação sobre a árvore", () => {
       "no-unsafe-cast",
       "no-from-props",
       "no-container-in-int-spec",
+      "no-sleep-as-proof",
       "runner-setup-allowlist",
     ])
   })
@@ -140,6 +141,16 @@ describe("harness-hygiene — os bans de duplicação sobre a árvore", () => {
   it("HRN-02 — nenhum GenericContainer num int-spec", () => {
     const { unrecorded, stale } = compareToBaseline(
       "no-container-in-int-spec",
+      violations,
+      loadBaseline()
+    )
+    expect(unrecorded).toEqual([])
+    expect(stale).toEqual([])
+  })
+
+  it("HRN-03 — nenhum setTimeout ou laço à mão como prova de efeito", () => {
+    const { unrecorded, stale } = compareToBaseline(
+      "no-sleep-as-proof",
       violations,
       loadBaseline()
     )

@@ -10,19 +10,22 @@
     "no-harness-literal": 1
   },
   "apps/api/src/shared/infra/database/application-pool.int-spec.ts": {
-    "no-harness-literal": 1
+    "no-harness-literal": 1,
+    "no-sleep-as-proof": 1
   },
   "apps/api/src/shared/infra/database/connection-config.spec.ts": {
     "no-harness-literal": 1
   },
   "apps/api/src/shared/infra/database/dedicated-client.int-spec.ts": {
-    "no-harness-literal": 2
+    "no-harness-literal": 2,
+    "no-sleep-as-proof": 2
   },
   "apps/api/src/shared/infra/database/managed-dedicated-client.spec.ts": {
     "no-unsafe-cast": 7
   },
   "apps/api/src/shared/infra/rate-limit/redis-rate-limiter.int-spec.ts": {
-    "no-container-in-int-spec": 3
+    "no-container-in-int-spec": 3,
+    "no-sleep-as-proof": 2
   },
   "apps/api/src/shared/infra/redis/redis.module.spec.ts": {
     "no-unsafe-cast": 2
@@ -30,7 +33,7 @@
   "apps/api/src/shared/infra/redis/redis.provider.spec.ts": {
     "no-harness-literal": 1
   },
-  "apps/api/src/shared/infra/storage/r2-storage.adapter.spec.ts": {
+  "apps/api/src/shared/infra/storage/s3-storage.adapter.spec.ts": {
     "no-unsafe-cast": 2
   },
   "apps/api/src/shared/kernel/access/access.guard.spec.ts": {
@@ -66,6 +69,7 @@
   },
   "apps/api/src/shared/kernel/outbox/outbox.int-spec.ts": {
     "no-harness-literal": 2,
+    "no-sleep-as-proof": 2,
     "no-unsafe-cast": 1
   },
   "apps/api/src/shared/kernel/rate-limit/rate-limit.guard.spec.ts": {
@@ -74,8 +78,12 @@
   "apps/api/src/shared/kernel/rate-limit/resilient-rate-limiter.spec.ts": {
     "no-unsafe-cast": 1
   },
+  "apps/api/src/shared/kernel/scheduling/advisory-lock.int-spec.ts": {
+    "no-sleep-as-proof": 1
+  },
   "apps/api/src/shared/kernel/scheduling/maintenance-runtime.int-spec.ts": {
-    "no-harness-literal": 1
+    "no-harness-literal": 1,
+    "no-sleep-as-proof": 2
   },
   "apps/api/src/shared/kernel/transactional/transaction-context.spec.ts": {
     "no-unsafe-cast": 2
@@ -98,6 +106,7 @@
   "catalog/attachment/api/__e2e__/access-link-avatar-ownership.e2e-spec.ts": {
     "no-harness-literal": 3,
     "no-local-helper": 2,
+    "no-sleep-as-proof": 1,
     "no-unsafe-cast": 1
   },
   "catalog/attachment/api/__e2e__/attachment-delete.e2e-spec.ts": {
@@ -106,6 +115,7 @@
   },
   "catalog/attachment/api/__e2e__/attachment-download.e2e-spec.ts": {
     "no-harness-literal": 23,
+    "no-sleep-as-proof": 4,
     "no-unsafe-cast": 1
   },
   "catalog/attachment/api/__e2e__/attachment-upload.e2e-spec.ts": {
@@ -155,6 +165,9 @@
   },
   "catalog/audit/api/application/list-audit-entries/list-audit-entries.use-case.spec.ts": {
     "no-unsafe-cast": 7
+  },
+  "catalog/audit/api/infrastructure/repositories/drizzle-activity-stats.reader.spec.ts": {
+    "no-unsafe-cast": 1
   },
   "catalog/identity/single-tenant/api/__e2e__/access-link-activation.e2e-spec.ts": {
     "no-harness-literal": 3
@@ -393,6 +406,9 @@
     "no-local-helper": 1,
     "no-from-props": 5
   },
+  "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-usage-stats.reader.spec.ts": {
+    "no-unsafe-cast": 1
+  },
   "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-user.repository.int-spec.ts": {
     "no-from-props": 13,
     "no-local-helper": 1
@@ -462,7 +478,8 @@
     "no-unsafe-cast": 1
   },
   "catalog/notification/api/infrastructure/realtime/realtime.int-spec.ts": {
-    "no-container-in-int-spec": 2
+    "no-container-in-int-spec": 2,
+    "no-sleep-as-proof": 1
   },
   "catalog/notification/parity/mailer.parity.spec.ts": {
     "no-unsafe-cast": 1

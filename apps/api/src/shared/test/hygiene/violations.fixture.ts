@@ -26,4 +26,8 @@ export const SEEDED = {
   fromPropsInBarrel: "return Sample.fromProps({ id })",
   makeEntity: "const sample = makeSample({ id })",
   genericContainer: "const container = new GenericContainer('postgres')",
+  sleepAsProof: "await new Promise((resolve) => setTimeout(resolve, 25))",
+  handRolledPoll: "while (!(await condition())) {",
+  forPoll: "for (let tries = 0; !(await ready()); tries += 1) {",
+  awaitedIteration: "for (const row of await pool.query(SELECT)) {",
 } as const

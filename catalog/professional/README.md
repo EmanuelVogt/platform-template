@@ -64,6 +64,10 @@ template versiona apenas o TS e o SQL manual de `migrations/custom/*.sql`.
 
 ## Paridade
 
+Os specs de integração (`api/infrastructure/repositories/*.int-spec.ts`) rodam no filho, contra o
+Postgres de teste do harness — nunca contra um mock de banco. O truncate das tabelas do recorte
+mora dentro do próprio spec: as tabelas são da entrada e saem com ela.
+
 Esta entrada ainda não distribui specs de paridade — não há `parity/` nem
 `contract.snapshot.json`. Não havendo rota HTTP própria, não há contrato OpenAPI a fixar; a
 superfície in-process é coberta pelos specs unitários e de integração da própria entrada.

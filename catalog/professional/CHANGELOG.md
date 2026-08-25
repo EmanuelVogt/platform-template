@@ -26,3 +26,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   `InvalidBirthDateError` e `InvalidProfessionalScopeError`.
 - As três portas do recorte passam a ser locais da entrada (AD-014):
   `ProfessionalAssignmentRepository`, `ProfessionalCommitments` e `ProfessionalScope`.
+- Adapters das três portas em `api/infrastructure/repositories/`:
+  `DrizzleProfessionalAssignmentRepository` (todo o SQL da entrada) e os null objects
+  `NullProfessionalScope`/`NullProfessionalCommitments` para o filho sem produto montado.
+- `professional-query.helpers.ts`: "profissional atribuível" passa a juntar
+  `professional.professional_profile` — `serves_clients` não é mais coluna de `identity.users`.
+- Spec de integração do repositório com 5 casos, sobre o Postgres de teste (sem mock de banco).

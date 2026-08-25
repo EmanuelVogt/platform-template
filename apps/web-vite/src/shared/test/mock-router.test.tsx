@@ -1,3 +1,4 @@
+// eslint-disable-next-line import-x/order -- deve vir antes de @tanstack/react-router: o vi.mock hoisted de mock-router.tsx só intercepta imports resolvidos depois dele (ver o JSDoc lá)
 import { mockRouter } from "./mock-router"
 
 import { Outlet, useLocation, useNavigate } from "@tanstack/react-router"

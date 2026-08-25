@@ -361,7 +361,7 @@ wave, and the major's waves start only after the minor's Verifier passes and the
 | 5 (exclusive) | C11 | T43 | `.agents/skills/tlc-spec-driven/SKILL.md`, `.agents/skills/tlc-spec-driven/references/validate.md`, `.agents/skills/tlc-spec-driven/references/sub-agents.md`, `.agents/skills/tlc-spec-driven/references/cards/orchestrator.md`, `.agents/skills/repo-discovery/SKILL.md`, `.claude/agents/spec-verifier.md`, `.claude/hooks/subagent-model-required.mjs`, `docs/agents/harness.md`, `scripts/platform/__tests__/harness-taxonomy.test.mjs` | BRAND-04 — **edits the rules this workflow runs under**; alone, last · gate: scoped |
 | 6 | C12 | T44 → T45 → T46 → T47 | `.claude/hooks/contract-enum.mjs`, `.claude/hooks/edit-reminders.mjs`, `docs/arch/front.md`, `apps/api/src/modules/module-boundaries.spec.ts`, `apps/api/test/setup/test-db.ts`, `apps/api/test/setup/unit-env.ts`, `apps/api/test/setup/e2e-env.ts`, `scripts/platform/__tests__/brand-hygiene.test.mjs`, `scripts/platform/__tests__/hook-references.test.mjs`, `catalog/identity/single-tenant/README.md`, `.specs/features/done/v0-2-product-slots/coverage-sweep.md` | hooks truth + guard scan + the hygiene gate · gate: **full-unit** (test harness) |
 | 7 (owner-gated) | C13 | T48 | `docs/dev/template-changelog.md` | **BLOCKED** until `git tag -l v2.3.0` is non-empty · gate: scoped |
-| 8 | C14 | T49 → T50 → T51 → T52 → T53 | `apps/api/src/openapi/openapi-config.ts`, `apps/api/src/openapi/openapi-config.spec.ts`, `apps/web/src/app/config/api-client.ts`, `apps/web/src/shared/lib/last-location.ts`, `apps/web/src/shared/store/auth.store.ts`, `apps/api/test/setup/unit-env.ts`, `apps/api/test/setup/e2e-env.ts`, `catalog/identity/single-tenant/api/identity.config.ts`, `catalog/identity/single-tenant/api/api/guards/cookie.ts`, `packages/api-client/src/client.ts`, `apps/api/src/shared/kernel/clock/bucket-sql.ts`, `apps/api/src/shared/kernel/clock/bucket-sql.spec.ts`, `apps/api/src/shared/config/env.ts`, `catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-usage-stats.reader.ts`, `catalog/audit/api/infrastructure/repositories/drizzle-activity-stats.reader.ts`, `apps/api/src/modules/module-boundaries.spec.ts` | brand major: cookies, CSRF seam, SameSite, timezone · gate: **full-unit** (kernel + contract inputs) |
+| 8 | C14 | T49 → **T49a** → T51 → T52 → T53 (T50 retired — § 0.8) | `apps/api/src/openapi/openapi-config.ts`, `apps/api/src/openapi/openapi-config.spec.ts`, `apps/web/src/app/config/api-client.ts`, `apps/web/src/shared/lib/last-location.ts`, `apps/web/src/shared/store/auth.store.ts`, `apps/api/test/setup/unit-env.ts`, `apps/api/test/setup/e2e-env.ts`, `apps/api/src/modules/module-boundaries.spec.ts`, `packages/api-client/src/client.ts`, `apps/api/src/shared/kernel/clock/bucket-sql.ts`, `apps/api/src/shared/kernel/clock/bucket-sql.spec.ts`, `apps/api/src/shared/config/env.ts`, `catalog/identity/single-tenant/module.json`, `catalog/attachment/module.json`, `catalog/audit/module.json`, `catalog/notification/module.json`, `catalog/tag/module.json`, `catalog/identity/single-tenant/CHANGELOG.md`, `catalog/attachment/CHANGELOG.md`, `catalog/audit/CHANGELOG.md`, `catalog/notification/CHANGELOG.md`, `catalog/tag/CHANGELOG.md`, `catalog/identity/single-tenant/api/identity.config.ts`, `catalog/identity/single-tenant/api/api/guards/cookie.ts`, `catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-usage-stats.reader.ts`, `catalog/audit/api/infrastructure/repositories/drizzle-activity-stats.reader.ts`, `docs/advisories/ADV-20260824-03.md`, `docs/advisories/ADV-20260824-04.md` | brand major: cookies, CSRF seam, SameSite, timezone — **T49a pays the bump, T53 is the single catalog commit and stages both advisories** · gate: **full-unit** (kernel + contract inputs) |
 | 8 | C15 | T54 → T55 → T56 | `apps/api/src/shared/infra/storage/storage.config.ts`, `apps/api/src/shared/infra/storage/storage.module.ts`, `apps/api/src/shared/infra/storage/s3-storage.adapter.ts`, `apps/api/src/shared/infra/storage/null-storage.adapter.ts`, `apps/api/src/shared/infra/storage/null-storage.adapter.spec.ts`, `apps/api/src/shared/infra/storage/storage-unavailable.error.ts`, `apps/api/src/app.module.ts`, `apps/api/.env.example`, `docs/dev/local-environment.md`, `scripts/platform/__tests__/brand-hygiene.test.mjs` | storage seam + hygiene-gate extension + env wiring · gate: **full-unit** |
 | 9 (exclusive) | C16 | T57 | `openapi.json`, `packages/api-client/src/` | contract regen after the cookie rename — alone · gate: full-unit |
 | 10 | C17 | T58 → T59 → T60 → T61 → T62 → T63 | `catalog/professional/` | new `professional` entry (AD-035) · gate: **full-unit** |
@@ -383,7 +383,7 @@ Wave 6:  [C12: T44→T45→T46→T47]
 Wave 7:  [C13: T48]  (owner-gated: v2.3.0 must be tagged)
          ► Verifier pass 1 (v2.4.0 scope) ► owner dispatches release → v2.4.0
 ─────────────────────────────── v3.0.0 ───────────────────────────────
-Wave 8:  [C14: T49→…→T53]     ∥ [C15: T54→T55→T56]
+Wave 8:  [C14: T49→T49a→T51→T52→T53]  ∥ [C15: T54→T55→T56]     (T50 retired — § 0.8)
 Wave 9:  [C16: T57] (exclusive — contract regen, cookie rename)
 Wave 10: [C17: T58→…→T63]     ∥ [C18: T64→T65→T66]
 Wave 11: [C19: T67→…→T72]     ∥ [C20: T73→T74→T75]
@@ -408,9 +408,15 @@ Wave 14: [C23: T79] (owner-gated: v2.4.0 must be tagged)
 1. **Before wave 7** — the owner tags `v2.3.0`. T48 is blocked until `git tag -l v2.3.0` is non-empty.
 2. **After wave 7** — the owner dispatches the `release` workflow for `v2.4.0` (+ the
    `catalog/<name>@x.y.z` tags CAT-05 observes).
-3. **Before wave 14** — `v2.4.0` must be tagged, or appending `## v3.0.0` makes it untaggable under
+3. **Before wave 8** — *(added 2026-08-24, not in the original plan)* the owner pushes the `v2.4.1`
+   marker. `v2.4.0` shipped `web_stack=next` broken and the fix is already on `main`; the marker is
+   `pnpm platform release 2.4.1 --push`, and it needs `git status --porcelain` **empty**
+   (`release.mjs:45` — untracked counts) with the marker as the **head** of the push
+   (`release-marker.mjs:41`). **No wave-8 commit may land on `main` before that push**, or the patch
+   tag carries T49's breaking cookie rename.
+4. **Before wave 14** — `v2.4.0` must be tagged, or appending `## v3.0.0` makes it untaggable under
    `release-preflight`'s latest-section rule.
-4. **After wave 14** — the owner dispatches `v3.0.0`.
+5. **After wave 14** — the owner dispatches `v3.0.0`.
 
 ---
 
@@ -1596,7 +1602,8 @@ steps** (AD-034). Anything that would force a child decision belongs to `v3.0.0`
 Every task below genuinely forces a child decision, which is what makes it a major (AD-031/AD-034).
 Each ships its half of the idempotent `scripts/platform/migrations/v3.0.0.mjs` (T73).
 
-> **WAVE 8 IS BLOCKED ON A PLAN GAP — MEASURED 2026-08-24, NOT INFERRED.** C14 edits four
+> **WAVE 8'S CATALOG TOLL — GAP MEASURED 2026-08-24, ADJUDICATED BY THE OWNER THE SAME DAY.**
+> The ruling is § 0.8, immediately below the evidence. C14 edits four
 > `catalog/**` files (`identity.config.ts`, `api/guards/cookie.ts`, `drizzle-usage-stats.reader.ts`,
 > `drizzle-activity-stats.reader.ts`) and **no task in waves 8–14 pays the toll they incur**:
 >
@@ -1614,11 +1621,76 @@ Each ships its half of the idempotent `scripts/platform/migrations/v3.0.0.mjs` (
 >    **professional split** (IDENT-01/02); T65/T66 (wave 10) author `ADV-20260824-0{1,2}` for
 >    **IDENT-03**. Neither covers BRAND-01, BRAND-02, SEAM-06 or TZ-01.
 >
-> **The design decision is the owner's, not a worker's**: whether the bump + advisory lives inside
-> C14 (a new first task, before T50 touches an entry), or as its own exclusive cluster; and whether
-> a `v3.0.0` kernel implies `3.0.0` on the two entries or a `2.1.0` minor. **A worker must not
-> improvise it — least of all with an `Advisory: none` trailer**, which is the one escape that
-> silently discards the child's notice of a breaking cookie rename.
+> 4. **A fourth toll the first measurement missed, and it is the largest.** `lintKernelRange`
+>    (`lib/lint.mjs:149-154`) measures every entry's `kernelRange` against the kernel version read
+>    from the **latest `## vX.Y.Z` heading of `docs/dev/template-changelog.md`**
+>    (`kernel-version.mjs:26`), and runs in pre-commit (`lefthook-local.yml:14-21`, whose glob
+>    includes that changelog). **All five** entries declare `>=2.0.0 <3.0.0`. T79 (wave 14) is the
+>    task that writes the `## v3.0.0` heading — so T79's own pre-commit turns red on five entries,
+>    at the very end of the plan. No task in waves 8–14 touches `kernelRange` (only T58, creating
+>    the new entry). This is not a new discovery for the repository: **AD-033 records `v2.0.0`
+>    shipping exactly this bug** — five entries at `2.0.0` still pinned `>=1.0.0 <2.0.0`, exit 8 on
+>    every `module add`, fixed only on `v2.1.0` — and states the rule that governs the fix:
+>    *"A kernel major therefore opens the ranges in the same commit as the changelog heading."*
+
+### 0.8 The wave-8 catalog toll — adjudicated by the owner (2026-08-24)
+
+Three questions were put to the owner with the measurements above. All three answers below are
+**the owner's**, not a worker's inference.
+
+**The mechanic that decides everything: the two halves of the toll are paid in opposite ways.**
+
+| Half | How it is measured | Does an earlier commit pay it? |
+| --- | --- | --- |
+| Bump (`entryChangedWithoutBump`, `release-preflight.mjs:92-121`) | diffs the previous stable tag against HEAD *or the index*, over the entry's whole directory; violates only if the directory moved **and** `version` still equals the version at the tag | **Yes.** And a bump-only commit never trips the advisory hook — `CODE_PATH_RE:11` matches only `catalog/<entry>/{api,web,migrations,parity}/`, so `module.json` and `CHANGELOG.md` are invisible to it |
+| Advisory (`advisory-required.mjs:61-89`) | reads staged advisories with `git show :<file>` — **the index of the commit being made** | **No.** This is the same fact § 0.6 used to rule that pulling T42 forward "buys exactly nothing" |
+
+So *"its own exclusive cluster, before C14"* — one of the two shapes the gap block framed — pays the
+bump and **cannot** pay the advisory. It was rejected on mechanics, not on taste.
+
+**Ruling 1 — the bump is C14's first task, and it moves all five entries.** New task **T49a**.
+Five entries, not two: item 4 above obliges all five to move for `kernelRange` alone, and any touch
+of `module.json` is a change to the entry's directory, which REL-04 then requires a bump for. It
+needs no exclusive wave — no other wave-8 task touches a manifest or a changelog.
+
+**Ruling 2 — every entry goes to `3.0.0`, and the ranges open to `>=3.0.0 <4.0.0` in T79's commit.**
+`identity` and `audit` break for real (cookie rename, `CLINIC_TZ` → `APP_TIMEZONE`); the other three
+must drop kernel 2.x support, which is itself breaking. This also dissolves the ordering deadlock:
+`>=3.0.0` fails `lintKernelRange` while the changelog still reads `v2.4.1`, and `<3.0.0` fails once
+the `## v3.0.0` heading lands — so **T49a bumps `version` and leaves `kernelRange` alone**, and T79
+opens all six ranges (five entries + `professional`) in the same commit as the heading, exactly as
+AD-033 prescribes. Every intermediate commit stays green.
+
+**Consequence — the entries move once for the whole release.** `entryChangedWithoutBump` compares
+against the previous stable tag, where every entry reads `2.0.2`. Once T49a sets `3.0.0`, every
+later catalog commit of `v3.0.0` is already covered, and **no later task may bump an entry again.**
+Checked card by card: only **T72** carried a bump Done-when (*"The entry's `version` bumps for the
+break"*), and it is amended to forbid the second bump. T63 and T66 carry no version or changelog
+language at all, and T77's changelog line is about `professional`'s own `CHANGELOG.md` — a new entry
+born at `1.0.0`, outside this rule. Changelog prose for an **existing** entry appends to T49a's
+`## [3.0.0]` section; nothing opens a second heading.
+
+**Ruling 3 — one catalog commit in the whole cluster, carrying both advisories.** Since an advisory
+counts only in the commit that stages it, three catalog-touching commits would need three-to-four
+advisory files for what a child reads as two breaks. C14 is therefore re-cut into a kernel half and
+a catalog half:
+
+| Task | Was | Is now |
+| --- | --- | --- |
+| T49 | kernel + web neutral defaults | unchanged |
+| **T49a** | — | **new**: five bumps + five `## [3.0.0]` sections, `kernelRange` untouched |
+| T51 | `configureClient` (depended on T50) | unchanged; **depends on T49a** |
+| T52 | SameSite fail-closed (catalog) | **redefined**: TZ-01's kernel half — `bucket-sql.ts`, its spec, `env.ts` |
+| T53 | `APP_TIMEZONE` (kernel + two readers) | **redefined**: the cluster's single catalog commit — absorbs old T50 and old T52, plus both readers, plus the two advisories |
+| T50 | cookie defaults in the entry | **retired**, folded into T53 |
+
+Chain: **T49 → T49a → T51 → T52 → T53**. The advisories are `ADV-20260824-03` (`identity/single-tenant`)
+and `ADV-20260824-04` (`audit`) — `-01`/`-02` stay reserved for T65/T66, which keep their numbers.
+
+**The `Advisory: none` trailer is barred from wave 8 entirely.** § 0.6 reserved it for changes with
+nothing for the child to act on; a breaking cookie rename is the opposite. `kind: breaking` is the
+right channel and the repository already uses it for deliberate migrations, not only defects — the
+five `ADV-20260821-0*` announce the Jest → Vitest codemod.
 
 ### T49: Neutral cookie and storage-key defaults — kernel and web
 
@@ -1643,25 +1715,39 @@ Each ships its half of the idempotent `scripts/platform/migrations/v3.0.0.mjs` (
 
 ---
 
-### T50: Neutral cookie defaults in the identity entry
+### T49a: The catalog toll — five entry bumps and the `## [3.0.0]` sections
 
-**What**: The entry's shipped defaults follow, and `CSRF_COOKIE_NAME` stops being a bare module constant.
-**Where**: `catalog/identity/single-tenant/api/identity.config.ts:20,23`
-**Touches**: `catalog/identity/single-tenant/api/identity.config.ts`, `catalog/identity/single-tenant/api/api/guards/cookie.ts`
-**Depends on**: T49
-**Exclusive**: no
-**Reuses**: `identity.config.ts:20,23`'s existing env seam as the precedent for the third cookie
-**Requirement**: BRAND-01, BRAND-02 (F-extensibility-any-product-4)
+**What**: Every catalog entry moves to `3.0.0` **before** any wave-8 commit touches entry code, so `entryChangedWithoutBump` never fires mid-cluster. `kernelRange` is deliberately left alone — AD-033 opens the ranges in T79's commit, not here.
+**Where**: `catalog/*/module.json`
+**Touches**: `catalog/identity/single-tenant/module.json`, `catalog/attachment/module.json`, `catalog/audit/module.json`, `catalog/notification/module.json`, `catalog/tag/module.json`, `catalog/identity/single-tenant/CHANGELOG.md`, `catalog/attachment/CHANGELOG.md`, `catalog/audit/CHANGELOG.md`, `catalog/notification/CHANGELOG.md`, `catalog/tag/CHANGELOG.md`
+**Depends on**: None — runs first in the cluster and **must** precede T53
+**Exclusive**: no — no other wave-8 task touches a manifest or a changelog, and C15 touches no `catalog/**` path at all
+**Reuses**: T42 as the precedent for a bump-only commit that never trips the advisory hook; `release-preflight.mjs:92-121`
+**Requirement**: area H (release machinery) · AD-016, AD-033, AD-035 · § 0.8 ruling 1–2
 
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
-- [ ] `identity.config.ts` defaults are `__Host-app_session` / `__Host-app_device`
-- [ ] `cookie.ts:78`'s `CSRF_COOKIE_NAME` reads from config, defaulting to `app_csrf`
-- [ ] Gate passes: `pnpm vitest run --project api catalog/identity`
-- [ ] Test count: 5 new tests pass
+- [ ] All five `version` fields read `3.0.0`
+- [ ] Each entry's `CHANGELOG.md` gains **one** `## [3.0.0]` section. The three entries that ship no code change in `v3.0.0` (`attachment`, `notification`, `tag`) say so explicitly: they move because the version drops kernel 2.x support
+- [ ] `kernelRange` is **untouched** at `>=2.0.0 <3.0.0` in all five. `lintKernelRange` (`lib/lint.mjs:149-154`) measures it against the changelog's latest heading — still `v2.4.1` — so opening it here turns pre-commit red on every commit that follows. T79 opens it
+- [ ] The `## [3.0.0]` sections are written so **later tasks append to them**: T63, T66, T72 and T77 must not open a second heading and must not bump again (§ 0.8)
+- [ ] **No advisory is authored or required here** — `CODE_PATH_RE` (`advisory-required.mjs:11`) matches only `catalog/<entry>/{api,web,migrations,parity}/`, and this commit stages no such path. Do **not** add an `Advisory: none` trailer either; the hook is simply silent
+- [ ] Gate passes: `pnpm catalog:lint`
+- [ ] Test count: none (manifests)
 
-**Tests**: unit · **Gate**: quick
+**Tests**: none (manifests) · **Gate**: build
+
+**Commit**: `chore(catalog)!: the five entries move to 3.0.0 for the kernel major`
+
+---
+
+### T50: **RETIRED** — folded into T53
+
+Its two files (`identity.config.ts`, `api/guards/cookie.ts`) and its BRAND-01/BRAND-02 acceptance
+criteria moved into T53, the cluster's single catalog commit (§ 0.8, ruling 3). The number is kept
+so the wave-8 cross-references in this file, in `design.md` and in `STATE.md` do not dangle.
+**Nothing is dispatched for T50.**
 
 ---
 
@@ -1670,7 +1756,7 @@ Each ships its half of the idempotent `scripts/platform/migrations/v3.0.0.mjs` (
 **What**: `ConfigureClientOptions` gains the option so a product that renames its CSRF cookie keeps the double-submit working. This is the **only new mechanism** in the brand cluster.
 **Where**: `packages/api-client/src/client.ts:109-114`
 **Touches**: `packages/api-client/src/client.ts`, `apps/web/src/app/config/api-client.ts`
-**Depends on**: T50
+**Depends on**: T49a (the `app_csrf` default it centres on comes from T49's kernel rename, not from the entry — the old dependency on T50 was retired with T50)
 **Exclusive**: no
 **Reuses**: today's hard-coded regex at `client.ts:65`
 **Requirement**: BRAND-02 (F-extensibility-any-product-4) — story AC 2
@@ -1688,51 +1774,59 @@ Each ships its half of the idempotent `scripts/platform/migrations/v3.0.0.mjs` (
 
 ---
 
-### T52: `COOKIE_SAMESITE=none` fails closed on a host mismatch
+### T52: `APP_TIMEZONE` — validated, IANA, default `UTC` (kernel half)
 
-**What**: Refuse the configuration at boot when the API host differs from `WEB_ORIGIN`'s host, unless the token travels a channel the SPA can read.
-**Where**: `catalog/identity/single-tenant/api/identity.config.ts:22,98-102`
-**Touches**: `catalog/identity/single-tenant/api/identity.config.ts`
+**What**: Replace the owner-named São Paulo constant with configuration, validated against a closed IANA set **before** it reaches `sql.raw`. The two catalog readers that consume it follow in T53. *(This number carried the SameSite task before § 0.8; that work is now T53's.)*
+**Where**: `apps/api/src/shared/kernel/clock/bucket-sql.ts:11,25`
+**Touches**: `apps/api/src/shared/kernel/clock/bucket-sql.ts`, `apps/api/src/shared/kernel/clock/bucket-sql.spec.ts`, `apps/api/src/shared/config/env.ts`
 **Depends on**: T51
 **Exclusive**: no
-**Reuses**: the existing refine at `:98-102`, which checks `CSRF_SECRET` but never compares hosts; `setCsrfCookie` at `api/guards/cookie.ts:90-95` sets no `domain` (host-only)
-**Requirement**: SEAM-06 (F-web-kernel-2)
-
-**Tools**: MCP: NONE · Skill: NONE
-
-**Done when**:
-- [ ] `SAMESITE=none` + cross-host is refused at boot with an actionable message
-- [ ] `WEB_ORIGIN`'s double declaration (`apps/api/src/shared/config/env.ts:68` and `identity.config.ts:19`) is reconciled to one source
-- [ ] Gate passes: `pnpm vitest run --project api catalog/identity`
-- [ ] Test count: 5 new tests pass
-
-**Tests**: unit · **Gate**: quick
-
----
-
-### T53: `APP_TIMEZONE` — validated, IANA, default `UTC`
-
-**What**: Replace the owner-named São Paulo constant with configuration, validated against a closed IANA set **before** it reaches `sql.raw`.
-**Where**: `apps/api/src/shared/kernel/clock/bucket-sql.ts:11,25`
-**Touches**: `apps/api/src/shared/kernel/clock/bucket-sql.ts`, `apps/api/src/shared/kernel/clock/bucket-sql.spec.ts`, `apps/api/src/shared/config/env.ts`, `catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-usage-stats.reader.ts`, `catalog/audit/api/infrastructure/repositories/drizzle-activity-stats.reader.ts`
-**Depends on**: T52
-**Exclusive**: no
 **Reuses**: the per-job `timeZone` field at `maintenance-job.decorator.ts:19` / `maintenance-registry.ts:10` — a config-driven precedent already in the kernel, **not** a leak; `bucket-sql.ts:8-10`'s comment documents the injection-safety property to preserve
-**Requirement**: TZ-01 (F-api-kernel-5 **C**) — story AC 3
+**Requirement**: TZ-01 (F-api-kernel-5 **C**) — story AC 3, kernel half
 
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
-- [ ] `CLINIC_TZ` is gone; the value comes from `APP_TIMEZONE`, default `UTC`
+- [ ] `CLINIC_TZ` is gone from the kernel; the value comes from `APP_TIMEZONE`, default `UTC`
 - [ ] An unknown or non-IANA value **fails boot** with a validation error; the closed-map property that keeps `sql.raw` safe survives
 - [ ] Absent value falls back to `UTC` and logs the fallback **once** at boot
-- [ ] Both catalog readers follow
+- [ ] **No `catalog/**` file is touched** — the two readers are T53's, and this cluster has exactly one catalog commit (§ 0.8)
 - [ ] Gate passes: `pnpm vitest run --project api apps/api/src/shared/kernel/clock`
-- [ ] Test count: 7 new tests pass (default, valid IANA, unknown throws, injection attempt throws, fallback logged once, both readers)
+- [ ] Test count: 5 new tests pass (default, valid IANA, unknown throws, injection attempt throws, fallback logged once)
 
 **Tests**: unit · **Gate**: quick
 
 **Commit**: `feat(kernel)!: APP_TIMEZONE replaces the hard-coded clinic timezone`
+
+---
+
+### T53: The single catalog commit of the brand major — **the only wave-8 task that may touch `catalog/**`**
+
+**What**: identity's shipped cookie defaults, the CSRF seam, the SameSite fail-closed refine and both timezone readers land in **one commit**, together with the two `breaking` advisories that same commit must stage. Absorbs the retired T50 and the former T52.
+**Where**: `catalog/identity/single-tenant/api/identity.config.ts:20,22,23,98-102`
+**Touches**: `catalog/identity/single-tenant/api/identity.config.ts`, `catalog/identity/single-tenant/api/api/guards/cookie.ts`, `catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-usage-stats.reader.ts`, `catalog/audit/api/infrastructure/repositories/drizzle-activity-stats.reader.ts`, `docs/advisories/ADV-20260824-03.md`, `docs/advisories/ADV-20260824-04.md`
+**Depends on**: T49a, T51, T52
+**Exclusive**: no — but it is the cluster's **only** catalog-touching task, and C15 touches no `catalog/**` path
+**Reuses**: `identity.config.ts:20,23`'s env seam as the precedent for the third cookie; the refine at `:98-102`, which checks `CSRF_SECRET` but never compares hosts; `setCsrfCookie` (`api/guards/cookie.ts:90-95`) sets no `domain`, so the cookie is host-only; the five `ADV-20260821-0*` as the shape of a `kind: breaking` advisory for a **deliberate** migration
+**Requirement**: BRAND-01, BRAND-02 (F-extensibility-any-product-4), SEAM-06 (F-web-kernel-2), TZ-01 (F-api-kernel-5 **C**) — catalog half · § 0.8 ruling 3
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+- [ ] `identity.config.ts` defaults are `__Host-app_session` / `__Host-app_device`
+- [ ] `cookie.ts:78`'s `CSRF_COOKIE_NAME` reads from config, defaulting to `app_csrf`
+- [ ] `SAMESITE=none` + cross-host is refused at boot with an actionable message
+- [ ] `WEB_ORIGIN`'s double declaration (`apps/api/src/shared/config/env.ts:68` and `identity.config.ts:19`) is reconciled to one source
+- [ ] Both readers consume `APP_TIMEZONE`; no `CLINIC_TZ` literal survives anywhere under `catalog/`
+- [ ] **Both advisories are created in this commit and staged with it**: `ADV-20260824-03` (`module: identity/single-tenant`) and `ADV-20260824-04` (`module: audit`), `kind: breaking`, `affects: ">=2.0.0 <3.0.0"`, every frontmatter field of `docs/advisories/README.md:12-21` filled. `advisory-required.mjs` reads them with `git show :<file>` (`:61-89`) — **an advisory committed earlier covers nothing**
+- [ ] The `fix` field of each names the child's actual act: renamed session/device/CSRF cookies invalidate live sessions, and `CLINIC_TZ` becomes `APP_TIMEZONE`
+- [ ] **No `Advisory: none` trailer on this or any other wave-8 commit** (§ 0.8). `-01`/`-02` of the same date stay reserved for T65/T66
+- [ ] Gate passes: `pnpm vitest run --project api catalog/identity catalog/audit && pnpm catalog:lint`
+- [ ] Test count: 12 new tests pass — 5 cookie defaults, 5 SameSite/host mismatch, 2 readers
+
+**Tests**: unit · **Gate**: quick
+
+**Commit**: `feat(identity,audit)!: neutral cookies, CSRF seam and APP_TIMEZONE in the entries`
 
 ---
 
@@ -1808,7 +1902,7 @@ Each ships its half of the idempotent `scripts/platform/migrations/v3.0.0.mjs` (
 **What**: Regenerate `openapi.json` and the generated client so the committed contract matches the renamed cookies.
 **Where**: `openapi.json`
 **Touches**: `openapi.json`, `packages/api-client/src/`
-**Depends on**: T49, T50, T51, T52, T53
+**Depends on**: T49, T49a, T51, T52, T53 (T50 retired — § 0.8)
 **Exclusive**: yes
 **Reuses**: `pnpm contract` (root `package.json:12`)
 **Requirement**: BRAND-01 (F-agnostic-leaks-3 **C**) — story AC 1, contract half
@@ -1841,6 +1935,7 @@ Each ships its half of the idempotent `scripts/platform/migrations/v3.0.0.mjs` (
 
 **Done when**:
 - [ ] `module.json` carries `name`, `version`, `description`, `kernelRange`, `dependsOn: ["identity"]`, `apiModule`, `schemaExports`, `customMigrations`, `env: []`, `absorbs: []`
+- [ ] `version` is born `1.0.0` and `kernelRange` is born **`>=2.0.0 <3.0.0`** — not `>=3.0.0`. `lintKernelRange` (`lib/lint.mjs:149-154`) measures it against the changelog's latest heading, which is still `v2.4.1` while wave 10 runs; a `>=3.0.0` range turns pre-commit red on the commit that creates the entry. **T79 opens this range with the other five** (§ 0.8, AD-033)
 - [ ] **No kernel port is introduced** — the aggregate cut removes the cycle, so `dependsOn` alone carries the edge (AD-025); nothing is promoted to `shared/kernel/**` (AD-021/AD-024, RULE C)
 - [ ] It is a **new entry**, not a variant (AD-013)
 - [ ] Gate passes: `pnpm catalog:lint`
@@ -2154,7 +2249,7 @@ Each ships its half of the idempotent `scripts/platform/migrations/v3.0.0.mjs` (
 - [ ] `schemaExports` lists only identity's own tables
 - [ ] `attach_audit()` registers **7** tables, keeping the redactions for `users.password_hash`, `sessions.token_hash`, `devices.cookie_token_hash`, `verification_tokens.token_hash`
 - [ ] `apps/api/test/setup/test-db.ts:105` (`identity.professional_default_hours`) is **deleted** — T45 widened the guard around it in `v2.4.0`; this is the deletion that line was waiting for
-- [ ] The entry's `version` bumps for the break
+- [ ] The entry's `version` is **not** bumped again — T49a already moved it to `3.0.0`, and `entryChangedWithoutBump` compares against the previous stable tag, where it reads `2.0.2`. The entry moves **once** per kernel release (§ 0.8). Append the break to the existing `## [3.0.0]` CHANGELOG section; do not open a second heading
 - [ ] Gate passes: `pnpm catalog:lint && pnpm vitest run --project api catalog/identity`
 
 **Tests**: none (manifest/SQL) · **Gate**: build (full-unit)
@@ -2303,11 +2398,11 @@ Each ships its half of the idempotent `scripts/platform/migrations/v3.0.0.mjs` (
 
 **What**: Author the `v3.0.0` section with real child migration steps, because a major is the one release allowed to have them.
 **Where**: `docs/dev/template-changelog.md`
-**Touches**: `docs/dev/template-changelog.md`
+**Touches**: `docs/dev/template-changelog.md`, `catalog/identity/single-tenant/module.json`, `catalog/attachment/module.json`, `catalog/audit/module.json`, `catalog/notification/module.json`, `catalog/tag/module.json`, `catalog/professional/module.json`
 **Depends on**: T78
 **Exclusive**: no
 **Reuses**: `lintChildMigrationSteps`; the `v2.4.0` section from T48
-**Requirement**: area H (release machinery) · AD-034
+**Requirement**: area H (release machinery) · AD-034, **AD-033** (§ 0.8, ruling 2)
 
 **Tools**: MCP: NONE · Skill: NONE
 
@@ -2317,12 +2412,15 @@ Each ships its half of the idempotent `scripts/platform/migrations/v3.0.0.mjs` (
 - [ ] `git tag -l v2.4.0` returned non-empty **before** the first edit
 - [ ] Child migration steps cover: the cookie rename (re-login or pin the old names), `R2_*` to `STORAGE_*`, `APP_TIMEZONE`, the identity split with its `ALTER TYPE` story, and installing `professional` for a child that needs the slice
 - [ ] Each step names `pnpm platform template migrate` where the migration does the work
+- [ ] **All six `kernelRange` values open to `>=3.0.0 <4.0.0` in this same commit** — the five entries plus `professional`. AD-033: *"A kernel major therefore opens the ranges in the same commit as the changelog heading."* `lintKernelRange` reads the changelog's latest heading, so the heading and the ranges are green only together: land the heading alone and pre-commit fails on six entries; land the ranges alone and it fails on all of them too. `v2.0.0` shipped this bug and `v2.1.0` fixed it
+- [ ] **No `version` field moves here** — T49a already set `3.0.0`, and `entryChangedWithoutBump` measures against the previous stable tag (§ 0.8)
+- [ ] This commit stages `catalog/*/module.json` but **no** `catalog/<entry>/{api,web,migrations,parity}/` path, so `advisory-required.mjs` stays silent — no advisory, and no `Advisory: none` trailer
 - [ ] The agent **does not tag and does not push** (AD-006/AD-034)
 - [ ] Gate passes: `pnpm catalog:lint`
 
 **Tests**: none · **Gate**: build
 
-**Commit**: `docs(changelog): v3.0.0`
+**Commit**: `docs(changelog)!: v3.0.0 and the six kernelRange openings`
 
 ---
 
@@ -2337,7 +2435,7 @@ Wave 5:  [C11: T43]  (exclusive)
 Wave 6:  [C12: T44→T45→T46→T47]
 Wave 7:  [C13: T48]  (owner-gated)
          ► Verifier pass 1 (v2.4.0 scope) ► owner dispatches release → v2.4.0
-Wave 8:  [C14: T49→T50→T51→T52→T53] ∥ [C15: T54→T55→T56]
+Wave 8:  [C14: T49→T49a→T51→T52→T53] ∥ [C15: T54→T55→T56]   (T50 retired — § 0.8)
 Wave 9:  [C16: T57] (exclusive)
 Wave 10: [C17: T58→T59→T60→T61→T62→T63] ∥ [C18: T64→T65→T66]
 Wave 11: [C19: T67→T68→T69→T70→T71→T72] ∥ [C20: T73→T74→T75]
@@ -2379,7 +2477,9 @@ navigation question to a scout, and commit one atomic, pathspec-limited commit p
 | T5, T18, T19, T29, T30, T31, T52, T53, T54, T73 | 1 behaviour in 1 seam | ✅ Granular |
 | T6, T7, T8, T9, T10, T11, T14, T15, T16, T24, T32, T35, T38, T47, T56 | 1 coherent file change | ✅ Granular |
 | T12, T13 | 1 document rewrite each — the design says rewrite, not edit | ✅ Granular |
-| T23, T25, T26, T27, T28, T37, T39, T40, T49, T50 | 1 seam across its consumers | ✅ Granular |
+| T23, T25, T26, T27, T28, T37, T39, T40, T49 | 1 seam across its consumers | ✅ Granular |
+| T49a | 5 manifests + 5 changelogs, one concept (the release's single entry bump) | ✅ Granular — same shape as T42 |
+| T53 | 4 catalog files + 2 advisories, 4 requirements — **atomicity forced by `advisory-required.mjs`**, which only counts an advisory staged in the commit being made (§ 0.8) | ✅ Granular — one owner for one indivisible commit |
 | T36, T44, T45, T46, T55, T75, T77 | 1 gate or 1 spec | ✅ Granular |
 | T41 | 1 file (`copier.yml`), 4 requirements — **wiring task by design** | ✅ Granular — one owner for a shared file |
 | T42, T43, T57, T76 | exclusive, 1 concern each | ✅ Granular |
@@ -2446,14 +2546,15 @@ No task creates multiple components across unrelated files. **0 ❌.**
 | T47 | T46 | after T46 in C12 | ✅ |
 | T48 | T42, T43, T47 | wave 7 ← waves 4, 5, 6 | ✅ |
 | T49 | None | wave 8, first in C14 | ✅ |
-| T50 | T49 | after T49 in C14 | ✅ |
-| T51 | T50 | after T50 in C14 | ✅ |
+| T49a | None (must precede T53) | after T49 in C14 | ✅ (§ 0.8) |
+| T50 | — | **retired**, folded into T53 | ✅ (§ 0.8) |
+| T51 | T49a | after T49a in C14 | ✅ |
 | T52 | T51 | after T51 in C14 | ✅ |
-| T53 | T52 | after T52 in C14 | ✅ |
+| T53 | T49a, T51, T52 | last in C14 | ✅ |
 | T54 | None | wave 8, first in C15 | ✅ |
 | T55 | T54 | after T54 in C15 | ✅ |
 | T56 | T55 | after T55 in C15 | ✅ |
-| T57 | T49, T50, T51, T52, T53 | wave 9 ← wave 8 (C14) | ✅ |
+| T57 | T49, T49a, T51, T52, T53 | wave 9 ← wave 8 (C14) | ✅ |
 | T58 | T57 | wave 10 ← wave 9 | ✅ |
 | T59 | T58 | after T58 in C17 | ✅ |
 | T60 | T59 | after T59 in C17 | ✅ |

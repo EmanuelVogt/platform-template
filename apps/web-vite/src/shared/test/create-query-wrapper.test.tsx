@@ -13,7 +13,9 @@ describe("createQueryWrapper", () => {
       { wrapper: createQueryWrapper() }
     )
 
-    await waitFor(() => expect(result.current.data).toBe("um"))
+    await waitFor(() => {
+      expect(result.current.data).toBe("um")
+    })
   })
 
   it("usa o QueryClient informado em vez de criar um novo", () => {

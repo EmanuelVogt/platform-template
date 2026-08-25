@@ -1,3 +1,4 @@
+// eslint-disable-next-line import-x/order -- deve vir antes de next/navigation: o vi.mock hoisted de mock-router.tsx só intercepta imports resolvidos depois dele (ver o JSDoc lá)
 import { mockRouter } from "./mock-router"
 
 import { render, screen } from "@testing-library/react"
@@ -13,7 +14,13 @@ function Probe() {
   return (
     <div>
       <span>{pathname}</span>
-      <button onClick={() => router.push(ROUTES.HOME)}>ir</button>
+      <button
+        onClick={() => {
+          router.push(ROUTES.HOME)
+        }}
+      >
+        ir
+      </button>
     </div>
   )
 }

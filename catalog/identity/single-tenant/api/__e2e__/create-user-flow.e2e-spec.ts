@@ -19,7 +19,7 @@ import type { E2eApp } from "../../../shared/test/e2e/app"
 import type { Pollable } from "../../../shared/test/e2e/outbox"
 
 const MASTER = "master@example.com"
-const SESSION_COOKIE = "rit_session"
+const SESSION_COOKIE = "app_session"
 
 describe("Fluxo de criação de usuário (e2e)", () => {
   const db = withE2ePool()

@@ -9,7 +9,7 @@ import { loginAs, seedUser, TEST_PASSWORD } from "../testing"
 import type { E2eApp } from "../../../shared/test/e2e/app"
 
 const EMAIL = "logout-e2e@example.com"
-const SESSION_COOKIE = "rit_session"
+const SESSION_COOKIE = "app_session"
 
 describe("Logout — POST /v1/auth/logout (e2e)", () => {
   const db = withE2ePool()

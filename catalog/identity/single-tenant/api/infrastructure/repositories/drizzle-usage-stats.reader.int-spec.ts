@@ -1,5 +1,13 @@
 import { ulid } from "ulid"
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 
 import {
   createTestDb,
@@ -70,6 +78,10 @@ describe("DrizzleUsageStatsReader (int)", () => {
   }
 
   beforeAll(() => {
+    // O recorte por dia/semana é o assunto do arquivo, e `saoPaulo()` acima
+    // assevera o dia local de Brasília: o fuso é declarado aqui porque o
+    // default do kernel é `UTC` e nenhum tier de teste define `APP_TIMEZONE`.
+    vi.stubEnv("APP_TIMEZONE", "America/Sao_Paulo")
     pool = createTestPool()
     reader = new DrizzleUsageStatsReader(
       new TransactionManager(createTestDb(pool), makeTestLogger().loggerFactory)
@@ -81,6 +93,7 @@ describe("DrizzleUsageStatsReader (int)", () => {
   })
 
   afterAll(async () => {
+    vi.unstubAllEnvs()
     await pool.end()
   })
 

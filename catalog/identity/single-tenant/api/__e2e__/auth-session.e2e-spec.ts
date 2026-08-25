@@ -41,11 +41,11 @@ describe("Sessão — rota protegida (e2e)", () => {
     const res = await e2e.http
       .get("/v1/auth/session")
       .set("Origin", E2E_ORIGIN)
-      .set("Cookie", "rit_session=nao-e-um-token-de-sessao-valido")
+      .set("Cookie", "app_session=nao-e-um-token-de-sessao-valido")
       .expect(401)
     const joined = cookieHeader(res).join(";")
-    // e2e-env usa COOKIE_NAME=rit_session (sem prefixo __Host-, que exige Secure).
-    expect(joined).toContain("rit_session=;")
+    // e2e-env usa COOKIE_NAME=app_session (sem prefixo __Host-, que exige Secure).
+    expect(joined).toContain("app_session=;")
     expect(joined).toMatch(/Max-Age=0/i)
   })
 })

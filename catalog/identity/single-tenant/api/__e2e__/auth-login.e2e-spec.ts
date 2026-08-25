@@ -44,8 +44,8 @@ describe("Login — cookie de sessão (e2e)", () => {
     expect(res.body.user.id).toBeDefined()
 
     const cookie = cookieHeader(res)[0]
-    // e2e-env usa COOKIE_NAME=rit_session (sem prefixo __Host-, que exige Secure).
-    expect(cookie).toContain("rit_session=")
+    // e2e-env usa COOKIE_NAME=app_session (sem prefixo __Host-, que exige Secure).
+    expect(cookie).toContain("app_session=")
     expect(cookie).toMatch(/HttpOnly/i)
     expect(cookie).toMatch(/SameSite=Lax/i)
     expect(cookie).toMatch(/Path=\//i)

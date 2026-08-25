@@ -9,8 +9,8 @@ import { seedUser, TEST_PASSWORD } from "../testing"
 import type { E2eApp } from "../../../shared/test/e2e/app"
 
 const EMAIL = "devices-e2e@example.com"
-const SESSION_COOKIE = "rit_session"
-const DEVICE_COOKIE = "rit_device"
+const SESSION_COOKIE = "app_session"
+const DEVICE_COOKIE = "app_device"
 
 type DeviceItem = { id: string; current: boolean; activeSessionCount: number }
 

@@ -11,6 +11,7 @@ import { IDENTITY_CONFIG, parseIdentityConfig } from "../identity.config"
 import { seedUser, TEST_PASSWORD } from "../testing"
 
 import type { E2eApp } from "../../../shared/test/e2e/app"
+import type { IdentityConfig } from "../identity.config"
 
 const EMAIL = "csrf-none@example.com"
 
@@ -24,21 +25,28 @@ const fakeHasher = {
 
 describe("CSRF double-submit sob SameSite=none (e2e)", () => {
   let e2e: E2eApp
+  // Espelho de `e2e` só para o teardown: se o beforeAll cair antes de criar o
+  // app, um `close()` sem guarda estoura e mascara a causa real da falha.
+  let openApp: E2eApp | undefined
+  let cfg: IdentityConfig
   let sessionCookie: string
   let csrfToken: string
 
   beforeAll(async () => {
     await resetDb(db.pool, ["identity", "_kernel"])
 
-    const cfg = parseIdentityConfig({
+    cfg = parseIdentityConfig({
       ...process.env,
       COOKIE_SAMESITE: "none",
       COOKIE_SECURE: "true",
-      COOKIE_NAME: "rit_session",
+      COOKIE_NAME: "app_session",
+      // SameSite=none exige API_ORIGIN no mesmo host de WEB_ORIGIN: o cookie de
+      // CSRF é host-only e o SPA não o leria de outro host.
+      API_ORIGIN: E2E_ORIGIN,
       CSRF_SECRET: "z".repeat(40),
     })
 
-    e2e = await createE2eApp({
+    e2e = openApp = await createE2eApp({
       overrides: [
         [IDENTITY_CONFIG, cfg],
         [PASSWORD_HASHER, fakeHasher],
@@ -56,15 +64,15 @@ describe("CSRF double-submit sob SameSite=none (e2e)", () => {
       .send({ email: EMAIL, password: "qualquer", rememberMe: false })
       .expect(200)
 
-    sessionCookie = cookieValue(login, "rit_session") ?? ""
-    csrfToken = cookieValue(login, "rit_csrf") ?? ""
+    sessionCookie = cookieValue(login, cfg.COOKIE_NAME) ?? ""
+    csrfToken = cookieValue(login, cfg.CSRF_COOKIE_NAME) ?? ""
   })
 
   afterAll(async () => {
-    await e2e.close()
+    await openApp?.close()
   })
 
-  it("login emite o cookie rit_csrf legível", () => {
+  it("login emite o cookie de CSRF legível", () => {
     expect(csrfToken.length).toBeGreaterThan(0)
     expect(sessionCookie.length).toBeGreaterThan(0)
   })
@@ -73,7 +81,7 @@ describe("CSRF double-submit sob SameSite=none (e2e)", () => {
     await e2e.http
       .delete("/v1/auth/devices")
       .set("Origin", E2E_ORIGIN)
-      .set("Cookie", `rit_session=${sessionCookie}`)
+      .set("Cookie", `${cfg.COOKIE_NAME}=${sessionCookie}`)
       .expect(403)
   })
 
@@ -81,7 +89,7 @@ describe("CSRF double-submit sob SameSite=none (e2e)", () => {
     await e2e.http
       .delete("/v1/auth/devices")
       .set("Origin", E2E_ORIGIN)
-      .set("Cookie", `rit_session=${sessionCookie}`)
+      .set("Cookie", `${cfg.COOKIE_NAME}=${sessionCookie}`)
       .set("X-CSRF-Token", csrfToken)
       .expect(204)
   })
@@ -90,7 +98,7 @@ describe("CSRF double-submit sob SameSite=none (e2e)", () => {
     await e2e.http
       .delete("/v1/auth/devices")
       .set("Origin", E2E_ORIGIN)
-      .set("Cookie", `rit_session=${sessionCookie}`)
+      .set("Cookie", `${cfg.COOKIE_NAME}=${sessionCookie}`)
       .set("X-CSRF-Token", "forjado-invalido")
       .expect(403)
   })
@@ -99,13 +107,14 @@ describe("CSRF double-submit sob SameSite=none (e2e)", () => {
     await e2e.http
       .get("/v1/auth/session")
       .set("Origin", E2E_ORIGIN)
-      .set("Cookie", `rit_session=${sessionCookie}`)
+      .set("Cookie", `${cfg.COOKIE_NAME}=${sessionCookie}`)
       .expect(200)
   })
 })
 
 describe("Origin forjada não gasta bucket (e2e)", () => {
   let e2e: E2eApp
+  let openApp: E2eApp | undefined
   let consumed: string[]
 
   beforeAll(async () => {
@@ -125,7 +134,7 @@ describe("Origin forjada não gasta bucket (e2e)", () => {
       reset: (key: string) => inner.reset(key),
     }
 
-    e2e = await createE2eApp({
+    e2e = openApp = await createE2eApp({
       rateLimiter: "real",
       overrides: [
         [PASSWORD_HASHER, fakeHasher],
@@ -135,7 +144,7 @@ describe("Origin forjada não gasta bucket (e2e)", () => {
   })
 
   afterAll(async () => {
-    await e2e.close()
+    await openApp?.close()
   })
 
   it("Origin de outro site é 403 e o bucket segue intacto para o pedido legítimo", async () => {

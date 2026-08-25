@@ -34,6 +34,20 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 - Os três reprovavam o `pnpm check` de todo filho que instala a entrada: `catalog/` está fora de
   toda invocação de ESLint do template, então o desvio só aparece no filho. Ver
   `ADV-20260825-02`.
+- Specs de e2e: os nomes de cookie de marca `rit_session`/`rit_device` — anteriores à
+  generificação — ficaram parados em 17 pontos de 6 arquivos enquanto os defaults desta mesma
+  versão rendem `app_session`/`app_device`; dois comentários ainda afirmavam
+  "e2e-env usa COOKIE_NAME=rit_session", falso desde o rename.
+- `auth-csrf-none.e2e-spec.ts`: a suíte montava `COOKIE_SAMESITE=none` sem declarar `API_ORIGIN`,
+  e o refine fail-closed desta versão recusava o setup da única suíte que prova CSRF sob
+  `SameSite=none`. Agora ela declara `API_ORIGIN` no host de `WEB_ORIGIN` e lê os nomes de cookie
+  da config que monta, em vez de literais. O `afterAll` fechava o app sem guarda, transformando
+  qualquer falha de setup num segundo erro espúrio que escondia a causa.
+- `drizzle-usage-stats.reader.int-spec.ts`: as asserções embutem `-03:00` no bucket esperado, mas
+  o default do kernel passou a `UTC` nesta versão; o spec agora declara o `APP_TIMEZONE` que
+  testa.
+- Os quatro reprovavam o `pnpm test:db` de todo filho que instala a entrada — 14 falhas. Ver
+  `ADV-20260825-03`.
 
 ## [2.1.3]
 

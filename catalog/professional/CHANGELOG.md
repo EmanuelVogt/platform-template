@@ -21,3 +21,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   `user_professional_schedule_config_blocks` e `professional_default_hours`. Colunas
   inalteradas; `area_id`/`service_id` seguem `text` sem FK (débito herdado, declarado no
   README).
+- Agregado `ProfessionalProfile` (`api/domain/entities/`) com `servesClients`, `birthDate` e
+  a validação `assertValidBirthDate()` movida do `User`, mais os erros locais
+  `InvalidBirthDateError` e `InvalidProfessionalScopeError`.
+- As três portas do recorte passam a ser locais da entrada (AD-014):
+  `ProfessionalAssignmentRepository`, `ProfessionalCommitments` e `ProfessionalScope`.

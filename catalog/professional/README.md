@@ -21,6 +21,12 @@ entradas e pelo módulo do produto através das facades exportadas por `Professi
 ## Portas do kernel consumidas
 
 - `shared/infra/database/drizzle.provider`
+- `shared/kernel/errors/domain.error`
+- `shared/kernel/listing/paginated`
+
+As três portas do recorte — `ProfessionalAssignmentRepository`, `ProfessionalCommitments` e
+`ProfessionalScope` — são **locais da entrada** (AD-014), em `api/domain/ports/`. Nenhum token
+sobe para `shared/kernel/**`: sem ciclo, não há o que inverter (AD-025).
 
 ## Dados
 
@@ -47,7 +53,9 @@ template versiona apenas o TS e o SQL manual de `migrations/custom/*.sql`.
 ## Decisões
 
 - **Corte no agregado, não na tabela** (AD-035). `servesClients` e `birthDate` saem da entidade
-  `User` e passam a viver num registro próprio, chaveado 1:1 no usuário.
+  `User` e passam a viver no agregado `ProfessionalProfile`, chaveado 1:1 no usuário, junto com
+  a validação `assertValidBirthDate()` que era privada do `User` — data real, não-futura,
+  idade ≤ 120.
 - **Nenhum token sobe para o kernel.** Como o `identity` deixa de chamar o recorte, o ciclo
   `identity <-> professional` nunca se forma e a aresta única fica declarada em `dependsOn`
   (AD-025 narrows AD-021/AD-024; RULE C do `module-boundaries.spec.ts` continua valendo).

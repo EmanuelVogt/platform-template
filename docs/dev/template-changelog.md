@@ -4,6 +4,30 @@ Version truth = git tag + this entry (AD-006); `package.json` is not bumped on
 release. Each version lists the contract-breaking changes and the steps for the child
 to apply on `copier update`.
 
+## v2.4.1
+
+`v2.4.0` was tagged by a release workflow that never rendered a Next child, so it shipped a
+Next shell whose comment named Vite variables. Both are fixed.
+
+### Changes
+
+1. **The Next shell stops naming `VITE_` variables**
+   (`apps/web-next/src/_app/layout/root-layout.tsx`): the code always read `NEXT_PUBLIC_*`,
+   but the comment above `resolveAppName` cited `VITE_APP_NAME` / `VITE_LOCALE`, and the
+   brand-hygiene assertion over a rendered child rejects `VITE_` in a Next shell — comments
+   included.
+2. **The release gate certifies everything the branch gate certifies**
+   (`.github/workflows/release.yml`): it ran neither `template:smoke` nor any `web_stack`
+   leg of `catalog:check`, so `v2.4.0`'s release was green while `ci.yml` on the same tree
+   was red. `catalog:check` gains the `web_stack` dimension and a two-leg `smoke` job joins
+   `tag.needs`; `release-gate-parity.test.mjs` derives the requirement from `ci.yml` itself.
+3. **`copier` is pinned to `9.17.2`** (`ci.yml`, `release.yml`): the version
+   `copier-questions.test.mjs` derives its guarantee from. Five install sites.
+
+### Child migration steps
+
+None — copier update is enough.
+
 ## v2.4.0
 
 A release can no longer be cut by accident: the `release` subcommand rejects the flags

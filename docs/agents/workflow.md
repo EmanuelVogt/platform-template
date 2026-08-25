@@ -111,5 +111,5 @@ A **local commit triggers neither gate.** Run `pnpm check` before asking for rev
 
 **Deploy.** A push to `main` fires whatever hook the product's environment configures —
 push = deploy ([`../dev/deploy.md`](../dev/deploy.md#deploy-flow), operational access in
-[`infra.md`](infra.md)). An agent never pushes `main` on its own and never moves a deploy
-branch — those are the user's acts; the agent stops at the local commit and says so.
+[`infra.md`](infra.md)). An agent may push `main` and cut release tags (AD-034, owner
+ruling 2026-08-25). Moving a deploy branch stays the user's act.

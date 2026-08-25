@@ -21,8 +21,8 @@ skill runs them in order and stops at the same place every time:
 | Installed catalog entries              | `port-module-update` skill                | one entry        |
 | Retroactive fixes on entries           | `docs/advisories/ADV-*.md` + `APPLIED.md` | one advisory     |
 
-Push, release and deploy are the user's acts (`docs/agents/workflow.md`); this routine
-ends at a local branch that passes the gates.
+Push and release are the agent's to run (AD-034); deploy is the user's act
+(`docs/agents/workflow.md`). This routine ends at a local branch that passes the gates.
 
 ## Preconditions
 

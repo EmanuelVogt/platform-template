@@ -63,7 +63,7 @@ the conflict rules of the ownership table above (platform path → template side
 files and lockfiles → regenerate, never merge), the `### Child migration steps` of that
 version in [`template-changelog.md`](template-changelog.md), `pnpm install`, the gates,
 one commit. Then the stale entries (`port-module-update`) and the pending advisories, one
-commit each. Push, tag and deploy stay the user's acts.
+commit each. Push and tag are the agent's to run (AD-034); deploy stays the user's act.
 
 ## Module catalog
 

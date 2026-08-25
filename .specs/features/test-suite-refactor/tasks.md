@@ -479,8 +479,8 @@ parallelism the old plan bought there is not worth the merge surface for three t
 
 **Done when**:
 
-- [ ] Reports a body whose every `expect` ends in `toBeDefined`/`toBeUndefined`/`toBeTruthy`/`toBeFalsy`/`resolves|rejects.toBeDefined`/argument-less `not.toThrow`
-- [ ] Does not report when a concrete value is also asserted, when `expect.assertions(n)` is declared, or when `not.toThrow(matcher)` has an argument
+- [ ] Reports a body whose every `expect` ends in `toBeDefined`/`toBeUndefined`/`toBeTruthy`/`toBeFalsy`/`resolves|rejects.toBeDefined`/`not.toThrow` — **with or without a matcher** (corrected 2026-08-25)
+- [ ] Does not report when a concrete value is also asserted or when `expect.assertions(n)` is declared. **`not.toThrow(matcher)` is NOT an exemption — corrected 2026-08-25 (`784d1af`)**: it counts as existence-only and is reported when it is the body's only assertion. Vitest passes `not.toThrow(X)` when a *different* error is thrown, so this bullet as originally written sanctioned the weaker form; the Verifier proved the loss by mutation
 - [ ] RuleTester suite covers both lists; the rule is registered as `error` for api and web test globs
 - [ ] `pnpm lint` green on the repository
 

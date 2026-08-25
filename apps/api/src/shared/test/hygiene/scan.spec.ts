@@ -20,6 +20,7 @@ const CHILD_SPEC =
 const CHILD_BARREL = "apps/api/src/modules/sample/testing/index.ts"
 const TEMPLATE_BARREL = "catalog/sample/api/testing/index.ts"
 const HARNESS = "apps/api/src/shared/test/e2e/app.ts"
+const HARNESS_SPEC = "apps/api/src/shared/test/e2e/wait-for.spec.ts"
 
 function rulesOf(file: string, source: string): string[] {
   return scanSource(file, source).map((violation) => violation.rule)
@@ -154,6 +155,21 @@ describe("scan — cada ban reprova a violação semeada e aceita a forma corret
     const source = SEEDED.genericContainer
     expect(rulesOf(intSpec, source)).toEqual(["no-container-in-int-spec"])
     expect(rulesOf(TEMPLATE_SPEC, source)).toEqual([])
+  })
+
+  it("no-sleep-as-proof", () => {
+    expect(rulesOf(TEMPLATE_SPEC, SEEDED.sleepAsProof)).toEqual([
+      "no-sleep-as-proof",
+    ])
+    expect(rulesOf(TEMPLATE_SPEC, SEEDED.handRolledPoll)).toEqual([
+      "no-sleep-as-proof",
+    ])
+    expect(rulesOf(TEMPLATE_SPEC, SEEDED.forPoll)).toEqual([
+      "no-sleep-as-proof",
+    ])
+    expect(rulesOf(TEMPLATE_SPEC, SEEDED.waitForCall)).toEqual([])
+    expect(rulesOf(TEMPLATE_SPEC, SEEDED.awaitedIteration)).toEqual([])
+    expect(rulesOf(HARNESS_SPEC, SEEDED.sleepAsProof)).toEqual([])
   })
 
   it("runner-setup-allowlist", () => {

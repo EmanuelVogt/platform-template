@@ -60,6 +60,12 @@ const RUNNER_SETUP_ALLOWLIST = new Set([
   "docker-runtime.ts",
 ])
 
+// HRN-03: o efeito assíncrono se prova com `waitFor`/`drainOutbox`. Um laço
+// escrito à mão — `while (!(await pronto()))` ou a condição de um `for`
+// clássico que reconsulta — é a mesma espera, sem prazo nem erro nomeado.
+// `for (const x of await consulta())` não é espera: só itera o que veio.
+const POLL_LOOP = /\bwhile\s*\([^)]*\bawait\b|\bfor\s*\([^;]*;[^;]*\bawait\b/
+
 type LineContext = { file: string; insideTest: boolean }
 
 type HygieneRule = {
@@ -125,6 +131,14 @@ export const HYGIENE_RULES: readonly HygieneRule[] = [
     description: "GenericContainer num int-spec",
     appliesTo: (file) => file.endsWith(".int-spec.ts"),
     matchesLine: (line) => line.includes("GenericContainer"),
+  },
+  {
+    id: "no-sleep-as-proof",
+    description:
+      "setTimeout ou laço à mão como prova de efeito assíncrono — use waitFor/drainOutbox",
+    appliesTo: (file) => SPEC_FILE.test(file) && !isVocabularyHome(file),
+    matchesLine: (line) =>
+      /\bsetTimeout\s*\(/.test(line) || POLL_LOOP.test(line),
   },
   {
     id: "runner-setup-allowlist",

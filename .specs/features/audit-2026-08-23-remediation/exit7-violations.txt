@@ -1,0 +1,68 @@
+# catalog:check exit 7 — the child's api#lint
+#
+# TWO MEASUREMENTS, BOTH REAL. Read this header before working from the list.
+#
+#   43 errors — measured 2026-08-25 at HEAD 8b92f67, log 05-catalog-check.log.
+#               This is the evidence the owner ruled on ("fix all 43 in this feature").
+#    5 errors — RE-MEASURED 2026-08-25 at HEAD 0146f84, after test-suite-refactor
+#               merged into main at ced8745. Its C9 had already repaired the 38 that
+#               predate wave 8, so the merge delivered them. The ruling is not
+#               contradicted: 38 were fixed by the feature that shipped the rule.
+#
+# THE 5 THAT REMAIN are exactly wave 8's own (created by ab81666), marked <-- OPEN
+# below. They are the only entries in this file that are still actionable; every
+# unmarked line is CLOSED by ced8745 and is kept only as the ruling's evidence.
+#
+# Split of the 5 by entry: audit 2, identity/single-tenant 3, notification 0.
+#
+# Paths are the RENDERED CHILD's (apps/api/src/modules/...). Map back to source:
+#   identity/__e2e__/X     -> catalog/identity/single-tenant/api/__e2e__/X
+#   identity/__parity__/X  -> catalog/identity/single-tenant/parity/X
+#   identity/<rest>        -> catalog/identity/single-tenant/api/<rest>
+#   notification/__parity__/X -> catalog/notification/parity/X
+#   notification/<rest>    -> catalog/notification/api/<rest>
+#   audit/<rest>           -> catalog/audit/api/<rest>
+
+audit/application/list-audit-entries/list-audit-entries.use-case.spec.ts       144:3    toBeUndefined  platform/no-existence-only-assert
+audit/infrastructure/repositories/drizzle-activity-stats.reader.spec.ts        6:1      ?              import-x/order   <-- OPEN
+audit/infrastructure/repositories/drizzle-activity-stats.reader.spec.ts        39:46    ?              @typescript-eslint/non-nullable-type-assertion-style   <-- OPEN
+identity/__e2e__/auth-rate-limit.e2e-spec.ts                                   24:3     toBeDefined    platform/no-existence-only-assert
+identity/__e2e__/create-user-flow.e2e-spec.ts                                  121:3    toBeTruthy     platform/no-existence-only-assert
+identity/__e2e__/devices.e2e-spec.ts                                           58:3     toBeDefined    platform/no-existence-only-assert
+identity/__e2e__/devices.e2e-spec.ts                                           121:3    toBeDefined    platform/no-existence-only-assert
+identity/__parity__/access-policy.parity.spec.ts                               125:3    not.toThrow    platform/no-existence-only-assert
+identity/__parity__/access-policy.parity.spec.ts                               145:3    not.toThrow    platform/no-existence-only-assert
+identity/__parity__/access-policy.parity.spec.ts                               153:3    not.toThrow    platform/no-existence-only-assert
+identity/__parity__/contract.parity.spec.ts                                    41:3     not.toThrow    platform/no-existence-only-assert
+identity/api/contracts/identity.contract.spec.ts                               53:3     toBeDefined    platform/no-existence-only-assert
+identity/application/access-policy.spec.ts                                     22:3     not.toThrow    platform/no-existence-only-assert
+identity/application/access-policy.spec.ts                                     28:3     not.toThrow    platform/no-existence-only-assert
+identity/application/access-policy.spec.ts                                     52:3     not.toThrow    platform/no-existence-only-assert
+identity/application/access-policy.spec.ts                                     67:3     not.toThrow    platform/no-existence-only-assert
+identity/application/access-policy.spec.ts                                     280:3    not.toThrow    platform/no-existence-only-assert
+identity/application/access-policy.spec.ts                                     292:3    not.toThrow    platform/no-existence-only-assert
+identity/application/access-policy.spec.ts                                     312:3    not.toThrow    platform/no-existence-only-assert
+identity/application/access-policy.spec.ts                                     336:3    not.toThrow    platform/no-existence-only-assert
+identity/application/access-policy.spec.ts                                     348:3    not.toThrow    platform/no-existence-only-assert
+identity/application/access-policy.spec.ts                                     374:3    not.toThrow    platform/no-existence-only-assert
+identity/application/assert-permission.spec.ts                                 49:3     not.toThrow    platform/no-existence-only-assert
+identity/application/assert-permission.spec.ts                                 74:3     not.toThrow    platform/no-existence-only-assert
+identity/application/use-cases/request-email-change/request-email-change.use-case.spec.ts 304:5    toBeUndefined  platform/no-existence-only-assert
+identity/application/use-cases/request-email-change/request-email-change.use-case.spec.ts 325:5    toBeUndefined  platform/no-existence-only-assert
+identity/application/use-cases/request-email-change/request-email-change.use-case.spec.ts 351:5    toBeUndefined  platform/no-existence-only-assert
+identity/domain/entities/user.entity.spec.ts                                   648:3    not.toThrow    platform/no-existence-only-assert
+identity/domain/password-policy.spec.ts                                        15:3     not.toThrow    platform/no-existence-only-assert
+identity/domain/password-policy.spec.ts                                        21:3     not.toThrow    platform/no-existence-only-assert
+identity/domain/permissions/catalog/admin.catalog.spec.ts                      105:3    toBeUndefined  platform/no-existence-only-assert
+identity/identity.config.spec.ts                                               194:3    toBeUndefined  platform/no-existence-only-assert   <-- OPEN
+identity/infrastructure/hashing/hmac-csrf.spec.ts                              34:3     not.toThrow    platform/no-existence-only-assert
+identity/infrastructure/hashing/hmac-csrf.spec.ts                              38:3     not.toThrow    platform/no-existence-only-assert
+identity/infrastructure/repositories/drizzle-professional-assignment.repository.int-spec.ts 290:5    toBeUndefined  platform/no-existence-only-assert
+identity/infrastructure/repositories/drizzle-usage-stats.reader.spec.ts        6:1      ?              import-x/order   <-- OPEN
+identity/infrastructure/repositories/drizzle-usage-stats.reader.spec.ts        39:46    ?              @typescript-eslint/non-nullable-type-assertion-style   <-- OPEN
+notification/__parity__/template-registry.parity.spec.ts                       40:3     toBeUndefined  platform/no-existence-only-assert
+notification/application/catalog/notification-catalog.spec.ts                  12:3     toBeDefined    platform/no-existence-only-assert
+notification/application/catalog/notification-catalog.spec.ts                  79:3     toBeDefined    platform/no-existence-only-assert
+notification/application/templates/notification-template-registry.spec.ts      27:3     toBeDefined    platform/no-existence-only-assert
+notification/application/templates/notification-template-registry.spec.ts      34:3     toBeDefined    platform/no-existence-only-assert
+notification/application/templates/notification-template-registry.spec.ts      41:3     toBeUndefined  platform/no-existence-only-assert

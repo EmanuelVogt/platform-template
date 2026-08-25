@@ -1,0 +1,96 @@
+# catalog:check exit 7 — THE THIRD LAYER: the child's `pnpm test:db`, 21 failures
+#
+# Measured 2026-08-25 at HEAD 657a7f8 (after T49c + T49e cleared the lint).
+# Log: scratchpad/catalog-check-after.log. `api#lint` is CLEAN — 5 turbo tasks
+# successful, "✖ 0 problems". Vitest: Test Files 8 failed | 63 passed (71);
+# Tests 19 failed | 488 passed | 5 skipped (512); 1 failed SUITE = 21 entries.
+#
+# THIS IS THE THIRD MASK IN THE SAME CHAIN, not a regression from T49c/T49e:
+#   exit 5 (MISSING_DEPS)  masked ->  the child's api#lint         (T49b cleared it)
+#   api#lint exit 1        masked ->  the child's pnpm test:db     (T49c/T49e cleared it)
+#   pnpm test:db exit 1    <- YOU ARE HERE
+# Each layer aborted turbo before the next one ran. Nothing here is new breakage;
+# it is wave 8's own, finally visible.
+#
+# ALL 21 TRACE TO WAVE 8 (T52 / T53). Three independent causes, A/B/C below.
+# Paths are the CATALOG SOURCE's, already mapped back from the render.
+
+## CAUSE A — `appTimeZone()` forces a full kernel env parse — 12 failures
+##
+## KERNEL DEFECT, from T52. `bucket-sql.ts:57` reads the timezone through
+## `env()` -> `loadEnv()` -> `parseEnv()`, which demands DATABASE_URL, REDIS_URL
+## and WEB_ORIGIN. The integration harness sets none of them: it supplies a db
+## handle, not a booted app. Before T52 the timezone was the module constant
+## `CLINIC_TZ` and `bucketOf` touched no env at all, so this path could not throw.
+## Blast radius is wider than the tests: ANY caller of `bucketOf` outside a fully
+## booted process now throws, in the child as much as here.
+##
+## Stack, identical in all 12:
+##   parseEnv          apps/api/src/shared/config/env.ts:113
+##   loadEnv           apps/api/src/shared/config/env.ts:129
+##   env               apps/api/src/shared/config/env.ts:134
+##   appTimeZone       apps/api/src/shared/kernel/clock/bucket-sql.ts:57
+##   bucketOf          apps/api/src/shared/kernel/clock/bucket-sql.ts:75
+
+catalog/audit/api/infrastructure/repositories/drizzle-activity-stats.reader.int-spec.ts    65   soma as alterações por tabela e por dia
+catalog/audit/api/infrastructure/repositories/drizzle-activity-stats.reader.int-spec.ts   102   alteração de rotina automática fica de fora da conta
+catalog/audit/api/infrastructure/repositories/drizzle-activity-stats.reader.int-spec.ts   120   alteração sem ator identificado fica de fora da conta
+catalog/audit/api/infrastructure/repositories/drizzle-activity-stats.reader.int-spec.ts   126   alteração às 23h fica no dia local, não no dia seguinte
+catalog/audit/api/infrastructure/repositories/drizzle-activity-stats.reader.int-spec.ts   141   agrega por semana quando a unidade é semana
+catalog/audit/api/infrastructure/repositories/drizzle-activity-stats.reader.int-spec.ts   156   ignora alteração fora da janela pedida
+catalog/audit/api/infrastructure/repositories/drizzle-activity-stats.reader.int-spec.ts   160   período sem nenhuma alteração devolve lista vazia
+catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-usage-stats.reader.int-spec.ts   106   soma as entradas por dia no fuso de Brasília
+catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-usage-stats.reader.int-spec.ts   125   entrada às 23h fica no dia local, não no dia seguinte
+catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-usage-stats.reader.int-spec.ts   147   conta só entrada bem-sucedida — falha, bloqueio e saída ficam de fora
+catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-usage-stats.reader.int-spec.ts     ?   ignora entrada fora da janela pedida
+catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-usage-stats.reader.int-spec.ts     ?   agrega por semana quando a unidade é semana
+
+## NOTE on A: two of these test names still say "no fuso de Brasília" / "dia
+## local". T52 made the default UTC. Even once the env throw is fixed, the
+## ASSERTIONS need re-reading — the names may now describe the old behaviour.
+
+## CAUSE B — the SameSite=none fail-closed refine rejects its own e2e — 1 suite, 2 entries
+##
+## T53 made `COOKIE_SAMESITE=none` + an API_ORIGIN on a different host from
+## WEB_ORIGIN a boot refusal. `auth-csrf-none.e2e-spec.ts:33` builds exactly that
+## combination — it is the suite whose whole purpose is CSRF under SameSite=none —
+## and was never updated, so it now dies in setup:
+##   Error: Configuração do módulo identity inválida:
+##   ✖ COOKIE_SAMESITE=none exige API_ORIGIN no mesmo host de WEB_ORIGIN: [...]
+##     -> at API_ORIGIN            (identity.config.ts:184, from the spec's :33)
+##
+## SECOND, INDEPENDENT DEFECT in the same file: `afterAll` calls `e2e.close()`
+## with no guard, so a setup throw cascades into a bogus second failure —
+##   TypeError: Cannot read properties of undefined (reading 'close')
+## That one is a harness robustness bug and would mask the real cause in any
+## future setup failure. Worth fixing even if the suite is rewritten.
+
+catalog/identity/single-tenant/api/__e2e__/auth-csrf-none.e2e-spec.ts    33   suite setup — config refusal
+catalog/identity/single-tenant/api/__e2e__/auth-csrf-none.e2e-spec.ts    64   afterAll — unguarded e2e.close()
+
+## CAUSE C — stale brand cookie names in the e2e specs — 7 failures
+##
+## T53 renamed the defaults to `__Host-app_session` / `__Host-app_device`
+## (identity.config.ts:30,33); under the e2e env they render `app_session` /
+## `app_device`. The e2e specs still hardcode the PRE-GENERIFICATION brand names
+## `rit_session` / `rit_device` — e.g. devices.e2e-spec.ts:12-13, whose comment
+## still claims "e2e-env usa COOKIE_NAME=rit_session". That claim is now false.
+##
+## NOTE: `rit_` is exactly the literal T55 extends the brand-hygiene gate to ban
+## (`__Host-rit`, `rit_`, `rit-`). These constants are therefore ALSO a BRAND-01
+## violation still living under `catalog/`. Whoever fixes C should check whether
+## T55's gate, once written, would have caught it — and why it did not.
+
+catalog/identity/single-tenant/api/__e2e__/auth-login.e2e-spec.ts        48   expected 'app_session=3uLnLru…' to contain 'rit_session='
+catalog/identity/single-tenant/api/__e2e__/auth-logout.e2e-spec.ts      47   expected 'app_session=; Max-Age=0; …' to contain 'rit_session=;'
+catalog/identity/single-tenant/api/__e2e__/auth-session.e2e-spec.ts     48   expected '' to contain 'rit_session=;' (no Set-Cookie at all on the 401)
+catalog/identity/single-tenant/api/__e2e__/create-user-flow.e2e-spec.ts  99   expected false to be true — cookie.startsWith(`${SESSION_COOKIE}=`)
+catalog/identity/single-tenant/api/__e2e__/create-user-flow.e2e-spec.ts 175   expected false to be true — same, on the set-password auto-login cookie
+catalog/identity/single-tenant/api/__e2e__/devices.e2e-spec.ts           60   expected undefined to be defined — cookieValue(res, "rit_device")
+catalog/identity/single-tenant/api/__e2e__/devices.e2e-spec.ts           75   expected undefined to be defined — cascades from :60
+
+## NOTE on C: `auth-session.e2e-spec.ts:48` received an EMPTY string, not a
+## renamed cookie — the 401 emitted no Set-Cookie at all. Renaming the constant
+## will NOT fix that one; it is a real behaviour question about whether the
+## clearing cookie still goes out on an invalid session. Do not assume C is
+## uniformly mechanical.

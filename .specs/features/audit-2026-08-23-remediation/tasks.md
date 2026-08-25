@@ -1776,6 +1776,119 @@ five `ADV-20260821-0*` announce the Jest → Vitest codemod.
 
 ---
 
+### T49c: identity/single-tenant's three `exit 7` lint errors — **the scope collapsed from 34 to 3**
+
+**What**: The rendered child's `api#lint` reported 34 errors for this entry at HEAD `8b92f67`. `test-suite-refactor` merged into `main` at `ced8745` carrying its own C9, which had already repaired the 31 that predate wave 8 — they shipped under that entry's `## [2.1.2]`/`## [2.1.3]` sections, in the feature that shipped the rule. **Three remain, and all three are wave 8's own** (`ab81666` created both files): two mechanical in `drizzle-usage-stats.reader.spec.ts` and one `platform/no-existence-only-assert` at `identity.config.spec.ts:194`.
+
+**Why the owner's *fix all 43 here* ruling is not contradicted**: it was given over a 43-error measurement. 38 of those were delivered by the feature they belonged to; this task closes wave 8's own share. Re-measured at HEAD `0146f84`, not inferred — `exit7-violations.txt` marks the survivors `<-- OPEN`.
+
+**Where**: `catalog/identity/single-tenant/api/identity.config.spec.ts:194`
+**Touches**: `catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-usage-stats.reader.spec.ts`, `catalog/identity/single-tenant/api/identity.config.spec.ts`, `catalog/identity/single-tenant/CHANGELOG.md`, `docs/advisories/ADV-20260825-02.md`
+**Depends on**: T49a, T49b
+**Exclusive**: no — disjoint from T49e's entry and files
+**Reuses**: `## [3.0.0]` from T49a — this task **appends** a `### Fixed` subsection and opens no second heading (§ 0.8); the `2.1.2`/`2.1.3` entries of this same changelog as the shape of a spec-only `### Fixed` bullet that names the child-facing lint consequence
+**Requirement**: area H (release machinery) · AD-019, AD-028 · § 0.8 ruling 3
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+- [x] `drizzle-usage-stats.reader.spec.ts`: the `TransactionManager` import precedes the sibling import of `./drizzle-usage-stats.reader`, and `captured.bucket as SQL` becomes `captured.bucket!`
+- [x] `identity.config.spec.ts:194`'s `it` gains a concrete-value assertion. The rule reproves the **whole body** (`no-existence-only-assert.js:133`, `frame.assertions.every(isExistenceOnly)`), so one value assertion beside the surviving `toBeUndefined()` clears it — and that is the rule's own stated intent (`:4-6`). **`expect.assertions(n)` is not used**: the acceptance is assertable, so declaring it exempt would be the escape hatch, not the fix
+- [x] **`ADV-20260825-02` is created and staged in this same commit** (`module: identity/single-tenant`). `advisory-required.mjs` reads staged advisories with `git show :<file>` — an advisory committed earlier covers nothing, and there is no `Advisory: ADV-...` trailer form
+- [x] `detect` and `parity` name the **child's** paths (`apps/api/src/modules/identity/...`), never `catalog/` — `lintAdvisoryPathScope` (`lib/lint.mjs:188-198`) scans exactly those two fields and rejects a `catalog/` token. The `fix` field may carry one, and does
+- [x] **No `Advisory: none` trailer** — barred from wave 8 entirely (§ 0.8)
+- [x] **No version bump** — `entryChangedWithoutBump` measures `module.json` against `v2.4.1`, and T49a already moved the entry to `3.0.0` after that tag, so it returns `false`. The entry stays at `3.0.0` (§ 0.8: no later task bumps again)
+- [x] **`kind: bug`, and the choice is justified here** — AD-028 asserts "a catalog entry whose specs change ships a `breaking` advisory (AD-019)", but AD-019's own text requires only *an* advisory of any kind. Neither the reader nor `identity.config.ts` was touched; no child behaviour changes and no child migrates. `breaking` would misdescribe it. **The AD-028 ↔ AD-019 contradiction is recorded, not resolved — it is the Verifier's**
+- [x] Gate passes **for what this task owns**: `pnpm catalog:lint` exit 0, and the rendered child's `api#lint` is **clean** — `✖ 0 problems`, 5 turbo tasks successful, measured at `657a7f8`. **The template's own vitest cannot exercise these specs** — the `api` project's include is `src/**/*.spec.ts`, so `catalog/**` is out of reach; the rendered child is the only instrument that runs them
+- [ ] `pnpm catalog:check` exit 0 — **NOT MET, and no longer this task's to meet.** Clearing the lint unmasked the third layer of the same chain: the child's `pnpm test:db`, 21 failures, all wave 8's own (T52/T53). Full record with file, line and cause: `child-testdb-failures.txt`. See T49f
+- [x] Test count: no new tests; one assertion added to an existing `it`
+
+**Tests**: unit (in the rendered child only) · **Gate**: build
+
+**Commit**: `fix(identity): assert the value, and order the reader spec's imports`
+
+---
+
+### T49d: **VOID** — `notification` had 6 of the 43 and has 0 of the 5
+
+**What**: Reserved for `notification`'s share of the `exit 7` errors (6 errors across 3 files: `template-registry.parity.spec.ts`, `notification-catalog.spec.ts`, `notification-template-registry.spec.ts`). **All six were repaired by `test-suite-refactor`'s C9 and landed on `main` with the merge at `ced8745`.** Re-measured at HEAD `0146f84`: the entry contributes **zero** errors to the child's `api#lint`.
+
+Nothing to fix, so nothing to advise: `ADV-20260825-03` — reserved for this task in the earlier plan — **is not authored and stays free**. The entry's `module.json`, `CHANGELOG.md` and specs are untouched by this feature.
+
+The number is kept rather than reused so that the earlier handoff's `T49c/T49d/T49e = identity/notification/audit` mapping still reads correctly.
+
+**Depends on**: —
+**Exclusive**: no
+**Requirement**: —
+
+**Done when**: n/a — void.
+
+---
+
+### T49e: audit's two `exit 7` lint errors — **the scope collapsed from 3 to 2**
+
+**What**: Of the 3 errors this entry contributed at HEAD `8b92f67`, the `toBeUndefined` at `list-audit-entries.use-case.spec.ts:144` was repaired by `test-suite-refactor` and shipped under this entry's `## [2.1.2]`. **Two remain, both wave 8's own** (`ab81666`) and both mechanical, in `drizzle-activity-stats.reader.spec.ts`: `import-x/order` at `6:1` and `@typescript-eslint/non-nullable-type-assertion-style` at `39:46`.
+
+**Where**: `catalog/audit/api/infrastructure/repositories/drizzle-activity-stats.reader.spec.ts:6,39`
+**Touches**: `catalog/audit/api/infrastructure/repositories/drizzle-activity-stats.reader.spec.ts`, `catalog/audit/CHANGELOG.md`, `docs/advisories/ADV-20260825-01.md`
+**Depends on**: T49a, T49b
+**Exclusive**: no — disjoint from T49c's entry and files
+**Reuses**: `## [3.0.0]` from T49a — **appends** a `### Fixed` subsection, no second heading (§ 0.8); `ADV-20260824-04` as the shape of an `audit` advisory, including its `detect` idiom (`grep -q '<marker>' <child path>; test $? -ne 0`, which yields **1 = affected** and **0 = not affected** even when the file is absent)
+**Requirement**: area H (release machinery) · AD-019, AD-028 · § 0.8 ruling 3
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+- [x] The `TransactionManager` import precedes the sibling import of `./drizzle-activity-stats.reader`, and `captured.bucket as SQL` becomes `captured.bucket!`
+- [x] The `fields.bucket as SQL` at `:22` is **left alone** — it is an `unknown` → `SQL` cast, a different rule's territory, and not among the reported errors
+- [x] **`ADV-20260825-01` is created and staged in this same commit** (`module: audit`), same mechanics as T49c
+- [x] `detect` and `parity` name the child's paths; **no `Advisory: none`**; **no version bump** (§ 0.8) — see T49c's Done-when for the mechanics, which are identical
+- [x] `kind: bug`, justified as in T49c: the reader itself is untouched, no child behaviour changes
+- [x] Gate passes **for what this task owns**: `pnpm catalog:lint` exit 0 and the child's `api#lint` clean at `657a7f8`
+- [ ] `pnpm catalog:check` exit 0 — **NOT MET, not this task's to meet**: the unmasked `pnpm test:db` layer, 21 failures. See `child-testdb-failures.txt` and T49f
+- [x] Test count: no new tests; the reader's single `it` keeps both its assertions
+
+**Tests**: unit (in the rendered child only) · **Gate**: build
+
+**Commit**: `fix(audit): order the reader spec's imports and drop the redundant cast`
+
+---
+
+### T49f: The child's `pnpm test:db` — 21 failures unmasked by T49c/T49e — **OWNER-GATED, NOT STARTED**
+
+**What**: Clearing the lint made `catalog:check` reach the child's `pnpm test:db` for the first time in this feature. It is red: **Test Files 8 failed | 63 passed (71); Tests 19 failed | 488 passed | 5 skipped (512)**, one of the eight being a failed *suite*, for 21 entries in total. **None of it is a regression from T49c/T49e** — it is the third mask in one chain (`MISSING_DEPS` hid the lint; the lint hid the tests), and all 21 trace to wave 8's own T52/T53.
+
+**Why this is a separate task and not a Done-when of T49c/T49e**: two of the three causes need a design ruling, not a repair. Full evidence, per file and per line: `child-testdb-failures.txt`.
+
+| Cause | Count | What it is | Whose call |
+| --- | --- | --- | --- |
+| **A** | 12 | `appTimeZone` (`bucket-sql.ts:57`) reads the timezone through `env()` -> `parseEnv()`, which demands `DATABASE_URL`/`REDIS_URL`/`WEB_ORIGIN`. The int harness sets none. Before T52 the timezone was the `CLINIC_TZ` constant and `bucketOf` touched no env, so this could not throw. **Kernel defect, and wider than the tests: any `bucketOf` caller outside a booted process now throws** | design — how should `APP_TIMEZONE` be read without dragging the whole env schema in? T52's seam |
+| **B** | 2 | T53 made `COOKIE_SAMESITE=none` + cross-host `API_ORIGIN` a boot refusal; `auth-csrf-none.e2e-spec.ts:33` builds exactly that, because CSRF-under-`none` is the scenario it exists to test. Its `afterAll` also calls `e2e.close()` unguarded, so the setup throw cascades into a bogus second failure | design — does the suite move to same-host, or does T53 mean the scenario is now illegal and the suite goes? |
+| **C** | 7 | The e2e specs hardcode `rit_session`/`rit_device`; T53's defaults render `app_session`/`app_device`. `devices.e2e-spec.ts:12-13`'s comment still asserts the old name | mostly mechanical — **but see the caveat below** |
+
+**Two things not to assume.** (1) C is **not** uniformly mechanical: `auth-session.e2e-spec.ts:48` received an **empty** Set-Cookie, not a renamed one, so the 401 emitted no clearing cookie at all — a behaviour question, not a constant. (2) `rit_` is precisely the literal **T55** extends the brand-hygiene gate to ban (`__Host-rit`, `rit_`, `rit-`). These constants are a live **BRAND-01** violation under `catalog/`; whoever takes this must establish why T55's gate does not already catch them.
+
+**Where**: `apps/api/src/shared/kernel/clock/bucket-sql.ts:57`
+**Touches**: TBD once the owner rules on A and B — at minimum `apps/api/src/shared/kernel/clock/bucket-sql.ts`, `catalog/identity/single-tenant/api/__e2e__/*.e2e-spec.ts`, both `*-stats.reader.int-spec.ts`, and an advisory per entry touched
+**Depends on**: T49c, T49e
+**Exclusive**: no
+**Requirement**: TZ-01, BRAND-01, SEAM-06 — the halves wave 8 shipped without a green child
+**Blocks**: **wave 9 (C16 = T57)** and the eight-command Build gate's 8/8
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+- [ ] The owner has ruled on A (the kernel env seam) and on B (what the SameSite=none e2e becomes)
+- [ ] `auth-csrf-none.e2e-spec.ts`'s `afterAll` is guarded regardless of the B ruling — an unguarded teardown masks the real cause of any future setup failure
+- [ ] The two int-spec test names that still say "fuso de Brasília"/"dia local" are re-read against T52's UTC default; the assertions may describe the old behaviour
+- [ ] An advisory per entry touched, staged in the same commit (see T49c's Done-when for the mechanics); `ADV-20260825-03` is free
+- [ ] Gate passes: `pnpm catalog:check` exit 0, i.e. the eight-command Build gate at **8/8**
+- [ ] Test count: 21 failures -> 0, with no test deleted merely to make it pass
+
+**Tests**: integration + e2e (in the rendered child only) · **Gate**: build
+
+---
+
 ### T50: **RETIRED** — folded into T53
 
 Its two files (`identity.config.ts`, `api/guards/cookie.ts`) and its BRAND-01/BRAND-02 acceptance

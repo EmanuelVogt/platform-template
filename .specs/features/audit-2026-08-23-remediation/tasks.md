@@ -3479,3 +3479,23 @@ invariant by deriving the set of jobs from the workflow files rather than pinnin
    "copier is not installed". Nothing in the repo declares `copier` a prerequisite for
    `pnpm test:scripts`, so a fresh developer machine reproduces these 15 failures with the same
    unhelpful message. A named precondition check would have turned a release failure into one line.
+
+### Cluster CG5 — GT8: pin the copier CI provisions (sonnet)
+
+**Found by Verifier round 3, item 4 — a risk GT7 introduced while fixing a different one.** GT7
+installs `copier` **unpinned** (`pipx install copier`) in every job that renders a child, while
+**TOOL-13's guarantee was derived empirically from copier 9.17.2**
+(`scripts/platform/__tests__/copier-questions.test.mjs:78`). A copier release that changes render
+behaviour would break the pipeline, or worse, silently shift what a rendered child contains — and the
+test that would notice is the one whose expectations came from the old version.
+
+**Touches**: `.github/workflows/ci.yml`, `.github/workflows/release.yml`,
+`scripts/platform/__tests__/workflow-copier-provisioning.test.mjs`
+**Done when**:
+- [ ] Every `pipx install copier` in both workflows pins the version — `pipx install 'copier==9.17.2'`
+      — matching the version the workstation validated against and TOOL-13 derived from
+- [ ] The provisioning guard from GT7 additionally asserts the pin is present and that **all**
+      provisioning sites agree on one version, so a future job cannot be added at a different one
+- [ ] The guard goes red when any pin is dropped or made to disagree — prove both
+- [ ] Gate passes: `pnpm test:scripts`
+**Commit**: `fix(ci): pin copier to the version TOOL-13 was derived from`

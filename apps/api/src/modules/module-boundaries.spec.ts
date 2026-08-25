@@ -776,3 +776,227 @@ describe("module-boundaries — RULE C: o vocabulário do kernel não conhece m�
     )
   })
 })
+
+// RULE D (design § RULE D, AD-025): um teste de entrada só importa o barrel
+// `testing/` de outra entrada quando ela está no `dependsOn` do seu
+// `module.json`, e só quando a aresta mantém o grafo acíclico. Os specifiers do
+// catálogo são escritos para o layout do filho (`apps/api/src/modules/<entrada>/`),
+// que é onde `module add` os instala — a resolução abaixo reproduz esse layout.
+const CATALOG_ROOT = resolve(SRC_DIR, "..", "..", "..", "catalog")
+
+type CatalogEntry = {
+  name: string
+  dir: string
+  dependsOn: string[]
+}
+
+function resolvePosix(fromDir: string, specifier: string): string {
+  const parts = fromDir.split("/")
+  for (const segment of specifier.split("/")) {
+    if (segment === "" || segment === ".") continue
+    if (segment === "..") parts.pop()
+    else parts.push(segment)
+  }
+  return parts.join("/")
+}
+
+function testingEntryOf(childPath: string, specifier: string): string | null {
+  if (!specifier.startsWith(".")) return null
+  const fromDir = childPath.slice(0, childPath.lastIndexOf("/"))
+  const target = resolvePosix(fromDir, specifier)
+  return /^modules\/([^/]+)\/testing(?:\/|$)/.exec(target)?.[1] ?? null
+}
+
+function cycleThrough(
+  dependsOn: Map<string, string[]>,
+  from: string,
+  to: string
+): string[] | null {
+  const stack: { name: string; chain: string[] }[] = [
+    { name: to, chain: [from, to] },
+  ]
+  const seen = new Set<string>()
+  while (stack.length > 0) {
+    const current = stack.pop()
+    if (!current) break
+    if (current.name === from) return current.chain
+    if (seen.has(current.name)) continue
+    seen.add(current.name)
+    for (const next of dependsOn.get(current.name) ?? []) {
+      stack.push({ name: next, chain: [...current.chain, next] })
+    }
+  }
+  return null
+}
+
+function catalogEntries(): CatalogEntry[] {
+  if (!existsSync(CATALOG_ROOT)) return []
+  const entries: CatalogEntry[] = []
+  for (const entry of readdirSync(CATALOG_ROOT, {
+    recursive: true,
+    encoding: "utf8",
+  })) {
+    const rel = toPosix(entry)
+    if (!rel.endsWith("/module.json")) continue
+    const manifest = JSON.parse(
+      readFileSync(resolve(CATALOG_ROOT, rel), "utf8")
+    ) as { name: string; dependsOn?: { name: string }[] }
+    entries.push({
+      name: manifest.name,
+      dir: rel.slice(0, rel.length - "/module.json".length),
+      dependsOn: (manifest.dependsOn ?? []).map((dep) => dep.name),
+    })
+  }
+  return entries
+}
+
+function ruleDOffensesIn(
+  entry: CatalogEntry,
+  dependsOn: Map<string, string[]>,
+  relFromApi: string,
+  source: string
+): string[] {
+  const childPath = `modules/${entry.name}/${relFromApi}`
+  const offenses: string[] = []
+  for (const statement of importStatementsIn(source)) {
+    const target = testingEntryOf(childPath, statement.specifier)
+    if (target === null || target === entry.name) continue
+    const where = `catalog/${entry.dir}/api/${relFromApi}:${String(statement.line)}`
+    if (!entry.dependsOn.includes(target)) {
+      offenses.push(`${where} → ${target}/testing fora de dependsOn`)
+      continue
+    }
+    const cycle = cycleThrough(dependsOn, entry.name, target)
+    if (cycle) {
+      offenses.push(`${where} → ciclo em dependsOn: ${cycle.join(" -> ")}`)
+    }
+  }
+  return offenses
+}
+
+function ruleDOffenses(): string[] {
+  const entries = catalogEntries()
+  const dependsOn = new Map(
+    entries.map((entry) => [entry.name, entry.dependsOn])
+  )
+  const offenses: string[] = []
+  for (const entry of entries) {
+    const apiDir = resolve(CATALOG_ROOT, entry.dir, "api")
+    if (!existsSync(apiDir)) continue
+    for (const file of readdirSync(apiDir, {
+      recursive: true,
+      encoding: "utf8",
+    })) {
+      const rel = toPosix(file)
+      if (!rel.endsWith(".ts") && !rel.endsWith(".tsx")) continue
+      const abs = resolve(apiDir, rel)
+      if (!statSync(abs).isFile()) continue
+      offenses.push(
+        ...ruleDOffensesIn(entry, dependsOn, rel, readFileSync(abs, "utf8"))
+      )
+    }
+  }
+  return offenses.sort()
+}
+
+describe("module-boundaries — RULE D: import de testing/ segue o dependsOn", () => {
+  const identity: CatalogEntry = {
+    name: "identity",
+    dir: "identity/single-tenant",
+    dependsOn: ["notification"],
+  }
+  const graph = new Map([
+    ["identity", ["notification"]],
+    ["notification", []],
+    ["audit", ["identity"]],
+  ])
+
+  it("o catálogo do template é lido com nome, diretório e dependsOn", () => {
+    const entries = catalogEntries()
+    expect(entries.map((entry) => entry.name).sort()).toEqual([
+      "attachment",
+      "audit",
+      "identity",
+      "notification",
+      "tag",
+    ])
+    expect(
+      entries.find((entry) => entry.name === "identity")?.dependsOn
+    ).toEqual(["notification"])
+  })
+
+  it("nenhum import de testing/ no catálogo viola dependsOn ou fecha ciclo", () => {
+    expect(ruleDOffenses()).toEqual([])
+  })
+
+  it("o specifier do catálogo resolve no layout do filho", () => {
+    expect(
+      testingEntryOf(
+        "modules/identity/__e2e__/a.e2e-spec.ts",
+        "../../notification/testing"
+      )
+    ).toBe("notification")
+    expect(
+      testingEntryOf("modules/identity/__e2e__/a.e2e-spec.ts", "../testing")
+    ).toBe("identity")
+    expect(
+      testingEntryOf(
+        "modules/identity/__e2e__/a.e2e-spec.ts",
+        "@nestjs/testing"
+      )
+    ).toBeNull()
+    expect(
+      testingEntryOf(
+        "modules/identity/__e2e__/a.e2e-spec.ts",
+        "../../notification/api/facades"
+      )
+    ).toBeNull()
+  })
+
+  it("reprova import de testing/ de entrada fora do dependsOn, com arquivo e linha", () => {
+    const source = `import { seedTag } from "../../tag/testing"\n`
+    expect(
+      ruleDOffensesIn(identity, graph, "__e2e__/a.e2e-spec.ts", source)
+    ).toEqual([
+      "catalog/identity/single-tenant/api/__e2e__/a.e2e-spec.ts:1 → tag/testing fora de dependsOn",
+    ])
+  })
+
+  it("aceita import de testing/ de entrada declarada no dependsOn", () => {
+    const source = `import { findSent } from "../../notification/testing"\n`
+    expect(
+      ruleDOffensesIn(identity, graph, "__e2e__/a.e2e-spec.ts", source)
+    ).toEqual([])
+  })
+
+  it("aceita import do próprio barrel da entrada", () => {
+    const source = `import { seedUser } from "../testing"\n`
+    expect(
+      ruleDOffensesIn(identity, graph, "__e2e__/a.e2e-spec.ts", source)
+    ).toEqual([])
+  })
+
+  it("reprova a aresta que fecharia um ciclo, nomeando o ciclo (AD-025)", () => {
+    const notification: CatalogEntry = {
+      name: "notification",
+      dir: "notification",
+      dependsOn: ["identity"],
+    }
+    const source = `import { seedUser } from "../../identity/testing"\n`
+    expect(
+      ruleDOffensesIn(notification, graph, "__e2e__/a.e2e-spec.ts", source)
+    ).toEqual([
+      "catalog/notification/api/__e2e__/a.e2e-spec.ts:1 → ciclo em dependsOn: notification -> identity -> notification",
+    ])
+  })
+
+  it("cycleThrough enxerga o ciclo indireto de três entradas", () => {
+    const indirect = new Map([
+      ["a", ["b"]],
+      ["b", ["c"]],
+      ["c", []],
+    ])
+    expect(cycleThrough(indirect, "c", "a")).toEqual(["c", "a", "b", "c"])
+    expect(cycleThrough(indirect, "a", "b")).toBeNull()
+  })
+})

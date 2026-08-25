@@ -104,6 +104,106 @@ function lintEntry(entryDir, contractHeadings, kernelVersion) {
   return errors
 }
 
+// RULE D (design § RULE D, AD-025): fora de um filho, `catalog-lint` é o único
+// lugar onde a aresta `<entrada> → <outra>/testing` é conferida. Os specifiers
+// do catálogo são escritos para o layout instalado (`modules/<entrada>/...`).
+const IMPORT_SPECIFIER =
+  /\b(?:import|export)\s+[^"';]*?\s*from\s*["']([^"']+)["']/g
+
+function importSpecifiers(content) {
+  const found = []
+  for (const match of content.matchAll(IMPORT_SPECIFIER)) {
+    found.push({
+      line: content.slice(0, match.index).split("\n").length,
+      specifier: match[1] ?? "",
+    })
+  }
+  return found
+}
+
+function resolvePosix(fromDir, specifier) {
+  const parts = fromDir.split("/")
+  for (const segment of specifier.split("/")) {
+    if (segment === "" || segment === ".") continue
+    if (segment === "..") parts.pop()
+    else parts.push(segment)
+  }
+  return parts.join("/")
+}
+
+export function testingEntryOf(childPath, specifier) {
+  if (!specifier.startsWith(".")) return null
+  const fromDir = childPath.slice(0, childPath.lastIndexOf("/"))
+  const target = resolvePosix(fromDir, specifier)
+  return /^modules\/([^/]+)\/testing(?:\/|$)/.exec(target)?.[1] ?? null
+}
+
+export function cycleThrough(dependsOn, from, to) {
+  const stack = [{ name: to, chain: [from, to] }]
+  const seen = new Set()
+  while (stack.length > 0) {
+    const current = stack.pop()
+    if (current.name === from) return current.chain
+    if (seen.has(current.name)) continue
+    seen.add(current.name)
+    for (const next of dependsOn.get(current.name) ?? []) {
+      stack.push({ name: next, chain: [...current.chain, next] })
+    }
+  }
+  return null
+}
+
+export function lintTestingImports(entryDirs) {
+  const entries = []
+  for (const dir of entryDirs) {
+    try {
+      const manifest = JSON.parse(
+        readFileSync(path.join(dir, "module.json"), "utf8")
+      )
+      entries.push({
+        name: manifest.name,
+        dir,
+        dependsOn: (manifest.dependsOn ?? []).map((dep) => dep.name),
+      })
+    } catch {
+      continue
+    }
+  }
+  const dependsOn = new Map(
+    entries.map((entry) => [entry.name, entry.dependsOn])
+  )
+  const errors = []
+  for (const entry of entries) {
+    const apiDir = path.join(entry.dir, "api")
+    for (const filePath of walkSourceFiles(apiDir)) {
+      const relFromApi = path
+        .relative(apiDir, filePath)
+        .split(path.sep)
+        .join("/")
+      const childPath = `modules/${entry.name}/${relFromApi}`
+      for (const { line, specifier } of importSpecifiers(
+        readFileSync(filePath, "utf8")
+      )) {
+        const target = testingEntryOf(childPath, specifier)
+        if (target === null || target === entry.name) continue
+        if (!entry.dependsOn.includes(target)) {
+          errors.push(
+            `${filePath}:${line}: importa ${target}/testing sem ${target} em dependsOn`
+          )
+          continue
+        }
+        const cycle = cycleThrough(dependsOn, entry.name, target)
+        if (cycle) {
+          errors.push(
+            `${filePath}:${line}: importa ${target}/testing e fecha ciclo em dependsOn: ${cycle.join(" -> ")}`
+          )
+        }
+      }
+    }
+  }
+  return errors
+}
+
 function lintAdvisories(dir, entryNames) {
   if (!existsSync(dir)) return []
   const errors = []
@@ -164,6 +264,7 @@ export function runLint({
   for (const entryDir of entryDirs) {
     errors.push(...lintEntry(entryDir, contractHeadings, kernelVersion))
   }
+  errors.push(...lintTestingImports(entryDirs))
   errors.push(...lintAdvisories(advisoriesDir, entryNames))
   if (repoRoot) {
     errors.push(...lintEntryBump({ repoRoot, exec, entries: entryDirs }))

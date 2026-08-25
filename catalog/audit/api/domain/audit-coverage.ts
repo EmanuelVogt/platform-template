@@ -20,13 +20,6 @@ export const AUDITED: ReadonlySet<string> = new Set([
   "identity.permission_templates",
   "identity.permission_template_permissions",
   "identity.user_permissions",
-  "identity.user_professional_areas",
-  "identity.user_professional_services",
-  "identity.user_scheduling_areas",
-  "identity.professional_default_hours",
-  "identity.user_professional_schedule_configs",
-  "identity.user_professional_schedule_config_slots",
-  "identity.user_professional_schedule_config_blocks",
   "tag.tags",
 ])
 

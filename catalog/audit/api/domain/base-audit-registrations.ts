@@ -19,47 +19,6 @@ export const BASE_AUDITED_TABLES: readonly AuditedTableRegistration[] = [
     owner: USERS_OWNER,
     aggregateRoot: "users",
   },
-  {
-    schema: "identity",
-    table: "user_professional_areas",
-    owner: USERS_OWNER,
-    aggregateRoot: "users",
-  },
-  {
-    schema: "identity",
-    table: "user_professional_services",
-    owner: USERS_OWNER,
-    aggregateRoot: "users",
-  },
-  {
-    schema: "identity",
-    table: "user_scheduling_areas",
-    owner: USERS_OWNER,
-    aggregateRoot: "users",
-  },
-  {
-    schema: "identity",
-    table: "user_professional_schedule_configs",
-    owner: USERS_OWNER,
-    aggregateRoot: "users",
-  },
-  {
-    schema: "identity",
-    table: "user_professional_schedule_config_slots",
-    owner: USERS_OWNER,
-    aggregateRoot: "users",
-  },
-  {
-    schema: "identity",
-    table: "user_professional_schedule_config_blocks",
-    owner: USERS_OWNER,
-    aggregateRoot: "users",
-  },
-  {
-    schema: "identity",
-    table: "professional_default_hours",
-    owner: USERS_OWNER,
-  },
   { schema: "identity", table: "devices", owner: USERS_OWNER, technical: true },
   {
     schema: "identity",

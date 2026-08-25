@@ -171,13 +171,6 @@ describe("Audit log (e2e)", () => {
     const allowed = new Set([
       "users",
       "user_permissions",
-      "user_professional_areas",
-      "user_professional_services",
-      "user_scheduling_areas",
-      "user_professional_schedule_configs",
-      "user_professional_schedule_config_slots",
-      "user_professional_schedule_config_blocks",
-      "professional_default_hours",
       "devices",
       "sessions",
       "verification_tokens",

@@ -25,13 +25,6 @@ const IDENTITY_TABLES = [
   "permission_templates",
   "permission_template_permissions",
   "user_permissions",
-  "user_professional_areas",
-  "user_professional_services",
-  "user_scheduling_areas",
-  "professional_default_hours",
-  "user_professional_schedule_configs",
-  "user_professional_schedule_config_slots",
-  "user_professional_schedule_config_blocks",
 ]
 
 /**

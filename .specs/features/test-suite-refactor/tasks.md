@@ -603,13 +603,14 @@ Verifier (fresh, sonnet; opus if the sensor targets the access guard or the sess
 | CI-01 | T37 |
 | CI-02 | T38 |
 | DOC-01 | T35, T40 |
-| STR-01, STR-02, STR-03, STR-04 | — cut — the weak asserts of files nobody is migrating stay weak until the file is next touched; T32's rule blocks a *new* existence-only assert and T33's baseline records the existing ones, so the count can only fall |
-| WEB-02, WEB-03 | — cut — the web migration; baselined by GA-9, enforced forward by T7's harness plus the lint rules |
+| STR-04 | **T1 — NOT cut.** (Corrected 2026-08-24: the row below originally read `STR-01, STR-02, STR-03, STR-04 — cut`, which contradicted T1's own `Requirement: STR-04`, `design.md` § *Components 10*, the `final` gate, T40's Done-when, § *Success Criteria* and the probe budget. The `it`-count non-weakening probe is the feature's central safeguard and cutting it would also contradict GA-7.) |
+| STR-01, STR-02, STR-03 | — cut — the weak asserts of files nobody is migrating stay weak until the file is next touched; T32's rule blocks a *new* existence-only assert and T33's baseline records the existing ones, so the count can only fall |
+| WEB-02, WEB-03 | — cut — the web migration; baselined by GA-9, enforced forward by T7's harness plus the lint rules. **WEB-03's AC3 needs no work under any scope**: the fixture it asks for already exists (`catalog/identity/single-tenant/web/core/session.fixture.ts` → `makeCurrentUser()`), the "web testing barrel" it named may not be built (`docs/arch/front.md` forbids front `index` barrels), and it is unprovable in the template — the shells have no identity entry installed. See the amendment in `spec.md` P1 § *Web harness adoption* |
 | COV-01..COV-11 | — cut — satisfied by `audit-2026-08-23-remediation` (96.5 / 94.4 / 94.9 / 96.8 over a 90 floor). The denominator half of COV-04 survives inside T5, because the entry-barrel exclude is still a live defect **in the child** |
 | GAP-01, GAP-02 | — cut — real gaps, but unrelated to duplication; their own follow-up |
 | DOC-02 | — cut — the `api-client` no-op test; folded into T35 if free |
 
-**32 requirements: 21 mapped, 11 cut with a reason. None dropped silently.**
+**32 requirements: 22 mapped, 10 cut with a reason. None dropped silently.** (Corrected 2026-08-24 from "21 mapped, 11 cut" — that arithmetic was derived from the STR-04 lump fixed above. `.specs/STATE.md` § *Handoff* carries the same stale "11 of the 32" and is corrected at T40.)
 
 ## Tips
 

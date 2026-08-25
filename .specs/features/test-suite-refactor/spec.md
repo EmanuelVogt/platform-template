@@ -190,10 +190,24 @@ The test *setup* is strong (unit / int / e2e tiers on testcontainers, per-worker
 
 1. WHEN `apps/web/src/shared/test/` is read THEN it SHALL export `renderWithProviders`, `makeTestQueryClient`, `createQueryWrapper(qc?)`, `mockRouter(opts?)` as a single `vi.hoisted` shape, `resetAuthState()` and `useMswServer(...handlers)`, AND `fixed-clock.ts` SHALL be deleted (no consumers).
 2. WHEN a web test mocks `@tanstack/react-router` or needs a `QueryClient` THEN it SHALL do so through `mockRouter` / `makeTestQueryClient` / `createQueryWrapper` — no ad-hoc `vi.mock` of the router and no inline `new QueryClient` in a test file.
-3. WHEN a web test needs a current user fixture THEN it SHALL come from the identity entry's web testing barrel, not from a literal in the test.
+3. WHEN a web test needs a current user fixture THEN it SHALL come from `makeCurrentUser()` in `catalog/identity/single-tenant/web/core/session.fixture.ts` — rendered to `apps/web/src/entities/identity/core/` in the child — never from a literal in the test. **This AC binds the child, not the template.**
 4. WHEN a web test file is read THEN it SHALL not re-import a matcher set already loaded by `test/setup.ts`, and every `vi.mock` factory SHALL use `vi.hoisted` rather than relying on closure hoisting.
 
-**Independent Test**: `pnpm vitest run --project web` green; the web half of the guard spec green.
+> **AC3 amended 2026-08-24 — it named an artifact that may not exist.** The original wording required
+> the fixture to come from "the identity entry's **web testing barrel**". There is no such barrel, and
+> one may not be created: `docs/arch/front.md:47,56,58,199` forbids aggregating `index` barrels on the
+> front. The reconciliation of `design.md` flagged AC3 as ownerless; the scout that checked it found
+> the opposite of missing work — **the fixture already exists**. `catalog/identity/single-tenant/web/core/session.fixture.ts`
+> exports `makeCurrentUser()`, and `catalog/identity/single-tenant/README.md:302` already documents it
+> as being for the child's tests. Two consequences: (1) nothing is built for AC3 — T7 creates no fixture
+> and no barrel; (2) **AC3 is not provable in this repository**. The template's shells have no identity
+> entry installed (`catalog/` entries reach `apps/web/src/entities/identity` only in a rendered child),
+> so no template web test can import it and the zero current-user literals in `apps/web-vite` and
+> `apps/web-next` today are a consequence of that, not of discipline. Its proof is the entry's fixture
+> plus the README line, verifiable by reading — **`proof: probe`, not `proof: test`**. The Verifier must
+> not look for a template test here.
+
+**Independent Test**: `pnpm vitest run --project web` green; the web half of the guard spec green. **AC3 is excluded from this run** — see the amendment above; it is proved by the entry artifact, not by a template test.
 
 ---
 
@@ -285,24 +299,34 @@ The test *setup* is strong (unit / int / e2e tiers on testcontainers, per-worker
 | UNT-04 | P1 doubles — unstubbed method rejects; state asserted on writes (AC4–5) | test | Tasks | In Tasks |
 | LNT-01 | P1 proof — vitest/testing-library/jest-dom rules active as errors (AC1) | test | Tasks | In Tasks |
 | LNT-02 | P1 proof — local `no-existence-only-assert` rule (AC2) | test | Tasks | In Tasks |
-| STR-01 | P1 proof — weak asserts strengthened (AC3) | test | Tasks | In Tasks |
-| STR-02 | P1 proof — order independence under `--sequence.shuffle` (AC4) | gate | Tasks | In Tasks |
-| STR-03 | P1 proof — persisted state asserted after a mutation (AC5) | test | Tasks | In Tasks |
+| STR-01 | P1 proof — weak asserts strengthened (AC3) | test | Tasks | **CUT 2026-08-24** — baselined by GA-9 |
+| STR-02 | P1 proof — order independence under `--sequence.shuffle` (AC4) | gate | Tasks | **CUT 2026-08-24** — the repo-wide shuffle proof; `--sequence.shuffle` still lands on `api-e2e` via T37 |
+| STR-03 | P1 proof — persisted state asserted after a mutation (AC5) | test | Tasks | **CUT 2026-08-24** — baselined by GA-9 |
 | STR-04 | P1 proof — `it` count non-decreasing (AC6) | probe: `node scripts/platform/it-count.mjs --check .specs/features/test-suite-refactor/baseline.json` | Tasks | In Tasks |
 | WEB-01 | P1 web — helpers exported, `fixed-clock` deleted (AC1) | test | Tasks | In Tasks |
-| WEB-02 | P1 web — router/query-client adoption (AC2) | test | Tasks | In Tasks |
-| WEB-03 | P1 web — entry fixture, setup hygiene (AC3–4) | test | Tasks | In Tasks |
+| WEB-02 | P1 web — router/query-client adoption (AC2) | test | Tasks | **CUT 2026-08-24** — baselined by GA-9, enforced forward by T7 + the lint rules |
+| WEB-03 | P1 web — entry fixture, setup hygiene (AC3–4) | probe (AC3: read the entry artifact) | Tasks | **CUT 2026-08-24.** AC3 needs no work in any case — see the amendment under P1 § *Web harness adoption*: the fixture already exists at `catalog/identity/single-tenant/web/core/session.fixture.ts` and a "web testing barrel" may not be built (`docs/arch/front.md` forbids front `index` barrels). Not provable in the template — the shells have no identity entry installed |
 | CI-01 | P2 gates — CI jobs (AC1–2) | gate | Tasks | In Tasks |
 | CI-02 | P2 gates — pre-push Docker-free, turbo pipelines (AC3–4) | test | Tasks | In Tasks |
-| COV-01..10 | P2 coverage — absorbed semantics (AC1–4) | gate | Tasks | In Tasks |
-| COV-11 | P2 coverage — fills and ratchet on the post-v1 denominator (AC5) | gate | Tasks | In Tasks |
-| GAP-01 | P2 gaps — tag use-case specs, delivery repository int-spec (AC1) | test | Tasks | In Tasks |
-| GAP-02 | P2 gaps — facade shape specs or rule retired (AC2) | test | Tasks | In Tasks |
+| COV-01..10 | P2 coverage — absorbed semantics (AC1–4) | gate | Tasks | **CUT 2026-08-24** — satisfied by `audit-2026-08-23-remediation`. **Except COV-04's denominator half, which survives in T5** (the entry-barrel exclude is a live defect in the child) |
+| COV-11 | P2 coverage — fills and ratchet on the post-v1 denominator (AC5) | gate | Tasks | **CUT 2026-08-24** — closed by events at 96.5 / 94.4 / 94.9 / 96.8 over a 90 floor; the ratchet is a new decision on AD-027 |
+| GAP-01 | P2 gaps — tag use-case specs, delivery repository int-spec (AC1) | test | Tasks | **CUT 2026-08-24** — real, unrelated to duplication; own follow-up |
+| GAP-02 | P2 gaps — facade shape specs or rule retired (AC2) | test | Tasks | **CUT 2026-08-24** — real, unrelated to duplication; own follow-up |
 | DOC-01 | P3 — `testing.md` rewrite absorbing v1 T26 (AC1) | probe: `rg -n 'Test\.createTestingModule\|test/setup/seed-user' docs/test/testing.md` | Tasks | In Tasks |
-| DOC-02 | P3 — prettier on specs, explicit `api-client` no-op test (AC2) | gate | Tasks | In Tasks |
+| DOC-02 | P3 — prettier on specs, explicit `api-client` no-op test (AC2) | gate | Tasks | **CUT 2026-08-24** — trivia; folded into T35 if free there |
 
-**Coverage:** 32 total (COV-01..10 counted as one row), 32 mapped to tasks (`tasks.md` § *Requirement mapping*), 0 unmapped.
-**Probe budget:** 2 of 3 used (STR-04, DOC-01) — every other requirement is proven by a committed test or a named gate.
+**Coverage:** 32 total (COV-01..10 counted as one row) — **22 mapped to tasks, 10 cut with a reason, 0 unmapped** (`tasks.md` § *Requirement mapping*).
+**Probe budget:** 2 of 3 used (STR-04, DOC-01) — every other live requirement is proven by a committed test or a named gate.
+
+> **Corrected 2026-08-24 — the cut is 10 rows, not 11, and STR-04 was never cut.** `tasks.md`
+> § *Requirement mapping* lumped **STR-04** into the `STR-01, STR-02, STR-03, STR-04 — cut` row, and
+> the "11 of 32" arithmetic in that file and in `STATE.md` § *Handoff* was derived from that lump.
+> STR-04 is **alive and owned by T1**: T1 declares `Requirement: STR-04`, `design.md` § *Components 10*
+> calls the `it`-count tool "STR-04's proof", the `final` gate in `tasks.md` § *Gate Check Commands*
+> runs `it-count.mjs --check`, T40's Done-when runs it again, § *Success Criteria* below requires it,
+> and the probe-budget line above spends one of its two probes on it. Cutting the non-weakening probe
+> would also have contradicted GA-7, which the owner confirmed the same day. One typo against six
+> corroborating statements: the row was wrong, not the six.
 
 ## Success Criteria
 

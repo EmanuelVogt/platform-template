@@ -3894,6 +3894,81 @@ five-entry allowlists all list six now — `module-boundaries.spec.ts:998`,
 `docs-shipped-paths.test.mjs:247-253`, `lint.test.mjs:389-395`. They went red when `professional` was
 born and C17 paid them, exactly as designed.
 
+### Wave 12 — C21/T76 + two gate fixes (2026-08-25) — **NOT YET GATED**
+
+Three commits: `f625673` (T76, opus), `4631a92` (gate fix 1, sonnet), `3ba4595` (gate fix 2, opus).
+**`catalog:check` has NOT been re-run since `3ba4595`** — the wave is closed on work, open on proof.
+
+**T76 did what it was dispatched to do, and the plan's stated reason for it was wrong.** The three
+parity assertions are gone from the log (`contract.parity` 0 hits, `profiles.parity` 0 hits). But
+`openapi.json` and `packages/api-client/{src,generated}` came back **byte-identical**: the root
+contract is kernel-only (liveness/readiness, 34 operations) and the professional slice lived only in
+the entry's DTOs. So T57a's widened pathspec caught nothing here, and T76's AC rationale — *"T70/T71
+change models and zod, which is exactly what T57a's widened pathspec exists to catch"* — is **item 8
+of the plan-text-wrong-about-the-tree list**. The pathspec is still right; the reason written beside
+it is not.
+
+**Snapshot re-cut:** `servesClients`/`areaIds`/`serviceIds`/`schedulingAreaIds` out of `CreateUserDto`,
+`UpdateUserDto` and the `ListUsersResponseDto` item (props + required); `birthDate` out of
+`SetPasswordDto` (props + required), `UpdateMyProfileDto`, `CurrentUserResponseDto.user`;
+`accessProfile` enums → `["admin"]` / `["master","admin"]`. 34 operations unchanged.
+
+**Wave 11's audit risk was measured and came back negative** — the four sibling entries pin only
+their own routes (`notification` 6, `attachment` 2, `audit` 1, `tag` 8), disjoint from identity, zero
+occurrences of the moved fields → unchanged, **reviewed rather than assumed**. That is the audit
+paying off even with a null result.
+
+**Each fix uncovered the next layer, because each gate died before reaching it.** Gate 1 at
+`f625673` was 7/8: `import-x/no-duplicates`, two duplicate imports in
+`professional-assignment.facade.ts` — invisible to `catalog:lint` (manifests/advisories only) and to
+`catalog:typecheck` (compiles fine). `4631a92` merged them, proof reproduced against the pre-fix
+content via `git show HEAD:<path>` before being declared dead. That let the child's own `pnpm check`
+complete 5/5 for the first time, so **the child's vitest ran to the end with all six entries
+installed — the first time in the whole feature** (wave 10 died at `module add professional`, wave 11
+at `module add identity`, both earlier in the order). 242/244 files, 1695/1697 tests, and underneath
+it: **8 cross-module violations** at `module-boundaries.spec.ts:234`,
+`professional/infrastructure/** -> identity/infrastructure/tables/user.table.ts`.
+
+**Owner ruling → AD-038** (recorded in `STATE.md` § Decisions, not absorbed here). `3ba4595`
+implements it: 5 exact table pairs in `CROSS_MODULE_ALLOWLIST`, the 3 read sites moved to a new
+`UserDirectoryFacade` in identity (`listActiveByIds` / `searchActive`). **No public behaviour was
+dropped** — same filters, sort, page and total; `listActive`/`listActiveByArea` additionally gained
+the PK tiebreaker the raw `orderBy(asc(users.name))` never had. Cost: one extra round-trip, IN list
+bounded by the professional roster. **The discrimination is now a permanent test**, not a one-off
+run: a new case asserts the 5 pairs pass **and** the 3 read pairs still report
+`cross-module fora de api/facades`; the dead-entry check is scoped to installed modules (all 5 would
+read as stale in the kernel-only template) with 3 branch assertions over a pure
+`staleAllowlistEntries`.
+
+**Open, deliberately not absorbed:**
+- **`SPEC_DEVIATION`** at `catalog/professional/parity/professional-slice.parity.spec.ts:11` — the new
+  entry has no `contract.snapshot.json`: it ships zero HTTP routes (facade-only), so an empty
+  operation snapshot would pass under any wrong implementation. Its parity pins the moved surface
+  instead (`serves_clients`/`birth_date` in `professional.professional_profile`, same SQL
+  name/notNull/default, `user_id` PK, 6 `schemaExports` tables).
+- **`Advisory: none — …` instances #4 (`4631a92`) and #5 (`3ba4595`)**, after `49824ef`, C17, C19.
+  **Five instances across five contexts is a rule defect**, not five execution slips. § 0.8 bars the
+  trailer; the commit-msg hook demands one for `catalog/**`; an entry born unreleased at `1.0.0` has
+  nothing honest to advise. Verifier's call.
+- **HIBP** `breach-check.spec.ts:117` timed out at 10 s in the same run as 3 `Failed to start forks
+  worker` / `Timeout waiting for worker to respond` pool errors (`transaction-context`,
+  `sensitive-keys`, `argon2-password-hasher`); the same spec passes under `catalog:test` (852/852).
+  Owner ruled **measure on the next pass** — if it returns *without* the pool errors beside it, it is
+  a defect and needs an owner.
+- **OWED, no task owns it:** `catalog/identity/single-tenant/CHANGELOG.md` does not document the
+  additive `UserDirectoryFacade` methods. Outside the fix worker's `Own`; flagged by it, not silent.
+- **Ownership stretch, flagged not silent:** `list-users.use-case.spec.ts` (identity `application/`) —
+  its `UserRepository` double had to gain the 2 new methods or nothing compiled.
+
+**Three more of the "green because blind" family, taking the count to eleven.** (9) `catalog:test`
+does **not** collect `catalog/**/parity/**` — `catalog-stage.mjs` copies only `<entry>/api`, so T76's
+6 new parity tests are in **none** of the eight gate commands; the worker proved them by hand in the
+child layout. (10) `catalog:lint` lints manifests and advisories, `catalog:typecheck` compiles per
+entry — **neither can see an ESLint error in entry source**; it surfaces only after `module add`
+inside the rendered child. (11) `module-boundaries.spec.ts` does not scan `catalog/**` in the
+template (`apps/api/src/modules/` holds only the two kernel specs), which is how 8 violations lived
+through six waves of green scoped gates.
+
 ## Fix Round 1 (`v2.4.0` scope) — authored 2026-08-24 after Verifier pass 1 FAIL
 
 Source: `validation.md` § *Fix Plans*. Two clusters, dispatched in parallel, then one Build gate,

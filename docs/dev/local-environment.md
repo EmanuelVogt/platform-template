@@ -17,6 +17,13 @@ at the root.
   both for local dev (`development` / `disable`). If an installed module declares its own
   required variable with no default (e.g. `identity`'s `BREACH_CHECK_ENABLED`), `module add`
   appends it to `.env.example` and it needs a real value before the app boots.
+- Since the v3.0.0 kernel changes, storage vars are provider-neutral: `R2_*` no longer exists,
+  and a local `.env` still declaring it just leaves storage unconfigured (boot succeeds; the
+  first storage call throws `StorageUnavailable`). To keep testing file uploads locally,
+  rename to `STORAGE_ACCESS_KEY_ID` / `STORAGE_SECRET_ACCESS_KEY` / `STORAGE_BUCKET` /
+  `STORAGE_ENDPOINT` and add the now-explicit `STORAGE_REGION` — see `.env.example` and
+  `docs/advisories/ADV-20260824-04.md` for `APP_TIMEZONE` and `docs/advisories/ADV-20260824-03.md`
+  for the cookie-name escape hatch.
 
 ## Bring up the infra
 

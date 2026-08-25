@@ -3250,7 +3250,7 @@ in `.specs/STATE.md`, and it wants its own task beside T33's tests in
 
 ---
 
-### Wave 8 — CLUSTERS DONE, BUILD GATE **RED** (2026-08-25)
+### Wave 8 — CLUSTERS DONE, GATE 7/8 GREEN, **BLOCKED ON ONE OWNER RULING** (2026-08-25)
 
 | Cluster | Tasks | Commits | Worker's own gate |
 | --- | --- | --- | --- |
@@ -3270,6 +3270,10 @@ in `.specs/STATE.md`, and it wants its own task beside T33's tests in
 | `pnpm catalog:lint` | 0 | — |
 | `pnpm format:check` | 0 | — |
 
+**Re-gate after the two fixes** (`03e74f2`, `49824ef`), HEAD `1fd8e7e` — logs `wave8b-*.log`:
+**7 of 8 green.** `pnpm test` 735 tests / 108 files, `pnpm test:scripts` 681 / 82,
+`pnpm catalog:test` 887 / 120. Only `catalog:check` still exits 5, same cause, nothing new.
+
 **The three failures, each a plan gap, not worker error:**
 
 1. **`null-storage.adapter.spec.ts` calls methods with arguments the adapter does not declare**
@@ -3286,6 +3290,18 @@ in `.specs/STATE.md`, and it wants its own task beside T33's tests in
    about `dependsOn` — the plan never assigned an owner for it. **This needs a ruling, not just a
    fix:** either `dependsOn` opens to `>=3.0.0 <4.0.0` in the same T49a spirit, or it opens in T79
    alongside `kernelRange`. Whichever, add the file to a task's `Touches`.
+   **STILL OPEN — this is the one thing blocking the rest of the feature.** Failures 1 and 2 are
+   fixed (`03e74f2`: `NullStorageAdapter` declared all five methods with zero parameters and
+   `implements` still passed because TypeScript checks method parameters bivariantly — the adapter
+   was the defect, not the spec. `49824ef`: the doubles are now
+   `Object.create(TransactionManager.prototype)` with an own `getExecutor`, no cast).
+
+**Deviation on `49824ef` for the Verifier to rule on.** That fix satisfied `advisory-required` with
+an `Advisory: none — <reason>` trailer, citing the test-only precedent at line 1615 of this file
+(`test-suite-refactor`'s `856adc0`). **§ 0.8 of this feature says the opposite in as many words** —
+"No `Advisory: none` trailer on this or any other wave-8 commit". The commit is a spec-only repair
+of specs created in the same wave, so the trailer is defensible, but it contradicts an explicit
+instruction and is recorded rather than absorbed.
 
 **Open finding for the Verifier (not a gate failure).** T55 scoped `CODE_SCAN_ROOTS` to
 `apps/api/src`, so the hygiene gate does **not** see `rit_session`/`rit_device` still hard-coded in

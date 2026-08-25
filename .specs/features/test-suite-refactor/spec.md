@@ -27,8 +27,10 @@
 > - **The web shell split in two.** Every `apps/web/**` path in these four files reads as
 >   `apps/web-vite/**` in this repository and `apps/web/**` in the rendered child (the `WEB_DIR`
 >   resolver, `vitest.coverage.mts:7-10`); `apps/web-next` is the sibling `web_stack=next` surface.
->   **P1 § *Web harness adoption* must name which of the two shells it lands in** — the same open owner
->   ruling as v2.4.0's Fix 5, where seams that exist only in `apps/web-vite` are lost to a `next` child.
+>   **RULED 2026-08-24 — see GA-8: P1 § *Web harness adoption* lands in BOTH shells**, same relative
+>   path, shell-agnostic half byte-identical, router helper the only divergence, parity asserted by the
+>   guard spec. This is scoped to this feature; it sets a precedent v2.4.0's Fix 5 may adopt, but it
+>   does not decide Fix 5 — that ruling is still the owner's, on that feature.
 > - **The harness is partly built.** `apps/api/src/shared/test/` now holds `parity/` and
 >   `unit/source-survey.ts`; `int/`, `e2e/` and `hygiene/` are still absent. `catalog/*/api/testing/`
 >   exists for `audit`, `identity/single-tenant` and `notification`; `attachment` and `tag` have none.
@@ -41,9 +43,11 @@
 > - **The `it`-count baselines in `tasks.md` predate v2.4.0.** GA-7's non-weakening probe must re-record
 >   its per-file baselines at wave 1 rather than trust the stored numbers.
 >
-> **Standing gate, unchanged:** the ten assumption rows below marked `n` are still defaults the agent
-> chose. The owner flips or confirms them on this spec **before Design is approved** (`context.md:15`,
-> and § *Open questions* below). Restoration does not confirm them.
+> **Gate CLEARED 2026-08-24.** The ten rows that were marked `n` are confirmed and GA-8 was added, on
+> the owner's explicit delegation — not on a row-by-row owner review; § *Assumptions* says so in the
+> rows themselves. `context.md:15` ("defaults set by the agent") is superseded by that table. **Design
+> is unblocked; `design.md` was authored against these same defaults and needs re-reading only where
+> GA-8 touches it** (P1 web harness, the guard spec's scan surface, the lint globs).
 
 ## Problem Statement
 
@@ -76,18 +80,19 @@ The test *setup* is strong (unit / int / e2e tiers on testcontainers, per-worker
 | Assumption / decision | Chosen default | Rationale | Confirmed? |
 | --- | --- | --- | --- |
 | GA-1 sequencing | resolved — v1 merged (`8bb606d`), pre-flight is a check, not a wait | files are touched once, in their final home | y (event) |
-| GA-2 harness home | runner plumbing stays in `apps/api/test/`; spec-facing helpers in `apps/api/src/shared/test/{unit,int,e2e}`; entry helpers in `catalog/<entry>/api/testing/` | RULE C forbids module vocabulary in `shared/**`; entries are copied into children with their helpers | n |
-| GA-3 doubles | `mockOf<T>()` typed mocks; stateful `InMemory*` only where state is asserted, entry-owned | avoids a parallel repository implementation per entry | n |
-| GA-4 fixtures | one `make<Entity>(overrides)` per aggregate plus named constants, in the entry `testing/` barrel | replaces the local `makeUser` copies and the raw literals | n |
-| GA-5 lint | `@vitest/eslint-plugin` already on the api and web test globs and `testing-library` on the web ones (vitest-migration); this feature adds `jest-dom` (web) plus a local `no-existence-only-assert` rule | the handbook rule L-007 is prose today and is violated in the tree | n |
-| GA-6 CI | `.github/workflows/ci.yml` already exists (jobs `quality`, `test-unit`, `test-coverage`); this feature fills the gaps (contract job, shuffled e2e) and never duplicates `catalog.yml`; pre-push is the AD-027 gate and needs Docker | the pipeline `testing.md` promised was born with vitest-migration, still short of the contract job | n |
-| GA-7 non-weakening proof | `it` count per original file ≥ before, sensor mutants killed, lint blocks skips | the refactor must not buy brevity with lost proof | n |
-| Bans are enforced by a guard spec, not by greps | `apps/api/src/shared/test/hygiene/harness-hygiene.spec.ts` scans `apps/api/**` and `catalog/**` test files | a spec is a gate that survives the feature; a grep in a review is not (also keeps the feature within the ≤3-probe budget) | n |
-| Coverage denominator | excludes test files, `*.d.ts`, `main.ts(x)`, `apps/api/src/shared/test/**`, `catalog/*/api/testing/**` (child: `apps/api/src/modules/*/testing/**`), generated client | inherits COV-04 + GA-2 | n |
-| Ordered `it` chains | split into independent `it`s sharing a `beforeEach` seed; the "seed master" pseudo-test is removed | it asserts nothing — the only removal allowed in this feature | n |
-| Redis in int-specs | the two container-booting int-specs move to the global container (`testRedisUrl()` + `flushRedis()`) | one runtime, ~60 s per file saved | n |
+| GA-2 harness home | runner plumbing stays in `apps/api/test/`; spec-facing helpers in `apps/api/src/shared/test/{unit,int,e2e}`; entry helpers in `catalog/<entry>/api/testing/` | RULE C forbids module vocabulary in `shared/**`; entries are copied into children with their helpers | **y (delegated 2026-08-24)** — the tree already agrees: `shared/test/parity/` and three `catalog/*/api/testing/` exist |
+| GA-3 doubles | `mockOf<T>()` typed mocks; stateful `InMemory*` only where state is asserted, entry-owned | avoids a parallel repository implementation per entry | **y (delegated 2026-08-24)** |
+| GA-4 fixtures | one `make<Entity>(overrides)` per aggregate plus named constants, in the entry `testing/` barrel | replaces the local `makeUser` copies and the raw literals | **y (delegated 2026-08-24)** |
+| GA-5 lint | `@vitest/eslint-plugin` already on the api and web test globs and `testing-library` on the web ones (vitest-migration); this feature adds `jest-dom` (web) plus a local `no-existence-only-assert` rule | the handbook rule L-007 is prose today and is violated in the tree | **y (delegated 2026-08-24)** — `jest-dom` and the local rule land on **both** web shells (GA-8) |
+| GA-6 CI | `.github/workflows/ci.yml` already exists (jobs `quality`, `test-unit`, `test-coverage`); this feature fills the gaps (contract job, shuffled e2e) and never duplicates `catalog.yml`; pre-push is the AD-027 gate and needs Docker | the pipeline `testing.md` promised was born with vitest-migration, still short of the contract job | **y (delegated 2026-08-24)** — with the standing follow-up: three workflow files carry the same gate block and two fire on the same trigger; GA-6 consolidates rather than adding a fourth |
+| GA-7 non-weakening proof | `it` count per original file ≥ before, sensor mutants killed, lint blocks skips | the refactor must not buy brevity with lost proof | **y (delegated 2026-08-24)** — baselines are re-recorded at wave 1, not read from `tasks.md` (they predate v2.4.0) |
+| **GA-8 web shell** (new, 2026-08-24) | the web harness lands in **both** shells at the identical relative path `src/shared/test/` — `apps/web-vite/` and `apps/web-next/` here, `apps/web/` in the child. The shell-agnostic half (`renderWithProviders`, `makeTestQueryClient`, `createQueryWrapper`, `resetAuthState`, `useMswServer`) is byte-identical; **the router helper is the only permitted divergence** (`mockRouter` over `@tanstack/react-router` vs the Next router), and the guard spec asserts that parity so the two cannot drift | a rendered child has exactly **one** web app, so a seam built in one shell only is a seam a `web_stack=next` child silently loses — the failure v2.4.0's Fix 5 names. Both shells are live surfaces today (own `vitest.config.ts`, 24 and 18 test files), so neither is a stub that can be deferred. A shared package was rejected: it would be copied into the child carrying the other shell's dead code | **y (delegated 2026-08-24)** |
+| Bans are enforced by a guard spec, not by greps | `apps/api/src/shared/test/hygiene/harness-hygiene.spec.ts` scans `apps/api/**` and `catalog/**` test files | a spec is a gate that survives the feature; a grep in a review is not (also keeps the feature within the ≤3-probe budget) | **y (delegated 2026-08-24)** — scan widened to both web shells for the GA-8 parity assertion |
+| Coverage denominator | excludes test files, `*.d.ts`, `main.ts(x)`, `apps/api/src/shared/test/**`, `catalog/*/api/testing/**` (child: `apps/api/src/modules/*/testing/**`), generated client | inherits COV-04 + GA-2 | **y (delegated 2026-08-24)** — `**/shared/test/**` is already excluded at `vitest.coverage.mts:51`; the entry-barrel exclude is the piece T39/C10 still owes the child |
+| Ordered `it` chains | split into independent `it`s sharing a `beforeEach` seed; the "seed master" pseudo-test is removed | it asserts nothing — the only removal allowed in this feature | **y (delegated 2026-08-24)** |
+| Redis in int-specs | the two container-booting int-specs move to the global container (`testRedisUrl()` + `flushRedis()`) | one runtime, ~60 s per file saved | **y (delegated 2026-08-24)** |
 
-**Open questions:** none — every row above is a default the owner can flip on this spec before Design is approved.
+**Open questions:** none. **Every row is confirmed as of 2026-08-24 — by the owner's explicit delegation ("faz o que tu achar melhor"), not by a row-by-row owner review.** The defaults were kept because each carries a recorded rationale and several are already reality in the tree; the one substantive call added is GA-8. Any row is still the owner's to flip — flipping one after Design is approved reopens Design, not the whole spec.
 
 ## User Stories
 

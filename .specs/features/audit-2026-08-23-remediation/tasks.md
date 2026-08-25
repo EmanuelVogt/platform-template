@@ -3759,6 +3759,91 @@ again. Do not attempt to fix the TS2308 collision any other way.
 
 ---
 
+### Wave 11 — GATED 7/8, `catalog:check` RED **BY DESIGN** UNTIL T76 (2026-08-25)
+
+**Clusters.** `C19` T67→T72 (opus) ∥ `C20` T73→T75 (sonnet), then `C19-fix` (opus, serial by
+construction — it repairs what the Build gate caught).
+
+| Task | Commit | Note |
+| --- | --- | --- |
+| T67 | `bffb0af` | `servesClients`/`birthDate` out of the `User` aggregate |
+| T68 | `e13eb91` | professional writers out of `UserRepository`; 2 dead int-specs deleted with their subject |
+| T69 | `ea308b8` | slot, `forRoot({ professional })`, both tokens and the null adapters deleted; RULE C 52/52 |
+| T70 | `bb07227` | three fields out of five contract schemas |
+| T71 | `8ba8360` | `professional` off the base access-profile set; `seed-user.ts` stops deriving it |
+| T72 | `97467fe` | `schemaExports` slimmed; `attach_audit()` at **7** tables, 4 redactions kept; `test-db.ts:105` deleted; CHANGELOG appended under the existing `## [3.0.0]`, no second bump |
+| T73 | `33df609` | `scripts/platform/migrations/v3.0.0.mjs` |
+| T74 | **no commit** | already shipped in `68da35e` — see deviation 1 |
+| T75 | `7951755` | 6 idempotency/preservation tests |
+| C19-fix | `b49f63e` | three stale kernel guards retired or re-baselined |
+
+**Gate (8 commands, after `b49f63e`).** `check` 7/7 · `test` **762/762** · `test:scripts` **696/696** ·
+`catalog:test` **852/852** in 121 files · `catalog:typecheck` 6 entries · `catalog:lint` · `format:check`
+— all exit 0. `catalog:check` exits 7.
+
+**THE `catalog:check` RED CHANGED SHAPE, AND THAT IS THE WAVE'S RESULT.** Wave 10 died at
+`module add professional` with ~20 × TS2308 in the generated `apps/api/src/db/platform-schema.ts`.
+That is **gone** — the log has zero `TS2308`, and zero `audit-coverage` / `Parse Error` /
+`ECONNREFUSED` / `EADDRINUSE`, so it is neither the old collision nor Docker contention. What remains
+is `module add identity/single-tenant` exiting 7 on **3 parity assertions only**:
+`contract.parity.spec.ts:42` (`listUsers` lost `responses.200.data[].servesClients`),
+`profiles.parity.spec.ts:9` (`professional` missing from `accessProfile.enumValues`) and `:23`
+(cascade — reads `.name` of the value the previous line could not find). T70 predicted exactly this
+("parity specs go red **by design** and are re-snapshotted in T76"). **C21/T76 clears it; do not
+repair it in place.**
+
+**THREE KERNEL GUARDS BROKE ON A LEGITIMATE CATALOG DELETION, AND NO TASK OWNED THEM — the eighth of
+the shape wave 10 has been counting.** `module-boundaries.spec.ts:694-700` asserted `test-db.ts`
+*still contains* `identity.professional_default_hours` — its own title reads "T72 apaga em v3.0.0", so
+the guard knew its expiry date and the plan still gave nobody the job of retiring it.
+`harness-hygiene.spec.ts` HRN-06/UNT-03 and `it-count.test.mjs:243` compared versioned baselines
+against a tree five specs lighter. All three are `Touches` gaps in T68/T72, not regressions.
+
+**`b49f63e` re-based the guard instead of narrowing it.** The expired `toMatch` is gone, but the `it`
+survives on a stronger invariant: `tokenOffensesIn(test-db.ts)` must be **non-empty** (the file still
+carries `identity.*` and `tag.tags`), so the allowlist entry cannot rot into a dead allow. The
+exclusion assertion is untouched. **Delta accounting was required before either baseline was written,
+and it held**: hygiene 2 ins/14 del with no new `unrecorded` record — the three `no-local-helper` 1→0
+are specs deleted in `ea308b8`/`e13eb91`, and the wave-10 copy under `catalog/professional/` has no
+local `seedUser`, so no key is owed there; `no-from-props` drops land in `bffb0af` and `e13eb91`.
+it-count: 12 losses, **bisected** — the baseline was green at `bffb0af~1` (wave-10 tip), so every loss
+is wave 11 (`bffb0af` 5, `e13eb91` 2, `ea308b8` 2, `bb07227` 3); additions are title-matched moves
+(`s3`←`r2`, the `professional` entry), inert for the guard. Totals **340/2163**, above the
+**317/2074** floors — no floor was lowered to buy green.
+
+**Deviations — recorded, not absorbed.**
+
+1. **T74 needed no commit and its `Touches` names a file that does not exist.** The plan says
+   `scripts/platform/lib/commands/template.mjs`; the ascending runner lives at
+   `template-migrate.mjs`, wired through `cli.mjs`, shipped in `68da35e`, already covered by
+   `template-migrate.test.mjs` and already satisfying all three Done-when bullets. C20 verified by
+   gate and declined to create a dead file under the stale name. **Correct call; the defect is the
+   plan text.**
+2. **C19 widened its own ownership to `catalog/identity/single-tenant/**` minus `parity/`.** The
+   `tasks.md:369` list omits ~45 consumers of the two fields (`views.ts`, `access-policy.ts`,
+   `make-user.ts`, `set-password/`, `update-my-profile/`, four controllers, ~35 specs) — T67 is
+   **impossible** inside the literal list. No sibling in flight owned any of them (C20 was
+   `scripts/**`) and C21's explicit carve-out of `parity/` implies the remainder is C19's. **This is
+   the second ownership stop of the feature; the Touches audit over C21/C22/C23 is now owed before
+   wave 12 dispatches.**
+3. **`permission.types.ts` is at `api/domain/access/`, not `api/domain/permissions/`** as
+   `tasks.md:369` states.
+4. **`Advisory: none — …` on all six C19 commits — the THIRD instance in this feature** (`49824ef`,
+   C17, now C19). C19's argument is new and not weak: the commit-msg hook wants the advisory *staged
+   in the same commit*, and `ADV-20260824-01` was already committed complete in wave 10, so there was
+   nothing honest left to re-stage. **§ 0.8 still bars the trailer.** Three instances make this a rule
+   defect, not an execution defect. **Verifier's call, deliberately not absorbed here.**
+5. **Two tests removed as unreachable, not weakened** — `auto-edição de perfil → ForbiddenError` and
+   `perfil sem piso de permissão aceita conjunto vazio`. With `professional` gone, `admin` is the only
+   assignable base profile, so neither premise can be constructed. `resolveUserAccess` gained 2 tests
+   for its permissions-only shape.
+6. **C19-fix wrote one `.specs/` path** — `.specs/features/done/test-suite-refactor/baseline.json`,
+   under an explicit orchestrator grant. It is a versioned data baseline of a closed feature, not a
+   spec artifact; the worker card's blanket ban would otherwise have left a red nobody could clear.
+
+**Owed to the plan before wave 12:** the Touches audit (deviation 2), and the T74/`permission.types.ts`
+path corrections (deviations 1, 3).
+
 ## Fix Round 1 (`v2.4.0` scope) — authored 2026-08-24 after Verifier pass 1 FAIL
 
 Source: `validation.md` § *Fix Plans*. Two clusters, dispatched in parallel, then one Build gate,

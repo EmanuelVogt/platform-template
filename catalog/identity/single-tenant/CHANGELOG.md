@@ -4,6 +4,18 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 [semver](https://semver.org/lang/pt-BR/). Toda versão que leva código lista os advisories
 (`docs/advisories/ADV-*.md`) que carrega.
 
+## [2.1.3]
+
+### Fixed
+
+- Os 17 `not.toThrow(<erro>)` que a 2.1.2 colocou nos guards `void` provam menos que a forma
+  sem argumento: no Vitest esse matcher afirma só "não lançou _este_ tipo" e passa quando o
+  código lança outro erro — um `TypeError` no caminho válido de `assertValidPermissionSet`
+  mantinha os quatro testes de aceitação verdes. Cada um passa a usar `not.toThrow()` sem
+  argumento mais a asserção que discrimina a aceitação: a variação mínima da mesma entrada
+  que precisa ser recusada (`assertValidPermissionSet`, `assertProfileFloor`,
+  `assertCanGrant`, `validatePasswordPolicy`, `assertPermission` e a suíte de paridade).
+
 ## [2.1.2]
 
 ### Fixed

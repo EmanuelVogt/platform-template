@@ -127,7 +127,12 @@ describe("paridade do assertCanGrant", () => {
       assertCanGrant({ actor: actorOf(["admin.users.read"]), current: [] }, [
         "admin.users.read",
       ])
-    }).not.toThrow(/permissões/i)
+    }).not.toThrow()
+    expect(() => {
+      assertCanGrant({ actor: actorOf(["admin.tags.read"]), current: [] }, [
+        "admin.users.read",
+      ])
+    }).toThrow(/permissões/i)
   })
 
   it("nega conceder chave que o ator não possui", () => {
@@ -147,7 +152,13 @@ describe("paridade do assertCanGrant", () => {
       assertCanGrant({ actor: actorOf([]), current: ["admin.users.read"] }, [
         "admin.users.read",
       ])
-    }).not.toThrow(/permissões/i)
+    }).not.toThrow()
+    expect(() => {
+      assertCanGrant({ actor: actorOf([]), current: ["admin.users.read"] }, [
+        "admin.users.read",
+        "admin.tags.read",
+      ])
+    }).toThrow(/permissões/i)
   })
 
   it("master edita qualquer chave", () => {
@@ -159,6 +170,11 @@ describe("paridade do assertCanGrant", () => {
         },
         ["admin.tags.read"]
       )
-    }).not.toThrow(/permissões/i)
+    }).not.toThrow()
+    expect(() => {
+      assertCanGrant({ actor: actorOf([]), current: ["admin.users.read"] }, [
+        "admin.tags.read",
+      ])
+    }).toThrow(/permissões/i)
   })
 })

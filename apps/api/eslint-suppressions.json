@@ -1,0 +1,67 @@
+{
+  "src/openapi/openapi-config.spec.ts": {
+    "platform/no-existence-only-assert": {
+      "count": 1
+    }
+  },
+  "src/shared/config/coverage-metric/optional-chain.sample.spec.ts": {
+    "platform/no-existence-only-assert": {
+      "count": 1
+    }
+  },
+  "src/shared/config/load-dotenv.spec.ts": {
+    "platform/no-existence-only-assert": {
+      "count": 1
+    }
+  },
+  "src/shared/infra/database/pool-metrics.spec.ts": {
+    "platform/no-existence-only-assert": {
+      "count": 1
+    }
+  },
+  "src/shared/kernel/access/decorators.spec.ts": {
+    "platform/no-existence-only-assert": {
+      "count": 1
+    }
+  },
+  "src/shared/kernel/context/job-context.spec.ts": {
+    "platform/no-existence-only-assert": {
+      "count": 1
+    }
+  },
+  "src/shared/kernel/context/request-context.spec.ts": {
+    "platform/no-existence-only-assert": {
+      "count": 2
+    }
+  },
+  "src/shared/kernel/errors/problem-details.filter.spec.ts": {
+    "platform/no-existence-only-assert": {
+      "count": 1
+    }
+  },
+  "src/shared/kernel/listing/apply-listing.spec.ts": {
+    "platform/no-existence-only-assert": {
+      "count": 2
+    }
+  },
+  "src/shared/kernel/listing/list-query.decorator.spec.ts": {
+    "platform/no-existence-only-assert": {
+      "count": 1
+    }
+  },
+  "src/shared/kernel/listing/listing-query.schema.spec.ts": {
+    "platform/no-existence-only-assert": {
+      "count": 1
+    }
+  },
+  "src/shared/test/e2e/http.spec.ts": {
+    "platform/no-existence-only-assert": {
+      "count": 1
+    }
+  },
+  "src/shared/test/parity/contract-snapshot.spec.ts": {
+    "platform/no-existence-only-assert": {
+      "count": 4
+    }
+  }
+}

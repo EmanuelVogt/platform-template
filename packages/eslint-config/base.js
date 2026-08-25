@@ -6,6 +6,18 @@ import unusedImports from "eslint-plugin-unused-imports"
 import globals from "globals"
 import tseslint from "typescript-eslint"
 
+import { noExistenceOnlyAssert } from "./rules/no-existence-only-assert.js"
+import { srOnlyRequiresPositionedAncestor } from "./rules/sr-only-requires-positioned-ancestor.js"
+
+// Um único objeto de plugin para todo o pacote: o flat config recusa dois
+// objetos diferentes sob o mesmo namespace quando ambos alcançam o arquivo.
+export const platformPlugin = {
+  rules: {
+    "no-existence-only-assert": noExistenceOnlyAssert,
+    "sr-only-requires-positioned-ancestor": srOnlyRequiresPositionedAncestor,
+  },
+}
+
 export const baseConfig = tseslint.config(
   {
     ignores: [
@@ -124,7 +136,10 @@ export const baseConfig = tseslint.config(
   },
   {
     files: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/*-spec.{ts,tsx}"],
+    plugins: { platform: platformPlugin },
     rules: {
+      "platform/no-existence-only-assert": "error",
+
       "@typescript-eslint/no-non-null-assertion": "off",
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",

@@ -1,0 +1,7 @@
+{
+  "src/app/router/shell.integration.test.tsx": {
+    "platform/no-existence-only-assert": {
+      "count": 1
+    }
+  }
+}

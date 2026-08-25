@@ -98,9 +98,29 @@ describe("LNT-01 — severidades resolvidas para um arquivo de teste do web", ()
   })
 })
 
+describe("LNT-02 — a regra local alcança os dois lados", () => {
+  it(`platform/no-existence-only-assert resolve error em ${API_TEST_FILE}`, async () => {
+    const rules = await severities(API_CONFIG, API_TEST_FILE)
+    assert.equal(severityOf(rules, "platform/no-existence-only-assert"), 2)
+  })
+
+  it(`platform/no-existence-only-assert resolve error em ${WEB_TEST_FILE}`, async () => {
+    const rules = await severities(WEB_CONFIG, WEB_TEST_FILE)
+    assert.equal(severityOf(rules, "platform/no-existence-only-assert"), 2)
+  })
+})
+
 describe("LNT-01 — o endurecimento não vaza para código de produção", () => {
   it("no-focused-tests não resolve em um arquivo que não é de teste", async () => {
     const rules = await severities(API_CONFIG, "src/modules/example/example.ts")
     assert.equal(severityOf(rules, "vitest/no-focused-tests"), undefined)
+  })
+
+  it("no-existence-only-assert não resolve em um arquivo que não é de teste", async () => {
+    const rules = await severities(API_CONFIG, "src/modules/example/example.ts")
+    assert.equal(
+      severityOf(rules, "platform/no-existence-only-assert"),
+      undefined
+    )
   })
 })

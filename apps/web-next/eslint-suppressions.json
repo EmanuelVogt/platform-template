@@ -1,0 +1,7 @@
+{
+  "src/shared/config/route-access.spec.ts": {
+    "platform/no-existence-only-assert": {
+      "count": 2
+    }
+  }
+}

@@ -5,14 +5,7 @@ import reactRefresh from "eslint-plugin-react-refresh"
 import globals from "globals"
 import tseslint from "typescript-eslint"
 
-import { baseConfig } from "./base.js"
-import { srOnlyRequiresPositionedAncestor } from "./rules/sr-only-requires-positioned-ancestor.js"
-
-const platformPlugin = {
-  rules: {
-    "sr-only-requires-positioned-ancestor": srOnlyRequiresPositionedAncestor,
-  },
-}
+import { baseConfig, platformPlugin } from "./base.js"
 
 export const reactConfig = tseslint.config(
   ...baseConfig,

@@ -12,7 +12,14 @@ const WORKFLOW_PATHS = [
   path.join(ROOT_DIR, ".github/workflows/release.yml"),
 ]
 
-const COPIER_PROVISION_STEP = "pipx install copier"
+// Versão que TOOL-13 validou empiricamente (scripts/platform/__tests__/copier-questions.test.mjs:78,
+// comentário de linha 62) — não é arbitrária, é a baseline do comportamento de render que aquele
+// teste assume.
+const COPIER_VERSION = "9.17.2"
+const COPIER_PROVISION_STEP = `pipx install 'copier==${COPIER_VERSION}'`
+
+const COPIER_INSTALL_STEP_PATTERN =
+  /^pipx install (?:'copier==([^']+)'|copier)$/
 
 // GT7: nenhum nome de job é hardcoded aqui de propósito — o padrão abaixo é a
 // única fonte da verdade sobre "o que renderiza um filho": qualquer comando
@@ -35,11 +42,38 @@ function jobsThatRenderAChild(jobs) {
   )
 }
 
-for (const workflowPath of WORKFLOW_PATHS) {
-  const relative = path.relative(ROOT_DIR, workflowPath)
+// GT8: varre TODOS os jobs, não só os que batem em RENDERS_CHILD_PATTERN — um site pinado
+// errado num job que ainda não precisa de copier hoje já quebra a concordância de versão.
+function copierInstallSites(jobs, workflowRelativePath) {
+  const sites = []
+  for (const [jobName, job] of Object.entries(jobs)) {
+    for (const step of job.steps ?? []) {
+      if (typeof step.run !== "string") continue
+      const match = step.run.match(COPIER_INSTALL_STEP_PATTERN)
+      if (match) {
+        sites.push({
+          workflow: workflowRelativePath,
+          jobName,
+          run: step.run,
+          version: match[1],
+        })
+      }
+    }
+  }
+  return sites
+}
 
-  test(`GT7: todo job de ${relative} que roda um comando que renderiza um filho provisiona copier antes dele`, () => {
-    const { jobs } = readWorkflow(workflowPath)
+const workflows = WORKFLOW_PATHS.map((workflowPath) => ({
+  relative: path.relative(ROOT_DIR, workflowPath),
+  jobs: readWorkflow(workflowPath).jobs,
+}))
+
+const allCopierInstallSites = workflows.flatMap(({ relative, jobs }) =>
+  copierInstallSites(jobs, relative)
+)
+
+for (const { relative, jobs } of workflows) {
+  test(`GT7: todo job de ${relative} que roda um comando que renderiza um filho provisiona copier pinado antes dele`, () => {
     const jobsNeedingCopier = jobsThatRenderAChild(jobs)
     assert.ok(
       jobsNeedingCopier.length > 0,
@@ -53,7 +87,7 @@ for (const workflowPath of WORKFLOW_PATHS) {
       )
       assert.ok(
         provisionIndex >= 0,
-        `job "${jobName}" de ${relative} roda um comando que renderiza um filho mas não tem o step "run: ${COPIER_PROVISION_STEP}"`
+        `job "${jobName}" de ${relative} roda um comando que renderiza um filho mas não tem o step "run: ${COPIER_PROVISION_STEP}" — falta o step ou falta o pin de versão`
       )
 
       const renderIndexes = steps
@@ -72,3 +106,35 @@ for (const workflowPath of WORKFLOW_PATHS) {
     }
   })
 }
+
+test("GT8: todo provisionamento de copier nos workflows está pinado numa versão", () => {
+  assert.ok(
+    allCopierInstallSites.length > 0,
+    'nenhum step "pipx install copier" encontrado nos workflows — o padrão ficou obsoleto?'
+  )
+  for (const site of allCopierInstallSites) {
+    assert.ok(
+      site.version,
+      `job "${site.jobName}" de ${site.workflow} roda "${site.run}" sem pin de versão — deveria ser "${COPIER_PROVISION_STEP}"`
+    )
+  }
+})
+
+test("GT8: todos os provisionamentos de copier concordam na mesma versão, a que TOOL-13 validou", () => {
+  const versions = new Set(allCopierInstallSites.map((site) => site.version))
+  assert.equal(
+    versions.size,
+    1,
+    `sites de provisionamento de copier discordam de versão: ${allCopierInstallSites
+      .map(
+        (site) =>
+          `${site.workflow}#${site.jobName}=${site.version ?? "unpinned"}`
+      )
+      .join(", ")}`
+  )
+  assert.equal(
+    [...versions][0],
+    COPIER_VERSION,
+    `versão pinada não é a que TOOL-13 validou empiricamente (copier-questions.test.mjs:78, copier ${COPIER_VERSION})`
+  )
+})

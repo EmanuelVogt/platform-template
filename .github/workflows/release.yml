@@ -47,7 +47,7 @@ jobs:
       - run: node scripts/platform/release-preflight.mjs "${{ needs.marker.outputs.version }}"
       - run: pnpm check
       - run: pnpm test
-      - run: pipx install copier
+      - run: pipx install 'copier==9.17.2'
       - run: pnpm test:scripts
       - run: pnpm catalog:lint
       - run: pnpm catalog:typecheck
@@ -97,7 +97,7 @@ jobs:
           node-version-file: ".nvmrc"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pipx install copier
+      - run: pipx install 'copier==9.17.2'
       - run: pnpm catalog:check ${{ matrix.entry }}
 
   tag:

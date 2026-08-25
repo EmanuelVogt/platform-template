@@ -129,7 +129,7 @@ jobs:
           node-version-file: ".nvmrc"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pipx install copier
+      - run: pipx install 'copier==9.17.2'
       - run: pnpm test:scripts
       - run: pnpm catalog:lint
       - run: pnpm catalog:typecheck
@@ -185,7 +185,7 @@ jobs:
           node-version-file: ".nvmrc"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pipx install copier
+      - run: pipx install 'copier==9.17.2'
       - run: pnpm catalog:check ${{ matrix.entry }} --web-stack ${{ matrix.web_stack }}
 
   smoke:
@@ -205,7 +205,7 @@ jobs:
           node-version-file: ".nvmrc"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pipx install copier
+      - run: pipx install 'copier==9.17.2'
       - if: matrix.web_stack == 'next'
         run: pnpm --filter web-next exec vitest run --coverage
       - run: pnpm template:smoke --web-stack ${{ matrix.web_stack }}

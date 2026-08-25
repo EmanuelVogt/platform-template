@@ -23,7 +23,6 @@ export class CreateUserController {
       name: dto.name,
       email: dto.email,
       accessProfile: dto.accessProfile,
-      servesClients: dto.servesClients,
       permissions: dto.permissions,
       areaIds: dto.areaIds,
       serviceIds: dto.serviceIds,

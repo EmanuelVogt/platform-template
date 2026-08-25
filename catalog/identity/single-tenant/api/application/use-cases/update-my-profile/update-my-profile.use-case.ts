@@ -36,11 +36,6 @@ export class UpdateMyProfileUseCase implements UseCaseContract<
     if (!user) {
       throw new ForbiddenError()
     }
-    await this.users.update(
-      user.updateOwnProfile(
-        { name: input.name, birthDate: input.birthDate },
-        now
-      )
-    )
+    await this.users.update(user.updateOwnProfile({ name: input.name }, now))
   }
 }

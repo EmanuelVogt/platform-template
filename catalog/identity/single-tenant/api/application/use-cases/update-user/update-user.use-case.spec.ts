@@ -5,7 +5,6 @@ import { User, type UserProps } from "../../../domain/entities/user.entity"
 import {
   InvalidPermissionSetError,
   PermissionGrantNotAllowedError,
-  ProfessionalHasCommitmentsError,
   UserNotFoundError,
 } from "../../../domain/errors"
 import { fakeRequestContext } from "../../request-context.fixture"
@@ -16,7 +15,6 @@ const BASE_INPUT = {
   userId: "u-target",
   name: "Novo Nome",
   accessProfile: "admin" as const,
-  servesClients: false,
   permissions: ["admin.users.read" as const],
   areaIds: [] as string[],
   serviceIds: [] as string[],
@@ -34,13 +32,11 @@ function makeUser(over: Partial<UserProps> = {}): User {
     emailVerified: true,
     pendingEmail: null,
     accessProfile: "admin",
-    servesClients: false,
     failedLoginAttempts: 0,
     lockedUntil: null,
     lastResetRequestedAt: null,
     lastVerificationRequestedAt: null,
     lastEmailChangeRequestedAt: null,
-    birthDate: null,
     avatarAttachmentId: null,
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
     updatedAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -81,11 +77,8 @@ function makeDeps(over: Record<string, any> = {}) {
   const scope = over.scope ?? {
     assertValid: vi.fn().mockResolvedValue(undefined),
   }
-  const commitments = over.commitments ?? {
-    listFuture: vi.fn().mockResolvedValue([]),
-  }
-  const uc = new UpdateUserUseCase(users, clock, ctx, scope, commitments)
-  return { uc, users, scope, commitments }
+  const uc = new UpdateUserUseCase(users, clock, ctx, scope)
+  return { uc, users, scope }
 }
 
 describe("UpdateUserUseCase", () => {
@@ -308,99 +301,6 @@ describe("UpdateUserUseCase", () => {
     await uc.execute(BASE_INPUT)
     expect(users.replaceSchedulingAreas).toHaveBeenCalledWith("u-target", [])
   })
-
-  describe("tirar do atendimento a cliente", () => {
-    function attendingUser() {
-      return {
-        findByIdWithPermissions: vi.fn().mockResolvedValue({
-          user: makeUser({ servesClients: true }),
-          permissions: [],
-        }),
-        update: vi.fn().mockResolvedValue(undefined),
-        replacePermissions: vi.fn().mockResolvedValue(undefined),
-        replaceProfessionalAreas: vi.fn().mockResolvedValue(undefined),
-        replaceProfessionalServices: vi.fn().mockResolvedValue(undefined),
-        replaceSchedulingAreas: vi.fn().mockResolvedValue(undefined),
-      }
-    }
-
-    const COMMITMENT = {
-      kind: "service" as const,
-      id: "appt-1",
-      name: "Massagem",
-      date: "2026-08-12",
-      startMinute: 600,
-      endMinute: 650,
-    }
-
-    it("com compromisso futuro recusa e não grava nada", async () => {
-      const users = attendingUser()
-      const { uc } = makeDeps({
-        users,
-        commitments: { listFuture: vi.fn().mockResolvedValue([COMMITMENT]) },
-      })
-      await expect(
-        uc.execute({ ...BASE_INPUT, servesClients: false })
-      ).rejects.toThrow(ProfessionalHasCommitmentsError)
-      expect(users.update).not.toHaveBeenCalled()
-      expect(users.replaceProfessionalAreas).not.toHaveBeenCalled()
-    })
-
-    it("a recusa carrega a lista do que precisa ser remarcado", async () => {
-      const { uc } = makeDeps({
-        users: attendingUser(),
-        commitments: { listFuture: vi.fn().mockResolvedValue([COMMITMENT]) },
-      })
-      let caught: unknown
-      try {
-        await uc.execute({ ...BASE_INPUT, servesClients: false })
-      } catch (error) {
-        caught = error
-      }
-      expect(caught).toBeInstanceOf(ProfessionalHasCommitmentsError)
-      expect((caught as ProfessionalHasCommitmentsError).extensions).toEqual({
-        commitments: [COMMITMENT],
-      })
-    })
-
-    it("sem compromisso futuro grava e zera o escopo de atuação", async () => {
-      const users = attendingUser()
-      const { uc } = makeDeps({ users })
-      await uc.execute({
-        ...BASE_INPUT,
-        servesClients: false,
-        areaIds: ["area-1"],
-      })
-      expect(users.update).toHaveBeenCalledTimes(1)
-      expect(
-        (users.update.mock.calls[0]?.[0] as User).props.servesClients
-      ).toBe(false)
-      expect(users.replaceProfessionalAreas).toHaveBeenCalledWith(
-        "u-target",
-        []
-      )
-    })
-
-    it("quem já não atendia não consulta a agenda", async () => {
-      const { uc, commitments } = makeDeps()
-      await uc.execute({ ...BASE_INPUT, servesClients: false })
-      expect(commitments.listFuture).not.toHaveBeenCalled()
-    })
-
-    it("continuar atendendo não consulta a agenda", async () => {
-      const { uc, commitments } = makeDeps({
-        users: attendingUser(),
-        scope: { assertValid: vi.fn().mockResolvedValue(undefined) },
-      })
-      await uc.execute({
-        ...BASE_INPUT,
-        servesClients: true,
-        areaIds: ["area-1"],
-      })
-      expect(commitments.listFuture).not.toHaveBeenCalled()
-    })
-  })
-
   it("set sem closure → InvalidPermissionSetError", async () => {
     const { uc } = makeDeps()
     await expect(
@@ -449,27 +349,14 @@ describe("UpdateUserUseCase", () => {
         })),
       })
     }
-
-    it("marcar-se como atendente → 403 e nada é gravado", async () => {
-      const { uc, users } = selfDeps()
-
-      await expect(
-        uc.execute({ ...BASE_INPUT, servesClients: true, areaIds: ["a-1"] })
-      ).rejects.toThrow(ForbiddenError)
-      expect(users.update).not.toHaveBeenCalled()
-      expect(users.replaceProfessionalAreas).not.toHaveBeenCalled()
-    })
-
     it("mudar as próprias áreas de atuação → 403", async () => {
       const { uc, users } = selfDeps({
-        user: { servesClients: true },
         scope: { areaIds: ["a-1"], serviceIds: [] },
       })
 
       await expect(
         uc.execute({
           ...BASE_INPUT,
-          servesClients: true,
           areaIds: ["a-1", "a-2"],
         })
       ).rejects.toThrow(ForbiddenError)
@@ -478,14 +365,12 @@ describe("UpdateUserUseCase", () => {
 
     it("mudar os próprios serviços de atuação → 403", async () => {
       const { uc, users } = selfDeps({
-        user: { servesClients: true },
         scope: { areaIds: ["a-1"], serviceIds: ["s-1"] },
       })
 
       await expect(
         uc.execute({
           ...BASE_INPUT,
-          servesClients: true,
           areaIds: ["a-1"],
           serviceIds: ["s-1", "s-2"],
         })
@@ -504,13 +389,11 @@ describe("UpdateUserUseCase", () => {
 
     it("reenviar o mesmo escopo (no-op) passa", async () => {
       const { uc, users } = selfDeps({
-        user: { servesClients: true },
         scope: { areaIds: ["a-1"], serviceIds: ["s-1"] },
       })
 
       await uc.execute({
         ...BASE_INPUT,
-        servesClients: true,
         areaIds: ["a-1"],
         serviceIds: ["s-1"],
       })
@@ -538,7 +421,6 @@ describe("UpdateUserUseCase", () => {
 
       await uc.execute({
         ...BASE_INPUT,
-        servesClients: true,
         areaIds: ["a-1"],
         schedulingAreaIds: ["area-1"],
       })

@@ -86,14 +86,7 @@ export class DrizzleUserRepository implements UserRepository {
     const rows = await this.db
       .select({ id: users.id })
       .from(users)
-      .where(
-        and(
-          eq(users.id, userId),
-          eq(users.servesClients, true),
-          eq(users.status, "active"),
-          visible
-        )
-      )
+      .where(and(eq(users.id, userId), eq(users.status, "active"), visible))
       .limit(1)
     return rows.length > 0
   }
@@ -102,7 +95,7 @@ export class DrizzleUserRepository implements UserRepository {
     const rows = await this.db
       .select({ id: users.id })
       .from(users)
-      .where(and(eq(users.id, userId), eq(users.servesClients, true), visible))
+      .where(and(eq(users.id, userId), visible))
       .limit(1)
     return rows.length > 0
   }
@@ -506,7 +499,6 @@ export class DrizzleUserRepository implements UserRepository {
         emailVerified: p.emailVerified,
         pendingEmail: p.pendingEmail,
         accessProfile: p.accessProfile,
-        servesClients: p.servesClients,
         status: p.status,
         passwordHash: p.passwordHash,
         pepperVersion: p.pepperVersion,
@@ -515,7 +507,6 @@ export class DrizzleUserRepository implements UserRepository {
         lastResetRequestedAt: p.lastResetRequestedAt,
         lastVerificationRequestedAt: p.lastVerificationRequestedAt,
         lastEmailChangeRequestedAt: p.lastEmailChangeRequestedAt,
-        birthDate: p.birthDate,
         avatarAttachmentId: p.avatarAttachmentId,
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,
@@ -543,7 +534,6 @@ export class DrizzleUserRepository implements UserRepository {
         emailVerified: p.emailVerified,
         pendingEmail: p.pendingEmail,
         accessProfile: p.accessProfile,
-        servesClients: p.servesClients,
         status: p.status,
         passwordHash: p.passwordHash,
         pepperVersion: p.pepperVersion,
@@ -552,7 +542,6 @@ export class DrizzleUserRepository implements UserRepository {
         lastResetRequestedAt: p.lastResetRequestedAt,
         lastVerificationRequestedAt: p.lastVerificationRequestedAt,
         lastEmailChangeRequestedAt: p.lastEmailChangeRequestedAt,
-        birthDate: p.birthDate,
         avatarAttachmentId: p.avatarAttachmentId,
         updatedAt: new Date(),
         deletedAt: p.deletedAt,
@@ -769,7 +758,6 @@ export class DrizzleUserRepository implements UserRepository {
       emailVerified: row.emailVerified,
       pendingEmail: row.pendingEmail,
       accessProfile: row.accessProfile,
-      servesClients: row.servesClients,
       status: row.status,
       passwordHash: row.passwordHash,
       pepperVersion: row.pepperVersion,
@@ -778,7 +766,6 @@ export class DrizzleUserRepository implements UserRepository {
       lastResetRequestedAt: row.lastResetRequestedAt,
       lastVerificationRequestedAt: row.lastVerificationRequestedAt,
       lastEmailChangeRequestedAt: row.lastEmailChangeRequestedAt,
-      birthDate: row.birthDate,
       avatarAttachmentId: row.avatarAttachmentId,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,

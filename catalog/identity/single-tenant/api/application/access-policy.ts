@@ -82,7 +82,6 @@ export function assertCanGrant(
 export async function resolveUserAccess(
   input: {
     accessProfile: AssignableAccessProfile
-    servesClients: boolean
     permissions: readonly PermissionKey[]
     areaIds: readonly string[]
     serviceIds: readonly string[]
@@ -95,8 +94,8 @@ export async function resolveUserAccess(
   assertValidPermissionSet(input.permissions)
   assertProfileFloor(input.accessProfile, input.permissions)
 
-  // Duas perguntas independentes (ADR 0082): atuação segue a marcação de
-  // atendimento; a segunda segue o perfil. Uma nunca zera a outra.
+  // Duas perguntas independentes: o escopo de atuação e as áreas restritas por
+  // perfil são vínculos distintos. Uma nunca zera a outra.
   const attendance = await resolveAttendanceScope(input, scope)
   const schedulingAreaIds = await resolveSchedulingAreas(input, scope)
 
@@ -109,18 +108,12 @@ export async function resolveUserAccess(
 
 async function resolveAttendanceScope(
   input: {
-    servesClients: boolean
     areaIds: readonly string[]
     serviceIds: readonly string[]
   },
   scope: ProfessionalScope
 ): Promise<{ areaIds: string[]; serviceIds: string[] }> {
-  if (!input.servesClients) return { areaIds: [], serviceIds: [] }
-  if (input.areaIds.length === 0) {
-    throw new InvalidProfessionalScopeError(
-      "Selecione ao menos uma área de atuação."
-    )
-  }
+  if (input.areaIds.length === 0) return { areaIds: [], serviceIds: [] }
   await scope.assertValid(input.areaIds, input.serviceIds)
   return { areaIds: [...input.areaIds], serviceIds: [...input.serviceIds] }
 }

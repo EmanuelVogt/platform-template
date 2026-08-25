@@ -15,11 +15,7 @@ export const ASSIGNABLE_LISTING_CONFIG: ListingConfig = {
 /** Profissional atribuível: atende cliente, ativo e não soft-deletado. O perfil
  *  de acesso não entra — agendista e recepção também atendem (ADR 0082). */
 export function assignableProfessionalFilters(): SQL[] {
-  return [
-    eq(users.servesClients, true),
-    eq(users.status, "active"),
-    isNull(users.deletedAt),
-  ]
+  return [eq(users.status, "active"), isNull(users.deletedAt)]
 }
 
 export const assignableProfessionalSelection = {

@@ -1,6 +1,6 @@
 import { ulid } from "ulid"
 
-import { InvalidAccountStateError, InvalidBirthDateError } from "../errors"
+import { InvalidAccountStateError } from "../errors"
 
 import type { AccessProfile } from "../access/permission.types"
 
@@ -10,7 +10,6 @@ export interface CreateUserInput {
   name: string
   email: string
   accessProfile: AccessProfile
-  servesClients?: boolean
   createdByUserId?: string | null
 }
 
@@ -24,9 +23,6 @@ export interface UserProps {
   readonly pendingEmail: string | null
   // Classificação fixa (não concede acesso — o guard checa user_permissions). Detalhe no ADR 0028.
   readonly accessProfile: AccessProfile
-  // Atende cliente: entra nos seletores, nos mapas e na escala. Independente do
-  // accessProfile — agendista e recepção também atendem (ADR 0082).
-  readonly servesClients: boolean
   readonly passwordHash: string | null
   readonly pepperVersion: number
   readonly status: UserStatus
@@ -36,8 +32,6 @@ export interface UserProps {
   readonly lastVerificationRequestedAt: Date | null
   // Cooldown do pedido de troca de e-mail (rate-limit por usuário).
   readonly lastEmailChangeRequestedAt: Date | null
-  // ISO 'YYYY-MM-DD'; null até a ativação (master/seed nunca passam pela tela).
-  readonly birthDate: string | null
   readonly avatarAttachmentId: string | null
   readonly createdAt: Date
   readonly updatedAt: Date
@@ -79,7 +73,6 @@ export class User {
       emailVerified: false,
       pendingEmail: null,
       accessProfile: "admin",
-      servesClients: false,
       passwordHash,
       pepperVersion,
       status: "active",
@@ -88,7 +81,6 @@ export class User {
       lastResetRequestedAt: null,
       lastVerificationRequestedAt: null,
       lastEmailChangeRequestedAt: null,
-      birthDate: null,
       avatarAttachmentId: null,
       createdAt: now,
       updatedAt: now,
@@ -101,7 +93,6 @@ export class User {
     name,
     email,
     accessProfile,
-    servesClients,
     createdByUserId,
   }: CreateUserInput): User {
     const now = new Date()
@@ -112,7 +103,6 @@ export class User {
       emailVerified: false,
       pendingEmail: null,
       accessProfile,
-      servesClients: servesClients ?? false,
       passwordHash: null,
       pepperVersion: 1,
       status: "pending",
@@ -121,7 +111,6 @@ export class User {
       lastResetRequestedAt: null,
       lastVerificationRequestedAt: null,
       lastEmailChangeRequestedAt: null,
-      birthDate: null,
       avatarAttachmentId: null,
       createdAt: now,
       updatedAt: now,
@@ -131,15 +120,14 @@ export class User {
   }
 
   /**
-   * Ativa a conta a partir do estado pending: grava senha, perfil e nascimento,
-   * marca emailVerified e vira active. `now` na assinatura (a entidade não chama
+   * Ativa a conta a partir do estado pending: grava senha e nome, marca
+   * emailVerified e vira active. `now` na assinatura (a entidade não chama
    * new Date()). `avatarAttachmentId` já vem resolvido (ownership checada no use case).
    */
   activate(
     input: {
       passwordHash: string
       name: string
-      birthDate: string // ISO 'YYYY-MM-DD'
       avatarAttachmentId: string | null
     },
     now: Date
@@ -147,12 +135,10 @@ export class User {
     if (this.props.status !== "pending") {
       throw new InvalidAccountStateError()
     }
-    assertValidBirthDate(input.birthDate, now)
     return new User({
       ...this.props,
       passwordHash: input.passwordHash,
       name: input.name.trim(),
-      birthDate: input.birthDate,
       avatarAttachmentId: input.avatarAttachmentId,
       status: "active",
       emailVerified: true,
@@ -229,7 +215,6 @@ export class User {
     input: {
       name: string
       accessProfile: AccessProfile
-      servesClients: boolean
     },
     now: Date
   ): User {
@@ -237,26 +222,18 @@ export class User {
       ...this.props,
       name: input.name.trim(),
       accessProfile: input.accessProfile,
-      servesClients: input.servesClients,
       updatedAt: now,
     })
   }
 
   /**
-   * Edição self-service do próprio perfil: nome e data de nascimento. Não toca em
-   * accessProfile/permissões (governança de admin) nem em e-mail (cadeia própria).
+   * Edição self-service do próprio perfil: nome. Não toca em accessProfile/
+   * permissões (governança de admin) nem em e-mail (cadeia própria).
    */
-  updateOwnProfile(
-    input: { name: string; birthDate?: string },
-    now: Date
-  ): User {
-    if (input.birthDate !== undefined) {
-      assertValidBirthDate(input.birthDate, now)
-    }
+  updateOwnProfile(input: { name: string }, now: Date): User {
     return new User({
       ...this.props,
       name: input.name.trim(),
-      birthDate: input.birthDate ?? this.props.birthDate,
       updatedAt: now,
     })
   }
@@ -344,29 +321,5 @@ export class User {
 
   isMaster(): boolean {
     return this.props.accessProfile === "master"
-  }
-}
-
-const MAX_AGE_YEARS = 120
-
-/** Valida nascimento ISO: data real, não-futura, idade ≤ 120. `birthDate` já vem
- *  com formato 'YYYY-MM-DD' garantido pelo boundary (Zod). */
-function assertValidBirthDate(birthDate: string, now: Date): void {
-  const [year, month, day] = birthDate.split("-").map(Number)
-  const parsed = new Date(`${birthDate}T00:00:00.000Z`)
-  if (
-    Number.isNaN(parsed.getTime()) ||
-    parsed.getUTCFullYear() !== year ||
-    parsed.getUTCMonth() + 1 !== month ||
-    parsed.getUTCDate() !== day
-  ) {
-    throw new InvalidBirthDateError()
-  }
-  if (parsed.getTime() > now.getTime()) {
-    throw new InvalidBirthDateError()
-  }
-  const maxAgeMs = MAX_AGE_YEARS * 365.25 * 24 * 60 * 60 * 1000
-  if (now.getTime() - parsed.getTime() > maxAgeMs) {
-    throw new InvalidBirthDateError()
   }
 }

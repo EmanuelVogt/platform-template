@@ -5,7 +5,6 @@ export type CreateUserInput = {
   name: string
   email: string
   accessProfile: AssignableAccessProfile
-  servesClients: boolean
   permissions: PermissionKey[]
   // Quem atende cliente: áreas de atuação e o subconjunto de serviços. Vazios para os demais.
   areaIds: string[]

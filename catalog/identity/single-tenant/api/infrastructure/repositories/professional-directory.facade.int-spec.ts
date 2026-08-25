@@ -33,12 +33,9 @@ describe("ProfessionalDirectoryFacade (int)", () => {
     await pool.end()
   })
 
-  // servesClients default = perfil professional: espelha o backfill da migration
-  // 0131, então os casos que não falam de atendimento seguem valendo.
   async function seedUser(opts: {
     id?: string
     accessProfile: "professional" | "admin" | "master"
-    servesClients?: boolean
     status?: "active" | "pending"
     deletedAt?: Date | null
     name?: string
@@ -47,14 +44,13 @@ describe("ProfessionalDirectoryFacade (int)", () => {
     const email = `${id}@test.local`
     await pool.query(
       `INSERT INTO identity.users
-         (id, name, email, access_profile, serves_clients, status, deleted_at, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, now(), now())`,
+         (id, name, email, access_profile, status, deleted_at, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, now(), now())`,
       [
         id,
         opts.name ?? `User ${id}`,
         email,
         opts.accessProfile,
-        opts.servesClients ?? opts.accessProfile === "professional",
         opts.status ?? "active",
         opts.deletedAt ?? null,
       ]
@@ -66,7 +62,6 @@ describe("ProfessionalDirectoryFacade (int)", () => {
     it("perfil não-profissional marcado é profissional atribuível", async () => {
       const id = await seedUser({
         accessProfile: "admin",
-        servesClients: true,
         name: "Admin Que Atende",
       })
       expect(await facade.isActiveProfessional(id)).toBe(true)
@@ -77,7 +72,6 @@ describe("ProfessionalDirectoryFacade (int)", () => {
     it("perfil Profissional sem a marcação fica fora", async () => {
       const id = await seedUser({
         accessProfile: "professional",
-        servesClients: false,
         name: "Profissional Sem Escala",
       })
       expect(await facade.isActiveProfessional(id)).toBe(false)

@@ -16,7 +16,6 @@ function makeUser(over: Partial<UserProps> = {}): User {
     emailVerified: true,
     pendingEmail: null,
     accessProfile: "admin",
-    servesClients: false,
     failedLoginAttempts: 0,
     lockedUntil: null,
     lastResetRequestedAt: null,
@@ -26,7 +25,6 @@ function makeUser(over: Partial<UserProps> = {}): User {
     updatedAt: new Date("2026-01-01T00:00:00.000Z"),
     deletedAt: new Date("2026-06-01T00:00:00.000Z"),
     createdByUserId: null,
-    birthDate: null,
     avatarAttachmentId: null,
     ...over,
   })

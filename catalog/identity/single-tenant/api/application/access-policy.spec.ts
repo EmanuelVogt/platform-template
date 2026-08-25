@@ -123,7 +123,6 @@ describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
     const access = await resolveUserAccess(
       {
         accessProfile: "admin",
-        servesClients: false,
         permissions: ["admin.users.read"],
         areaIds: [],
         serviceIds: [],
@@ -141,10 +140,9 @@ describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
     const access = await resolveUserAccess(
       {
         accessProfile: "admin",
-        servesClients: false,
         permissions: ["admin.users.read"],
-        areaIds: ["area-ignorada"],
-        serviceIds: ["svc-ignorado"],
+        areaIds: [],
+        serviceIds: [],
         schedulingAreaIds: ["area-1", "area-2"],
       },
       scope,
@@ -168,7 +166,6 @@ describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
       resolveUserAccess(
         {
           accessProfile: "admin",
-          servesClients: false,
           permissions: ["admin.users.read"],
           areaIds: [],
           serviceIds: [],
@@ -185,7 +182,6 @@ describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
     const access = await resolveUserAccess(
       {
         accessProfile: "professional",
-        servesClients: true,
         permissions: [],
         areaIds: ["area-1"],
         serviceIds: ["svc-1"],
@@ -202,50 +198,10 @@ describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
     })
     expect(scope.assertValid).toHaveBeenCalledWith(["area-1"], ["svc-1"])
   })
-
-  it("quem atende sem área de atuação → InvalidProfessionalScopeError", async () => {
-    await expect(
-      resolveUserAccess(
-        {
-          accessProfile: "admin",
-          servesClients: true,
-          permissions: ["admin.users.read"],
-          areaIds: [],
-          serviceIds: [],
-          schedulingAreaIds: [],
-        },
-        makeScope(),
-        MASTER_GRANT
-      )
-    ).rejects.toBeInstanceOf(InvalidProfessionalScopeError)
-  })
-
-  it("perfil Profissional sem a marcação zera áreas e serviços de atuação", async () => {
-    const access = await resolveUserAccess(
-      {
-        accessProfile: "professional",
-        servesClients: false,
-        permissions: [],
-        areaIds: ["area-1"],
-        serviceIds: ["svc-1"],
-        schedulingAreaIds: [],
-      },
-      makeScope(),
-      MASTER_GRANT
-    )
-    expect(access).toEqual({
-      permissions: [],
-      areaIds: [],
-      serviceIds: [],
-      schedulingAreaIds: [],
-    })
-  })
-
   it("atuação e agendamento coexistem sem uma zerar a outra", async () => {
     const access = await resolveUserAccess(
       {
         accessProfile: "admin",
-        servesClients: true,
         permissions: ["admin.users.read"],
         areaIds: ["atuacao-1"],
         serviceIds: ["svc-1"],
@@ -259,27 +215,6 @@ describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
       areaIds: ["atuacao-1"],
       serviceIds: ["svc-1"],
       schedulingAreaIds: ["agenda-1"],
-    })
-  })
-
-  it("sem atendimento zera áreas e serviços de atuação", async () => {
-    const access = await resolveUserAccess(
-      {
-        accessProfile: "admin",
-        servesClients: false,
-        permissions: ["admin.users.read"],
-        areaIds: ["a"],
-        serviceIds: ["s"],
-        schedulingAreaIds: [],
-      },
-      makeScope(),
-      MASTER_GRANT
-    )
-    expect(access).toEqual({
-      permissions: ["admin.users.read"],
-      areaIds: [],
-      serviceIds: [],
-      schedulingAreaIds: [],
     })
   })
 })

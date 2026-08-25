@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest"
 
 import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.error"
 import { User, type UserProps } from "../../../domain/entities/user.entity"
-import { InvalidBirthDateError } from "../../../domain/errors"
 import { fakeRequestContext } from "../../request-context.fixture"
 
 import { UpdateMyProfileUseCase } from "./update-my-profile.use-case"
@@ -20,13 +19,11 @@ function makeUser(over: Partial<UserProps> = {}): User {
     emailVerified: true,
     pendingEmail: null,
     accessProfile: "admin",
-    servesClients: false,
     failedLoginAttempts: 0,
     lockedUntil: null,
     lastResetRequestedAt: null,
     lastVerificationRequestedAt: null,
     lastEmailChangeRequestedAt: null,
-    birthDate: null,
     avatarAttachmentId: null,
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
     updatedAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -65,30 +62,6 @@ describe("UpdateMyProfileUseCase", () => {
     expect(updated.props.name).toBe("Ana Silva")
     expect(updated.props.updatedAt).toEqual(NOW)
   })
-
-  it("caminho feliz: atualiza nome e birthDate válida", async () => {
-    const t = makeDeps()
-    await t.uc.execute({ name: "Ana", birthDate: "1990-05-20" })
-    expect(t.users.update).toHaveBeenCalledTimes(1)
-    const updated = t.users.update.mock.calls[0]?.[0] as User
-    expect(updated.props.birthDate).toBe("1990-05-20")
-    expect(updated.props.name).toBe("Ana")
-  })
-
-  it("sem birthDate no input: mantém o birthDate existente", async () => {
-    const t = makeDeps({
-      users: {
-        findById: vi
-          .fn()
-          .mockResolvedValue(makeUser({ birthDate: "1985-03-10" })),
-        update: vi.fn().mockResolvedValue(undefined),
-      },
-    })
-    await t.uc.execute({ name: "Ana" })
-    const updated = t.users.update.mock.calls[0]?.[0] as User
-    expect(updated.props.birthDate).toBe("1985-03-10")
-  })
-
   it("ctx sem userId lança ForbiddenError e NÃO chama users.findById nem users.update", async () => {
     const t = makeDeps({
       ctx: fakeRequestContext(() => ({
@@ -137,23 +110,6 @@ describe("UpdateMyProfileUseCase", () => {
     )
     expect(t.users.update).not.toHaveBeenCalled()
   })
-
-  it("birthDate futura lança InvalidBirthDateError e NÃO chama users.update", async () => {
-    const t = makeDeps()
-    await expect(
-      t.uc.execute({ name: "Ana", birthDate: "2099-01-01" })
-    ).rejects.toBeInstanceOf(InvalidBirthDateError)
-    expect(t.users.update).not.toHaveBeenCalled()
-  })
-
-  it("birthDate com idade > 120 anos lança InvalidBirthDateError e NÃO chama users.update", async () => {
-    const t = makeDeps()
-    await expect(
-      t.uc.execute({ name: "Ana", birthDate: "1800-01-01" })
-    ).rejects.toBeInstanceOf(InvalidBirthDateError)
-    expect(t.users.update).not.toHaveBeenCalled()
-  })
-
   it("findById é chamado com o userId do contexto autenticado", async () => {
     const t = makeDeps()
     await t.uc.execute({ name: "Ana" })
@@ -202,20 +158,5 @@ describe("UpdateMyProfileUseCase", () => {
     expect(t.users.update).toHaveBeenCalledTimes(1)
     const updated = t.users.update.mock.calls[0]?.[0] as User
     expect(updated.props.name).toBe("Ana Arquivada")
-  })
-
-  it("birthDate undefined explícito no input: mantém birthDate existente (branch birthDate !== undefined falso)", async () => {
-    const t = makeDeps({
-      users: {
-        findById: vi
-          .fn()
-          .mockResolvedValue(makeUser({ birthDate: "1990-01-15" })),
-        update: vi.fn().mockResolvedValue(undefined),
-      },
-    })
-    await t.uc.execute({ name: "Ana", birthDate: undefined })
-    const updated = t.users.update.mock.calls[0]?.[0] as User
-    expect(updated.props.birthDate).toBe("1990-01-15")
-    expect(t.users.update).toHaveBeenCalledTimes(1)
   })
 })

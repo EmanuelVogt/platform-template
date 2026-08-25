@@ -6,14 +6,7 @@ import { ForbiddenError } from "../../../../../shared/kernel/errors/forbidden.er
 import { Traced } from "../../../../../shared/kernel/tracing/traced.decorator"
 import { Transactional } from "../../../../../shared/kernel/transactional/transactional.decorator"
 import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
-import {
-  ProfessionalHasCommitmentsError,
-  UserNotFoundError,
-} from "../../../domain/errors"
-import {
-  PROFESSIONAL_COMMITMENTS,
-  type ProfessionalCommitments,
-} from "../../../domain/ports/professional-commitments.port"
+import { UserNotFoundError } from "../../../domain/errors"
 import {
   PROFESSIONAL_SCOPE,
   type ProfessionalScope,
@@ -50,9 +43,7 @@ export class UpdateUserUseCase implements UseCaseContract<
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly ctx: RequestContext,
-    @Inject(PROFESSIONAL_SCOPE) private readonly scope: ProfessionalScope,
-    @Inject(PROFESSIONAL_COMMITMENTS)
-    private readonly commitments: ProfessionalCommitments
+    @Inject(PROFESSIONAL_SCOPE) private readonly scope: ProfessionalScope
   ) {}
 
   @Transactional()
@@ -83,10 +74,6 @@ export class UpdateUserUseCase implements UseCaseContract<
     if (actorAccess === undefined) {
       throw new ForbiddenError()
     }
-    await this.assertCanStopAttending(user.props.id, {
-      was: user.props.servesClients,
-      now: input.servesClients,
-    })
     const access = await resolveUserAccess(input, this.scope, {
       actor: actorAccess,
       current,
@@ -97,7 +84,6 @@ export class UpdateUserUseCase implements UseCaseContract<
         {
           name: input.name,
           accessProfile: input.accessProfile,
-          servesClients: input.servesClients,
         },
         this.clock.now()
       )
@@ -130,10 +116,7 @@ export class UpdateUserUseCase implements UseCaseContract<
     user: User,
     input: UpdateUserInput
   ): Promise<void> {
-    if (
-      input.servesClients !== user.props.servesClients ||
-      input.schedulingAreaIds.length > 0
-    ) {
+    if (input.schedulingAreaIds.length > 0) {
       throw new SelfEditError()
     }
     const scope = await this.users.findProfessionalScope(user.props.id)
@@ -142,17 +125,6 @@ export class UpdateUserUseCase implements UseCaseContract<
       !sameIds(scope.serviceIds, input.serviceIds)
     ) {
       throw new SelfEditError()
-    }
-  }
-
-  private async assertCanStopAttending(
-    userId: string,
-    attendance: { was: boolean; now: boolean }
-  ): Promise<void> {
-    if (!attendance.was || attendance.now) return
-    const pending = await this.commitments.listFuture(userId)
-    if (pending.length > 0) {
-      throw new ProfessionalHasCommitmentsError(pending)
     }
   }
 }

@@ -148,7 +148,6 @@ describe("produtores in-app (e2e)", () => {
       .send({
         token,
         name: "Bia",
-        birthDate: "1992-03-10",
         password: "Senha-Bia-Muito-Forte-2026!",
       })
       .expect(200)

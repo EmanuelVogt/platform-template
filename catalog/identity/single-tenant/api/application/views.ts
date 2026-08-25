@@ -18,7 +18,6 @@ export type UserView = {
   accessProfile: AccessProfile
   permissions: readonly PermissionKey[]
   avatarAttachmentId: string | null
-  birthDate: string | null
 }
 
 /** Item de uma listagem de usuários (admin). `createdAt` serializado em ISO. */
@@ -28,7 +27,6 @@ export type UserListItemView = {
   email: string
   emailVerified: boolean
   accessProfile: AccessProfile
-  servesClients: boolean
   permissions: readonly PermissionKey[]
   // Áreas/serviços de atuação (quem atende cliente). Vazios para os demais.
   areaIds: readonly string[]
@@ -56,7 +54,6 @@ export function toUserView(
     accessProfile: user.props.accessProfile,
     permissions,
     avatarAttachmentId: user.props.avatarAttachmentId,
-    birthDate: user.props.birthDate,
   }
 }
 
@@ -68,7 +65,6 @@ export function toUserListItemView(row: UserListRow): UserListItemView {
     email: props.email,
     emailVerified: props.emailVerified,
     accessProfile: props.accessProfile,
-    servesClients: props.servesClients,
     permissions: row.permissions,
     areaIds: row.areaIds,
     serviceIds: row.serviceIds,

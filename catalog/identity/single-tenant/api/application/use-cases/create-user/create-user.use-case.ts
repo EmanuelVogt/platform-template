@@ -88,7 +88,6 @@ export class CreateUserUseCase implements UseCaseContract<
       name: input.name.trim(),
       email,
       accessProfile: input.accessProfile,
-      servesClients: input.servesClients,
       createdByUserId: actorId,
     })
     await this.users.insert(user)

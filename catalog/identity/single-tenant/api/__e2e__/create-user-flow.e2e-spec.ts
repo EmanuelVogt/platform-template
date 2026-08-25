@@ -163,7 +163,6 @@ describe("Fluxo de criação de usuário (e2e)", () => {
       .send({
         token,
         name: "Ana Maria",
-        birthDate: "1990-05-20",
         password: "Senha-Ana-Muito-Forte-2026!",
       })
       .expect(200)
@@ -194,7 +193,6 @@ describe("Fluxo de criação de usuário (e2e)", () => {
       .send({
         token,
         name: "Ana Maria",
-        birthDate: "1990-05-20",
         password: "Senha-Ana-Muito-Forte-2026!",
       })
       .expect(200)
@@ -219,7 +217,6 @@ describe("Fluxo de criação de usuário (e2e)", () => {
       .send({
         token,
         name: "Ana Maria",
-        birthDate: "1990-05-20",
         password: "Senha-Ana-Muito-Forte-2026!",
       })
       .expect(200)
@@ -230,7 +227,6 @@ describe("Fluxo de criação de usuário (e2e)", () => {
       .send({
         token,
         name: "Ana",
-        birthDate: "1990-05-20",
         password: "Outra-Senha-Forte-2026!",
       })
       .expect(400)
@@ -251,7 +247,6 @@ describe("Fluxo de criação de usuário (e2e)", () => {
         name: "Pedro Profissional",
         email: "pedro@example.com",
         accessProfile: "professional",
-        servesClients: true,
         permissions: [],
         areaIds: [areaId],
         serviceIds: [serviceId],
@@ -269,7 +264,6 @@ describe("Fluxo de criação de usuário (e2e)", () => {
     )
     expect(pedro).toBeDefined()
     expect(pedro.accessProfile).toBe("professional")
-    expect(pedro.servesClients).toBe(true)
     expect(pedro.permissions).toEqual([])
     expect(pedro.areaIds).toEqual([areaId])
     expect(pedro.serviceIds).toEqual([serviceId])
@@ -287,7 +281,6 @@ describe("Fluxo de criação de usuário (e2e)", () => {
         name: "Pro Admin",
         email: "pro.admin@example.com",
         accessProfile: "professional",
-        servesClients: true,
         permissions: ["admin.users.read"],
         areaIds: [areaId],
         serviceIds: [],

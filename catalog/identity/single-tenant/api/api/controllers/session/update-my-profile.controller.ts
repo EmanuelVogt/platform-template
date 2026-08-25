@@ -19,7 +19,6 @@ export class UpdateMyProfileController {
   async handle(@Body() dto: UpdateMyProfileDto): Promise<void> {
     await this.updateProfile.execute({
       name: dto.name,
-      birthDate: dto.birthDate,
     })
   }
 }

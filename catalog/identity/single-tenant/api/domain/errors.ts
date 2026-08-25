@@ -22,7 +22,6 @@ const MESSAGES = {
   profileImageStoreMissingDetail:
     "Nenhum armazenamento de imagem de perfil está registrado.",
   invalidAccountState: "Estado de conta inválido",
-  invalidBirthDate: "Data de nascimento inválida",
   cannotRevokeCurrentDevice:
     "Não é possível encerrar o dispositivo atual. Use o logout.",
   invalidPermissionSet: "Conjunto de permissões inválido",
@@ -181,16 +180,6 @@ export class InvalidAccountStateError extends DomainError {
 
   constructor() {
     super(MESSAGES.invalidAccountState)
-  }
-}
-
-/** Data de nascimento inválida (futura, fora de faixa ou impossível). */
-export class InvalidBirthDateError extends DomainError {
-  readonly status = 422
-  readonly type = `${TYPE_BASE}/invalid-birth-date`
-
-  constructor() {
-    super(MESSAGES.invalidBirthDate)
   }
 }
 

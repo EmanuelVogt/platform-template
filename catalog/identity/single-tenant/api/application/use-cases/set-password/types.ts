@@ -4,7 +4,6 @@ export type SetPasswordInput = {
   token: string
   password: string
   name: string
-  birthDate: string // ISO 'YYYY-MM-DD'
   avatarAttachmentId?: string
   /** Cookie de device cru do request (ausente = gera device novo). */
   deviceCookie?: string | null

@@ -172,7 +172,6 @@ export class SetPasswordUseCase implements UseCaseContract<
       {
         passwordHash,
         name: input.name,
-        birthDate: input.birthDate,
         avatarAttachmentId,
       },
       now

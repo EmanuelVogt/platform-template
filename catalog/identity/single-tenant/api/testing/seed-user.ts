@@ -12,8 +12,6 @@ type SeedUserOptions = {
   name?: string
   emailVerified?: boolean
   accessProfile?: "master" | "admin" | "professional"
-  // Default = perfil professional, espelhando o backfill da migration 0131.
-  servesClients?: boolean
   permissions?: string[]
 }
 
@@ -40,8 +38,8 @@ export async function seedUser(
   }
   await pool.query(
     `INSERT INTO identity.users
-       (id, name, email, email_verified, password_hash, pepper_version, failed_login_attempts, access_profile, serves_clients, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, 1, 0, $6, $7, now(), now())
+       (id, name, email, email_verified, password_hash, pepper_version, failed_login_attempts, access_profile, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, 1, 0, $6, now(), now())
      ON CONFLICT (email) DO NOTHING`,
     [
       ulid(),
@@ -50,7 +48,6 @@ export async function seedUser(
       opts.emailVerified ?? true,
       passwordHash,
       opts.accessProfile ?? "admin",
-      opts.servesClients ?? opts.accessProfile === "professional",
     ]
   )
   const { rows } = await pool.query<{ id: string }>(

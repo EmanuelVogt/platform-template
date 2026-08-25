@@ -5,7 +5,6 @@ export type UpdateUserInput = {
   userId: string
   name: string
   accessProfile: AssignableAccessProfile
-  servesClients: boolean
   permissions: PermissionKey[]
   // Quem atende cliente: áreas de atuação e o subconjunto de serviços. Vazios para os demais.
   areaIds: string[]

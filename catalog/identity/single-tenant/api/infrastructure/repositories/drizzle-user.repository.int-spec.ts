@@ -54,46 +54,6 @@ describe("DrizzleUserRepository (int)", () => {
     expect(found).not.toBeNull()
     expect(found?.props.email).toBe("alice@example.com")
   })
-
-  it("atendimento a cliente: insert grava a marcação e update a desliga", async () => {
-    const user = User.fromProps({
-      ...makeUser("atende@example.com").props,
-      servesClients: true,
-    })
-    await repo.insert(user)
-    expect((await repo.findById(user.props.id))?.props.servesClients).toBe(true)
-
-    await repo.update(
-      user.updateProfile(
-        { name: user.props.name, accessProfile: "admin", servesClients: false },
-        new Date()
-      )
-    )
-    expect((await repo.findById(user.props.id))?.props.servesClients).toBe(
-      false
-    )
-  })
-
-  it("gate da configuração de horários segue a marcação, não o perfil", async () => {
-    const atende = User.fromProps({
-      ...makeUser("agendista.atende@example.com").props,
-      accessProfile: "admin",
-      servesClients: true,
-    })
-    const naoAtende = User.fromProps({
-      ...makeUser("profissional.fora@example.com").props,
-      accessProfile: "professional",
-      servesClients: false,
-    })
-    await repo.insert(atende)
-    await repo.insert(naoAtende)
-
-    expect(await repo.existsProfessional(atende.props.id)).toBe(true)
-    expect(await repo.existsActiveProfessional(atende.props.id)).toBe(true)
-    expect(await repo.existsProfessional(naoAtende.props.id)).toBe(false)
-    expect(await repo.existsActiveProfessional(naoAtende.props.id)).toBe(false)
-  })
-
   it("findByEmail retorna null para e-mail inexistente", async () => {
     expect(await repo.findByEmail("ninguem@example.com")).toBeNull()
   })

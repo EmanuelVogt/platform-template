@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { InvalidAccountStateError, InvalidBirthDateError } from "../errors"
+import { InvalidAccountStateError } from "../errors"
 
 import { User } from "./user.entity"
 
@@ -34,25 +34,6 @@ describe("User.create", () => {
     const user = buildUser({ email: "Ana@Example.COM", accessProfile: "admin" })
     expect(user.props.email).toBe("ana@example.com")
   })
-
-  it("nasce fora do atendimento a cliente, e entra quando pedido", () => {
-    expect(
-      User.create({
-        name: "Ana",
-        email: "a@b.com",
-        accessProfile: "professional",
-      }).props.servesClients
-    ).toBe(false)
-    expect(
-      User.create({
-        name: "Bia",
-        email: "b@b.com",
-        accessProfile: "professional",
-        servesClients: true,
-      }).props.servesClients
-    ).toBe(true)
-  })
-
   it("registra quem criou a conta", () => {
     const user = User.create({
       name: "Ana",
@@ -236,7 +217,7 @@ describe("User — criação", () => {
     expect(user.props.passwordHash).toBe("argon2")
   })
 
-  it("activate() ativa, verifica, seta senha/nome/nascimento (nova instância)", () => {
+  it("activate() ativa, verifica e seta senha/nome (nova instância)", () => {
     const now = new Date("2026-01-01T00:00:00Z")
     const pending = User.create({
       name: "Ana",
@@ -247,7 +228,6 @@ describe("User — criação", () => {
       {
         passwordHash: "argon2-novo",
         name: "  Ana Maria  ",
-        birthDate: "1990-05-20",
         avatarAttachmentId: null,
       },
       now
@@ -257,7 +237,6 @@ describe("User — criação", () => {
     expect(active.props.emailVerified).toBe(true)
     expect(active.props.passwordHash).toBe("argon2-novo")
     expect(active.props.name).toBe("Ana Maria") // trim
-    expect(active.props.birthDate).toBe("1990-05-20")
     expect(active.props.updatedAt).toEqual(now)
     expect(pending.props.status).toBe("pending") // imutabilidade
   })
@@ -273,7 +252,6 @@ describe("User — criação", () => {
       {
         passwordHash: "h",
         name: "Ana",
-        birthDate: "1990-05-20",
         avatarAttachmentId: "att-1",
       },
       now
@@ -294,72 +272,11 @@ describe("User — criação", () => {
         {
           passwordHash: "h",
           name: "Bia",
-          birthDate: "1990-05-20",
           avatarAttachmentId: null,
         },
         now
       )
     ).toThrow(InvalidAccountStateError)
-  })
-
-  it("activate() com data futura lança InvalidBirthDateError", () => {
-    const now = new Date("2026-01-01T00:00:00Z")
-    const pending = User.create({
-      name: "Ana",
-      email: "ana@example.com",
-      accessProfile: "admin",
-    })
-    expect(() =>
-      pending.activate(
-        {
-          passwordHash: "h",
-          name: "Ana",
-          birthDate: "2099-01-01",
-          avatarAttachmentId: null,
-        },
-        now
-      )
-    ).toThrow(InvalidBirthDateError)
-  })
-
-  it("activate() com idade > 120 lança InvalidBirthDateError", () => {
-    const now = new Date("2026-01-01T00:00:00Z")
-    const pending = User.create({
-      name: "Ana",
-      email: "ana@example.com",
-      accessProfile: "admin",
-    })
-    expect(() =>
-      pending.activate(
-        {
-          passwordHash: "h",
-          name: "Ana",
-          birthDate: "1850-01-01",
-          avatarAttachmentId: null,
-        },
-        now
-      )
-    ).toThrow(InvalidBirthDateError)
-  })
-
-  it("activate() com data impossível (31/02) lança InvalidBirthDateError", () => {
-    const now = new Date("2026-01-01T00:00:00Z")
-    const pending = User.create({
-      name: "Ana",
-      email: "ana@example.com",
-      accessProfile: "admin",
-    })
-    expect(() =>
-      pending.activate(
-        {
-          passwordHash: "h",
-          name: "Ana",
-          birthDate: "2000-02-31",
-          avatarAttachmentId: null,
-        },
-        now
-      )
-    ).toThrow(InvalidBirthDateError)
   })
 })
 
@@ -386,7 +303,7 @@ describe("User.updateProfile", () => {
     })
     const now = new Date("2026-06-12T12:00:00Z")
     const updated = user.updateProfile(
-      { name: " Bia ", accessProfile: "professional", servesClients: false },
+      { name: " Bia ", accessProfile: "professional" },
       now
     )
     expect(updated).not.toBe(user)
@@ -394,35 +311,6 @@ describe("User.updateProfile", () => {
     expect(updated.props.accessProfile).toBe("professional")
     expect(updated.props.updatedAt).toBe(now)
     expect(user.props.accessProfile).toBe("admin")
-  })
-
-  it("liga o atendimento a cliente sem mexer no perfil", () => {
-    const user = User.create({
-      name: "Ana",
-      email: "ana@x.test",
-      accessProfile: "professional",
-    })
-    const updated = user.updateProfile(
-      { name: "Ana", accessProfile: "professional", servesClients: true },
-      new Date("2026-06-12T12:00:00Z")
-    )
-    expect(updated.props.servesClients).toBe(true)
-    expect(updated.props.accessProfile).toBe("professional")
-  })
-
-  it("desliga o atendimento a cliente preservando a instância anterior", () => {
-    const user = User.create({
-      name: "Ana",
-      email: "ana@x.test",
-      accessProfile: "professional",
-      servesClients: true,
-    })
-    const updated = user.updateProfile(
-      { name: "Ana", accessProfile: "professional", servesClients: false },
-      new Date("2026-06-12T12:00:00Z")
-    )
-    expect(updated.props.servesClients).toBe(false)
-    expect(user.props.servesClients).toBe(true)
   })
 })
 
@@ -448,25 +336,14 @@ describe("User.isMaster", () => {
 describe("User.updateOwnProfile", () => {
   const now = new Date("2026-06-12T12:00:00Z")
 
-  it("atualiza nome (trim) e nascimento sem tocar em accessProfile/email", () => {
+  it("atualiza nome (trim) sem tocar em accessProfile/email", () => {
     const user = buildUser({ email: "ana@x.test" })
-    const updated = user.updateOwnProfile(
-      { name: "  Ana Maria  ", birthDate: "1990-05-20" },
-      now
-    )
+    const updated = user.updateOwnProfile({ name: "  Ana Maria  " }, now)
     expect(updated).not.toBe(user)
     expect(updated.props.name).toBe("Ana Maria")
-    expect(updated.props.birthDate).toBe("1990-05-20")
     expect(updated.props.accessProfile).toBe(user.props.accessProfile)
     expect(updated.props.email).toBe("ana@x.test")
     expect(updated.props.updatedAt).toEqual(now)
-  })
-
-  it("rejeita data de nascimento inválida", () => {
-    const user = buildUser()
-    expect(() =>
-      user.updateOwnProfile({ name: "Ana", birthDate: "2099-01-01" }, now)
-    ).toThrow(InvalidBirthDateError)
   })
 })
 
@@ -631,92 +508,5 @@ describe("User.registerFailedAttempt — preservação do lockedUntil existente"
     })
     const updated = user.registerFailedAttempt(now, 10, DURATION)
     expect(updated.props.lockedUntil).toEqual(preExistingLock)
-  })
-})
-
-describe("assertValidBirthDate — ramos internos via activate()", () => {
-  const now = new Date("2026-01-01T00:00:00Z")
-
-  function pendingUser(): User {
-    return User.create({
-      name: "Ana",
-      email: "ana@example.com",
-      accessProfile: "admin",
-    })
-  }
-
-  it("data válida no passado próximo é aceita sem lançar", () => {
-    const activated = pendingUser().activate(
-      {
-        passwordHash: "h",
-        name: "Ana",
-        birthDate: "1990-01-01",
-        avatarAttachmentId: null,
-      },
-      now
-    )
-
-    expect(activated.props.birthDate).toBe("1990-01-01")
-    expect(activated.props.status).toBe("active")
-  })
-
-  it("data com dia inválido para o mês (29/02 em ano não-bissexto) lança InvalidBirthDateError", () => {
-    // 2001-02-29 não existe: Date UTC promove para 2001-03-01 → UTCDate != 29
-    expect(() =>
-      pendingUser().activate(
-        {
-          passwordHash: "h",
-          name: "Ana",
-          birthDate: "2001-02-29",
-          avatarAttachmentId: null,
-        },
-        now
-      )
-    ).toThrow(InvalidBirthDateError)
-  })
-
-  it("data com dia zero (2000-01-00) lança InvalidBirthDateError", () => {
-    // parsed não representa dia 0 — UTCDate vira 31 (dia anterior ao mês)
-    expect(() =>
-      pendingUser().activate(
-        {
-          passwordHash: "h",
-          name: "Ana",
-          birthDate: "2000-01-00",
-          avatarAttachmentId: null,
-        },
-        now
-      )
-    ).toThrow(InvalidBirthDateError)
-  })
-})
-
-describe("User.updateOwnProfile — birthDate opcional", () => {
-  const now = new Date("2026-06-16T10:00:00Z")
-
-  it("sem birthDate mantém o valor anterior intacto sem validar", () => {
-    const user = User.fromProps({
-      ...buildUser().props,
-      birthDate: "1985-03-15",
-    })
-    const updated = user.updateOwnProfile({ name: "Novo Nome" }, now)
-    expect(updated.props.birthDate).toBe("1985-03-15")
-    expect(updated.props.name).toBe("Novo Nome")
-    expect(updated.props.updatedAt).toEqual(now)
-  })
-
-  it("birthDate undefined com birthDate atual null mantém null", () => {
-    const user = User.fromProps({ ...buildUser().props, birthDate: null })
-    const updated = user.updateOwnProfile({ name: "X" }, now)
-    expect(updated.props.birthDate).toBeNull()
-  })
-
-  it("idade exatamente acima de 120 anos lança InvalidBirthDateError", () => {
-    // 1905-01-02 está dentro de 120 anos de 2026-01-01, mas 1900-01-01 não está
-    const farPast = new Date("2026-06-16T10:00:00Z")
-    const user = buildUser()
-    expect(() =>
-      user.updateOwnProfile({ name: "Ana", birthDate: "1905-06-15" }, farPast)
-    ).toThrow(InvalidBirthDateError)
   })
 })

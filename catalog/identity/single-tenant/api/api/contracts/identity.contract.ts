@@ -95,7 +95,6 @@ export const userResponseSchema = z.object({
   permissions: permissionSetSchema,
   avatarAttachmentId: z.string().nullable(),
   // ISO 'YYYY-MM-DD'; null para master/seed que não passam pela ativação.
-  birthDate: z.string().nullable(),
 })
 
 // envelope de resposta dos controllers (spec §13): login/session → { user }.
@@ -134,7 +133,6 @@ export const userListItemSchema = z.object({
   email: z.string(),
   emailVerified: z.boolean(),
   accessProfile: accessProfileSchema,
-  servesClients: z.boolean(),
   permissions: permissionSetSchema,
   // Áreas/serviços de atuação (quem atende cliente). Vazios para os demais.
   areaIds: z.array(z.string()),
@@ -179,8 +177,6 @@ export const createUserSchema = z.object({
   name,
   email,
   accessProfile: assignableAccessProfileSchema,
-  // Atende cliente: independe do perfil de acesso (ADR 0082).
-  servesClients: z.boolean().default(false),
   permissions: permissionSetSchema,
   // Quem atende cliente. Omitidos/[] para os demais (o server os ignora).
   areaIds: areaIdsSchema.default([]),
@@ -196,8 +192,6 @@ export type CreateUserInput = z.infer<typeof createUserSchema>
 export const updateUserSchema = z.object({
   name,
   accessProfile: assignableAccessProfileSchema,
-  // Atende cliente: independe do perfil de acesso (ADR 0082).
-  servesClients: z.boolean().default(false),
   permissions: permissionSetSchema,
   // Quem atende cliente. Omitidos/[] para os demais (o server os ignora).
   areaIds: areaIdsSchema.default([]),
@@ -214,8 +208,6 @@ export const setPasswordSchema = z.object({
   token,
   password,
   name,
-  // ISO 'YYYY-MM-DD'. Validação de data real fica no domínio (activate).
-  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida."),
   avatarAttachmentId: z.string().optional(),
 })
 export class SetPasswordDto extends createZodDto(setPasswordSchema) {}
@@ -224,12 +216,6 @@ export type SetPasswordInput = z.infer<typeof setPasswordSchema>
 // --- conta self-service (perfil, avatar, troca de e-mail) ---
 export const updateMyProfileSchema = z.object({
   name,
-  // ISO 'YYYY-MM-DD'. Opcional: quem não tem nascimento (master/seed) salva só o
-  // nome. Validação de data real fica no domínio (updateOwnProfile).
-  birthDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida.")
-    .optional(),
 })
 export class UpdateMyProfileDto extends createZodDto(updateMyProfileSchema) {}
 export type UpdateMyProfileInput = z.infer<typeof updateMyProfileSchema>

@@ -17,7 +17,6 @@ const VALID_INPUT = {
   token: "raw",
   password: "Senha-Muito-Forte-2026!",
   name: "Ana Oliveira",
-  birthDate: "1990-05-15",
 }
 
 function pendingUser(createdByUserId: string | null = null) {
@@ -28,7 +27,6 @@ function pendingUser(createdByUserId: string | null = null) {
     emailVerified: false,
     pendingEmail: null,
     accessProfile: "admin",
-    servesClients: false,
     passwordHash: null,
     pepperVersion: 1,
     status: "pending",
@@ -37,7 +35,6 @@ function pendingUser(createdByUserId: string | null = null) {
     lastResetRequestedAt: null,
     lastVerificationRequestedAt: null,
     lastEmailChangeRequestedAt: null,
-    birthDate: null,
     avatarAttachmentId: null,
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
     updatedAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -452,7 +449,6 @@ describe("SetPasswordUseCase", () => {
       emailVerified: false,
       pendingEmail: null,
       accessProfile: "admin",
-      servesClients: false,
       passwordHash: null,
       pepperVersion: 1,
       status: "pending",
@@ -461,7 +457,6 @@ describe("SetPasswordUseCase", () => {
       lastResetRequestedAt: null,
       lastVerificationRequestedAt: null,
       lastEmailChangeRequestedAt: null,
-      birthDate: null,
       avatarAttachmentId: avatarId,
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
       updatedAt: new Date("2026-01-01T00:00:00.000Z"),

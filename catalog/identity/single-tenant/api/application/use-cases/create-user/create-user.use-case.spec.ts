@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from "vitest"
 import {
   EmailAlreadyInUseError,
   InvalidPermissionSetError,
-  InvalidProfessionalScopeError,
 } from "../../../domain/errors"
 import { makeIdentityConfig } from "../../../testing/identity.config.fixture"
 import { fakeRequestContext } from "../../request-context.fixture"
@@ -14,7 +13,6 @@ const NOW = new Date("2026-06-08T00:00:00.000Z")
 
 const BASE_ACCESS = {
   accessProfile: "admin" as const,
-  servesClients: false,
   permissions: ["admin.users.read" as const],
   areaIds: [] as string[],
   serviceIds: [] as string[],
@@ -143,7 +141,6 @@ describe("CreateUserUseCase", () => {
         name: "Ana",
         email: "ana@x.test",
         accessProfile: "admin",
-        servesClients: false,
         permissions: ["admin.users.create"],
         areaIds: [],
         serviceIds: [],
@@ -160,7 +157,6 @@ describe("CreateUserUseCase", () => {
         name: "Ana",
         email: "ana@x.test",
         accessProfile: "admin",
-        servesClients: false,
         permissions: [],
         areaIds: [],
         serviceIds: [],
@@ -169,24 +165,6 @@ describe("CreateUserUseCase", () => {
     ).rejects.toBeInstanceOf(InvalidPermissionSetError)
     expect(t.users.insert).not.toHaveBeenCalled()
   })
-
-  it("quem atende sem área → InvalidProfessionalScopeError, não cria nada", async () => {
-    const t = makeDeps()
-    await expect(
-      t.uc.execute({
-        name: "Pro",
-        email: "pro@x.test",
-        accessProfile: "professional",
-        servesClients: true,
-        permissions: [],
-        areaIds: [],
-        serviceIds: [],
-        schedulingAreaIds: [],
-      })
-    ).rejects.toBeInstanceOf(InvalidProfessionalScopeError)
-    expect(t.users.insert).not.toHaveBeenCalled()
-  })
-
   it("quem atende persiste permissões de outros módulos + áreas", async () => {
     const t = makeDeps()
     t.scope.assertValid.mockResolvedValue(undefined)
@@ -194,7 +172,6 @@ describe("CreateUserUseCase", () => {
       name: "Pro Cross",
       email: "pro.cross@example.com",
       accessProfile: "professional",
-      servesClients: true,
       permissions: ["admin.users.read"],
       areaIds: ["area-1"],
       serviceIds: [],
@@ -209,29 +186,6 @@ describe("CreateUserUseCase", () => {
       ["area-1"]
     )
   })
-
-  it("quem não atende persiste só as áreas de agendamento", async () => {
-    const t = makeDeps()
-    await t.uc.execute({
-      name: "Ag",
-      email: "ag@x.test",
-      accessProfile: "admin",
-      servesClients: false,
-      permissions: ["admin.tags.read"],
-      areaIds: ["area-ignorada"],
-      serviceIds: [],
-      schedulingAreaIds: ["area-1", "area-2"],
-    })
-    expect(t.users.replaceSchedulingAreas).toHaveBeenCalledWith(
-      expect.any(String),
-      ["area-1", "area-2"]
-    )
-    expect(t.users.replaceProfessionalAreas).toHaveBeenCalledWith(
-      expect.any(String),
-      []
-    )
-  })
-
   it("quem atende sem permissão de módulo é válido (piso = ≥1 área de atuação)", async () => {
     const t = makeDeps()
     t.scope.assertValid.mockResolvedValue(undefined)
@@ -239,7 +193,6 @@ describe("CreateUserUseCase", () => {
       name: "Pro Vazio",
       email: "pro.vazio@example.com",
       accessProfile: "professional",
-      servesClients: true,
       permissions: [],
       areaIds: ["area-1"],
       serviceIds: [],

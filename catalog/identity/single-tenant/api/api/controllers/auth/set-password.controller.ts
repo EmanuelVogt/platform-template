@@ -58,7 +58,6 @@ export class SetPasswordController {
       token: dto.token,
       password: dto.password,
       name: dto.name,
-      birthDate: dto.birthDate,
       avatarAttachmentId: dto.avatarAttachmentId,
       deviceCookie,
     })

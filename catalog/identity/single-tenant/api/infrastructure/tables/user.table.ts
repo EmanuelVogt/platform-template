@@ -1,7 +1,6 @@
 import { sql } from "drizzle-orm"
 import {
   boolean,
-  date,
   integer,
   text,
   timestamp,
@@ -33,9 +32,6 @@ export const users = identitySchema.table(
     // E-mail novo aguardando confirmação na troca self-service; null = sem troca pendente.
     pendingEmail: text("pending_email"),
     accessProfile: accessProfile("access_profile").notNull().default("admin"),
-    // Atende cliente: entra nos seletores, nos mapas e na escala. NÃO deriva do
-    // access_profile — agendista e recepção também atendem (ADR 0082).
-    servesClients: boolean("serves_clients").notNull().default(false),
     passwordHash: text("password_hash"),
     status: userStatus("status").notNull().default("active"),
     pepperVersion: integer("pepper_version").notNull().default(1),
@@ -50,8 +46,6 @@ export const users = identitySchema.table(
     lastEmailChangeRequestedAt: timestamp("last_email_change_requested_at", {
       withTimezone: true,
     }),
-    // ISO 'YYYY-MM-DD'; preenchida na ativação. Nullable: master/seed nunca passam pela tela.
-    birthDate: date("birth_date"),
     // Referência lógica a attachment.attachments (sem FK cross-schema). Null = sem avatar.
     avatarAttachmentId: text("avatar_attachment_id"),
     createdAt: timestamp("created_at", { withTimezone: true })

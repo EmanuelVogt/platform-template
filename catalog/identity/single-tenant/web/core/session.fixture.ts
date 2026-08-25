@@ -12,7 +12,6 @@ export function makeCurrentUser(over: Partial<CurrentUser> = {}): CurrentUser {
     accessProfile: "admin",
     permissions: [],
     avatarAttachmentId: null,
-    birthDate: null,
   }
   return { ...base, ...over }
 }

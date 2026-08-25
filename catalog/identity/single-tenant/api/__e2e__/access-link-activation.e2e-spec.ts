@@ -97,7 +97,6 @@ describe("Ativação via access-link (e2e)", () => {
       .send({
         token,
         name: "Ana Maria",
-        birthDate: "1990-05-20",
         password: "Senha-Ana-Muito-Forte-2026!",
       })
       .expect(200)
@@ -140,7 +139,6 @@ describe("Ativação via access-link (e2e)", () => {
       .send({
         token,
         name: "Ana",
-        birthDate: "1990-05-20",
         password: "Outra-Senha-Forte-2026!",
       })
       .expect(400)
@@ -176,7 +174,6 @@ describe("Ativação via access-link (e2e)", () => {
       .send({
         token,
         name: "Bia",
-        birthDate: "1995-03-10",
         password: "Senha-Bia-Muito-Forte-2026!",
       })
       .expect(400)

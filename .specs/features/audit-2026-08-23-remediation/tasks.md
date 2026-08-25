@@ -1720,7 +1720,7 @@ five `ADV-20260821-0*` announce the Jest → Vitest codemod.
 
 ### T49a: The catalog toll — five entry bumps and the `## [3.0.0]` sections
 
-**What**: Every catalog entry moves to `3.0.0` **before** any wave-8 commit touches entry code, so `entryChangedWithoutBump` never fires mid-cluster. `kernelRange` is deliberately left alone — AD-033 opens the ranges in T79's commit, not here.
+**What**: Every catalog entry moves to `3.0.0` **before** any wave-8 commit touches entry code, so `entryChangedWithoutBump` never fires mid-cluster. `kernelRange` is deliberately left alone — AD-033 opens the ranges in T79's commit, not here. **The inter-entry `dependsOn` ranges were an omission in this block, not a deliberate exclusion** — they belong here in spirit but landed in the follow-up **T49b** (owner ruling, 2026-08-25), because this task was already committed when the gap surfaced.
 **Where**: `catalog/*/module.json`
 **Touches**: `catalog/identity/single-tenant/module.json`, `catalog/attachment/module.json`, `catalog/audit/module.json`, `catalog/notification/module.json`, `catalog/tag/module.json`, `catalog/identity/single-tenant/CHANGELOG.md`, `catalog/attachment/CHANGELOG.md`, `catalog/audit/CHANGELOG.md`, `catalog/notification/CHANGELOG.md`, `catalog/tag/CHANGELOG.md`
 **Depends on**: None — runs first in the cluster and **must** precede T53
@@ -1742,6 +1742,37 @@ five `ADV-20260821-0*` announce the Jest → Vitest codemod.
 **Tests**: none (manifests) · **Gate**: build
 
 **Commit**: `chore(catalog)!: the five entries move to 3.0.0 for the kernel major`
+
+---
+
+### T49b: The inter-entry `dependsOn` ranges open with the bump — **OWNER RULING, 2026-08-25**
+
+**What**: T49a moved all five entries to `3.0.0` and left the inter-entry `dependsOn` ranges at `>=2.0.0 <3.0.0`, so `resolveDeps` (`lib/plan.mjs:50-58`) found no installed peer satisfying the range and `catalog:check` exited **5** (`MISSING_DEPS`, `lib/exit-codes.mjs:6`) on `identity/single-tenant` beside `notification@3.0.0`. The plan assigned `dependsOn` to **nobody** — T49a's Done-when pinned only `kernelRange`, T79's pins only `kernelRange`. **The owner ruled it opens now, in T49a's spirit, not in T79.** The precedent is in AD-033's own text: at `v2.0.0` the entries shipped with *version and `dependsOn` bumped, `kernelRange` not* — so `dependsOn` travelling with the version is the established pairing, and T49a's split was the anomaly.
+
+**Why it is safe to open here while `kernelRange` waits for T79**: the two ranges are measured against different things. `lintKernelRange` reads the changelog's latest heading (still `v2.4.1`), which is why T79 must own `kernelRange`; `dependsOn` is matched by `semver.satisfies` against the **installed peer's version** in the lock, which is already `3.0.0`. Opening one does not disturb the other.
+
+**Where**: `catalog/*/module.json`, `catalog/*/CHANGELOG.md`
+**Touches**: `catalog/identity/single-tenant/module.json`, `catalog/attachment/module.json`, `catalog/audit/module.json`, `catalog/tag/module.json`, `catalog/identity/single-tenant/CHANGELOG.md`, `catalog/attachment/CHANGELOG.md`, `catalog/audit/CHANGELOG.md`, `catalog/tag/CHANGELOG.md`
+**Depends on**: T49a
+**Exclusive**: no
+**Reuses**: T49a's `## [3.0.0]` sections — this task **appends** to them and opens no second heading (§ 0.8)
+**Requirement**: area H (release machinery) · AD-016, AD-033 · § 0.8 ruling 1–2
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+- [x] Every `dependsOn[].range` reads `>=3.0.0 <4.0.0` — `attachment` (`identity`, `notification`), `audit` (`identity`), `tag` (`identity`), `identity/single-tenant` (`notification`). **`notification` has an empty `dependsOn` and is not touched** — four manifests, not five
+- [x] `kernelRange` stays **untouched** at `>=2.0.0 <3.0.0` in all five (T79 opens it). The edit is line-scoped to `"name":` lines precisely because the two ranges are the same literal string
+- [x] No `version` field moves — `entryChangedWithoutBump` measures against the previous stable tag (§ 0.8)
+- [x] The four `## [3.0.0]` sections gain **one** appended `### Breaking` bullet naming the peer requirement; `attachment` and `tag`'s "nenhuma mudança de código … por esse motivo" becomes "… por esses motivos", since the section now carries two
+- [x] **No advisory** — `CODE_PATH_RE` (`advisory-required.mjs:11`) matches only `catalog/<entry>/{api,web,migrations,parity}/`; this commit stages neither a manifest nor a changelog into that set, and no `Advisory: none` trailer is added
+- [x] The `MISSING_DEPS` class is cleared: all five `module add` steps succeed in the rendered child, and no `dependsOn` error appears anywhere in the `catalog:check` log
+- [ ] Gate passes: the eight-command Build gate. **7 of 8 green; `catalog:check` still red, but at a different exit and a different cause** — exit **7**, the rendered child's `api#lint` with 43 errors (41 × `platform/no-existence-only-assert`, plus one `import-x/order` and one `@typescript-eslint/non-nullable-type-assertion-style`). Exit 5 aborted *before* the child's `pnpm check` ran, so this failure was **masked by the very defect this task fixed**. It is not a regression from these four manifests and is not T49b's to fix — tracked separately
+- [ ] Test count: none (manifests)
+
+**Tests**: none (manifests) · **Gate**: build
+
+**Commit**: `chore(catalog)!: open the inter-entry dependsOn ranges to 3.x`
 
 ---
 
@@ -1905,7 +1936,7 @@ so the wave-8 cross-references in this file, in `design.md` and in `STATE.md` do
 **What**: Regenerate `openapi.json` and the generated client so the committed contract matches the renamed cookies.
 **Where**: `openapi.json`
 **Touches**: `openapi.json`, `packages/api-client/src/`
-**Depends on**: T49, T49a, T51, T52, T53 (T50 retired — § 0.8)
+**Depends on**: T49, T49a, T49b, T51, T52, T53 (T50 retired — § 0.8)
 **Exclusive**: yes
 **Reuses**: `pnpm contract` (root `package.json:12`)
 **Requirement**: BRAND-01 (F-agnostic-leaks-3 **C**) — story AC 1, contract half
@@ -3287,10 +3318,18 @@ in `.specs/STATE.md`, and it wants its own task beside T33's tests in
 3. **`catalog:check` — T49a bumped all five entries to `3.0.0` but left the inter-entry `dependsOn`
    ranges at `>=2.0.0 <3.0.0`.** `identity/single-tenant` now refuses to install beside
    `notification@3.0.0`. T49a's Done-when pinned `kernelRange` (AD-033, T79 opens it) and said nothing
-   about `dependsOn` — the plan never assigned an owner for it. **This needs a ruling, not just a
+   about `dependsOn` — the plan never assigned an owner for it. **This needed a ruling, not just a
    fix:** either `dependsOn` opens to `>=3.0.0 <4.0.0` in the same T49a spirit, or it opens in T79
-   alongside `kernelRange`. Whichever, add the file to a task's `Touches`.
-   **STILL OPEN — this is the one thing blocking the rest of the feature.** Failures 1 and 2 are
+   alongside `kernelRange`.
+   **RULED 2026-08-25 — the owner chose the first: `dependsOn` opens now, in T49a's spirit.**
+   Carried by the new **T49b**, which owns the four manifests and their `Touches`
+   (`notification`'s `dependsOn` is empty and is not touched — four entries, not five). The
+   precedent cited in the ruling is AD-033's own text: at `v2.0.0` the entries shipped with
+   *version and `dependsOn` bumped, `kernelRange` not*, so `dependsOn` travelling with the version
+   is the established pairing and T49a's split was the anomaly. `kernelRange` still waits for T79
+   — the ranges are measured against different things (`lintKernelRange` reads the changelog's
+   latest heading; `dependsOn` is `semver.satisfies` against the installed peer's version), so
+   opening one does not disturb the other. Failures 1 and 2 are
    fixed (`03e74f2`: `NullStorageAdapter` declared all five methods with zero parameters and
    `implements` still passed because TypeScript checks method parameters bivariantly — the adapter
    was the defect, not the spec. `49824ef`: the doubles are now

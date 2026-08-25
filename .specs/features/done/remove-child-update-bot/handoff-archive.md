@@ -63,3 +63,10 @@ Gates at closeout: `pnpm check` 5/5, `pnpm test` 585/585, `pnpm test:scripts` 34
   `.worktrees/security-audit-remediation` was clean and its branch
   `feat/security-audit-remediation` had zero commits absent from `main` (45 behind). The
   branch itself was left in place — fully merged, safe to delete whenever.
+
+## Handoff entry, verbatim
+
+Moved out of `.specs/STATE.md` § Handoff on 2026-08-24; the Handoff carries open work only.
+Every item it left open is resolved — see this file's Outcome section.
+
+- Feature `remove-child-update-bot` — **DONE (2026-08-23). Verifier PASS, 10/10 ACs, sensor 3/3 killed.** The owner decision that blocked the `v2.3.0` tag is **applied — the block is lifted.** Archive `.specs/features/done/remove-child-update-bot/` (`handoff-archive.md` carries the original decision verbatim, the commit table, the two deliberate deviations from the removal scope, and three findings). Three commits on `main`, `eb907ef`…`557fef0`, **not pushed**. AD-034's child side amended in place. Gates: `pnpm check` 5/5, `pnpm test` 585/585, `pnpm test:scripts` 345/345 (baseline 355 − the deleted bot test's 10), `catalog:lint` 0, `catalog:typecheck` 5/5. Also done as housekeeping: the stale `.worktrees/security-audit-remediation` worktree was removed (clean, branch fully merged; the branch itself was left in place).

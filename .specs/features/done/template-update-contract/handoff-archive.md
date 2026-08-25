@@ -79,3 +79,10 @@ the bot's inert-in-template guard sits on every step after checkout.
 neither tags nor pushes (AD-034, `docs/agents/workflow.md`). Two unrelated commits ride the same
 tag: `817a129` (platform-feedback) and `7ab03bd` (the `template-update` skill symlink v2.2.0 left
 untracked).
+
+## Handoff entry, verbatim
+
+Moved out of `.specs/STATE.md` § Handoff on 2026-08-24; the Handoff carries open work only.
+Every item it left open is resolved — see this file's Outcome section.
+
+- Feature `template-update-contract` — **DONE (2026-08-23). Verifier PASS round 2, 33/33 ACs.** Archive `.specs/features/done/template-update-contract/` (`handoff-archive.md` carries the full record: what shipped, the commit range `db8149d`…`474f9f6`, every deviation, and the two findings worth keeping). 17/17 tasks in 3 waves, all workers sonnet, worked directly on `main` — no worktree, nothing to merge. Final gate exit 0: `pnpm check` 5/5, `pnpm test` 585/585, `pnpm test:scripts` 355/355 (pre-feature baseline 279), `catalog:lint` 0, `catalog:typecheck` 5/5; sensor 3/3 killed. AD-034 recorded; lessons L-025/026/027. **Still open, and the user's act alone: `v2.3.0` is not tagged** — the tag is cut by dispatching the `release` workflow (the agent neither tags nor pushes). Two unrelated commits ride the same tag: `817a129` platform-feedback and `7ab03bd`, the `.claude/skills/template-update` symlink v2.2.0 left untracked. Note for whoever tags: `docs/dev/template-changelog.md`'s v2.3.0 section is being appended to by a parallel session (dev-server hooks, item 7) — the preflight requires its `### Child migration steps` to stay the literal `None — copier update is enough.`

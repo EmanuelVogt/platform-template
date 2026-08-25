@@ -95,3 +95,10 @@ re-baseline. Only the stale "red on purpose" comment *inside* the block was reti
 threshold value is still 90 and no key was removed" — the original probe would have forced the
 file to keep a statement that T10's measurement had just made false (`spec.md` § COV-03
 amendment).
+
+## Handoff entry, verbatim
+
+Moved out of `.specs/STATE.md` § Handoff on 2026-08-24; the Handoff carries open work only.
+Every item it left open is resolved — see this file's Outcome section.
+
+- Feature `api-coverage-to-90` — **DONE (2026-08-22), Verifier PASS at opus.** Closes the former *"Open, blocking pushes"* item: `pre-push` is green end to end (`lefthook run pre-push` exit 0 — catalog-typecheck, migrations, typecheck, test-coverage). `apps/api/src/**` at 96.69 / 95.33 / 94.92 / 96.84 against the flat 90; floors, pragmas and existing tests untouched. Full record — commit table, the two denominator corrections, the four unreachable branches deleted from production code, and lessons L-014/L-015 — in `.specs/features/done/api-coverage-to-90/handoff-archive.md`. `test-suite-refactor` T39/C10 still owns the coverage ratchet: the `thresholds` block's four `90`s and both glob keys were left untouched for it.

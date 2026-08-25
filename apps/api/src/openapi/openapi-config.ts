@@ -100,7 +100,7 @@ function collectPublicOperationIds(app: INestApplication): Set<string> {
  * das rotas @Public. CSRF fica na descrição do documento (prosa) e é refletido
  * pelo interceptor do api-client (app_csrf → X-CSRF-Token), NÃO como parâmetro
  * por operação: param de header vira variable da mutation no Kubb e quebra
- * caller sem corpo (logout/revoke-others). Ver ADR 0015.
+ * caller sem corpo (logout/revoke-others).
  */
 export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
   const document = cleanupOpenApiDoc(

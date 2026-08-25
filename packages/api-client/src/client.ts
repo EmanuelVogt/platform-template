@@ -58,16 +58,25 @@ export const instance: AxiosInstance = axios.create({
 
 const MUTATING_METHODS = new Set(["post", "put", "patch", "delete"])
 
-/** Lê o cookie rit_csrf (legível por JS, emitido no login e no GET /auth/session
- *  sob SameSite=None — ADR 0015). Sob SameSite=Lax/Strict o cookie não existe. */
+const DEFAULT_CSRF_COOKIE_NAME = "app_csrf"
+
+let csrfCookieName = DEFAULT_CSRF_COOKIE_NAME
+
+/** Lê o cookie de CSRF (legível por JS, emitido no login e no GET /auth/session
+ *  sob SameSite=None). Sob SameSite=Lax/Strict o cookie não existe. */
 function readCsrfToken(): string | null {
   if (typeof document === "undefined") return null
-  const match = document.cookie.match(/(?:^|;\s*)rit_csrf=([^;]*)/)
-  return match ? decodeURIComponent(match[1] ?? "") : null
+  for (const pair of document.cookie.split(";")) {
+    const separator = pair.indexOf("=")
+    if (separator < 0) continue
+    if (pair.slice(0, separator).trim() !== csrfCookieName) continue
+    return decodeURIComponent(pair.slice(separator + 1))
+  }
+  return null
 }
 
-// Double-submit do CsrfGuard: reflete rit_csrf em X-CSRF-Token em toda mutação
-// (ADR 0015 §37). Sob SameSite=Lax (dev) o cookie não existe → header omitido →
+// Double-submit do CsrfGuard: reflete o cookie de CSRF em X-CSRF-Token em toda
+// mutação. Sob SameSite=Lax (dev) o cookie não existe → header omitido →
 // guard ignora. O transporte cuida do header — não é parâmetro por operação.
 instance.interceptors.request.use((config) => {
   const method = config.method?.toLowerCase()
@@ -112,6 +121,10 @@ export type ConfigureClientOptions = {
   /** Chamado em todo 401. Recebe a `url` da request que falhou para o caller
    *  decidir a política (ex.: ignorar o 401 do próprio probe de sessão). */
   onUnauthorized?: (context: { url?: string }) => void
+  /** Nome do cookie de CSRF que o double-submit reflete em `X-CSRF-Token`.
+   *  Default `app_csrf`; o produto que renomeia o cookie na API passa o nome
+   *  aqui, senão o header sai vazio e toda mutação leva 403. */
+  csrfCookieName?: string
 }
 
 /**
@@ -120,6 +133,7 @@ export type ConfigureClientOptions = {
  */
 export function configureClient(options: ConfigureClientOptions): void {
   instance.defaults.baseURL = options.baseURL
+  csrfCookieName = options.csrfCookieName ?? DEFAULT_CSRF_COOKIE_NAME
   const onUnauthorized = options.onUnauthorized
   if (onUnauthorized) {
     instance.interceptors.response.use(

@@ -37,19 +37,19 @@ describe("transporte do api-client (integração via MSW)", () => {
 
   beforeEach(() => {
     onUnauthorized.mockReset()
-    document.cookie = "rit_csrf=tok-123"
+    document.cookie = "app_csrf=tok-123"
   })
 
   afterEach(() => {
     server.resetHandlers()
-    document.cookie = "rit_csrf=; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+    document.cookie = "app_csrf=; expires=Thu, 01 Jan 1970 00:00:00 GMT"
   })
 
   afterAll(() => {
     server.close()
   })
 
-  it("reflete o cookie rit_csrf em X-CSRF-Token nas mutações com corpo", async () => {
+  it("reflete o cookie app_csrf em X-CSRF-Token nas mutações com corpo", async () => {
     let received: string | null = null
     server.use(
       http.post(`${BASE_URL}${MUTATION_URL}`, ({ request }) => {

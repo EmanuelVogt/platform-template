@@ -11,6 +11,8 @@ const ROOT_DIR = path.join(
   "../../.."
 )
 const CI_WORKFLOW_PATH = path.join(ROOT_DIR, ".github/workflows/ci.yml")
+const API_CLIENT_DIR = "packages/api-client"
+const KUBB_CONFIG_PATH = path.join(ROOT_DIR, API_CLIENT_DIR, "kubb.config.ts")
 
 function readYaml(filePath) {
   return parseYaml(readFileSync(filePath, "utf8"))
@@ -22,13 +24,59 @@ function allRunSteps(jobs) {
   )
 }
 
-test("TOOL-11: package.json expõe contract:check = pnpm contract + diff sem sujeira no contrato gerado", () => {
+// Corta em `plugins:` antes de procurar `output: { path: ... }`: os plugins
+// (pluginTs/pluginZod/pluginReactQuery) também declaram `output.path`, só que
+// como subdiretório do output de topo — sem o corte, o primeiro match poderia
+// pegar um deles em vez do output raiz do defineConfig.
+function deriveKubbOutputPath() {
+  const source = readFileSync(KUBB_CONFIG_PATH, "utf8")
+  const start = source.indexOf("defineConfig(")
+  assert.ok(start !== -1, "kubb.config.ts não chama defineConfig(...)")
+  const pluginsIndex = source.indexOf("plugins:", start)
+  const topLevelBody = source.slice(
+    start,
+    pluginsIndex === -1 ? undefined : pluginsIndex
+  )
+
+  const rootMatch = topLevelBody.match(/root:\s*["']([^"']+)["']/)
+  const outputMatch = topLevelBody.match(
+    /output:\s*{\s*path:\s*["']([^"']+)["']/
+  )
+  assert.ok(rootMatch, "kubb.config.ts não declara `root` no nível de topo")
+  assert.ok(
+    outputMatch,
+    "kubb.config.ts não declara `output.path` no nível de topo"
+  )
+
+  return path.posix.normalize(
+    path.posix.join(API_CLIENT_DIR, rootMatch[1], outputMatch[1])
+  )
+}
+
+test("TOOL-11/T57a: contract:check cobre openapi.json, src/ escrito à mão e o output real do Kubb — derivado de kubb.config.ts", () => {
   const { scripts } = JSON.parse(
     readFileSync(path.join(ROOT_DIR, "package.json"), "utf8")
   )
+  const kubbOutputPath = deriveKubbOutputPath()
   assert.equal(
     scripts["contract:check"],
-    "pnpm contract && git diff --exit-code openapi.json packages/api-client/src"
+    `pnpm contract && git diff --exit-code openapi.json ${API_CLIENT_DIR}/src ${kubbOutputPath}`
+  )
+})
+
+test("T57a: generated/.kubb/ segue ignorado — o diretório de scratch do Kubb não deve fazer o check tropeçar", () => {
+  const kubbOutputPath = deriveKubbOutputPath()
+  const outputDirName = path.posix.basename(kubbOutputPath)
+  const gitignore = readFileSync(
+    path.join(ROOT_DIR, API_CLIENT_DIR, ".gitignore"),
+    "utf8"
+  )
+  assert.ok(
+    gitignore
+      .split("\n")
+      .map((line) => line.trim())
+      .includes(`${outputDirName}/.kubb/`),
+    `.gitignore de ${API_CLIENT_DIR} não ignora mais ${outputDirName}/.kubb/`
   )
 })
 

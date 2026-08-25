@@ -10,7 +10,7 @@
     "format": "turbo format",
     "format:check": "prettier --check \"**/*.{ts,tsx,mts,mjs,cjs,js,jsx,json,yml,yaml,css}\"",
     "contract": "pnpm --filter api contract && pnpm --filter @platform/api-client generate",
-    "contract:check": "pnpm contract && git diff --exit-code openapi.json packages/api-client/src",
+    "contract:check": "pnpm contract && git diff --exit-code openapi.json packages/api-client/src packages/api-client/generated",
     "contract:consumers": "node scripts/contract-consumers.mjs",
     "contract:diff": "node scripts/contract-diff.mjs",
     "tokens:report": "node scripts/token-report.mjs",

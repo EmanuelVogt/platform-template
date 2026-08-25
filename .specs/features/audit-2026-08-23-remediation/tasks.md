@@ -3396,3 +3396,30 @@ repair it is precisely the one blocked.** `51daeb3` created that state on 2026-0
       unfixed rule. Put it beside T33's 7 tests, which pin the `HEAD` semantics
 - [ ] Gate passes: `pnpm test:scripts` and `pnpm catalog:lint`
 **Commit**: `fix(release): make the entry-bump rule see staged state in a pre-commit hook`
+
+### Cluster CG4 — every job that runs `pnpm test:scripts` provisions `copier` (sonnet)
+
+**Found by the failed `v2.4.0` release run `32795089578`**, which is the only reason this is known:
+`Verify` returned `pnpm test:scripts` **577/592, 15 failures**, every one of them
+`copier copy falhou: undefined` with `status === null` — the binary is absent, so the spawn never
+ran. The 15 are the render-based tests **Fix Round 1 itself added**: `brand-hygiene.test.mjs`
+(64-72, whose `before` hook renders the child, so even its self-tests fail) and
+`locale-threading.test.mjs` (363-368). Local runs are green because the workstation has `copier`
+installed. **The gate was green locally and red in CI for one reason: an unprovisioned tool.**
+
+#### GT7: install `copier` wherever `pnpm test:scripts` runs, and guard it
+
+**Where**: `.github/workflows/release.yml:50` (`verify` job) and `.github/workflows/ci.yml:132`
+(`gates` job) — both run `pnpm test:scripts`; neither installs `copier`. Only `ci.yml:187`
+(`catalog`), `ci.yml:207` (`smoke`) and `release.yml:99` (`catalog`) do.
+**Touches**: `.github/workflows/release.yml`, `.github/workflows/ci.yml`,
+`scripts/platform/__tests__/workflow-copier-provisioning.test.mjs` (new)
+**Done when**:
+- [ ] Both jobs install `copier` before the step that needs it, matching the existing
+      `- run: pipx install copier` line verbatim — do not introduce a second provisioning style
+- [ ] A guard asserts the invariant rather than the two line numbers: **every workflow job whose
+      steps run a command that renders a child must provision `copier`**. Derive the set from the
+      workflow files, so a job added later is covered without editing the test
+- [ ] The guard fails when either `pipx install copier` line is removed — prove it
+- [ ] Gate passes: `pnpm test:scripts`
+**Commit**: `fix(ci): provision copier in every job that runs the script tests`

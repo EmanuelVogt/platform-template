@@ -169,8 +169,10 @@ Rules, obeyed by the doc author (T2, T3, T5, T6) and enforced by the guard (T9):
 
 - **Marker prefix exactly `audience-contract:`**, then the token verbatim as it appears in the doc,
   then ` — `, then the reason.
-- **One token, one line.** The comment names the token literally, so a line carrying two absent
-  tokens needs two comments. A waiver never covers a whole line, a paragraph or a file.
+- **One token, one paragraph.** The comment names the token literally, so a paragraph carrying two
+  absent tokens needs two comments. A waiver never covers a file. *(Amended at wave 3: this read
+  "one line" until hard-wrapped prose proved a token and the sentence's end sit on different source
+  lines. See § Wave 3 deviations, item 2.)*
 - **End of the same line only.** A comment on its own line does **not** count: in CommonMark an HTML
   block interrupts the paragraph it sits inside, so a waiver written that way would silently change
   how the doc renders. Trailing inline raw HTML renders as nothing and keeps the paragraph intact.
@@ -231,6 +233,47 @@ Gate: `pnpm format:check` exit 0 · `pnpm test:scripts` **639 pass / 0 fail**.
 | Cluster | Task | Commit | Note |
 | ------- | ---- | ------ | ---- |
 | C4 | T7 | `203f448` | `/docs/platform` anchored; the per-file `docs/catalog/README-contract.md` entry removed; `/docs/platform_template` left in place |
+
+### Wave 3 — DONE, Build gate GREEN (2026-08-25)
+
+Gate: `pnpm format:check` exit 0 · `pnpm test:scripts` **681 pass / 0 fail** (floor was 630).
+Shipped set measures 663 of 1551 tracked files; the guard runs over 159 shipped docs.
+
+| Cluster | Task | Commit | Note |
+| ------- | ---- | ------ | ---- |
+| C5 | T8 | `df41664` | shipped set 663/1551, floor of 500 asserted |
+| C5 | T9 | `83cd9fc` | guard green over 159 shipped docs |
+| C5 | T10 | `2629248` | |
+| C5 | T11 | `79d17e9`, `2e0c31d` | the grep had to exclude its own file once tracked |
+| C5 | T12 | `95b02b0` | new `## v2.5.0` above `v2.4.1`, migration steps `None` |
+| C5 | T10 close-out | `5d86d8b` | **orchestrator follow-up** — see deviation 3 |
+
+### Wave 3 deviations, all accepted
+
+**1. `.agents/skills/**` is outside the guard's scope** (`audience-contract.mjs:172`). 19 of the 22
+live findings sat there: synced third-party payload that no wave repairs and no task owns. This
+moves the guard back toward the scope the owner actually ruled (`docs/**`); the plan had widened it
+to "every shipped doc". Blast radius is pinned by assertion: with the exemption off, zero findings
+fall outside that prefix.
+
+**2. A waiver matches over its paragraph, not one source line — my pinned grammar was wrong.** I
+pinned "one token, one line". It broke immediately on hard-wrapped prose: wave 1 correctly wrote
+`docs/catalog/catalog.md`'s waiver at `:5` for a token sitting on `:4`. C5 widened the match to the
+paragraph and kept the part that carries the guarantee — an own-line comment still waives nothing,
+asserted for both the adjacent and the separated case. The spelling is unchanged. Amend § *Inline
+waiver — pinned grammar* to read "paragraph" wherever it reads "line".
+
+**3. T10 shipped a ratchet over a REAL live defect, and the orchestrator closed it.** C5's new stem
+rule found `docs/dev/template-update.md:10` — "The `release` workflow runs the full gate" — a REAL
+AUD-06 finding that did not exist as a finding when the tree was measured, because the rule did not
+exist then. It sat outside C5's `Touches`, so C5 pinned it as an expected finding rather than
+silently exempting it. Correct call, wrong end state: the guard would have shipped green while
+tolerating exactly the defect it exists to catch. Closed in `5d86d8b` with an inline waiver — the
+sentence sits under "What the template promises per tag", describes the template's own machinery and
+instructs the child to do nothing — and the assertion was shrunk to expect **zero** live findings.
+
+**Also recorded:** `ADV-YYYYMMDD-NN.md` is read as a spec § Edge-Cases placeholder; AUD-04 exempts the
+two historical records (the changelog and `docs/platform_template/`), blast radius pinned.
 
 ### Corrections this wave forced on the plan
 

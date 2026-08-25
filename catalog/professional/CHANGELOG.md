@@ -32,3 +32,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 - `professional-query.helpers.ts`: "profissional atribuível" passa a juntar
   `professional.professional_profile` — `serves_clients` não é mais coluna de `identity.users`.
 - Spec de integração do repositório com 5 casos, sobre o Postgres de teste (sem mock de banco).
+- Facades da entrada (`api/api/facades/`): `ProfessionalDirectoryFacade` (diretório de
+  atribuíveis, agora sobre o port local `ProfessionalDirectoryReader` e não mais sobre o
+  `UserRepository` do identity), `ProfessionalAssignmentFacade` e `professional-tables.facade`.
+- `ProfessionalModule.forRoot({ product })` monta portas, adapters e facades e abre o slot de
+  produto para `ProfessionalScope`/`ProfessionalCommitments`, com null objects por padrão.

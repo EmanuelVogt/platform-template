@@ -16,7 +16,17 @@ implementação alternativa do mesmo módulo, e esta é um complemento que se in
 | — | — | — | — | — |
 
 A entrada não publica rota HTTP própria: sua superfície é in-process, consumida por outras
-entradas e pelo módulo do produto através das facades exportadas por `ProfessionalModule`.
+entradas e pelo módulo do produto através das facades exportadas por `ProfessionalModule`
+(`forRoot`), na regra de que **toda leitura cross-module passa por uma facade do módulo dono**:
+
+- `ProfessionalDirectoryFacade` — `isActiveProfessional`, `searchAssignable`, `findByIds`,
+  `listActive`, `listActiveByArea`, `findAreaIdsByProfessionalIds`,
+  `findActiveProfessionalIdsByServices`, `findActiveProfessionalLinksByServices`.
+- `ProfessionalAssignmentFacade` — o vínculo profissional↔serviço editado POR SERVIÇO.
+- `professional-tables.facade.ts` — só o formato das linhas de agenda.
+
+`ProfessionalModule.forRoot({ product })` abre o slot de produto para `ProfessionalScope` e
+`ProfessionalCommitments`; sem ele, os null objects respondem.
 
 ## Portas do kernel consumidas
 

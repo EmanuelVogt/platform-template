@@ -162,6 +162,10 @@ jobs:
       # daemon do testcontainers, e test:coverage funde unit+int+e2e num processo
       # Vitest só e aplica os thresholds por glob.
       - run: pnpm test:coverage
+      # release-gate-parity.test.mjs: espelha o step de shuffle do api-e2e que
+      # ci.yml roda no job test-coverage (CI-01/AC1) — sem ele o release taguearia
+      # sem provar a mesma independência de ordem que o CI exige a cada push.
+      - run: pnpm test:e2e -- --sequence.shuffle
 
   tag:
     name: Tag and push

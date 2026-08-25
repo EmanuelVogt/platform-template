@@ -113,6 +113,10 @@ jobs:
       # test:coverage roda unit+int+e2e num processo Vitest só, funde a cobertura
       # e aplica os thresholds por glob — falha o build se erodir.
       - run: pnpm test:coverage
+      # CI-01/AC1: prova de independência de ordem do projeto api-e2e. Corre de novo,
+      # sozinho e embaralhado — test:coverage acima já provou cobertura e correção,
+      # este step só prova que a suíte não depende da ordem dos testes.
+      - run: pnpm test:e2e -- --sequence.shuffle
 
   gates:
     name: Gates

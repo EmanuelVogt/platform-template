@@ -184,3 +184,73 @@ catalog/identity/single-tenant/api/__e2e__/devices.e2e-spec.ts           75   ex
 ## literal, so :60/:67 may need the config value, not a hardcoded string.
 ## BOTH COMMENTS (:47 in auth-login and auth-session) assert something false and
 ## must be deleted or corrected, not just left beside a renamed literal.
+
+
+################################################################################
+# 5. THE BRAND-01 QUESTION, ANSWERED — AND THE ANSWER IS THE SAME MASK AGAIN.
+#    Established 2026-08-25 while executing T49f. Do not re-derive.
+################################################################################
+
+## T55 IS WRITTEN AND SHIPPED. The unchecked Done-when boxes at tasks.md:2023
+## are stale bookkeeping, not state: the Wave 8 execution log (tasks.md:3409)
+## records C15 = T54 -> T55 -> T56 at `d5cfcaf`, `06398ac`, `7dcde4e`. The gate
+## bans `rit_`, `rit-`, `__Host-rit` and `America/Sao_Paulo` today
+## (`scripts/platform/__tests__/brand-hygiene.test.mjs:55,59`).
+##
+## WHY IT DOES NOT CATCH THE `rit_*` UNDER `catalog/`: IT SCANS A RENDERED
+## CHILD, AND A CATALOG ENTRY NEVER ENTERS A RENDER.
+##   brand-hygiene.test.mjs:228  renderChild(...)   <- copier copy
+##   :63  SCAN_ROOTS      = ["docs", ".claude", ".github/workflows"]
+##   :68  CODE_SCAN_ROOTS = ["apps/api/src"]
+## The render carries the kernel; entries arrive by the SECOND delivery channel,
+## `pnpm platform module add`, which lands them at `apps/api/src/modules/<entry>`
+## AFTER the render. So `apps/api/src` is scanned but the entry's files are not
+## there to scan. This is the same structural blindness as the ESLint story —
+## `catalog/` outside the workspace, outside every gate the template runs — and
+## the same second channel that `docs-shipped-paths.test.mjs` had to be taught
+## about in the audience-contract fix. THE GATE IS NOT WRONG; ITS SCOPE IS.
+##
+## THE COUNT IT WOULD FIND IF IT COULD SEE THEM: 16 `rit_*` SITES IN 7 FILES,
+## on top of T49f's 17, all green today. They are NOT stale like C's: each spec
+## sets its OWN COOKIE_NAME / DEVICE_COOKIE_NAME to the `rit_*` literal and then
+## asserts against that same literal, so they are self-consistent. BRAND-01
+## violations, not test failures — which is why T49f's 21-failure scope does not
+## reach them.
+##
+##   api/__e2e__/auth-anti-enum.e2e-spec.ts                          :72
+##       (`__Host-rit_session` inside a NEGATIVE regex — the assertion that
+##        proves the prefix is absent carries the literal, exactly the case
+##        KNOWN_EXCEPTIONS already waives for openapi-config.spec.ts:177)
+##   api/api/middleware/auth-seam.spec.ts                             :34
+##   api/api/middleware/auth.middleware.spec.ts                       :22
+##   api/api/controllers/auth/confirm-email-change.controller.spec.ts :23,:24,:40
+##   api/application/use-cases/request-email-change/
+##       email-change-flow.int-spec.ts                                :62,:63
+##   api/application/use-cases/reset-password/
+##       reset-password.use-case.int-spec.ts                          :73,:74
+##   api/application/use-cases/change-password/
+##       change-password.use-case.int-spec.ts                    :125,:126,:194,:195
+##   api/infrastructure/repositories/
+##       drizzle-auth-event.repository.int-spec.ts                    :389,:390
+##
+## Paths relative to `catalog/identity/single-tenant/`. No other entry has one.
+## Two decisions are owed, and neither is T49f's: (1) rename the sixteen;
+## (2) extend the gate's scan to an INSTALLED child (render + `module add`) so
+## the class cannot come back. Both belong beside T55, or in a new task.
+##
+## CORRECTION TO COMMIT faf3508's BODY: it states that T55 "does not exist yet
+## (depends on T54)". That is WRONG — it was read off the stale checkboxes at
+## tasks.md:2023 before the execution log was consulted. T55 shipped at
+## `06398ac`; the gate exists and its scan roots are the reason. The finding
+## itself — 16 sites, file:line above — stands unchanged.
+
+## 5b. THE GATE BITES THE ADVISORIES THIS TASK WRITES.
+##
+## `docs` IS a scan root and `docs/advisories/**` DOES ship to the child, so
+## ADV-20260825-03 (`rit_session`, `America/Sao_Paulo`) and -04
+## (`America/Sao_Paulo`) trip brand-hygiene the moment they land — the advisory
+## text has to cite the old values, because that is what the child greps for.
+## Precedent is already in the file: ADV-20260824-03/04 carry exactly this
+## waiver (brand-hygiene.test.mjs:105-106, "não é o dono vazando, é o texto que
+## explica a mudança quebrada"). The two new IDs join KNOWN_EXCEPTIONS on the
+## same grounds.

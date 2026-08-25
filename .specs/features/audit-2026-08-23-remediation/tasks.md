@@ -1612,7 +1612,8 @@ Each ships its half of the idempotent `scripts/platform/migrations/v3.0.0.mjs` (
 >    with no glob and self-filters. Satisfied only by a **staged** `docs/advisories/ADV-*.md` whose
 >    `module` frontmatter covers the entry (read from the index, `:37-41`) or by an
 >    `Advisory: none — <reason>` trailer (`TRAILER_RE`, `:13`).
-> 2. Both entries are at `version 2.0.2` and `git diff v2.4.0..HEAD -- catalog/` is **empty**, so
+> 2. *(Measured before `v2.4.1`; **`identity` has since moved to `2.1.0`** and `git diff v2.4.0..HEAD -- catalog/` is no longer empty — `test-suite-refactor` landed `856adc0` on the entry, bumping it and paying the hook with an honest `Advisory: none` trailer for test-only code. The ruling in § 0.8 is unaffected: `3.0.0` clears `2.1.0` as easily as it cleared `2.0.2`. Only the baseline number below is stale.)*
+>    Both entries are at `version 2.0.2` and `git diff v2.4.0..HEAD -- catalog/` is **empty**, so
 >    `entryChangedWithoutBump` returns `false` today. T50's first commit flips that: the rule then
 >    fires in the pre-commit hook (`PLATFORM_ENTRY_BUMP_STATE=staged`, `lefthook-local.yml`) *and*
 >    in `pnpm catalog:lint` (`head`). Same class of lock-up as `51daeb3`.
@@ -1662,7 +1663,9 @@ opens all six ranges (five entries + `professional`) in the same commit as the h
 AD-033 prescribes. Every intermediate commit stays green.
 
 **Consequence — the entries move once for the whole release.** `entryChangedWithoutBump` compares
-against the previous stable tag, where every entry reads `2.0.2`. Once T49a sets `3.0.0`, every
+against the previous stable tag — **read the versions there, do not assume `2.0.2`**: another
+session bumped `identity` to `2.1.0` before `v2.4.1`, and the tag `v3.0.0` measures against will be
+`v2.4.1`, not `v2.4.0`. Once T49a sets `3.0.0`, every
 later catalog commit of `v3.0.0` is already covered, and **no later task may bump an entry again.**
 Checked card by card: only **T72** carried a bump Done-when (*"The entry's `version` bumps for the
 break"*), and it is amended to forbid the second bump. T63 and T66 carry no version or changelog

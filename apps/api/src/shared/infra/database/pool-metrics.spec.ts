@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { makeTestLogger } from "../../../../test/setup/test-logger"
+import { makeTestLogger } from "../../test/int/logger"
 
 import {
   PoolMetrics,

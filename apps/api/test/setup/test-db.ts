@@ -1,41 +1,17 @@
-import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres"
-import Redis from "ioredis"
-
-import * as schema from "../../src/db/schema"
-import { parseEnv } from "../../src/shared/config/env"
-import { ApplicationPool } from "../../src/shared/infra/database/application-pool"
-import { poolConfig } from "../../src/shared/infra/database/connection-config"
-
-import { containerPostgresUri, containerRedisUri } from "./container-uris"
-
-import type { Env } from "../../src/shared/config/env"
+// Plumbing legado: ver `test-logger.ts`. O pool, o db e o reset vêm do harness;
+// o que sobra aqui são os truncates nomeados por módulo, que pertencem às
+// entradas e saem com elas (GA-9), não ao kernel.
 import type { Pool } from "pg"
 
-export function testDatabaseUrl(): string {
-  const base = containerPostgresUri()
-  if (process.env.TEST_DB_PER_WORKER !== "1") return base
-  const url = new URL(base)
-  url.pathname = `/test_w${process.env.VITEST_POOL_ID ?? "1"}`
-  return url.toString()
-}
-
-export function testRedisUrl(): string {
-  return containerRedisUri()
-}
-
-/**
- * Zera o Redis efêmero entre testes. Abre uma conexão própria, faz FLUSHALL e
- * encerra — usar no `beforeEach` das suítes que dependem de estado de rate-limit
- * para o contador não vazar entre testes do mesmo run.
- */
-export async function flushRedis(): Promise<void> {
-  const redis = new Redis(testRedisUrl(), { maxRetriesPerRequest: 1 })
-  try {
-    await redis.flushall()
-  } finally {
-    await redis.quit()
-  }
-}
+export {
+  createTestDb,
+  createTestPool,
+  resetDb,
+  testDatabaseUrl,
+  truncateKernel,
+  type TestDb,
+} from "../../src/shared/test/int/db"
+export { flushRedis, testRedisUrl } from "../../src/shared/test/int/redis"
 
 /**
  * E-mail de seed isolado por suíte. Dois e2e que reusam o mesmo e-mail num
@@ -44,49 +20,6 @@ export async function flushRedis(): Promise<void> {
  */
 export function seedEmail(suite: string, local: string): string {
   return `${suite}.${local}@test.local`
-}
-
-/**
- * `env()` é memoizado e exige WEB_ORIGIN/REDIS_URL, que o processo de teste de
- * integração nunca define — por isso valida uma cópia local com `parseEnv`,
- * suprindo os 3 campos obrigatórios sem tocar no cache global.
- */
-function testConnectionEnv(): Env {
-  return parseEnv({
-    ...process.env,
-    DATABASE_URL: testDatabaseUrl(),
-    WEB_ORIGIN: process.env.WEB_ORIGIN ?? "http://localhost:5173",
-    REDIS_URL: process.env.REDIS_URL ?? "redis://localhost:6379",
-  })
-}
-
-export function createTestPool(overrides?: { max?: number }): ApplicationPool {
-  const config = testConnectionEnv()
-  return new ApplicationPool(
-    { ...poolConfig(config), ...overrides },
-    {
-      maxWaiting: config.DATABASE_POOL_MAX_WAITING,
-      acquireWarnMs: config.DATABASE_POOL_ACQUIRE_WARN_MS,
-    }
-  )
-}
-
-/**
- * Tipado com o schema concreto, e não com o `DrizzleDb` agnóstico do kernel:
- * int-spec usa a API relacional (`db.query.<tabela>`), que só existe quando o
- * tipo do schema é conhecido.
- */
-export type TestDb = NodePgDatabase<typeof schema>
-
-export function createTestDb(pool: Pool): TestDb {
-  return drizzle(pool, { schema })
-}
-
-/** Zera o schema do kernel entre testes (isolamento). */
-export async function truncateKernel(pool: Pool): Promise<void> {
-  await pool.query(
-    "TRUNCATE _kernel.outbox, _kernel.outbox_dead, _kernel.processed_events, _kernel.idempotency_keys"
-  )
 }
 
 /**

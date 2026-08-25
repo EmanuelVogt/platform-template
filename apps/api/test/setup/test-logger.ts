@@ -1,14 +1,4 @@
-import pino from "pino"
-
-import { RequestContext } from "../../src/shared/kernel/context/request-context"
-import { LoggerFactory } from "../../src/shared/kernel/logging/logger.factory"
-
-/** LoggerFactory real, porém silencioso, para instanciar classes do kernel em testes. */
-export function makeTestLogger(): {
-  ctx: RequestContext
-  loggerFactory: LoggerFactory
-} {
-  const ctx = new RequestContext()
-  const loggerFactory = new LoggerFactory(ctx, pino({ level: "silent" }))
-  return { ctx, loggerFactory }
-}
+// Plumbing legado: as entradas do catálogo ainda importam daqui. A
+// implementação é uma só — o harness — e este arquivo some quando o último
+// import de `catalog/**` apontar para `src/shared/test/int/logger`.
+export { makeTestLogger } from "../../src/shared/test/int/logger"

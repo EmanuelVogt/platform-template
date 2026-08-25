@@ -49,6 +49,10 @@ export default defineConfig({
         "apps/api/src/shared/config/coverage-metric/*.sample.ts",
         `${WEB_DIR}/src/main.tsx`,
         "**/shared/test/**",
+        // No filho, o barril de teste da entrada instalada cai dentro do glob
+        // `apps/api/src/**` — sem esta linha ele entra no denominador de
+        // cobertura como se fosse código de produção.
+        "apps/api/src/modules/*/testing/**",
         "apps/api/test/**",
       ],
       // Barra única de 90 (AD-027, decisão do dono em 2026-08-22, precedente

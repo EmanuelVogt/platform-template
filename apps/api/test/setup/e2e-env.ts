@@ -1,29 +1,21 @@
+import { applySharedTestEnv } from "../../src/shared/test/env"
+
 import { containerPostgresUri, containerRedisUri } from "./container-uris"
+
+applySharedTestEnv()
 
 // Roda antes do test framework em cada worker: aponta o app para os containers.
 process.env.DATABASE_URL = containerPostgresUri()
-process.env.DATABASE_SSL = "disable"
 // Redis efêmero do globalSetup: parte limpo a cada run (sem fail-open por
 // ausência de Redis, sem estado de rate-limit vazando entre runs).
 process.env.REDIS_URL = containerRedisUri()
-process.env.NODE_ENV = "test"
-process.env.LOG_LEVEL = "silent"
 // Fila de espera do pool larga no e2e: há prova de rajada (51 downloads
 // simultâneos, sockets do storage) que estouraria o teto fail-closed padrão
 // (10 + 20) e devolveria 503 antes de exercitar o que o teste mede. O guard de
 // saturação tem prova própria em unit/int — aqui ele só mascararia o assunto.
 process.env.DATABASE_POOL_MAX_WAITING = "200"
-process.env.BREACH_CHECK_ENABLED = "false"
 process.env.OTEL_EXPORTER_OTLP_ENDPOINT = ""
 process.env.OTEL_SDK_DISABLED = "true"
-process.env.WEB_ORIGIN = "http://localhost:5173"
-process.env.PASSWORD_PEPPER = "test-pepper-test-pepper-test-pepper-0123"
-process.env.CSRF_SECRET = "test-csrf-secret-test-csrf-secret-0123456"
-process.env.BREACH_CHECK_MODE = "fail_open"
-process.env.COOKIE_SECURE = "false"
-// COOKIE_SECURE=false (dev-over-http) é incompatível com o prefixo __Host-.
-process.env.COOKIE_NAME = "rit_session"
-process.env.DEVICE_COOKIE_NAME = "rit_device"
 // R2 dummy: o StorageModule valida no boot (fail-fast em prod). O storage real
 // nunca é exercitado no e2e — quem testa download faz override do OBJECT_STORAGE.
 process.env.R2_ACCOUNT_ID = "test-account"

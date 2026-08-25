@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest"
 
-import { createTestPool, testDatabaseUrl } from "./test-db"
+import { createTestPool, testDatabaseUrl } from "./db"
 
-import type { ApplicationPool } from "../../src/shared/infra/database/application-pool"
+import type { ApplicationPool } from "../../infra/database/application-pool"
 
 /**
  * Prova do handshake do tier de integração (RUN-02): cada worker fala com o

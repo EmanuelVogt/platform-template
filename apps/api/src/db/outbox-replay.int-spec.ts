@@ -1,12 +1,12 @@
 import { eq } from "drizzle-orm"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
+import { outbox, outboxDead } from "../shared/kernel/outbox/outbox.table"
 import {
   createTestDb,
   createTestPool,
   truncateKernel,
-} from "../../test/setup/test-db"
-import { outbox, outboxDead } from "../shared/kernel/outbox/outbox.table"
+} from "../shared/test/int/db"
 
 import { replayByEventId, replaySince } from "./outbox-replay"
 

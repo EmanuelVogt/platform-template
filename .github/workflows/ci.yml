@@ -129,6 +129,7 @@ jobs:
           node-version-file: ".nvmrc"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pipx install copier
       - run: pnpm test:scripts
       - run: pnpm catalog:lint
       - run: pnpm catalog:typecheck

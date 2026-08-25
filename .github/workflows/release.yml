@@ -47,6 +47,7 @@ jobs:
       - run: node scripts/platform/release-preflight.mjs "${{ needs.marker.outputs.version }}"
       - run: pnpm check
       - run: pnpm test
+      - run: pipx install copier
       - run: pnpm test:scripts
       - run: pnpm catalog:lint
       - run: pnpm catalog:typecheck

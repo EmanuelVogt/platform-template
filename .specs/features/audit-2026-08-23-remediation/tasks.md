@@ -3250,6 +3250,59 @@ in `.specs/STATE.md`, and it wants its own task beside T33's tests in
 
 ---
 
+### Wave 8 — CLUSTERS DONE, BUILD GATE **RED** (2026-08-25)
+
+| Cluster | Tasks | Commits | Worker's own gate |
+| --- | --- | --- | --- |
+| C14 (opus) | T49 → T49a → T51 → T52 → T53 | `79d5d7a`, `e234c90`, `d227089`, `4b614eb`, `ab81666`, + `32c33bf` (RULE C follow-up) | quick gates exit 0 per task; `catalog:test` + `catalog:lint` exit 0 on T53 |
+| C15 (sonnet) | T54 → T55 → T56 | `d5cfcaf`, `06398ac`, `7dcde4e` | `--project api .../storage` 24 passed; `pnpm test:scripts` exit 0 |
+
+**Build gate (`full-unit`, eight commands)** — logs under the session scratchpad `wave8-*.log`:
+
+| Command | Exit | Result |
+| --- | --- | --- |
+| `pnpm check` | 1 | **FAIL** — `null-storage.adapter.spec.ts` TS2554 ×5 |
+| `pnpm test` | 1 | **FAIL** — 1 failed / 734 passed (735), 108 files |
+| `pnpm test:scripts` | 0 | 681 tests |
+| `pnpm catalog:test` | 0 | — |
+| `pnpm catalog:check` | 5 | **FAIL** — `dependsOn` range vs the 3.0.0 bump |
+| `pnpm catalog:typecheck` | 0 | — |
+| `pnpm catalog:lint` | 0 | — |
+| `pnpm format:check` | 0 | — |
+
+**The three failures, each a plan gap, not worker error:**
+
+1. **`null-storage.adapter.spec.ts` calls methods with arguments the adapter does not declare**
+   (TS2554 at `:13,18,24,30,38`). T54's own scoped gate was vitest-only, which does not typecheck —
+   the spec passes at runtime and fails `tsc`. Owner: C15's area.
+2. **`as unknown as TransactionManager` in the two reader specs T53 created**
+   (`catalog/audit/.../drizzle-activity-stats.reader.spec.ts:22`,
+   `catalog/identity/.../drizzle-usage-stats.reader.spec.ts:22`) trips UNT-01 in
+   `harness-hygiene.spec.ts:127`. The ban is repo policy; the specs must build the double without the
+   cast. Owner: C14's area.
+3. **`catalog:check` — T49a bumped all five entries to `3.0.0` but left the inter-entry `dependsOn`
+   ranges at `>=2.0.0 <3.0.0`.** `identity/single-tenant` now refuses to install beside
+   `notification@3.0.0`. T49a's Done-when pinned `kernelRange` (AD-033, T79 opens it) and said nothing
+   about `dependsOn` — the plan never assigned an owner for it. **This needs a ruling, not just a
+   fix:** either `dependsOn` opens to `>=3.0.0 <4.0.0` in the same T49a spirit, or it opens in T79
+   alongside `kernelRange`. Whichever, add the file to a task's `Touches`.
+
+**Open finding for the Verifier (not a gate failure).** T55 scoped `CODE_SCAN_ROOTS` to
+`apps/api/src`, so the hygiene gate does **not** see `rit_session`/`rit_device` still hard-coded in
+`catalog/identity/single-tenant/api/__e2e__/*` and in two controller/middleware specs. T49 bounded
+itself to `apps/**` + `packages/**`; § 0.8 gave T53 a single catalog commit. BRAND-01's "no `rit_`
+literal survives" is therefore **not** proven for `catalog/**` by any wave-8 task.
+
+**Plan defect recorded.** `apps/web/` does not exist in this repo — the wave-8 `Touches` naming
+`apps/web/src/...` resolved to **both** `apps/web-vite` and `apps/web-next`. Every later wave citing
+`apps/web/` inherits the same correction.
+
+**Also outstanding:** `CSRF_COOKIE_NAME` and `API_ORIGIN` are absent from
+`catalog/identity/single-tenant/module.json`'s `env` list (§ 0.8 barred a second manifest touch in
+wave 8); the advisory carries them for now. A later wave must land them in the manifest.
+
+---
+
 ## Fix Round 1 (`v2.4.0` scope) — authored 2026-08-24 after Verifier pass 1 FAIL
 
 Source: `validation.md` § *Fix Plans*. Two clusters, dispatched in parallel, then one Build gate,

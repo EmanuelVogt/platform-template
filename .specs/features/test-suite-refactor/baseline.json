@@ -1,0 +1,3996 @@
+{
+  "totals": {
+    "files": 317,
+    "sites": 2088
+  },
+  "files": [
+    {
+      "file": "apps/api/src/db/check-journal.spec.ts",
+      "titles": [
+        "append com when abaixo do máximo da base falha, com mensagem e sugestão intactas",
+        "append com when acima do máximo da base passa",
+        "kernel abre o journal e o que vem depois segue o formato de tag",
+        "reset deste branch passa e avisa quais entradas publicadas sumiram",
+        "baseline nova por cima da base inteira é append, não reset — segue falhando",
+        "renomear só a baseline não é reset — segue falhando"
+      ],
+      "count": 6
+    },
+    {
+      "file": "apps/api/src/db/outbox-replay.int-spec.ts",
+      "titles": [
+        "replayByEventId reseta uma linha publicada",
+        "replayByEventId reinsere do dead preservando a redaction",
+        "replayByEventId retorna 0 para id inexistente",
+        "replaySince reseta só os publicados desde a data"
+      ],
+      "count": 4
+    },
+    {
+      "file": "apps/api/src/db/schema-completeness.spec.ts",
+      "titles": [
+        "varredura encontra tabelas e o agregador exporta algo (sanidade)",
+        "schema.ts reexporta o registry gerado das entradas instaladas",
+        "nenhuma tabela do disco fora do agregador e da allowlist",
+        "agregador não aponta para arquivo inexistente",
+        "allowlist sem entrada morta (arquivo existe e segue fora do agregador)",
+        "segue reexport nomeado, estrela e barril de entrada",
+        "não conta `import` — importar tabela vizinha não a reexporta"
+      ],
+      "count": 7
+    },
+    {
+      "file": "apps/api/src/docs/docs.spec.ts",
+      "titles": [
+        "produção sem DOCS_ENABLED → não monta",
+        "produção com DOCS_ENABLED=true → monta",
+        "não-produção sem DOCS_ENABLED → monta",
+        "não-produção com DOCS_ENABLED=true → monta"
+      ],
+      "count": 4
+    },
+    {
+      "file": "apps/api/src/modules/module-boundaries.spec.ts",
+      "titles": [
+        "nenhuma travessia proibida fora das allowlists",
+        "reprova application → infrastructure do próprio módulo",
+        "reprova domain importando fora de domain/kernel",
+        "aceita domain importando kernel",
+        "api/events/ é superfície pública como api/facades/; application/events/ não é (KPB-05)",
+        "allowlist cross-module sem entrada morta",
+        "enxerga aspas simples, aspas duplas e specifier não-relativo",
+        "enxerga import multi-linha e reporta a linha de abertura",
+        "separa binding type-only de binding de valor",
+        "o caminho relativo do fixture resolve no drizzle.provider real",
+        "nenhum arquivo de produção em src/modules importa a conexão raiz",
+        "reprova DRIZZLE nomeando arquivo e linha",
+        "reprova PG_POOL, DrizzleDb, DrizzleTx e DrizzleSchema",
+        "aceita DrizzleExecutor type-only, no statement ou inline",
+        "reprova DrizzleExecutor importado como valor",
+        "reprova specifier não-relativo, que a varredura antiga não via",
+        "reprova import multi-linha que mistura valor e tipo",
+        "reprova só os bindings proibidos quando DrizzleExecutor vem junto",
+        "não confunde import de outro alvo com a conexão raiz",
+        "o caminho relativo do fixture resolve num arquivo real de modules",
+        "a varredura enxerga os arquivos de produção de shared (sanidade)",
+        "nenhum arquivo de produção em src/shared importa src/modules",
+        "reprova import de valor nomeando file → target",
+        "reprova import type — o tipo de produto também é dependência",
+        "reprova specifier não-relativo para src/modules",
+        "não reprova import interno de shared nem pacote externo",
+        "a varredura enxerga a casca do template, api e web (sanidade)",
+        "webShellRoots() resolve só as cascas web existentes — template ou produto (CAT-03)",
+        "KERNEL_SURFACE inclui src/app/** e src/_app/** de cada casca web",
+        "KERNEL_SURFACE inclui apps/api/test, src/openapi e src/docs (BRAND-07)",
+        "KERNEL_SURFACE inclui src/pages de cada casca web (BRAND-07)",
+        "a varredura alcança de fato apps/api/test e apps/api/src/openapi",
+        "test-db.ts mantém identity.professional_default_hours (T72 apaga em v3.0.0), mas sai da varredura de token",
+        "nenhum token de módulo sobrevive na casca do template",
+        "reprova cada token da lista, com arquivo e linha",
+        "é case-sensitive: `Identity` sozinho não casa com o token minúsculo",
+        "não reprova palavra vizinha que só contém o token como prefixo alheio",
+        "libera fixture de teste sob shared/test, não o resto"
+      ],
+      "count": 38
+    },
+    {
+      "file": "apps/api/src/modules/template-kernel-only.spec.ts",
+      "titles": [
+        "src/modules não tem pasta de módulo",
+        "src/modules não tem arquivo de produção — só os guards do próprio ponto de montagem"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/api/src/openapi/authz-coverage.spec.ts",
+      "titles": [
+        "varredura encontra rotas (sanidade do glob)",
+        "nenhuma rota sem declaração (@Public | @Authenticated | @RequirePermission | @RequireAnyPermission)"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/api/src/openapi/docs-reference.spec.ts",
+      "titles": [
+        "entrega o middleware que mountDocs monta em /docs"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/api/src/openapi/openapi-config.spec.ts",
+      "titles": [
+        "declara título e versão da API",
+        "declara o cookie de sessão como security scheme apiKey",
+        "exige o cookie por default no documento inteiro",
+        "abre com security vazio o handler @Public com operationId",
+        "abre também o método mutante público (post)",
+        "mantém o default do documento no handler não-público",
+        "herda o requisito público declarado na classe do controller",
+        "não abre handler público sem operationId declarado",
+        "ignora membro do prototype que não é função ao coletar",
+        "remove o summary vazio injetado pelo @ApiOperation",
+        "preserva o summary declarado de verdade",
+        "visita só os métodos presentes no path item",
+        "controller sem handler não contribui path",
+        "pula os wrappers inválidos e ainda abre a rota pública"
+      ],
+      "count": 14
+    },
+    {
+      "file": "apps/api/src/openapi/operation-id.spec.ts",
+      "titles": [
+        "varredura encontra rotas (sanidade do glob)",
+        "toda rota declara operationId explícito via @ApiOperation",
+        "operationId é camelCase de ação, sem prefixo de controller nem versão",
+        "operationId é único no documento"
+      ],
+      "count": 4
+    },
+    {
+      "file": "apps/api/src/openapi/transactional-coverage.spec.ts",
+      "titles": [
+        "nenhum use case fora da allowlist sem @Transactional/@ReadOnly/txm.run",
+        "allowlist sem entrada morta (arquivo existe e segue sem marcador)",
+        "recusa `.run(` genérico como prova de transação",
+        "aceita os quatro marcadores que provam transação",
+        "aceita @NonTransactional com motivo e recusa a isenção muda",
+        "arquivo sem marcador nenhum segue reprovando"
+      ],
+      "count": 6
+    },
+    {
+      "file": "apps/api/src/shared/config/coverage-metric/coverage-metric.contract.spec.ts",
+      "titles": [
+        "optional-chain não deixa branch descoberta (COV-05)",
+        "if/else só com o caminho true deixa branch descoberta (COV-06)"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/api/src/shared/config/coverage-metric/if-else.sample.uncovered.spec.ts",
+      "titles": [
+        "returns a when flag is true"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/api/src/shared/config/coverage-metric/optional-chain.sample.spec.ts",
+      "titles": [
+        "returns bar when present",
+        "returns undefined when absent"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/api/src/shared/config/env.spec.ts",
+      "titles": [
+        "aplica defaults quando opcionais ausentes",
+        "falha (fail-fast) sem NODE_ENV",
+        "falha (fail-fast) sem DATABASE_SSL",
+        "desescapa \\n em DATABASE_SSL_CA",
+        "recusa REDIS_URL redis:// em produção sem REDIS_ALLOW_PLAINTEXT",
+        "aceita REDIS_URL redis:// em produção com REDIS_ALLOW_PLAINTEXT=true",
+        "aceita rediss:// em produção sem precisar de opt-in",
+        "aceita DOCS_ENABLED=true em produção",
+        "coage PORT e DATABASE_POOL_MAX de string para número",
+        "falha (fail-fast) sem DATABASE_URL",
+        "falha com DATABASE_URL inválida apontando o campo",
+        "rejeita DATABASE_URL com scheme não-postgres",
+        "aceita scheme postgresql://",
+        "falha com PORT não numérica",
+        "exige WEB_ORIGIN (consumido pelo CORS)",
+        "falha (fail-fast) sem REDIS_URL",
+        "rejeita REDIS_URL com scheme não-redis",
+        "aceita scheme rediss://",
+        "aceita OTEL_EXPORTER_OTLP_ENDPOINT vazio",
+        "aceita development, test, staging e production"
+      ],
+      "count": 20
+    },
+    {
+      "file": "apps/api/src/shared/config/load-dotenv.spec.ts",
+      "titles": [
+        "não carrega arquivo em produção",
+        "tenta carregar .env fora de produção",
+        "ignora ausência de .env local"
+      ],
+      "count": 3
+    },
+    {
+      "file": "apps/api/src/shared/infra/database/application-pool.int-spec.ts",
+      "titles": [
+        "mantém instanceof Pool (o drizzle decide o modo por isso)",
+        "pool.query executa",
+        "pool.connect entrega um client utilizável",
+        "pool.query rejeita a promise em vez de lançar síncrono",
+        "pool.query dentro do run derruba a transação e não persiste nada",
+        "pool.connect rejeita a promise em vez de lançar síncrono",
+        "pool.connect derruba a transação quando a recusa não é tratada",
+        "a mensagem aponta as saídas suportadas",
+        "a abertura da transação de topo passa pela guarda",
+        "onCommit gravando na raiz passa (o ALS já esvaziou)",
+        "requires_new segue em SAVEPOINT sem pedir conexão ao pool",
+        "rollback do SAVEPOINT não derruba o pai (mesma conexão)",
+        "recusa na hora a aquisição que estouraria a fila",
+        "pool.query no teto rejeita com o mesmo erro (forma callback)",
+        "tx de topo aberta no teto da fila falha com o mesmo 503, sem rodar o corpo",
+        "a mensagem da saturação não vaza connection string, SQL nem contadores",
+        "as duas formas de connect saem com PoolSaturatedError e o log traz o pool do instante",
+        "falha de conexão de verdade não vira saturação",
+        "a espera na fila loga db.pool_acquire_slow com o pool do instante",
+        "as duas formas de connect entregam o tempo de espera ao observador",
+        "observador que lança não derruba a aquisição",
+        "transação ociosa além do teto é encerrada pelo Postgres, e a próxima query falha alto",
+        "o client morto pela sessão ociosa não volta íntegro ao pool",
+        "sem idle_in_transaction_session_timeout a transação ociosa não é encerrada (controle)"
+      ],
+      "count": 24
+    },
+    {
+      "file": "apps/api/src/shared/infra/database/connection-config.spec.ts",
+      "titles": [
+        "deriva connectionString, statement_timeout e application_name do env",
+        "deriva idle_in_transaction_session_timeout do env, default igual ao statement timeout",
+        "respeita DATABASE_IDLE_IN_TX_TIMEOUT_MS configurado",
+        "desliga TLS com DATABASE_SSL=disable",
+        "exige certificado válido com DATABASE_SSL=require, sem CA",
+        "usa DATABASE_SSL_CA como CA confiável com DATABASE_SSL=require",
+        "não carrega chaves de pool (é config de client)",
+        "estende a config base com os limites do pool",
+        "respeita os valores configurados no env",
+        "respeita DATABASE_IDLE_IN_TX_TIMEOUT_MS configurado",
+        "identifica o propósito no application_name",
+        "mantém o restante da config base",
+        "carrega idle_in_transaction_session_timeout do env",
+        "aplica default 20 para DATABASE_POOL_MAX_WAITING",
+        "aplica default 500ms para DATABASE_POOL_ACQUIRE_WARN_MS",
+        "coage os dois de string para número",
+        "rejeita teto de fila zero ou negativo",
+        "rejeita limiar de aquisição lenta não numérico"
+      ],
+      "count": 18
+    },
+    {
+      "file": "apps/api/src/shared/infra/database/database.module.spec.ts",
+      "titles": [
+        "monta o DRIZZLE com o schema recebido, e só com ele",
+        "DrizzleExecutor aceita select().from de tabela fora do kernel",
+        "mantém o contrato de injeção do módulo"
+      ],
+      "count": 3
+    },
+    {
+      "file": "apps/api/src/shared/infra/database/dedicated-client.int-spec.ts",
+      "titles": [
+        "conecta com application_name identificando o propósito",
+        "outra sessão enxerga o application_name em pg_stat_activity",
+        "aponta para o banco do worker, como o pool",
+        "nasce fora do pool: não consome conexão do pool de aplicação",
+        "liveCount reflete criação e end()",
+        "quebra por application_name bate com o que pg_stat_activity reporta",
+        "client encerrado sai da quebra, e o propósito zerado some da série",
+        "dá baixa também quando a sessão morre server-side",
+        "onApplicationShutdown encerra os remanescentes",
+        "reaproveita o mesmo client enquanto ele vive",
+        "drop encerra o atual antes de qualquer novo existir",
+        "end() não deixa client vivo",
+        "onReady que falha não deixa client vivo",
+        "não martela o Postgres: falha recente é reapresentada sem nova tentativa",
+        "reconecta após pg_terminate_backend e reexecuta o onReady",
+        "nunca mantém dois clients vivos ao trocar de conexão"
+      ],
+      "count": 16
+    },
+    {
+      "file": "apps/api/src/shared/infra/database/managed-dedicated-client.spec.ts",
+      "titles": [
+        "drop() loga e engole a falha de client.end() sem propagar",
+        "end() aguarda uma conexão em andamento antes de encerrar, sem vazar o client",
+        "drop() usa String(err) quando a falha de client.end() não é um Error",
+        "ensure() envolve rejeição não-Error da factory antes de reapresentar via backoff"
+      ],
+      "count": 4
+    },
+    {
+      "file": "apps/api/src/shared/infra/database/pool-metrics.spec.ts",
+      "titles": [
+        "nomeia as três séries do pool com o atributo do pool de aplicação",
+        "client dedicado sai em série própria e nunca soma no total do pool",
+        "emite um ponto por application_name, sem somar propósitos diferentes",
+        "sem client dedicado vivo não emite ponto algum",
+        "fonte que lança não impede as demais nem propaga",
+        "entrega os contadores do pool e os dedicados como pontos distintos",
+        "pool que falha na leitura não apaga a série dos clients dedicados",
+        "lê o estado a cada coleta, não o do momento da construção",
+        "cria instrumentos no-op sem quebrar e liga o observador de aquisição"
+      ],
+      "count": 9
+    },
+    {
+      "file": "apps/api/src/shared/infra/rate-limit/redis-rate-limiter.int-spec.ts",
+      "titles": [
+        "permite até o limite e bloqueia depois",
+        "consumos concorrentes admitem exatamente o limite (ZCARD+ZADD atômico)",
+        "sliding-window: sem burst de 2x na borda da janela",
+        "janela expirada zera o contador",
+        "erro do Redis propaga em vez de liberar a janela",
+        "reset apaga o bucket ratelimit:<key> e a chave volta a admitir",
+        "reset de uma chave não toca as demais",
+        "erro do Redis no reset também propaga"
+      ],
+      "count": 8
+    },
+    {
+      "file": "apps/api/src/shared/infra/redis/redis.module.spec.ts",
+      "titles": [
+        "quit resolve → sem disconnect forçado",
+        "quit rejeita (socket ainda conectando) → não propaga e cai para disconnect"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/api/src/shared/infra/redis/redis.provider.spec.ts",
+      "titles": [
+        "define commandTimeout de 2000ms",
+        "repassa a URL redis:// (texto plano) sem alterar host/porta/tls",
+        "repassa a URL rediss:// (TLS) sem alterar host/porta/tls"
+      ],
+      "count": 3
+    },
+    {
+      "file": "apps/api/src/shared/infra/storage/object-storage.port.spec.ts",
+      "titles": [
+        "é um symbol único para injeção"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/api/src/shared/infra/storage/r2-storage.adapter.spec.ts",
+      "titles": [
+        "configura o client R2 (region auto, path-style, credenciais, requestHandler com timeout/maxSockets)",
+        "put envia PutObjectCommand com bucket/key/body/contentType e abortSignal",
+        "put mapeia TimeoutError do SDK pra StorageUnavailableError (503)",
+        "getStream retorna o Body do GetObjectCommand sem passar abortSignal",
+        "head mapeia contentType/sizeBytes/etag da resposta",
+        "head aplica defaults quando a resposta omite os campos",
+        "head retorna null quando o objeto não existe (send rejeita com erro comum)",
+        "head mapeia TimeoutError do SDK pra StorageUnavailableError em vez de null",
+        "delete envia DeleteObjectCommand com a key e abortSignal",
+        "delete mapeia AbortError do SDK pra StorageUnavailableError (503)",
+        "putStream repassa o stream ao bucket com a key e o contentType",
+        "putStream propaga a falha do stream de origem"
+      ],
+      "count": 12
+    },
+    {
+      "file": "apps/api/src/shared/infra/storage/storage.config.spec.ts",
+      "titles": [
+        "parseia env válida",
+        "rejeita endpoint não-URL",
+        "rejeita chave faltando",
+        "aplica os defaults de timeout/sockets quando ausentes",
+        "coage STORAGE_REQUEST_TIMEOUT_MS/STORAGE_MAX_SOCKETS de string pra number"
+      ],
+      "count": 5
+    },
+    {
+      "file": "apps/api/src/shared/kernel/access/access.guard.spec.ts",
+      "titles": [
+        "libera a rota pública",
+        "nega a rota de permissão com 403 access-policy-missing",
+        "nega a rota autenticada — ausência de política não libera",
+        "libera a rota pública sem consultar a política",
+        "libera quando a política responde true",
+        "nega com 403 quando a política responde false",
+        "aguarda a política assíncrona antes de negar",
+        "passa o ator do contexto e o requisito da rota para a política",
+        "rota @OptionalAuth chega no handler sem ator e sem consultar a política",
+        "encaminha o requisito OR do @RequireAnyPermission para a política",
+        "nega com 403 a rota OR quando a política responde false",
+        "handler sem decorator exige ator autenticado (fail closed)"
+      ],
+      "count": 12
+    },
+    {
+      "file": "apps/api/src/shared/kernel/access/decorators.spec.ts",
+      "titles": [
+        "@Public grava { kind: public }",
+        "@Authenticated grava { kind: authenticated }",
+        "@RequirePermission grava { kind: permission, key }",
+        "@OptionalAuth grava { kind: public } — anônimo chega no handler",
+        "@SelfService grava { kind: authenticated }",
+        "handler sem decorator não tem requisito — o guard decide o default",
+        "grava { kind: anyPermission, keys } no requisito do kernel",
+        "lista vazia lança na definição"
+      ],
+      "count": 8
+    },
+    {
+      "file": "apps/api/src/shared/kernel/clock/bucket-sql.spec.ts",
+      "titles": [
+        "retorna fragmento SQL para bucket diário e semanal"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/api/src/shared/kernel/clock/clock.spec.ts",
+      "titles": [
+        "token é Symbol com descrição estável",
+        "SystemClock retorna Date"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/api/src/shared/kernel/collections/in-flight-gate.spec.ts",
+      "titles": [
+        "admite até a capacidade e conta as vagas ocupadas",
+        "recusa com null no teto, sem incrementar o contador",
+        "liberar devolve a vaga e permite readquirir",
+        "liberar duas vezes não decrementa duas vezes",
+        "release duplicado não abre vaga além da capacidade",
+        "capacidade zero recusa desde a primeira aquisição"
+      ],
+      "count": 6
+    },
+    {
+      "file": "apps/api/src/shared/kernel/collections/set-equal.spec.ts",
+      "titles": [
+        "retorna true para mesmas chaves em ordem diferente",
+        "retorna false quando tamanhos diferem",
+        "conta multiplicidade — duplicatas importam"
+      ],
+      "count": 3
+    },
+    {
+      "file": "apps/api/src/shared/kernel/context/event-context.spec.ts",
+      "titles": [
+        "herda correlationId e define causationId = eventId",
+        "extrai traceId do traceparent W3C",
+        "traceId null quando traceparent ausente ou inválido"
+      ],
+      "count": 3
+    },
+    {
+      "file": "apps/api/src/shared/kernel/context/job-context.spec.ts",
+      "titles": [
+        "abre um contexto de job sem ator quando nada foi enfileirado",
+        "copia o actorId enfileirado para o ator do contexto",
+        "preserva a correlação persistida pelo job",
+        "propaga o tenantId recebido para o store e para o ator",
+        "tenantId e ator chegam intactos ao escopo rodado pelo dispatcher",
+        "cada job recebe uma sacola de extensões própria"
+      ],
+      "count": 6
+    },
+    {
+      "file": "apps/api/src/shared/kernel/context/request-context.middleware.spec.ts",
+      "titles": [
+        "adota ULID válido (uppercase)",
+        "normaliza ULID lowercase para uppercase",
+        "ignora valor forjado e usa o requestId gerado",
+        "sem header usa o requestId gerado",
+        "cabeçalho array-valued usa o primeiro valor, não um valor qualquer",
+        "cabeçalho array-valued vazio cai no requestId gerado",
+        "sem Accept-Language usa pt-BR; com o header, usa o valor enviado",
+        "sem req.ip grava ip nulo no store"
+      ],
+      "count": 8
+    },
+    {
+      "file": "apps/api/src/shared/kernel/context/request-context.spec.ts",
+      "titles": [
+        "tryGet retorna null fora de escopo",
+        "getActor devolve null fora de um escopo de request",
+        "getActor exportado devolve null fora de um escopo de request",
+        "getActor exportado enxerga o ator gravado no escopo corrente",
+        "getActor devolve null enquanto ninguém chamou setActor",
+        "setActor grava o ator e getActor devolve o mesmo valor no escopo",
+        "setActor é one-shot: a segunda chamada lança e preserva o 1º ator",
+        "setActor fora de escopo lança",
+        "setActor propaga o tenantId do ator sem o kernel interpretá-lo",
+        "tenantId permanece null enquanto ninguém chamou setTenant",
+        "setTenant grava o tenantId no store do escopo corrente",
+        "o tenantId gravado por setTenant é lido de volta por get() no mesmo escopo",
+        "setTenant é one-shot: a segunda chamada lança e preserva o 1º tenantId",
+        "setTenant fora de escopo lança",
+        "getExtension devolve undefined para símbolo nunca gravado",
+        "getExtension fora de escopo devolve undefined",
+        "setExtension guarda o valor opaco sob o símbolo do módulo dono",
+        "extensões ficam isoladas entre requests concorrentes",
+        "setExtension fora de escopo lança"
+      ],
+      "count": 19
+    },
+    {
+      "file": "apps/api/src/shared/kernel/database/pg-errors.spec.ts",
+      "titles": [
+        "detecta código 23505 no erro direto",
+        "detecta código 23505 em cause (DrizzleQueryError)",
+        "retorna false para outros erros"
+      ],
+      "count": 3
+    },
+    {
+      "file": "apps/api/src/shared/kernel/domain/entity-props.spec.ts",
+      "titles": [
+        "true quando só updatedAt difere",
+        "false quando um campo de negócio muda",
+        "Date comparada por valor (getTime), não identidade",
+        "array reconstruído conta como mudança (identidade)",
+        "null preservado é igual"
+      ],
+      "count": 5
+    },
+    {
+      "file": "apps/api/src/shared/kernel/errors/error-namespace.spec.ts",
+      "titles": [
+        "nenhum TYPE_BASE fora de https://errors.example.com/<módulo>",
+        "reprova TYPE_BASE que não casa com a pasta do módulo",
+        "nenhum módulo declara class ForbiddenError (o 403 tem casa única no kernel)"
+      ],
+      "count": 3
+    },
+    {
+      "file": "apps/api/src/shared/kernel/errors/forbidden.error.spec.ts",
+      "titles": [
+        "estende DomainError: status 403, type único sem namespace de módulo, título pt-BR",
+        "repassa o detail para a mensagem"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/api/src/shared/kernel/errors/nested-acquisition.error.spec.ts",
+      "titles": [
+        "nomeia o frame do chamador, com função e arquivo",
+        "não devolve o frame da própria função nem de node_modules",
+        "não é DomainError — cai no fallback genérico do filtro",
+        "a mensagem nomeia o chamador e aponta as saídas suportadas",
+        "o ProblemDetailsFilter responde 500 genérico sem ecoar a mensagem"
+      ],
+      "count": 5
+    },
+    {
+      "file": "apps/api/src/shared/kernel/errors/problem-details.filter.spec.ts",
+      "titles": [
+        "adiciona Retry-After ao mapear 429",
+        "DomainError 429 → Retry-After do retryAfterSeconds",
+        "HttpException com retryAfter → usa esse valor",
+        "429 sem número → fallback 60",
+        "PoolSaturatedError → 503 com Retry-After 1",
+        "corpo é RFC 7807 exato, com correlationId e sem nada interno",
+        "503 mantém a precedência: domain 1 / http 45 / default 60",
+        "outros status seguem sem Retry-After",
+        "erro genérico vira 500 'Erro interno' sem detail/SQL/path/stack",
+        "DomainError mapeia status/type/title",
+        "espalha extensions do DomainError sem clobber dos membros padrão",
+        "DomainError sem extensions segue com corpo padrão",
+        "$name → status $status, type e title presentes",
+        "copia type, title, status e detail do erro",
+        "fora de um escopo de request o correlationId sai nulo",
+        "dentro do escopo o correlationId do contexto entra no corpo",
+        "ZodValidationException vira 400 com as issues do zod em errors",
+        "erro de validação sem issues sai com errors ausente",
+        "resposta string vira o próprio título",
+        "message string do objeto de resposta vira o título",
+        "message em lista é juntada por vírgula",
+        "message de outro tipo cai na mensagem da exceção",
+        "resposta sem message cai na mensagem da exceção",
+        "trunca a url no primeiro ? e não ecoa a query",
+        "url sem query string entra inteira",
+        "status 500 ou mais registra unhandled_exception com o erro original",
+        "status 4xx não registra nada",
+        "validação: pacote pt-BR padrão reproduz as strings atuais sem mudança",
+        "erro interno: pacote pt-BR padrão reproduz a string atual sem mudança",
+        "DomainError não passa pelo pacote — title continua pass-through do próprio erro",
+        "DomainError 429 sem retryAfterSeconds cai em 60",
+        "retryAfter que não é número cai em 60",
+        "objeto de resposta sem retryAfter cai em 60",
+        "400 nunca recebe Retry-After"
+      ],
+      "count": 34
+    },
+    {
+      "file": "apps/api/src/shared/kernel/errors/too-many-requests.error.spec.ts",
+      "titles": [
+        "estende DomainError: status 429, type transversal, título pt-BR",
+        "carrega retryAfterSeconds do construtor",
+        "satisfaz o contrato que o ProblemDetailsFilter lê para o Retry-After",
+        "expõe os membros que o toProblem copia para o corpo RFC 7807"
+      ],
+      "count": 4
+    },
+    {
+      "file": "apps/api/src/shared/kernel/events/domain-event.spec.ts",
+      "titles": [
+        "preenche eventId (ULID) e occurredAt (ISO) ao criar via factory",
+        "respeita eventId e occurredAt fornecidos"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/api/src/shared/kernel/health/health.controller.spec.ts",
+      "titles": [
+        "retorna ready quando o banco responde, sem log de erro",
+        "loga o err e lança 503 quando o banco falha",
+        "a exceção 503 não vaza o detalhe do banco"
+      ],
+      "count": 3
+    },
+    {
+      "file": "apps/api/src/shared/kernel/http/content-disposition.spec.ts",
+      "titles": [
+        "nome ASCII simples: filename= e filename* iguais, sem percent-encoding",
+        "nome com acento: filename= vira fallback sem o acento, filename* leva o RFC 5987",
+        "nome com aspas: aspas somem dos dois — não podem fechar o quoted-string",
+        "nome com ' ( ) *: os quatro vêm percent-encoded em filename*, intactos em filename=",
+        "nome vazio (null): cai no fallback genérico nos dois campos",
+        "remove CR e LF — filename vem do cliente e entra num header"
+      ],
+      "count": 6
+    },
+    {
+      "file": "apps/api/src/shared/kernel/i18n/message-pack.spec.ts",
+      "titles": [
+        "pt-BR retorna as strings atuais do kernel",
+        "locale sem pacote dedicado cai no pacote padrão",
+        "DEFAULT_LOCALE do env, sem configuração explícita, resolve para pt-BR"
+      ],
+      "count": 3
+    },
+    {
+      "file": "apps/api/src/shared/kernel/idempotency/idempotency.int-spec.ts",
+      "titles": [
+        "tryReserve fresco retorna null e cria row in_progress",
+        "conflito com chave viva retorna a row existente",
+        "complete grava status e response",
+        "chave expirada é reclamada (retorna null, hash atualizado)",
+        "reopen é CAS: 1ª chamada em 'failed' true, 2ª (já in_progress) false",
+        "deleteExpired remove só rows expiradas e retorna a contagem",
+        "reopen sob concorrência: exatamente um vencedor (sem double-exec)"
+      ],
+      "count": 7
+    },
+    {
+      "file": "apps/api/src/shared/kernel/idempotency/idempotency.interceptor.spec.ts",
+      "titles": [
+        "compõe o escopo com tenantId e actorId do contexto",
+        "escopa por IP quando não há ator no contexto",
+        "sem ator e sem IP conhecido resta o placeholder do IP",
+        "dois anônimos de IPs diferentes não colidem (REM-32)",
+        "dois anônimos do mesmo IP compartilham o escopo (dedup preservado)",
+        "isola o escopo por ator dentro do mesmo tenant",
+        "sem tenant, sem ator e sem IP conhecido restam os placeholders",
+        "usa só o ator quando o contexto não tem tenant",
+        "fora de um escopo de request o escopo usa os placeholders",
+        "sem metadata @Idempotent devolve o valor do handler sem reservar",
+        "fora de um contexto http devolve o valor do handler sem reservar",
+        "sem o header Idempotency-Key o handler executa sem dedup",
+        "com o header repetido e vazio o handler executa sem dedup",
+        "usa o primeiro valor quando o header chega repetido",
+        "usa o valor cru quando o header chega como string",
+        "executa o handler e devolve o valor dele intacto",
+        "grava o snapshot com o status da resposta e o corpo devolvido",
+        "rejeita com 422 a mesma chave com payload diferente",
+        "rejeita com 409 a chave ainda em processamento",
+        "faz replay do corpo persistido e reaplica o status gravado",
+        "faz replay com 200 quando não há status persistido",
+        "re-lança o erro persistido com o mesmo corpo e status",
+        "re-lança o erro persistido sem corpo com o texto padrão",
+        "reabre a row 'failed' e re-executa o handler",
+        "devolve 409 quando perde a corrida pela reabertura",
+        "grava erro http abaixo de 500 como completed com o corpo do erro",
+        "grava erro http de 500 ou mais como failed e sem corpo",
+        "grava erro que não é HttpException como failed com status 500",
+        "ignora a ordem das chaves, inclusive em objeto aninhado e array",
+        "muda quando o conteúdo do payload muda",
+        "não leva a query string em conta",
+        "descarta a query string do endpoint reservado",
+        "preserva a url inteira quando não há query string",
+        "deriva expiresAt do ttlHours a partir do instante da reserva",
+        "um ttl maior empurra expiresAt na mesma proporção",
+        "aceita chave dentro do padrão e chega ao store",
+        "aceita exatamente 200 caracteres",
+        "rejeita 201 caracteres com 400, sem consultar o store",
+        "rejeita chave com `/` com 400, sem consultar o store"
+      ],
+      "count": 39
+    },
+    {
+      "file": "apps/api/src/shared/kernel/listing/apply-listing.spec.ts",
+      "titles": [
+        "escapa %, _ e \\ para não alterar a semântica do LIKE",
+        "deixa texto comum intacto",
+        "limit = pageSize e offset = (page - 1) * pageSize",
+        "page 1 → offset 0",
+        "orderBy tem 2 entradas: coluna de sort + desempate por PK",
+        "ordem padrão é 'created_at desc' com desempate 'id desc'",
+        "sort=name order=asc → 'name asc' com desempate 'id asc'",
+        "sort=name order=desc → 'name desc'",
+        "sort inválido cai no sort padrão (createdAt)",
+        "sem filtros nem busca: where indefinido (sem WHERE)",
+        "com q: where contém ILIKE sobre a coluna 'name'",
+        "com q: where contém ILIKE sobre a coluna 'email'",
+        "com q: where NÃO referencia coluna fora das searchable (ex: active)",
+        "busca inclui o termo escapado como parâmetro %<termo>%",
+        "termos diferentes geram parâmetros diferentes no WHERE",
+        "metacaracteres LIKE no q são escapados no parâmetro",
+        "com filtros tipados: where definido e contém a condição do filtro",
+        "filtro + busca: where combina ambas as condições via AND",
+        "where referencia apenas a coluna configurada, não email",
+        "alvo função injeta seu predicado no OR junto das colunas",
+        "coluna recebe termo escapado/wrapped; função recebe o termo cru",
+        "função que retorna undefined é descartada do OR",
+        "todos os alvos undefined → q não gera WHERE"
+      ],
+      "count": 23
+    },
+    {
+      "file": "apps/api/src/shared/kernel/listing/list-query.decorator.spec.ts",
+      "titles": [
+        "documenta um campo obrigatório e dois opcionais/default como parâmetros de query",
+        "schema sem campo obrigatório não grava nenhum parâmetro como required"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/api/src/shared/kernel/listing/listing-query.schema.spec.ts",
+      "titles": [
+        "\"false\" vira false (z.coerce.boolean estaria errado aqui)",
+        "\"true\" vira true",
+        "rejeita valor fora do enum",
+        "aplica defaults page=1 e pageSize=20",
+        "coage strings de query para number",
+        "rejeita pageSize acima de 100 (anti scan/payload abusivo)",
+        "rejeita page abaixo de 1",
+        "aceita page=10000 e rejeita page=10001 (REM-33)",
+        "order é opcional, sem default (direção é por recurso)"
+      ],
+      "count": 9
+    },
+    {
+      "file": "apps/api/src/shared/kernel/listing/paginated.spec.ts",
+      "titles": [
+        "calcula totalPages com ceil",
+        "total=0 vira totalPages=0 (não 1)",
+        "embrulha data e os metadados de página",
+        "valida o envelope { data, page }",
+        "rejeita item de data fora do shape"
+      ],
+      "count": 5
+    },
+    {
+      "file": "apps/api/src/shared/kernel/logging/log.interceptor.spec.ts",
+      "titles": [
+        "remove a query string",
+        "mantém a url sem query intacta",
+        "fora do contexto http repassa o observable do handler sem logar",
+        "em development loga reqBody e resBody redigidos",
+        "fora de development não loga corpo, só os campos de request/response",
+        "no erro loga log.error com err e sem status",
+        "corpo %p não produz reqBody mesmo em development",
+        "corpo populado produz reqBody redigido em development"
+      ],
+      "count": 8
+    },
+    {
+      "file": "apps/api/src/shared/kernel/logging/log.redact.spec.ts",
+      "titles": [
+        "cobre cada PII no topo, em 1 e em 2 níveis",
+        "cobre headers sensíveis e censura com [REDACTED]",
+        "redige de fato via pino no topo e aninhado",
+        "censura ip, ip_address, user_agent e email_attempted no topo",
+        "censura os mesmos campos a 1 nível",
+        "inclui authorization/cookie/set-cookie por nome em vários níveis",
+        "redige authorization a 4 níveis (err de cliente HTTP)",
+        "redige cookie aninhado em err.config.headers",
+        "não redige além do cap de 5 níveis (limite consciente)",
+        "redige campo sensível no topo, preservando os demais",
+        "redige link (token viaja na URL)",
+        "redige em profundidade arbitrária",
+        "redige campos sensíveis dentro de arrays",
+        "compara o nome da chave case-insensitive",
+        "primitivos e null passam intactos",
+        "não muta o objeto de entrada",
+        "reusa SENSITIVE_FIELDS (mesma lista do pino)",
+        "redige %s",
+        "redige hashes que carregam o fragmento no nome",
+        "deixa passar recipientId e description (ip casa exato, não por substring)",
+        "redige ip, ip_address e ipAddress por igualdade exata",
+        "cobre %s no topo e a 1 nível"
+      ],
+      "count": 22
+    },
+    {
+      "file": "apps/api/src/shared/kernel/logging/logger.factory.spec.ts",
+      "titles": [
+        "em produção usa level info e não injeta o transport pretty",
+        "em development usa level debug e injeta o transport pino-pretty",
+        "em test não injeta pretty mesmo fora de produção",
+        "LOG_LEVEL explícito sobrepõe o default por ambiente",
+        "vincula o logger filho ao nome do módulo pedido",
+        "mescla requestId/correlationId/tenantId/userId do RequestContext no record",
+        "sem ator no contexto o userId cai em null",
+        "fora de um escopo de request os campos de correlação vêm undefined"
+      ],
+      "count": 8
+    },
+    {
+      "file": "apps/api/src/shared/kernel/outbox/outbox.int-spec.ts",
+      "titles": [
+        "publish dentro de tx grava o envelope com correlationId do contexto",
+        "publish sem tx aberta lança",
+        "markIfNew retorna true só na primeira vez (dedupe)",
+        "wasProcessed enxerga só o par (evento, consumer) marcado e não marca nada",
+        "dispatcher emite o evento ao listener e marca published_at",
+        "falha do handler incrementa attempts e não marca published",
+        "após MAX_ATTEMPTS move a linha para outbox_dead e remove de outbox",
+        "não retém lock durante o handler (IO fora da tx)",
+        "dois dispatchers concorrentes entregam cada evento uma vez",
+        "no-listeners: não marca published, reentra com lastError 'sem listener'",
+        "no-listeners vai a dead após MAX_ATTEMPTS",
+        "dead-letter idempotente: replay não viola PK e preserva o dead original",
+        "boot não deixa detentor permanente no pool de aplicação",
+        "NOTIFY acorda o dispatch mesmo com o LISTEN fora do pool",
+        "após pg_terminate_backend no client do LISTEN, ele se recria e volta a acordar",
+        "shutdown encerra o client dedicado sem handle vazado",
+        "shutdown drena o dispatch em voo e impede novos",
+        "FIFO-por-aggregate intra-batch: mesma aggregate em ordem de occurred_at",
+        "purgePublished remove published>30d, preserva recente e unpublished",
+        "ao marcar published redige a chave sensível do envelope (REM-16)",
+        "payload sem chave redigível fica idêntico após publish",
+        "dead-letter redige o payload de domínio aninhado (REM-16)",
+        "purgeDeadLetters remove dead>retenção e preserva o recente (REM-17)"
+      ],
+      "count": 23
+    },
+    {
+      "file": "apps/api/src/shared/kernel/rate-limit/in-memory-rate-limiter.spec.ts",
+      "titles": [
+        "admite enquanto a contagem na janela é menor que o limite",
+        "nega a (limite+1)-ésima com o Retry-After do script Lua",
+        "gate negado não consome slot — a espera não anda para frente",
+        "janela deslizante: o evento sai da janela e a chave volta a admitir",
+        "reset limpa uma chave e deixa as demais intactas",
+        "clear descarta todo o estado local",
+        "expira a chave cuja janela esvaziou em vez de guardar array vazio",
+        "não passa de MAX_TRACKED_KEYS chaves — despeja a menos recente"
+      ],
+      "count": 8
+    },
+    {
+      "file": "apps/api/src/shared/kernel/rate-limit/rate-limit.guard.spec.ts",
+      "titles": [
+        "permite quando o limiter retorna allowed",
+        "lança TooManyRequestsError com o retryAfter do limiter",
+        "ignora rota sem @RateLimit",
+        "consome a chave ip:<ip>:<rota> com o limite e a janela da metadata",
+        "repassa critical da metadata para o consume",
+        "expõe a chave de metadata do kernel",
+        "guarda { limit, windowSeconds, critical } sob a chave do kernel"
+      ],
+      "count": 7
+    },
+    {
+      "file": "apps/api/src/shared/kernel/rate-limit/rate-limit.module.spec.ts",
+      "titles": [
+        "é @Global — quem importa recebe RATE_LIMITER sem repetir a fábrica",
+        "importa RedisModule (fonte do REDIS_CLIENT da fábrica)",
+        "provê e exporta RATE_LIMITER",
+        "RATE_LIMITER é o composite resiliente, montado com Redis e EventEmitter2",
+        "não registra o guard como APP_GUARD — a ordem com o CSRF é do módulo de rotas"
+      ],
+      "count": 5
+    },
+    {
+      "file": "apps/api/src/shared/kernel/rate-limit/resilient-rate-limiter.spec.ts",
+      "titles": [
+        "repassa o resultado do primário quando ele responde",
+        "primário fora + critical: o fallback enforça o mesmo limite e janela",
+        "primário fora + chave não crítica: libera com retryAfterSeconds 0",
+        "primeiro erro depois de saudável: um warn e um rate-limiter.degraded",
+        "segundo erro na mesma queda não emite nem loga de novo",
+        "primeiro sucesso depois da queda descarta o estado local e emite recovered",
+        "Redis volta: a tentativa da queda não é cobrada de novo (sem contagem dobrada)",
+        "nova queda depois de recuperar emite degraded outra vez",
+        "reset repassa ao primário e sinaliza recuperação como o consume",
+        "reset com o primário fora limpa a chave local e sinaliza a queda"
+      ],
+      "count": 10
+    },
+    {
+      "file": "apps/api/src/shared/kernel/redaction/sensitive-keys.spec.ts",
+      "titles": [
+        "é o vocabulário canônico",
+        "casa por substring case-insensitive contra os fragments default",
+        "não casa recipientId/description (guarda de não-match)",
+        "linkedId é um over-match aceito (contém 'link' como substring)",
+        "aceita uma lista de fragments customizada (ex.: log redactor com 'email')",
+        "redige um envelope aninhado (payload.payload.link)",
+        "recorre em array de objetos",
+        "sem match nenhum, devolve a mesma referência com changed: false",
+        "aceita fragments customizados (email) e redige newEmail/pendingEmail"
+      ],
+      "count": 9
+    },
+    {
+      "file": "apps/api/src/shared/kernel/scheduling/advisory-lock.int-spec.ts",
+      "titles": [
+        "resolve imediatamente quando destravado",
+        "ids diferentes não bloqueiam entre si",
+        "mesmo id serializa: a 2ª tx só progride após a 1ª commitar",
+        "hashLockId é estável e cabe em int4 assinado",
+        "segura o lock entre conexões e solta no unlock explícito",
+        "não solta sozinho no fim de uma tx (é session-scoped)"
+      ],
+      "count": 6
+    },
+    {
+      "file": "apps/api/src/shared/kernel/scheduling/maintenance-registry.spec.ts",
+      "titles": [
+        "aceita jobs de nome e lockId distintos e devolve o spec registrado",
+        "nome duplicado lança e preserva o primeiro registro",
+        "lockId em colisão lança nomeando o dono e não registra o intruso",
+        "lookup de nome não registrado lança",
+        "entram pelo mesmo registro, com cron e lockId preservados",
+        "nenhum lockId repetido entre os jobs registrados no processo",
+        "job sem fuso não declara timeZone nas opções do Cron",
+        "job com fuso repassa timeZone nas opções do Cron",
+        "aceita nome novo registrado fora do kernel, sem união fechada",
+        "nome não registrado lança na definição da classe",
+        "varredura resolve exatamente um arquivo de corpo por job do kernel",
+        "nenhum nome de job com mais de um corpo",
+        "todo nome decorado segue <escopo>.<ação> em kebab-case",
+        "reprova nome fora do padrão e aceita escopo composto",
+        "nenhum job atômico do kernel referencia outsideTransaction",
+        "job atômico com outsideTransaction reprova nomeando job e arquivo",
+        "mesmo arquivo passa quando o job não é atômico",
+        "job atômico passa quando o arquivo não referencia a porta"
+      ],
+      "count": 18
+    },
+    {
+      "file": "apps/api/src/shared/kernel/scheduling/maintenance-runtime.int-spec.ts",
+      "titles": [
+        "advisory lock serializa runs concorrentes: um roda, o outro pula",
+        "lock solta no fim: run sequencial seguinte pega o lock",
+        "isolamento: corpo que lança não rejeita o run e marca failed",
+        "dois jobs simultâneos completam, cada um com lock no próprio client",
+        "corpo que lança: failed, com lock solto e client dedicado encerrado",
+        "solta o lock no finally, antes de encerrar o client, mesmo com o corpo lançando",
+        "devolve false com o lock tomado e não roda o corpo",
+        "corpo destacado sobrevive ao retorno e não deixa client vivo no fim",
+        "roda o corpo fora de tx envolvente: write persiste apesar de throw posterior",
+        "é skipped quando o lock session-scoped já está tomado por outra sessão",
+        "solta o lock no fim: um 2º run consegue rodar o corpo",
+        "roda o corpo em transação, com o lock já tomado noutra sessão",
+        "corpo atomic que lança sofre rollback e vira failed",
+        "job atomic que pede a conexão raiz esbarra na guarda e vira failed",
+        "lock já tomado por outra sessão: skipped sem pedir conexão ao pool",
+        "client dedicado que não conecta: skipped com motivo, sem pedir conexão ao pool"
+      ],
+      "count": 16
+    },
+    {
+      "file": "apps/api/src/shared/kernel/scheduling/weekly-slot.spec.ts",
+      "titles": [
+        "lista os 5 tipos e deriva disponibilidade",
+        "aceita slots válidos",
+        "acusa tipo, dia e janela inválidos",
+        "acusa overlap dentro da mesma classe, mas não entre classes",
+        "subtractSpans recorta janelas",
+        "intersectSpans cruza janelas mantendo semântica semiaberta",
+        "effectiveWindowsByDay = disponibilidade menos bloqueios",
+        "subtractSpans pula corte já consumido por outro e corte fora da janela",
+        "subtractSpans zera a janela quando o corte cobre tudo, sem sobra ao final",
+        "effectiveWindowsByDay preserva dia sem bloqueio e omite dia zerado"
+      ],
+      "count": 10
+    },
+    {
+      "file": "apps/api/src/shared/kernel/tracing/event-trace-propagation.spec.ts",
+      "titles": [
+        "parseia um traceparent W3C válido",
+        "retorna null para null ou formato inválido",
+        "monta um SpanContext remoto a partir do traceparent",
+        "retorna null quando o traceparent está ausente"
+      ],
+      "count": 4
+    },
+    {
+      "file": "apps/api/src/shared/kernel/tracing/traced.decorator.spec.ts",
+      "titles": [
+        "resolve: retorna o valor e encerra o span sem marcar ERROR",
+        "lança: recordException + setStatus ERROR, re-propaga e encerra no finally"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/api/src/shared/kernel/tracing/tracing.setup.spec.ts",
+      "titles": [
+        "sem endpoint entrega lista vazia nos três sinais, nunca undefined",
+        "com endpoint liga exportação de trace e de métrica"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/api/src/shared/kernel/transactional/non-transactional.decorator.spec.ts",
+      "titles": [
+        "não embrulha o método: o corpo original roda intacto",
+        "motivo vazio ou só espaço lança na definição da classe"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/api/src/shared/kernel/transactional/transaction-context.spec.ts",
+      "titles": [
+        "fora de escopo não há transação corrente",
+        "dentro do escopo expõe o mesmo objeto e acusa transação ativa",
+        "devolve o valor da função e restaura o escopo anterior ao sair",
+        "escopo aninhado sobrepõe o de fora e devolve o de fora ao terminar",
+        "é singleton de módulo: o escopo é visível para qualquer chamador do processo",
+        "fora de transação devolve o executor da raiz",
+        "com transação ativa lança NestedAcquisitionError",
+        "lança também fora de NODE_ENV=test — não há escape por ambiente"
+      ],
+      "count": 8
+    },
+    {
+      "file": "apps/api/src/shared/kernel/transactional/transaction-manager.int-spec.ts",
+      "titles": [
+        "commita as escritas do run",
+        "faz rollback quando o run lança",
+        "join: run aninhado compartilha a tx (rollback derruba os dois)",
+        "requires_new: savepoint enxerga escrita não-commitada do pai",
+        "requires_new: rollback do savepoint não derruba o pai",
+        "onCommit roda após o COMMIT",
+        "falha em onCommit não desfaz o commit",
+        "getExecutor fora de tx usa a raiz (autocommit)",
+        "requires_new: onCommit defere até o COMMIT do pai",
+        "outsideTransaction fora de tx grava na raiz",
+        "outsideTransaction dentro do run lança e derruba a transação",
+        "outsideTransaction lança também dentro de requires_new",
+        "requires_new: rollback do pai cancela onCommit deferido",
+        "onModuleInit registra o manager ativo para o @Transactional alcançar",
+        "onCommit fora de uma transação lança",
+        "isInTransaction reflete a tx ativa dentro e fora do run",
+        "carimba app.audit_ctx com o ator do RequestContext dentro da tx"
+      ],
+      "count": 17
+    },
+    {
+      "file": "apps/api/src/shared/kernel/transactional/transactional.decorator.spec.ts",
+      "titles": [
+        "NODE_ENV=test sem manager: pass-through, executa direto",
+        "fora de teste sem manager registrado: throw fail-loud"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/api/src/shared/test/parity/contract-snapshot.spec.ts",
+      "titles": [
+        "passa quando o child reproduz a operação do snapshot",
+        "falha nomeando a operationId ausente no child",
+        "falha nomeando a operação e o campo obrigatório alterado",
+        "passa quando o child tem operações extras além do snapshot",
+        "passa com o contrato com $ref idêntico nos dois lados, inclusive com $ref circular",
+        "falha nomeando a operação e o campo quando o tipo por trás de um $ref muda",
+        "falha nomeando a operação e o campo quando um obrigatório some por trás de um $ref",
+        "passa quando o child acrescenta campo opcional por trás de um $ref e uma operação nova"
+      ],
+      "count": 8
+    },
+    {
+      "file": "apps/api/test/bootstrap-product.e2e-spec.ts",
+      "titles": [
+        "rawBody: true entrega o corpo cru no request, antes do parse do body",
+        "o seam do produto roda depois de mountDocs",
+        "createApp só resolve depois que o seam do produto termina — logo, sempre antes de listen"
+      ],
+      "count": 3
+    },
+    {
+      "file": "apps/api/test/health.e2e-spec.ts",
+      "titles": [
+        "GET /health → 200 ok",
+        "GET /ready → 200 ready (contra Postgres real)",
+        "GET /ready → 200 mesmo com o pool de aplicação saturado",
+        "GET /ready → 503 quando o client dedicado do readiness não alcança o banco",
+        "rota inexistente → 404 RFC 7807 com correlationId do header"
+      ],
+      "count": 5
+    },
+    {
+      "file": "apps/api/test/openapi-contract.e2e-spec.ts",
+      "titles": [
+        "expõe só as operações do kernel-only tree"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/api/test/runner-env.e2e-spec.ts",
+      "titles": [
+        "prende o mailer no transporte de log, sem credencial de envio real",
+        "preenche o R2 com credenciais descartáveis",
+        "começa com o Redis do run vazio",
+        "enche o Redis para o hook de limpeza ter o que apagar",
+        "volta vazio: o hook após cada teste flusha o Redis"
+      ],
+      "count": 5
+    },
+    {
+      "file": "apps/api/test/security-bootstrap.e2e-spec.ts",
+      "titles": [
+        "envia headers do helmet",
+        "ecoa Access-Control-Allow-Origin só para a origin permitida",
+        "com TRUST_PROXY_HOPS não definido, req.ip é o endereço do socket e ignora X-Forwarded-For"
+      ],
+      "count": 3
+    },
+    {
+      "file": "apps/api/test/setup/test-db.int-spec.ts",
+      "titles": [
+        "conecta no clone do próprio worker",
+        "aponta para o container que o globalSetup publicou"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/web-next/src/_app/config/api-client.test.ts",
+      "titles": [
+        "configura a baseURL no client",
+        "encaminha onUnauthorized"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/web-next/src/_app/config/query-client.test.ts",
+      "titles": [
+        "aplica defaults conservadores de cache"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/web-next/src/_app/config/zod-locale.test.ts",
+      "titles": [
+        "traduz string obrigatória",
+        "traduz min > 1",
+        "traduz max de string",
+        "traduz invalid_type string ausente",
+        "delega outros códigos ao locale pt"
+      ],
+      "count": 5
+    },
+    {
+      "file": "apps/web-next/src/_app/layout/access-slot.test.tsx",
+      "titles": [
+        "retorna a entrada declarada para uma rota pública conhecida",
+        "cai fechada como autenticada para uma rota desconhecida",
+        "renderiza os children (no-op) para a rota atual"
+      ],
+      "count": 3
+    },
+    {
+      "file": "apps/web-next/src/_app/layout/last-location-tracker.test.tsx",
+      "titles": [
+        "persiste a rota protegida atual ao montar"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/web-next/src/_app/layout/root-layout.test.tsx",
+      "titles": [
+        "compõe AppProviders, ProductShell e AccessGuard até renderizar os children",
+        "aninha html[lang=pt-BR] > body > AppProviders > ProductShell > AccessGuard > LastLocationTracker + children",
+        "exporta metadata.icons apontando para o favicon servido por public/",
+        "sem as variáveis definidas, preserva o comportamento atual",
+        "NEXT_PUBLIC_APP_NAME definido compõe o título default e o template",
+        "NEXT_PUBLIC_LOCALE definido sobrescreve resolveLocale e o html[lang]"
+      ],
+      "count": 6
+    },
+    {
+      "file": "apps/web-next/src/_app/providers/app-providers.auth.test.tsx",
+      "titles": [
+        "limpa o cache e redireciona para o login ao detectar logout em outra aba"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/web-next/src/_app/providers/app-providers.test.tsx",
+      "titles": [
+        "renderiza os children sob o QueryClientProvider compartilhado"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/web-next/src/_pages/error/ui/error-page.test.tsx",
+      "titles": [
+        "chama reset ao clicar em tentar novamente"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/web-next/src/_pages/home/ui/home-page.test.tsx",
+      "titles": [
+        "exibe o título da página inicial"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/web-next/src/_pages/not-found/ui/not-found-page.test.tsx",
+      "titles": [
+        "linka para o início"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/web-next/src/shared/config/env.test.ts",
+      "titles": [
+        "expõe apiUrl a partir de NEXT_PUBLIC_API_URL no boot do vitest",
+        "lança ZodError em pt-BR quando NEXT_PUBLIC_API_URL está ausente",
+        "lança ZodError em pt-BR quando NEXT_PUBLIC_API_URL não é uma URL válida"
+      ],
+      "count": 3
+    },
+    {
+      "file": "apps/web-next/src/shared/config/password-policy.test.ts",
+      "titles": [
+        "fixa o score mínimo alinhado ao backend",
+        "expõe a mensagem pt-BR de senha fraca"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/web-next/src/shared/config/route-access.spec.ts",
+      "titles": [
+        "cobre toda entrada de ROUTES com uma linha de acesso",
+        "toda linha kind: permission carrega key"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/web-next/src/shared/config/routes.test.ts",
+      "titles": [
+        "aceita rota protegida da allowlist",
+        "ignora query e hash antes de validar",
+        "recusa destino fora da allowlist (%s)",
+        "resolve template paramétrico sob /inicio",
+        "rejeita pathname com segmentos a mais que o template",
+        "devolve null para path desconhecido",
+        "devolve o template exato quando bate",
+        "um path exato registrado pelo produto participa de toSafeProtectedRoute",
+        "um template com $param registrado pelo produto participa de resolveProtectedRouteTemplate",
+        "path nunca registrado continua fora da allowlist"
+      ],
+      "count": 10
+    },
+    {
+      "file": "apps/web-next/src/shared/lib/auth-redirect.test.ts",
+      "titles": [
+        "cai no início sem intenção nem memória",
+        "prefere a intenção guardada pelo guard",
+        "descarta intenção fora da allowlist",
+        "usa a última rota protegida visitada"
+      ],
+      "count": 4
+    },
+    {
+      "file": "apps/web-next/src/shared/lib/last-location.test.ts",
+      "titles": [
+        "persiste apenas rotas protegidas válidas",
+        "forgetLastLocation remove só quando bate com a memória"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/web-next/src/shared/lib/problem-details.test.ts",
+      "titles": [
+        "reconhece shape flat e aninhado",
+        "recusa não-problem (%s)",
+        "extrai o type nos dois shapes",
+        "extrai a mensagem user-facing, com fallback no title",
+        "extrai membro de extensão nos dois shapes"
+      ],
+      "count": 5
+    },
+    {
+      "file": "apps/web-next/src/shared/store/auth.store.test.ts",
+      "titles": [
+        "guarda e limpa a intenção de redirect",
+        "broadcastLogout grava timestamp no canal cross-tab",
+        "subscribeCrossTabLogout dispara callback em storage event válido"
+      ],
+      "count": 3
+    },
+    {
+      "file": "apps/web-vite/src/app/config/api-client.test.ts",
+      "titles": [
+        "configura a baseURL no client",
+        "encaminha onUnauthorized"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/web-vite/src/app/config/transport.test.ts",
+      "titles": [
+        "reflete o cookie rit_csrf em X-CSRF-Token nas mutações com corpo",
+        "envia X-CSRF-Token mesmo em mutação sem corpo (ADR 0023)",
+        "dispara onUnauthorized no 401 com a url da request",
+        "propaga o corpo problem+json (RFC 7807) no erro do axios"
+      ],
+      "count": 4
+    },
+    {
+      "file": "apps/web-vite/src/app/config/zod-locale.test.ts",
+      "titles": [
+        "traduz string obrigatória",
+        "traduz min > 1",
+        "traduz max de string",
+        "traduz invalid_type string ausente",
+        "delega outros códigos ao locale pt"
+      ],
+      "count": 5
+    },
+    {
+      "file": "apps/web-vite/src/app/providers/app-providers.auth.test.tsx",
+      "titles": [
+        "limpa cache e navega para login em logout cross-tab"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/web-vite/src/app/providers/app-providers.test.tsx",
+      "titles": [
+        "monta query client e router"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/web-vite/src/app/query-client.test.ts",
+      "titles": [
+        "aplica defaults conservadores de cache"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/web-vite/src/app/render.test.tsx",
+      "titles": [
+        "renderiza um componente e consulta o DOM"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/web-vite/src/app/router/access-matches.test.tsx",
+      "titles": [
+        "a última entrada do matches é a folha, com o access declarado"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/web-vite/src/app/router/app-layout.test.tsx",
+      "titles": [
+        "renderiza o conteúdo da rota filha dentro do main"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/web-vite/src/app/router/route-pending.test.tsx",
+      "titles": [
+        "exibe status de carregamento acessível"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/web-vite/src/app/router/router.test.tsx",
+      "titles": [
+        "registra a raiz, o layout da área logada e o início — sem login",
+        "sobe sem rota de produto — a lista é a costura de extensão",
+        "serializa arrays de string como CSV na query",
+        "serializa arrays mistos como JSON",
+        "serializa valores não-array como JSON"
+      ],
+      "count": 5
+    },
+    {
+      "file": "apps/web-vite/src/app/router/shell.integration.test.tsx",
+      "titles": [
+        "indexRoute redireciona a raiz para o início",
+        "o layout da área logada sobe sem guard — o template não exige sessão",
+        "o vocabulário de acesso das rotas do template é public/authenticated",
+        "rootRoute component está definido"
+      ],
+      "count": 4
+    },
+    {
+      "file": "apps/web-vite/src/app/router/shell.routes.test.tsx",
+      "titles": [
+        "rootRoute expõe título padrão",
+        "inicioRoute expõe título de início"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/web-vite/src/app/router/shell.test.tsx",
+      "titles": [
+        "usa só o nome do app sem label",
+        "prefixa label com separador",
+        "sem VITE_APP_NAME/VITE_LOCALE definidos, preserva o comportamento atual",
+        "usa VITE_APP_NAME quando definido",
+        "compõe o label com o VITE_APP_NAME configurado",
+        "usa VITE_LOCALE quando definido",
+        "instala um beforeLoad em appLayoutRoute que chama o guard registrado",
+        "um novo registro substitui o guard anterior",
+        "sem registro, nenhum 401 é isento",
+        "isenta apenas o 401 que casa o critério registrado",
+        "usa placeholders do Vite, não os literais pt-BR/Platform"
+      ],
+      "count": 11
+    },
+    {
+      "file": "apps/web-vite/src/pages/error/ui/error-page.test.tsx",
+      "titles": [
+        "esquece a rota que falhou para o início não trazer o usuário de volta",
+        "leva ao início ao clicar em voltar",
+        "tenta renderizar de novo ao clicar em tentar novamente"
+      ],
+      "count": 3
+    },
+    {
+      "file": "apps/web-vite/src/pages/home/ui/home-page.test.tsx",
+      "titles": [
+        "exibe o título da área logada"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/web-vite/src/pages/not-found/ui/not-found-page.test.tsx",
+      "titles": [
+        "leva ao início ao clicar em voltar"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/web-vite/src/shared/config/env.test.ts",
+      "titles": [
+        "exige VITE_API_URL no boot do vitest"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/web-vite/src/shared/config/password-policy.test.ts",
+      "titles": [
+        "fixa o score mínimo alinhado ao backend",
+        "expõe a mensagem pt-BR de senha fraca"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/web-vite/src/shared/config/routes.test.ts",
+      "titles": [
+        "aceita rota protegida da allowlist",
+        "ignora query e hash antes de validar",
+        "recusa destino fora da allowlist (%s)",
+        "resolve template paramétrico sob /inicio",
+        "rejeita pathname com segmentos a mais que o template",
+        "devolve null para path desconhecido",
+        "devolve o template exato quando bate",
+        "um path exato registrado pelo produto participa de toSafeProtectedRoute",
+        "um template com $param registrado pelo produto participa de resolveProtectedRouteTemplate",
+        "path nunca registrado continua fora da allowlist",
+        "sem as variáveis definidas, os slugs são os de hoje byte-a-byte",
+        "VITE_ROUTE_LOGIN definido sobrescreve o slug de login",
+        "VITE_ROUTE_INICIO definido sobrescreve o slug de início",
+        "é a única fonte de copy para RoutePending, NotFoundPage e ErrorPage"
+      ],
+      "count": 14
+    },
+    {
+      "file": "apps/web-vite/src/shared/lib/auth-redirect.test.ts",
+      "titles": [
+        "cai no início sem intenção nem memória",
+        "prefere a intenção guardada pelo guard",
+        "descarta intenção fora da allowlist",
+        "usa a última rota protegida visitada"
+      ],
+      "count": 4
+    },
+    {
+      "file": "apps/web-vite/src/shared/lib/last-location.test.ts",
+      "titles": [
+        "persiste apenas rotas protegidas válidas",
+        "forgetLastLocation remove só quando bate com a memória",
+        "persiste e lê uma rota de produto registrada com registerProtectedRoute",
+        "forgetLastLocation também remove uma rota de produto registrada"
+      ],
+      "count": 4
+    },
+    {
+      "file": "apps/web-vite/src/shared/lib/problem-details.test.ts",
+      "titles": [
+        "reconhece shape flat e aninhado",
+        "recusa não-problem (%s)",
+        "extrai o type nos dois shapes",
+        "extrai a mensagem user-facing, com fallback no title",
+        "extrai membro de extensão nos dois shapes"
+      ],
+      "count": 5
+    },
+    {
+      "file": "apps/web-vite/src/shared/store/auth.store.test.ts",
+      "titles": [
+        "guarda e limpa a intenção de redirect",
+        "broadcastLogout grava timestamp no canal cross-tab",
+        "subscribeCrossTabLogout dispara callback em storage event válido"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/attachment/api/__e2e__/access-link-avatar-ownership.e2e-spec.ts",
+      "titles": [
+        "avatar de OUTRO user é rejeitado (não persiste) na ativação"
+      ],
+      "count": 1
+    },
+    {
+      "file": "catalog/attachment/api/__e2e__/attachment-delete.e2e-spec.ts",
+      "titles": [
+        "exclusão que commita deixa exatamente uma linha action='delete', outcome='allowed'",
+        "exclusão com rollback forçado não deixa linha (nem soft-delete)"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/attachment/api/__e2e__/attachment-download.e2e-spec.ts",
+      "titles": [
+        "recurso 'authenticated': download com sessão 200, sem sessão 404, access log registra",
+        "recurso 'restricted': só o dono baixa; outro autenticado recebe 404",
+        "content_type fora do allowlist inline força octet-stream + nosniff, independente do perfil",
+        "perfil desconhecido (removido/renomeado) não bloqueia mais o download — decisão é só pelo content_type",
+        "perfil 'legacy' com content_type image/png segue inline (allowlist, não perfil)",
+        "mantém avatar inline",
+        "atende 3x DATABASE_POOL_MAX downloads simultâneos sem timeout de aquisição",
+        "If-None-Match casando responde 304 sem abrir stream de storage",
+        "50 requisições If-None-Match contra storage com maxSockets:2 — a 51ª ainda responde",
+        "abort do cliente no meio do corpo destrói o stream de origem",
+        "stream de storage falha depois dos headers: conexão cai, log único, processo segue de pé"
+      ],
+      "count": 12
+    },
+    {
+      "file": "catalog/attachment/api/__e2e__/attachment-upload.e2e-spec.ts",
+      "titles": [
+        "sobe uma imagem válida no perfil 'image' (200, um upload devolvido)",
+        "recusa bytes text/html declarados como image/png (415, nada persistido)",
+        "recusa PNG válido declarado como image/jpeg (415, nada persistido)",
+        "recusa upload sem sessão (401/403 — rota exige actor)",
+        "estoura o limite de 20 requisições/60s por IP na 21ª (429, Retry-After, corpo não consumido)",
+        "recusa com 413 quando pendentes do dono + Content-Length estourariam a cota, sem ler o corpo",
+        "recusa com 503 quando não há vaga de upload concorrente na instância, sem ler o corpo"
+      ],
+      "count": 7
+    },
+    {
+      "file": "catalog/attachment/api/api/controllers/multipart-files.spec.ts",
+      "titles": [
+        "entrega os arquivos do campo pedido na ordem do corpo — lote limpo dentro dos limites",
+        "recusa parte de campo diferente do esperado (400 UnexpectedMultipartFieldError)",
+        "recusa parte que não é arquivo (fieldsLimit: 0 campos não-arquivo aceitos)",
+        "recusa arquivo acima do fileSize do perfil (413 PayloadTooLargeError)",
+        "aceita lote no limite exato de maxFiles",
+        "recusa lote acima de maxFiles (413)",
+        "devolve nada quando o corpo não tem arquivo",
+        "não mexe na conexão quando o corpo chega inteiro",
+        "corta o recebimento quando o consumidor abandona o laço no meio",
+        "acorda o laço quando o cliente desliga no meio do envio",
+        "libera o consumidor que está drenando o arquivo quando a requisição cai",
+        "acorda o laço quando o cliente desliga sem nenhum arquivo completo",
+        "recusa corpo que não é multipart",
+        "recusa corpo multipart que termina antes do primeiro arquivo",
+        "recusa campo não-arquivo acima do fieldSize (400, valor truncado)",
+        "recusa mais partes que o teto de `parts` (400/413) e destrói o arquivo em voo"
+      ],
+      "count": 16
+    },
+    {
+      "file": "catalog/attachment/api/api/controllers/upload-attachments.controller.spec.ts",
+      "titles": [
+        "recusa com 503 quando a instância não tem vaga de upload concorrente, antes de checar a cota (corpo não lido)",
+        "recusa com 413 quando pendentes do dono + Content-Length estouram a cota, sem ler o corpo"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/attachment/api/api/facades/attachment.facade.spec.ts",
+      "titles": [
+        "delega ao use case (FILE-16)"
+      ],
+      "count": 1
+    },
+    {
+      "file": "catalog/attachment/api/application/jobs/purge-pending-attachments.job.spec.ts",
+      "titles": [
+        "apaga objeto e linha dos pendentes vencidos",
+        "apaga a linha mesmo se o objeto não existir no storage",
+        "não chama o repositório quando não há vencidos"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/attachment/api/application/use-cases/confirm-uploads/confirm-uploads.use-case.spec.ts",
+      "titles": [
+        "promove para ready com tamanho real e checksum do ETag",
+        "recusa anexo de outro usuário",
+        "recusa id inexistente",
+        "recusa quando o objeto não chegou ao storage",
+        "recusa objeto maior que o declarado",
+        "recusa soma real acima do teto mesmo com cada anexo aprovado no upload individual",
+        "recusa ids.length acima do maior maxFiles entre os perfis de rota, antes de consultar o banco"
+      ],
+      "count": 7
+    },
+    {
+      "file": "catalog/attachment/api/application/use-cases/delete-attachment/delete-attachment.use-case.spec.ts",
+      "titles": [
+        "soft-delete + agenda delete no R2 via onCommit",
+        "id inexistente é no-op",
+        "attachment já deletado é no-op",
+        "registra acesso de delete no access log via recordInTx, dentro da tx"
+      ],
+      "count": 4
+    },
+    {
+      "file": "catalog/attachment/api/application/use-cases/get-attachment-for-download/get-attachment-for-download.use-case.spec.ts",
+      "titles": [
+        "permitido: retorna meta e loga allowed sem abrir o stream",
+        "openStream: abre o storage adapter exatamente uma vez, sob demanda",
+        "negado: loga denied e lança NotFound (anti-vazamento)",
+        "trusted: libera restricted sem ser o dono",
+        "inexistente: lança NotFound"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/attachment/api/application/use-cases/list-attachment-access-log/list-attachment-access-log.use-case.spec.ts",
+      "titles": [
+        "resolve nomes em uma chamada em lote, sem N+1 (FILE-16)",
+        "acesso sem usuário devolve actorName null (FILE-17)",
+        "lista vazia é resultado válido, não erro (FILE-18)"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/attachment/api/application/use-cases/upload-attachment/upload-attachment.use-case.int-spec.ts",
+      "titles": [
+        "rejeita upload de 11 bytes contra o teto de 10 do perfil injetado",
+        "aceita upload de 10 bytes e persiste com a visibility do perfil injetado"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/attachment/api/application/use-cases/upload-attachment/upload-attachment.use-case.spec.ts",
+      "titles": [
+        "rejeita arquivo acima do limite",
+        "rejeita quando magic bytes não batem",
+        "sobe no R2 ANTES de persistir e grava log de upload",
+        "aceita arquivo exatamente no limite e não lança PayloadTooLargeError",
+        "aceita bytes não-imagem quando o profile aceita qualquer tipo",
+        "preserva o content-type declarado quando o profile aceita qualquer tipo",
+        "rejeita quando magic bytes indicam tipo diferente do declarado"
+      ],
+      "count": 7
+    },
+    {
+      "file": "catalog/attachment/api/application/use-cases/upload-attachments-batch/upload-attachments-batch.use-case.spec.ts",
+      "titles": [
+        "sobe cada arquivo e devolve os ids na ordem recebida",
+        "grava o tamanho medido, não o declarado",
+        "recusa o lote que passa do teto somado",
+        "a mensagem do teto excedido fala em MB, não em bytes",
+        "recusa o lote que passa do teto de quantidade",
+        "não grava nenhuma linha quando um arquivo do lote falha",
+        "apaga do bucket o que já tinha subido quando o lote falha",
+        "apaga do bucket o que subiu quando a gravação no banco falha",
+        "erro ao apagar não encobre o motivo da recusa",
+        "corpo que morre no meio vira erro de envio interrompido, não erro de servidor",
+        "preserva o erro de domínio que vem do corpo",
+        "recusa lote vazio sem tocar no storage",
+        "sobe PNG entregue em 2 chunks com o checksum/tamanho intacto (unshift não trunca) e persiste o tipo farejado",
+        "recusa arquivo cujo Content-Type declarado não bate com os magic bytes (415)",
+        "lote com 1 imagem válida + 1 spoofada: nada é persistido, tudo que subiu é descartado",
+        "recusa PNG válido declarado como image/jpeg (farejado difere do declarado, não é null)",
+        "recusa JPEG válido declarado como image/png e descarta o objeto já enviado do lote"
+      ],
+      "count": 17
+    },
+    {
+      "file": "catalog/attachment/api/attachment.config.spec.ts",
+      "titles": [
+        "usa defaults",
+        "coage valores de env",
+        "não conhece mais os envs antigos de feedback/report"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/attachment/api/domain/access-policy.spec.ts",
+      "titles": [
+        "public: qualquer um, mesmo anônimo",
+        "authenticated: exige userId, ignora owner",
+        "restricted: só o dono"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/attachment/api/domain/attachment.entity.spec.ts",
+      "titles": [
+        "create gera id, status ready e timestamps",
+        "é imutável (props congeladas)",
+        "markDeleted retorna nova instância deleted",
+        "nasce pendente, sem checksum, com storageKey derivado do id",
+        "markReady grava tamanho real e checksum sem mutar a instância anterior",
+        "withUploadedSize devolve nova instância pendente com o tamanho medido"
+      ],
+      "count": 6
+    },
+    {
+      "file": "catalog/attachment/api/domain/content-type-sniff.spec.ts",
+      "titles": [
+        "detecta jpeg/png/webp",
+        "retorna null pra bytes não-imagem",
+        "retorna null para buffer vazio",
+        "retorna null para buffer menor que 3 bytes (jpeg guard falha)",
+        "retorna null para buffer menor que 8 bytes que não é jpeg (png guard falha)",
+        "retorna null para buffer menor que 12 bytes que não é jpeg nem png (webp guard falha)",
+        "retorna null quando RIFF bate mas WEBP não (assinatura webp incompleta)",
+        "retorna null quando magic bytes do jpeg são parcialmente corretos",
+        "detecta o tipo pelos primeiros bytes sem truncar o stream (unshift preserva tudo)",
+        "preserva o conteúdo mesmo quando os bytes chegam em vários chunks pequenos",
+        "retorna null para um stream cujos bytes não são imagem",
+        "retorna null para um stream vazio (encerra sem nenhum byte)",
+        "sniffa mesmo um arquivo menor que os 16 bytes de espiada (stream termina cedo)"
+      ],
+      "count": 13
+    },
+    {
+      "file": "catalog/attachment/api/domain/counting-limit.spec.ts",
+      "titles": [
+        "conta os bytes que passam",
+        "interrompe o fluxo assim que passa do teto",
+        "aceita exatamente o teto"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/attachment/api/domain/errors.spec.ts",
+      "titles": [
+        "todos os erros estendem DomainError",
+        "AttachmentNotFoundError: status 404, título vem da tabela única de mensagens",
+        "EmptyUploadBatchError: title/detail inalterados por padrão",
+        "UploadsSaturatedError: status 503, Retry-After 2s"
+      ],
+      "count": 4
+    },
+    {
+      "file": "catalog/attachment/api/domain/format-megabytes.spec.ts",
+      "titles": [
+        "converte o teto de 500 MB do perfil de feedback",
+        "arredonda para o MB mais próximo",
+        "mostra 0 MB para valor abaixo de meio MB"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/attachment/api/domain/upload-profiles.spec.ts",
+      "titles": [
+        "é exatamente avatar, access-link-avatar, document, image, multi",
+        "mantém a política de imagem única para avatar, link de acesso e o perfil genérico image",
+        "dá ao perfil document tipo livre, 1 arquivo e visibilidade restricted",
+        "dá ao perfil multi tipo livre, 100 arquivos e os tetos vindos do ambiente",
+        "respeita os tetos vindos do ambiente",
+        "mescla um UploadProfileDef de produto no catálogo",
+        "lança ao encontrar uma chave de produto duplicada de um nome base",
+        "UPLOAD_PROFILE_NAMES contém os nomes base seguidos das chaves do slot de produto",
+        "buildUploadProfileNames acrescenta a chave do UploadProfileDef de produto depois dos nomes base",
+        "ROUTE_UPLOAD_PROFILE_NAMES contém document, image, multi seguidos das chaves roteáveis do slot de produto (avatar e access-link-avatar nunca sobem pela rota genérica)",
+        "buildRouteUploadProfileNames inclui a chave de produto só quando uploadRoute é true",
+        "reconhece um nome base",
+        "rejeita um nome desconhecido"
+      ],
+      "count": 13
+    },
+    {
+      "file": "catalog/attachment/api/infrastructure/repositories/drizzle-attachment-access-log.repository.int-spec.ts",
+      "titles": [
+        "apaga só o vencido, preserva o dentro da janela",
+        "respeita o limit apagando dos mais antigos primeiro",
+        "retorna 0 quando nada vencido",
+        "devolve só allowed, mais recente primeiro (FILE-16)",
+        "respeita o limite (FILE-16)",
+        "anexo sem acesso devolve lista vazia (FILE-16)",
+        "listByAttachment completa dentro de txm.run com pool de 1 conexão",
+        "deleteBatchOlderThan completa dentro de txm.run com pool de 1 conexão e apaga exatamente o vencido",
+        "record grava fora de tx",
+        "record lança dentro de uma transação de negócio (pede 2ª conexão)",
+        "recordInTx lança fora de uma transação",
+        "recordInTx some quando a tx de negócio dá rollback",
+        "recordInTx grava exatamente uma linha quando a tx de negócio comita"
+      ],
+      "count": 13
+    },
+    {
+      "file": "catalog/attachment/api/infrastructure/repositories/drizzle-attachment.repository.int-spec.ts",
+      "titles": [
+        "insert grava attachment + acl 1:1 e findById remonta a entidade",
+        "findById retorna null quando não existe",
+        "update soft-delete altera status",
+        "insertMany grava pendentes e findPendingOlderThan devolve só os antigos",
+        "migração 0005 renomeia linhas de profile feedback-attachment para multi",
+        "sumPendingBytesByOwner soma só os pendentes do dono, ignora prontos e de outro dono",
+        "sumPendingBytesByOwner devolve 0 quando o dono não tem pendente",
+        "deletePendingByIds só apaga quem ainda está pending — linha que virou ready sobrevive"
+      ],
+      "count": 8
+    },
+    {
+      "file": "catalog/attachment/parity/access-log.parity.spec.ts",
+      "titles": [
+        "expõe AttachmentFacade.listAccessLog(attachmentId)",
+        "mantém as ações de acesso rastreadas",
+        "mantém a forma de uma entrada do log de acesso"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/attachment/parity/contract.parity.spec.ts",
+      "titles": [
+        "mantém no openapi.json do child as operações do snapshot"
+      ],
+      "count": 1
+    },
+    {
+      "file": "catalog/attachment/parity/upload-profiles.parity.spec.ts",
+      "titles": [
+        "mantém os cinco perfis genéricos do base-set",
+        "expõe document, image e multi na rota genérica de upload",
+        "perfil multi aceita qualquer byte, até 100 arquivos, restricted",
+        "perfis avatar, access-link-avatar e image exigem imagem e são authenticated"
+      ],
+      "count": 4
+    },
+    {
+      "file": "catalog/audit/api/__e2e__/audit-product-extension.e2e-spec.ts",
+      "titles": [
+        "master lista a trilha da tabela do produto com o label da FK resolvido",
+        "usuário com a chave dona registrada pelo produto lista a tabela",
+        "usuário sem a chave dona registrada pelo produto recebe 403"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/audit/api/__e2e__/audit.e2e-spec.ts",
+      "titles": [
+        "reflete create + update do ator no GET /v1/audit",
+        "nega leitura sem nenhuma permissão de logs → 403",
+        "nega tabela fora do escopo do ator → 403",
+        "sem filtro de tabela devolve só a união permitida"
+      ],
+      "count": 4
+    },
+    {
+      "file": "catalog/audit/api/api/contracts/audit.contract.spec.ts",
+      "titles": [
+        "aceita from/to em ISO datetime válido",
+        "rejeita from com mês inválido (2026-13-01)",
+        "rejeita from/to como data sem horário",
+        "txId no teto (Number.MAX_SAFE_INTEGER) passa",
+        "txId acima do teto é rejeitado"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/audit/api/api/facades/usage-activity.facade.spec.ts",
+      "titles": [
+        "traduz a tabela alterada no assunto do sistema",
+        "tabela sem assunto mapeado sai como Outros, sem perder a contagem",
+        "não vaza nome de tabela para fora do módulo"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/audit/api/application/list-audit-entries/list-audit-entries.use-case.spec.ts",
+      "titles": [
+        "insert expõe row_new inteiro com old null",
+        "delete expõe row_old inteiro com new null",
+        "update expõe só as changed_keys",
+        "expande table raiz para raiz+satélites no repositório",
+        "sem table não passa tables",
+        "resolve actorName em lote com ids distintos",
+        "resolve labels de FK nas changes (update e insert de satélite)",
+        "sem access no contexto → 403",
+        "table cujo dono não é possuído → 403",
+        "table desconhecida → 403 fail-closed",
+        "table possuída expande agregado normalmente",
+        "sem table → união das tabelas permitidas",
+        "sem table e sem nenhuma chave de logs → 403",
+        "master sem table → sem restrição (tables undefined)",
+        "sem table → nenhuma restrição de tabela",
+        "lê tabela de outro módulo sem ter a chave dona",
+        "table desconhecida continua 403 mesmo com a trilha completa"
+      ],
+      "count": 17
+    },
+    {
+      "file": "catalog/audit/api/application/services/activity-area-resolver.spec.ts",
+      "titles": [
+        "resolve a tabela no assunto dono, com o rótulo pt-BR do catálogo",
+        "tabelas do mesmo agregado caem no mesmo assunto",
+        "tabela sem dono no mapa vira Outros",
+        "toda tabela auditada resolve para um assunto com rótulo",
+        "assuntos distintos nunca compartilham a mesma chave",
+        "UNMAPPED_AREA vem da tabela de mensagens do entry, inalterada por padrão"
+      ],
+      "count": 6
+    },
+    {
+      "file": "catalog/audit/api/application/services/audit-registry.spec.ts",
+      "titles": [
+        "toda tabela auditada tem exatamente um dono, e nada além delas",
+        "todo dono é chave do catálogo terminada em .audit.read",
+        "ownerOf devolve o dono ou undefined pra tabela desconhecida",
+        "allowedTables filtra pelo set do ator",
+        "toda tabela auditada aparece exatamente uma vez (raiz, satélite ou técnica)",
+        "satélites de um agregado têm o mesmo dono da raiz",
+        "tablesForAggregate expande raiz para raiz+satélites",
+        "tabela fora do registry volta só ela mesma",
+        "technicalTables devolve devices/sessions/verification_tokens",
+        "refTargetFor resolve as colunas de FK do base set",
+        "registerTables aceita uma tabela nova e refTargetFor resolve sua FK",
+        "registerTables com tabela já registrada lança nomeando-a",
+        "registerRefTargets com coluna já registrada lança nomeando-a"
+      ],
+      "count": 13
+    },
+    {
+      "file": "catalog/audit/api/domain/audit-coverage.int-spec.ts",
+      "titles": [
+        "toda tabela de schema de módulo está em AUDITED ou EXEMPT (sem órfã)",
+        "toda tabela AUDITED de módulo instalado tem o trigger audit_row no banco",
+        "nenhuma tabela EXEMPT tem o trigger audit_row",
+        "todo trigger audit_row no banco pertence a uma tabela AUDITED declarada"
+      ],
+      "count": 4
+    },
+    {
+      "file": "catalog/audit/api/infrastructure/repositories/drizzle-activity-stats.reader.int-spec.ts",
+      "titles": [
+        "soma as alterações por tabela e por dia",
+        "alteração de rotina automática fica de fora da conta",
+        "alteração sem ator identificado fica de fora da conta",
+        "alteração às 23h fica no dia local, não no dia seguinte",
+        "agrega por semana quando a unidade é semana",
+        "ignora alteração fora da janela pedida",
+        "período sem nenhuma alteração devolve lista vazia"
+      ],
+      "count": 7
+    },
+    {
+      "file": "catalog/audit/api/infrastructure/repositories/drizzle-audit.repository.int-spec.ts",
+      "titles": [
+        "filtra por tables (lista de tabelas do agregado)",
+        "filtra por origin user (só http) e system (não-http)",
+        "filtra por op",
+        "filtra por actorUserId",
+        "filtra por janela from/to (occurred_at)",
+        "filtra por txId",
+        "ordena por occurred_at desc com desempate estável por seq",
+        "pagina por offset",
+        "q busca pelo nome do ator (resolvido via UserDirectoryFacade)",
+        "q busca no conteúdo das alterações (row_new)",
+        "q casa por entity_id, ator OU alterações (OR)"
+      ],
+      "count": 11
+    },
+    {
+      "file": "catalog/audit/api/infrastructure/repositories/drizzle-ref-label.reader.int-spec.ts",
+      "titles": [
+        "resolve id→label e ignora ids inexistentes",
+        "lista vazia de ids não vai ao banco"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/audit/api/infrastructure/trail/audit-trail.repository.int-spec.ts",
+      "titles": [
+        "deleteOlderThan purga o vencido e mantém o recente (escape hatch em tx)",
+        "deleteOlderThan exige tx aberta (GUC é transaction-scoped)",
+        "purgeEntities apaga só a trilha do titular informado (por table+entity_id)",
+        "purgeEntities sem refs é no-op e não exige tx",
+        "purgeEntities exige tx aberta quando há refs"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/audit/api/infrastructure/trail/audit-trigger.int-spec.ts",
+      "titles": [
+        "INSERT grava op=insert, row_new completo, changed_keys vazio e origin unknown sem contexto",
+        "UPDATE grava changed_keys só do campo mudado, excluindo updated_at",
+        "no-op UPDATE (só updated_at muda) é suprimido",
+        "DELETE grava op=delete, row_old completo e row_new null",
+        "redaction: identity.users.password_hash vira [REDACTED] na trilha",
+        "redaction: identity.sessions.token_hash vira [REDACTED] na trilha",
+        "redaction: identity.devices.cookie_token_hash vira [REDACTED] na trilha",
+        "redaction: identity.verification_tokens.token_hash vira [REDACTED] na trilha",
+        "PK composta: entity_id junta os valores das colunas de PK com ':'",
+        "escape hatch: DELETE em audit.entries lança sem GUC e passa com app.audit_maintenance=on",
+        "UPDATE em audit.entries sempre lança (append-only), mesmo com GUC",
+        "contexto do ator: TransactionManager carimba actor_user_id, origin e correlation_id",
+        "app.audit_skip=on suprime a captura na transação"
+      ],
+      "count": 13
+    },
+    {
+      "file": "catalog/audit/parity/contract.parity.spec.ts",
+      "titles": [
+        "mantém no openapi.json do child as operações do snapshot"
+      ],
+      "count": 1
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/__e2e__/access-catalog.e2e-spec.ts",
+      "titles": [
+        "lista os perfis do base-set com rótulo em pt-BR e a marcação de atribuível",
+        "segue devolvendo os módulos do catálogo de permissões",
+        "sem cookie → 401"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/__e2e__/access-history.e2e-spec.ts",
+      "titles": [
+        "autenticado → 200 com envelope paginado e campos corretos",
+        "sem cookie → 401"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/__e2e__/access-link-activation.e2e-spec.ts",
+      "titles": [
+        "ativa a conta (200 + cookie + sessão + birth_date) e mata o token",
+        "recusar convite invalida o token; user segue pending"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/__e2e__/auth-anti-enum.e2e-spec.ts",
+      "titles": [
+        "inexistente e senha-errada produzem corpo byte-idêntico (401)",
+        "não vaza token de sessão em login falho",
+        "estourar o bucket de um e-mail inexistente devolve o MESMO 429 de um existente"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/__e2e__/auth-csrf-none.e2e-spec.ts",
+      "titles": [
+        "login emite o cookie rit_csrf legível",
+        "mutação SEM X-CSRF-Token → 403",
+        "mutação COM X-CSRF-Token válido → 204",
+        "mutação com X-CSRF-Token forjado → 403",
+        "GET /auth/session (safe) não exige X-CSRF-Token",
+        "Origin de outro site é 403 e o bucket segue intacto para o pedido legítimo"
+      ],
+      "count": 6
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/__e2e__/auth-login.e2e-spec.ts",
+      "titles": [
+        "login retorna 200 com user e Set-Cookie __Host- httpOnly SameSite",
+        "11ª falha na mesma conta, vinda de dois IPs, responde 429 com Retry-After",
+        "senha correta depois de falhas limpa o bucket da conta"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/__e2e__/auth-logout.e2e-spec.ts",
+      "titles": [
+        "logout com sessão válida → 204 e cookie de sessão apagado",
+        "após logout, rota autenticada retorna 401",
+        "logout sem sessão (cookie ausente) → 401",
+        "logout sem Origin → 403 (CSRF guard rejeita por Origin ausente)"
+      ],
+      "count": 4
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/__e2e__/auth-outbox-email.e2e-spec.ts",
+      "titles": [
+        "forgot-password emite o evento no outbox e o dispatcher entrega ao mailer 1x; re-poll não reenvia"
+      ],
+      "count": 1
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/__e2e__/auth-rate-limit.e2e-spec.ts",
+      "titles": [
+        "estouro do limite de forgot-password (3/min) responde 429 problem+json"
+      ],
+      "count": 1
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/__e2e__/auth-reset-token-logging.e2e-spec.ts",
+      "titles": [
+        "reset com token no body → token bruto não aparece no corpo, instance nem log"
+      ],
+      "count": 1
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/__e2e__/auth-session.e2e-spec.ts",
+      "titles": [
+        "rota protegida sem cookie → 401 sem Set-Cookie de limpeza",
+        "rota protegida com cookie inválido → 401 + Set-Cookie de limpeza"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/__e2e__/authz.e2e-spec.ts",
+      "titles": [
+        "reader acessa GET /v1/admin/users (200)",
+        "anônimo recebe 401 em GET /v1/admin/users, não 403",
+        "rota self-service exige sessão mas nenhuma permissão",
+        "noperm recebe 403 RFC 7807 em GET /v1/admin/users",
+        "reader SEM admin.users.create recebe 403 em POST /v1/admin/users",
+        "master cria usuário com permissions e closure válida (201)",
+        "422 invalid-permission-set quando requires falta no create",
+        "422 quando o piso do perfil não é satisfeito no create",
+        "PUT /v1/admin/users/:id atualiza nome/perfil/set (204) e o set persiste",
+        "PUT em alvo master → 403",
+        "auto-edição de permissões → 403",
+        "ator restrito não concede o que não possui no create (403)",
+        "ator restrito cria com subconjunto do próprio (201)",
+        "ator restrito renomeia usuário mais poderoso sem tocar no set (204)",
+        "ator restrito não REVOGA do alvo chave que não possui (403)",
+        "GET /v1/auth/session devolve accessProfile e permissions",
+        "rotas self-service passam sem permissão (noperm)",
+        "CRUD de modelos: create → list contém → update → delete → list vazio",
+        "modelo com nome duplicado → 409",
+        "download de attachment continua @OptionalAuth (sem 403 do guard)"
+      ],
+      "count": 20
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/__e2e__/create-user-flow.e2e-spec.ts",
+      "titles": [
+        "seed master e promoção via SQL",
+        "login do master retorna cookie de sessão",
+        "master cria usuário Ana via rota autenticada (201)",
+        "outbox + delivery dispatcher disparam sendAccessLink com token",
+        "GET /v1/auth/access-link com token válido retorna dados do usuário criado",
+        "POST /v1/auth/set-password ativa conta, retorna usuário atualizado e cookie de auto-login",
+        "cookie de ativação autentica a sessão de Ana sem login manual",
+        "reuso do token já consumido retorna 400",
+        "master cria Profissional com áreas/serviços; listagem não vaza a system perm",
+        "cria profissional com permissão de outro módulo",
+        "master cria usuário com áreas de agendamento; listagem devolve as áreas"
+      ],
+      "count": 11
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/__e2e__/devices.e2e-spec.ts",
+      "titles": [
+        "login sem cookie de device → Set-Cookie de device novo",
+        "relogin com o MESMO cookie de device → 1 device, 1 sessão; a anterior morre",
+        "DELETE /auth/devices/:id derruba as sessões do outro device",
+        "id de device longo demais → 400, sem chegar ao repositório",
+        "revogar o device atual → 409",
+        "DELETE /auth/devices (outros) mantém o atual e derruba os demais"
+      ],
+      "count": 6
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/__e2e__/idempotency.e2e-spec.ts",
+      "titles": [
+        "sem Idempotency-Key → executa sem dedup (header opcional)",
+        "com Idempotency-Key → 202",
+        "replay mesma key+body → 202 idêntico (status do snapshot)",
+        "mesma key + body diferente → 422",
+        "snapshot não persiste PII em claro no response_body"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/__e2e__/notifications-email.e2e-spec.ts",
+      "titles": [
+        "create-user → notification.requested → delivery sent com link redigido, sem in-app"
+      ],
+      "count": 1
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/__e2e__/notifications-feed.e2e-spec.ts",
+      "titles": [
+        "GET /v1/notifications lista só as do user logado, inbox por default",
+        "GET /v1/notifications?filter aplica a semântica da spec",
+        "GET /v1/notifications/unseen-count reflete o badge; POST /seen zera",
+        "POST /read-all marca todas lidas (e vistas) só do user logado",
+        "POST /:id/read marca lida (e vista); id de OUTRO user → 204 no-op",
+        "POST /:id/archive tira do inbox; aparece em ?filter=archived",
+        "sem sessão → 401 problem+json"
+      ],
+      "count": 7
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/__e2e__/notifications-inapp.e2e-spec.ts",
+      "titles": [
+        "change-password → item no feed + badge + delivery de e-mail",
+        "fluxo create-user → set-password notifica o admin criador"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/__e2e__/notifications-sse.e2e-spec.ts",
+      "titles": [
+        "retorna 200 com content-type text/event-stream quando autenticado",
+        "retorna 401 sem cookie de sessão"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/__e2e__/user-trash.e2e-spec.ts",
+      "titles": [
+        "delete → lixeira → restore → purge → e-mail liberado",
+        "sessão viva de usuário excluído deixa de valer na hora",
+        "?deleted=true sem admin.users.trash.read → 403, listagem normal segue 200"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/__e2e__/verify-email.e2e-spec.ts",
+      "titles": [
+        "token válido → 204 + email_verified=true no banco",
+        "token já consumido na segunda chamada → 400 RFC 7807",
+        "token completamente inválido (string aleatória) → 400 RFC 7807",
+        "token expirado (inserted direto no banco com expiresAt no passado) → 400",
+        "payload sem token → 400 de validação"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/api/access/identity-access.policy.spec.ts",
+      "titles": [
+        "rota pública passa sem ator",
+        "rota autenticada sem ator responde 401, não 403",
+        "rota de permissão sem ator responde 401, não 403",
+        "rota autenticada só exige ator — não exige permissão nenhuma",
+        "libera quando o ator tem a permissão exigida",
+        "nega quando o ator não tem a permissão exigida",
+        "master passa sem ter a chave (bypass)",
+        "ator sem permissões publicadas (usuário excluído) é negado",
+        "libera com uma única das chaves exigidas",
+        "nega quando o ator não tem nenhuma das chaves",
+        "master passa sem ter chave nenhuma (bypass)",
+        "sem ator responde 401, não 403",
+        "ator sem permissões publicadas é negado"
+      ],
+      "count": 13
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/api/contracts/identity.contract.spec.ts",
+      "titles": [
+        "loginSchema tem rememberMe default true",
+        "forgotPasswordSchema exige email",
+        "resetPasswordSchema exige token e password",
+        "changePasswordSchema exige currentPassword e newPassword",
+        "verifyEmailSchema exige token",
+        "DTOs expõem o schema (createZodDto)",
+        "email aceita 254 caracteres e recusa 255",
+        "token aceita 128 caracteres e recusa 129",
+        "name aceita 200 caracteres e recusa 201",
+        "permissions duplicadas são recusadas",
+        "areaIds, serviceIds e schedulingAreaIds duplicados são recusados",
+        "listas sem repetição continuam válidas",
+        "idParamSchema exige id de 1 a 64 caracteres"
+      ],
+      "count": 13
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/api/controllers/auth/confirm-email-change.controller.spec.ts",
+      "titles": [
+        "usa o device cookie do request e assina CSRF quando SameSite=none",
+        "deviceCookie = null sem cookies e não assina CSRF quando SameSite=lax"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/api/controllers/session/upload-avatar.controller.spec.ts",
+      "titles": [
+        "rejeita quando nenhum arquivo é enviado",
+        "encaminha bytes/contentType/filename ao use case para mime permitido",
+        "configura o multer sem campos extras (GHSA-72gw-mp4g-v24j)"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/api/decorators/current-user.decorator.spec.ts",
+      "titles": [
+        "registra um param decorator no handler"
+      ],
+      "count": 1
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/api/facades/professional-directory.facade.spec.ts",
+      "titles": [
+        "publica o agrupamento de áreas sem alterar a ordem"
+      ],
+      "count": 1
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/api/guards/cookie.spec.ts",
+      "titles": [
+        "emite com httpOnly, secure, sameSite, path / e sem domain",
+        "limpa com os MESMOS atributos (sem domain, maxAge 0)",
+        "COOKIE_OPTIONS não inclui domain"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/api/guards/csrf.guard.spec.ts",
+      "titles": [
+        "permite GET sem Origin (método safe)",
+        "permite POST com Origin igual ao WEB_ORIGIN",
+        "403 em POST com Origin divergente",
+        "403 em POST sem Origin nem Referer",
+        "rota máquina-a-máquina passa sem Origin (ADR 0074)",
+        "rota máquina-a-máquina não afrouxa as demais",
+        "cai no Referer quando Origin ausente",
+        "token do sessionId corrente + Origin ok → true",
+        "token de OUTRO sessionId → 403",
+        "sem sessionId (com token) → 403",
+        "sessionId sem header → 403",
+        "rota @Public (sem sessionId/token) pula o double-submit (só Origin)"
+      ],
+      "count": 12
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/api/middleware/auth-seam.spec.ts",
+      "titles": [
+        "rota pública responde 200 sem sessão",
+        "rota de permissão responde 200 com sessão — o middleware publicou o ator antes do guard",
+        "rota de permissão responde 401 sem sessão",
+        "rota de permissão responde 401 com cookie inválido"
+      ],
+      "count": 4
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/api/middleware/auth.middleware.spec.ts",
+      "titles": [
+        "sem cookie segue anônimo: nenhum ator publicado e o request continua",
+        "cookie válido publica o ator user, a sessão e o conjunto de permissões",
+        "propaga o tenantId do request para o ator",
+        "renova a sessão (touch) quando o cookie é válido",
+        "abaixo do intervalo de touch nenhum UPDATE é emitido",
+        "no limite do intervalo o touch volta a ser emitido",
+        "cookie inválido segue anônimo e apaga o cookie morto",
+        "sessão expirada segue anônima e apaga o cookie morto",
+        "falha de banco é fail-closed: 503, nunca segue anônimo",
+        "usuário excluído com sessão viva não publica NADA e perde o cookie",
+        "usuário sumido do banco também não publica nada",
+        "usuário master publica isMaster no contexto"
+      ],
+      "count": 12
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/access-policy.spec.ts",
+      "titles": [
+        "aceita set vazio",
+        "aceita set com cadeia completa",
+        "rejeita chave sem o requires presente, listando as faltantes",
+        "master é isento (set vazio passa)",
+        "admin exige ≥1 chave do módulo admin",
+        "professional é isento (o piso vem do slot de produto, não do catálogo)",
+        "perfil com permissionFloor false aceita set vazio",
+        "perfil com permissionFloor true exige chave do módulo homônimo",
+        "sem área de agendamento resolve lista vazia sem tocar o port",
+        "áreas de agendamento informadas são validadas no port e preservadas",
+        "falha do port (área inexistente/inativa) vira InvalidSchedulingAreasError",
+        "quem atende guarda áreas e serviços de atuação, em qualquer perfil",
+        "quem atende sem área de atuação → InvalidProfessionalScopeError",
+        "perfil Profissional sem a marcação zera áreas e serviços de atuação",
+        "atuação e agendamento coexistem sem uma zerar a outra",
+        "sem atendimento zera áreas e serviços de atuação",
+        "master concede qualquer chave",
+        "conjunto contido no do ator passa",
+        "chave nova fora do conjunto do ator lança",
+        "manter chave que o alvo já tinha e o ator não tem passa",
+        "revogar chave que o ator não tem lança (a revogação também é edição)",
+        "revogar chave que o ator tem passa",
+        "conjunto inalterado passa mesmo com chave fora do ator",
+        "troca simultânea cobra as duas pontas do delta",
+        "master revoga chave que não possui",
+        "o 403 carrega o type permission-grant-not-allowed",
+        "a mensagem não enumera as chaves negadas"
+      ],
+      "count": 27
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/assert-permission.spec.ts",
+      "titles": [
+        "passa quando o ator tem a chave",
+        "nega com 403 quando o ator não tem a chave",
+        "master passa sem a chave",
+        "sem contexto de acesso no request nega, nunca passa",
+        "fora de um escopo de request nega, nunca passa"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/jobs/maintenance-jobs.spec.ts",
+      "titles": [
+        "registra auth-events.purge com o horário e o lock da v0.2",
+        "registra email-change.revert com o horário e o lock da v0.2",
+        "não colide com os lockIds do kernel"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/password/check-breach.spec.ts",
+      "titles": [
+        "'breached' vira WeakPasswordError com a mensagem da política",
+        "'clear' devolve 'clear' e não lança",
+        "'skipped' devolve 'skipped' — a lacuna sobe para o caller auditar",
+        "repassa a senha para a porta sem transformá-la"
+      ],
+      "count": 4
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/rate-limiter-outage.listener.spec.ts",
+      "titles": [
+        "grava um auth event de sistema com userId null e o início da queda",
+        "uma queda com vários consumes gera UM único evento",
+        "fora de um request o evento ainda é gravado, com correlationId próprio",
+        "é evento de sistema: fica FORA da allowlist do histórico do usuário"
+      ],
+      "count": 4
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/require-auth.spec.ts",
+      "titles": [
+        "ator publicado devolve userId, sessionId e deviceId",
+        "sem ator no request lança 403 (sessão de usuário excluído)",
+        "sem sessão publicada lança 403"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/services/create-session.service.spec.ts",
+      "titles": [
+        "acima do teto: revoga as mais antigas além do cap",
+        "revoga só DEPOIS de criar a sessão nova (a recém-criada conta pro teto)",
+        "no teto exato: não revoga nada"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/cancel-access-link/cancel-access-link.use-case.spec.ts",
+      "titles": [
+        "happy: consome o token e registra access_link_cancelled",
+        "token inválido (consumeByHash null) lança InvalidAccessLinkError sem gravar evento",
+        "token inválido (consumeByHash undefined) lança InvalidAccessLinkError sem gravar evento",
+        "passa o hash do token e o propósito correto para consumeByHash",
+        "registra evento com userId do token consumido"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/change-password/change-password.use-case.int-spec.ts",
+      "titles": [
+        "o breach-check roda com isInTransaction() === false",
+        "fail_open + consulta indisponível: a troca commita e o skip é auditado"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/change-password/change-password.use-case.spec.ts",
+      "titles": [
+        "caminho feliz: atualiza senha, revoga outras sessões, audita e publica notificação",
+        "contexto sem userId lança ForbiddenError antes de qualquer IO",
+        "usuário não encontrado no repo lança ForbiddenError (não expõe existência)",
+        "usuário sem senha (pending) lança InvalidCredentialsError",
+        "senha atual incorreta lança InvalidCredentialsError sem atualizar nada",
+        "nova senha com score fraco lança WeakPasswordError sem atualizar nada",
+        "nova senha em breach lança WeakPasswordError sem atualizar nada",
+        "breach check NÃO é chamado quando BREACH_CHECK_ENABLED é false",
+        "habilitado em fail_open: a senha vazada é barrada (o modo não decide SE consulta)",
+        "fail_open + consulta indisponível: troca segue e grava breach_check_skipped",
+        "fail_closed + consulta indisponível: 503 sobe e nada é persistido",
+        "consulta bem-sucedida NÃO grava breach_check_skipped",
+        "hash da nova senha é chamado antes de persistir",
+        "fail_closed: senha não-breachada prossegue normalmente e persiste a troca",
+        "usuário não encontrado: sessions.deleteOthers e outbox.publish NÃO são chamados",
+        "passwordHash nulo: hasher.verify e users.update NÃO são chamados",
+        "senha atual inválida: breach.check e users.update NÃO são chamados"
+      ],
+      "count": 17
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/confirm-email-change/confirm-email-change.use-case.spec.ts",
+      "titles": [
+        "confirma troca: promove pendingEmail, grava sessão e retorna user + sessionToken",
+        "consome o token e invalida todos os outros tokens de email_change do usuário",
+        "persiste o usuário com confirmEmailChange antes de criar sessão",
+        "grava auth_event email_changed via recordInTx (dentro da tx)",
+        "deviceCookie presente e conhecido: não cria device e mantém o cookie",
+        "token inexistente/expirado/consumido lança InvalidEmailChangeTokenError antes da tx",
+        "token válido mas usuário sem pendingEmail lança InvalidEmailChangeTokenError no pré-check",
+        "token válido mas usuário inexistente lança InvalidEmailChangeTokenError no pré-check",
+        "token consumido por outro request entre pré-check e tx lança InvalidEmailChangeTokenError",
+        "consumeByHash retorna userId mas user não tem pendingEmail (estado corrompido): lança InvalidEmailChangeTokenError",
+        "consumeByHash retorna token mas findById retorna null dentro da tx: lança InvalidEmailChangeTokenError",
+        "e-mail tomado entre pedido e confirmação lança EmailAlreadyInUseError",
+        "erro de DB genérico (não unique) é relançado sem ser convertido",
+        "update rejeita com null: relança null sem converter (isUniqueViolation: error !== null = false)",
+        "update rejeita com string: relança sem converter (isUniqueViolation: typeof !== object)",
+        "update rejeita com objeto sem propriedade code: relança sem converter"
+      ],
+      "count": 16
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/create-permission-template/create-permission-template.use-case.spec.ts",
+      "titles": [
+        "happy: cria, persiste e devolve a view",
+        "nome em uso → 409",
+        "set sem closure → 422"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/create-user/create-user.use-case.spec.ts",
+      "titles": [
+        "e-mail já existente lança EmailAlreadyInUseError e não cria nada",
+        "e-mail de usuário soft-deleted → EmailAlreadyInUseError (409 único)",
+        "happy: cria pending, gera token, publica SendAccessLink e audita access_link_sent",
+        "rejeita set sem closure (422)",
+        "rejeita set sem o piso do perfil (422)",
+        "quem atende sem área → InvalidProfessionalScopeError, não cria nada",
+        "quem atende persiste permissões de outros módulos + áreas",
+        "quem não atende persiste só as áreas de agendamento",
+        "quem atende sem permissão de módulo é válido (piso = ≥1 área de atuação)"
+      ],
+      "count": 9
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/delete-permission-template/delete-permission-template.use-case.spec.ts",
+      "titles": [
+        "happy: deleta pelo id",
+        "id inexistente → 404",
+        "não encontrado → deleteById nunca chamado mesmo que repo aceite qualquer id",
+        "happy: findById chamado com o id exato antes de deletar"
+      ],
+      "count": 4
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/delete-user/delete-user.use-case.spec.ts",
+      "titles": [
+        "soft-deleta, revoga as sessões e audita user_deleted",
+        "404 quando o usuário não existe",
+        "404 quando já está soft-deleted (idempotente)",
+        "recusa excluir o usuário master",
+        "recusa excluir a própria conta (actor == alvo)"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/get-current-user/get-current-user.use-case.spec.ts",
+      "titles": [
+        "sem auth lança ForbiddenError",
+        "usuário removido lança SessionNotFoundError",
+        "usuário soft-deleted lança SessionNotFoundError (hard gate preservado)",
+        "happy: retorna a view pública com permissões, sem vazar passwordHash"
+      ],
+      "count": 4
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/get-permission-template/get-permission-template.use-case.spec.ts",
+      "titles": [
+        "happy: devolve a view",
+        "id inexistente → 404",
+        "não encontrado → findById chamado com o id recebido e nenhum save/update",
+        "happy: description preenchida é mapeada no retorno",
+        "happy: findById chamado exatamente com o id do input"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/list-access-history/list-access-history.use-case.spec.ts",
+      "titles": [
+        "repassa a allowlist e mapeia para a view sem campos sensíveis",
+        "lança sem usuário autenticado"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/list-devices/list-devices.use-case.spec.ts",
+      "titles": [
+        "marca current pelo deviceId do contexto e mapeia para a view"
+      ],
+      "count": 1
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/list-permission-templates/list-permission-templates.use-case.spec.ts",
+      "titles": [
+        "repositório vazio retorna lista vazia",
+        "retorna todos os templates mapeados para view com campos corretos",
+        "não chama insert, update nem deleteById — somente listAll",
+        "preserva a ordem retornada pelo repositório",
+        "description null é preservado na view"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/list-users/list-users.use-case.spec.ts",
+      "titles": [
+        "caminho feliz: delega ao repositório e mapeia cada row para UserListItemView",
+        "repassa o envelope de paginação sem alterar page/total",
+        "repassa filtros (q, status, emailVerified, deleted) direto ao port",
+        "deleted=true sem admin.users.trash.read responde 403 e não consulta o port",
+        "deleted=true com admin.users.trash.read lista a lixeira",
+        "deleted=false não exige a permissão de lixeira (nem lê contexto de acesso)",
+        "repassa sort e order ao port sem modificar",
+        "lista vazia: retorna data=[] e page sem erro",
+        "accessLinkExpiresAt serializado em ISO quando não-nulo",
+        "deletedAt serializado em ISO para usuário soft-deleted",
+        "schedulingAreaIds da row são repassadas para a view",
+        "permissions da row são repassadas para a view sem modificação",
+        "repositório lança erro: propaga sem consumir outros métodos"
+      ],
+      "count": 13
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/login/login.use-case.spec.ts",
+      "titles": [
+        "credenciais válidas retornam user + sessionToken raw e criam sessão",
+        "rate-limit estourado lança SEM chamar verify (pré-argon2)",
+        "estouro do bucket da conta é 429 antes do lookup, sem verify",
+        "e-mail desconhecido é negado de forma idêntica ao existente",
+        "a chave da conta usa o e-mail normalizado — o mesmo do repositório",
+        "login bem-sucedido limpa o bucket da conta",
+        "login falho NÃO limpa o bucket da conta",
+        "os dois buckets negando devolve o 429 da conta (edge case)",
+        "o burst por IP é critical — o teto sobrevive à queda do Redis",
+        "usuário inexistente: roda verify dummy e lança InvalidCredentialsError",
+        "conta com lockedUntil: senha correta entra e limpa o lockout",
+        "senha errada: grava login_failed FORA da tx e NÃO incrementa lockout",
+        "usuário pending (sem senha) é rejeitado com InvalidCredentialsError",
+        "rehash-on-login: needsRehash true re-hasheia e persiste",
+        "reusa o device quando o cookie casa (hit) — não cria, mantém o cookie",
+        "sem cookie (miss): gera token novo e cria device",
+        "cookie de outro user: cria row nova com o MESMO hash, mantém o cookie",
+        "relogin com device conhecido revoga as sessões anteriores do device",
+        "device novo não revoga sessão nenhuma",
+        "login sem device cookie publica device_new_login",
+        "login com device cookie CONHECIDO não publica"
+      ],
+      "count": 21
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/logout/logout.use-case.spec.ts",
+      "titles": [
+        "sem sessionId lança ForbiddenError e NÃO apaga a sessão",
+        "happy: apaga a sessão própria (escopo por dono) e audita logout"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/purge-users/purge-users.use-case.spec.ts",
+      "titles": [
+        "purga deletados: audita user_purged ANTES do hard delete",
+        "alvo não-deletado → UserNotInTrashError e nada é apagado",
+        "sem provider de AUDIT_TRAIL_PURGER: purga o usuário e pula a trilha",
+        "ids inexistentes: no-op com purged 0"
+      ],
+      "count": 4
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/request-email-change/email-change-flow.int-spec.ts",
+      "titles": [
+        "caso 1: happy path — user vira pending, pendingEmail atualizado, sessões deletadas, outbox com 2 eventos",
+        "caso 2: senha incorreta → InvalidCredentialsError, sem alteração de estado",
+        "caso 3: novo e-mail igual ao atual → EmailUnchangedError",
+        "caso 4: novo e-mail já em uso por outro usuário → EmailAlreadyInUseError",
+        "caso 4b: recusa persiste o cooldown e a segunda tentativa bate em 429",
+        "caso 5: confirmação com token válido → email promovido, pending_email cleared, sessão criada",
+        "caso 6: token inválido/expirado → InvalidEmailChangeTokenError",
+        "caso 7: job reverte user com token expirado; user com token ativo não é revertido"
+      ],
+      "count": 8
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/request-email-change/request-email-change.use-case.spec.ts",
+      "titles": [
+        "troca solicitada: desativa conta, invalida tokens, cria novo token, deloga, publica 2 notificações e grava evento",
+        "link enviado ao novo e-mail contém o token raw e a URL configurada",
+        "e-mail novo é normalizado (trim + lowercase) antes de comparar e persistir",
+        "lança ForbiddenError quando não há userId no contexto",
+        "lança ForbiddenError quando usuário não é encontrado no repositório",
+        "lança InvalidCredentialsError quando usuário não tem passwordHash (conta sem senha)",
+        "lança InvalidCredentialsError quando senha está errada",
+        "lança EmailUnchangedError quando novo e-mail é igual ao atual (após normalização)",
+        "lança RateLimitedError quando solicitação está dentro do cooldown",
+        "retryAfterSeconds reflete o tempo restante do cooldown",
+        "não aplica cooldown quando lastEmailChangeRequestedAt é null (primeira solicitação)",
+        "permite solicitação após cooldown expirado",
+        "não lança RateLimitedError quando elapsed é exatamente igual ao windowMs (boundary)",
+        "lança RateLimitedError com retryAfterSeconds calculado via Math.ceil (fração de segundo)",
+        "e-mail de usuário ativo → EmailAlreadyInUseError com o cooldown gravado",
+        "e-mail de usuário excluído → MESMO erro e MESMO cooldown",
+        "segunda sondagem em seguida bate no cooldown (429), não em outro 409",
+        "ForbiddenError (sem userId): nenhuma porta de escrita chamada",
+        "InvalidCredentialsError (senha errada): nenhuma porta de escrita chamada",
+        "RateLimitedError: nenhuma porta de escrita chamada"
+      ],
+      "count": 20
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/request-password-reset/request-password-reset.use-case.spec.ts",
+      "titles": [
+        "e-mail inexistente: gera token dummy e NÃO publica nem audita (anti-enum)",
+        "cooldown ativo: não invalida, não publica, não audita",
+        "cooldown expirado: lastResetRequestedAt antigo o suficiente → fluxo completo",
+        "happy: invalida pendentes, cria token, publica SendPasswordReset e audita"
+      ],
+      "count": 4
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/resend-access-link/resend-access-link.use-case.spec.ts",
+      "titles": [
+        "usuário inexistente lança AccessLinkNotResendableError",
+        "usuário não-pending lança AccessLinkNotResendableError",
+        "link de acesso ainda válido lança AccessLinkNotResendableError",
+        "pending + expirado: rotaciona token, publica SendAccessLink e audita access_link_resent",
+        "pending sem token (null) é reenviável",
+        "token consumido (consumedAt != null) mas não expirado é reenviável",
+        "token expirado exato na fronteira (expiresAt === now) é reenviável",
+        "usuário inexistente não chama invalidateAllForUser nem create",
+        "usuário não-pending não chama invalidateAllForUser nem create",
+        "link de acesso ainda válido não chama invalidateAllForUser nem create",
+        "payload da notificação contém link com WEB_ORIGIN, email, name, locale e tokenExpiresAt",
+        "authEvent gravado com userId do alvo e actorUserId do contexto"
+      ],
+      "count": 12
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/resend-verification/resend-verification.use-case.spec.ts",
+      "titles": [
+        "sem auth lança ForbiddenError",
+        "usuário não encontrado: no-op (nada criado nem publicado)",
+        "e-mail já verificado: no-op (nada criado nem publicado)",
+        "cooldown expirado: envia novo token mesmo com lastVerificationRequestedAt definido",
+        "cooldown ativo: no-op",
+        "happy: invalida pendentes, cria token e publica SendEmailVerification"
+      ],
+      "count": 6
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/reset-password/reset-password.use-case.int-spec.ts",
+      "titles": [
+        "a consulta HIBP roda com isInTransaction() === false",
+        "fail_open + consulta indisponível: o reset commita e o skip é auditado na tx",
+        "fail_closed + consulta indisponível: nada é consumido nem gravado"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/reset-password/reset-password.use-case.spec.ts",
+      "titles": [
+        "token inválido (consume retorna null) lança InvalidResetTokenError",
+        "token válido: troca senha, invalida TODAS as sessões e tokens pendentes",
+        "consome o token pelo HASH do raw (nunca o raw)",
+        "publica notification.requested password_changed",
+        "senha fraca lança e NÃO troca a senha",
+        "senha vazada lança WeakPasswordError ANTES de tocar o banco",
+        "desabilitado: breach NÃO é consultado",
+        "habilitado em fail_open: senha vazada é barrada (o modo não decide SE consulta)",
+        "fail_open + consulta indisponível: reset segue e grava breach_check_skipped",
+        "fail_closed + consulta indisponível: 503 sobe e o token não é consumido",
+        "usuário não encontrado após consumir token lança InvalidResetTokenError",
+        "registra auth event password_reset_completed após troca bem-sucedida",
+        "notificação inclui locale correto do contexto de requisição"
+      ],
+      "count": 13
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/restore-users/restore-users.use-case.spec.ts",
+      "titles": [
+        "restaura só os soft-deleted e audita user_restored por usuário",
+        "ids inexistentes: no-op com restored 0"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/revoke-device/revoke-device.use-case.spec.ts",
+      "titles": [
+        "bloqueia revogar o device atual",
+        "revoga outro device, registra device_revoked e publica a notificação",
+        "não registra evento nem publica quando nada foi apagado (n=0)"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/revoke-other-devices/revoke-other-devices.use-case.spec.ts",
+      "titles": [
+        "apaga os outros devices e registra sessions_revoked_all"
+      ],
+      "count": 1
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/set-password/set-password.use-case.spec.ts",
+      "titles": [
+        "sem provider da porta e com avatar submetido: lança ProfileImageStoreMissingError sem consumir o token",
+        "sem provider da porta e sem avatar submetido: a senha é definida normalmente",
+        "token inválido (findActive null) lança InvalidAccessLinkError sem consumir",
+        "consume null na tx lança InvalidAccessLinkError",
+        "happy: ativa conta, cria sessão, invalida tokens e audita password_set",
+        "token válido mas usuário não-pending lança InvalidAccessLinkError (não ativa)",
+        "user criado por admin: publica password_set com recipient = admin",
+        "user sem createdByUserId (seed/master): NÃO publica",
+        "senha fraca lança WeakPasswordError ANTES de consultar token",
+        "senha vazada lança WeakPasswordError sem tocar no token",
+        "avatar de outro dono cai de volta para o avatar atual (null)",
+        "avatar com ownership válida é mantido",
+        "user não encontrado (findById null) lança InvalidAccessLinkError sem consumir",
+        "senha não-vazada prossegue normalmente",
+        "desabilitado: o breach check não é consultado",
+        "habilitado em fail_open: senha vazada é barrada (o modo não decide SE consulta)",
+        "fail_open + consulta indisponível: ativação segue e grava breach_check_skipped",
+        "fail_closed + consulta indisponível: 503 sobe e o token não é consumido",
+        "TOCTOU: usuário ativado entre pre-check e tx lança InvalidAccessLinkError sem salvar",
+        "avatar idêntico ao atual (submitted === current) não chama attachments.exists"
+      ],
+      "count": 20
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/update-my-profile/update-my-profile.use-case.spec.ts",
+      "titles": [
+        "caminho feliz: atualiza nome e chama users.update com a nova entidade",
+        "caminho feliz: atualiza nome e birthDate válida",
+        "sem birthDate no input: mantém o birthDate existente",
+        "ctx sem userId lança ForbiddenError e NÃO chama users.findById nem users.update",
+        "ctx sem sessionId lança ForbiddenError e NÃO chama users.findById nem users.update",
+        "usuário não encontrado no repositório lança ForbiddenError e NÃO chama users.update",
+        "birthDate futura lança InvalidBirthDateError e NÃO chama users.update",
+        "birthDate com idade > 120 anos lança InvalidBirthDateError e NÃO chama users.update",
+        "findById é chamado com o userId do contexto autenticado",
+        "nome é trimado antes de persistir",
+        "clock.now() é chamado exatamente uma vez por execução",
+        "ctx.get() lança → erro propaga antes de findById ou update serem chamados",
+        "usuário soft-deleted encontrado por findById: atualiza normalmente (sem guard de deletedAt no use-case)",
+        "birthDate undefined explícito no input: mantém birthDate existente (branch birthDate !== undefined falso)"
+      ],
+      "count": 14
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/update-permission-template/update-permission-template.use-case.spec.ts",
+      "titles": [
+        "happy: atualiza e devolve a view nova",
+        "id inexistente → 404 e não consulta nome nem persiste",
+        "nome colidindo com OUTRO id → 409",
+        "mesmo nome no próprio id NÃO é colisão",
+        "nome não existe no banco → persiste sem erro (sameName null)",
+        "description nula é preservada na atualização",
+        "set sem closure → 422"
+      ],
+      "count": 7
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/update-user/update-user.use-case.spec.ts",
+      "titles": [
+        "atualiza nome, perfil e set do alvo",
+        "revogar do alvo chave que o ator não possui → 403, nada é gravado",
+        "revogar do alvo chave que o ator possui → grava o novo conjunto",
+        "alvo inexistente → UserNotFoundError",
+        "alvo na lixeira → UserNotFoundError",
+        "alvo master → ForbiddenError",
+        "auto-edição de perfil → ForbiddenError",
+        "auto-edição de permissões → ForbiddenError",
+        "auto-edição só de nome → permitida",
+        "áreas de agendamento informadas substituem as do alvo",
+        "sem áreas de agendamento no input as do alvo são limpas",
+        "com compromisso futuro recusa e não grava nada",
+        "a recusa carrega a lista do que precisa ser remarcado",
+        "sem compromisso futuro grava e zera o escopo de atuação",
+        "quem já não atendia não consulta a agenda",
+        "continuar atendendo não consulta a agenda",
+        "set sem closure → InvalidPermissionSetError",
+        "set sem piso → InvalidPermissionSetError",
+        "marcar-se como atendente → 403 e nada é gravado",
+        "mudar as próprias áreas de atuação → 403",
+        "mudar os próprios serviços de atuação → 403",
+        "carregar área de agendamento na auto-edição → 403",
+        "reenviar o mesmo escopo (no-op) passa",
+        "a regra é só da auto-edição: master muda o escopo de outro usuário"
+      ],
+      "count": 24
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/upload-access-link-avatar/upload-access-link-avatar.use-case.spec.ts",
+      "titles": [
+        "happy: faz upload com ownerUserId do token e retorna attachmentId",
+        "sem provider da porta: lança ProfileImageStoreMissingError depois de validar o token",
+        "token inválido/expirado lança InvalidAccessLinkError sem chamar facade",
+        "token inválido não consulta repositório de usuários",
+        "usuário não-pending lança InvalidAccessLinkError sem chamar facade",
+        "usuário com status suspended lança InvalidAccessLinkError",
+        "token sem user correspondente lança InvalidAccessLinkError",
+        "user undefined (porta retorna undefined) lança InvalidAccessLinkError"
+      ],
+      "count": 8
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/upload-avatar/upload-avatar.use-case.spec.ts",
+      "titles": [
+        "caminho feliz: faz upload, persiste e retorna avatarAttachmentId",
+        "sem provider da porta: lança ProfileImageStoreMissingError e não altera o usuário",
+        "sem avatar anterior: não chama attachments.delete",
+        "com avatar anterior diferente: remove o antigo após persistir o novo",
+        "mesmo attachment ID: não chama delete (substituição idempotente)",
+        "falha no delete do avatar antigo não propaga erro (melhor-esforço)",
+        "contexto sem userId lança ForbiddenError SEM chamar o repo nem upload",
+        "contexto sem sessionId lança ForbiddenError SEM chamar o repo nem upload",
+        "user não encontrado na primeira busca lança ForbiddenError SEM chamar upload",
+        "user desaparece antes do persistAvatar lança ForbiddenError SEM chamar update",
+        "falha no upload propaga erro e NÃO chama persistAvatar nem delete",
+        "falha no users.update propaga erro e NÃO executa limpeza do avatar antigo",
+        "falha no delete do avatar antigo loga warn com previousAvatarId e mensagem de erro",
+        "falha no delete com erro não-Error loga warn com String(error)"
+      ],
+      "count": 14
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/validate-access-link/validate-access-link.use-case.spec.ts",
+      "titles": [
+        "token válido + pending retorna { name, email } e NÃO consome",
+        "token inválido/expirado lança InvalidAccessLinkError",
+        "usuário não-pending lança InvalidAccessLinkError",
+        "usuário não encontrado (findById retorna null) lança InvalidAccessLinkError"
+      ],
+      "count": 4
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/validate-email-change/validate-email-change.use-case.spec.ts",
+      "titles": [
+        "caminho feliz: token ativo e pendingEmail definido retornam newEmail",
+        "token inativo (findActiveByHash null) lança InvalidEmailChangeTokenError",
+        "usuário não encontrado (findById null) lança InvalidEmailChangeTokenError",
+        "usuário sem pendingEmail lança InvalidEmailChangeTokenError",
+        "usa o clock.now() como referência de validade passada ao repositório",
+        "em falha de token, users.findById NÃO é chamado",
+        "userId do token ativo é repassado exatamente ao repositório de usuários",
+        "quando pendingEmail é null a query lança mas NÃO propaga dado parcial"
+      ],
+      "count": 8
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/application/use-cases/verify-email/verify-email.use-case.spec.ts",
+      "titles": [
+        "token inválido (consume retorna null) lança e NÃO atualiza o usuário",
+        "usuário removido (findById null) lança InvalidResetTokenError",
+        "happy: consome pelo HASH (nunca o raw), verifica e-mail e audita",
+        "usuário removido (findById null) NÃO chama authEvents",
+        "happy: update é chamado com usuário com emailVerified=true",
+        "recordInTx lançando propaga o erro sem silenciar"
+      ],
+      "count": 6
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/domain/entities/auth-event.entity.spec.ts",
+      "titles": [
+        "gera id ULID e createdAt, preserva campos",
+        "aceita userId null, emailHash null e metadata null",
+        "cobre variantes do enum AuthEventType",
+        "rate_limiter_degraded aceita userId null (não tem dono)",
+        "props é congelado: escrita direta lança"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/domain/entities/device.entity.spec.ts",
+      "titles": [
+        "create gera ulid, firstSeenAt default e congela props",
+        "fromProps hidrata sem gerar id"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/domain/entities/permission-template.entity.spec.ts",
+      "titles": [
+        "create gera id ULID, datas e deduplica permissões",
+        "update retorna nova instância com updatedAt novo, sem mutar a original"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/domain/entities/session.entity.spec.ts",
+      "titles": [
+        "gera id ULID e preserva campos",
+        "%s",
+        "idle + 1s → true",
+        "idle - 1s → false",
+        "absolute + 1s → true",
+        "absolute - 1s → false",
+        "props é congelado: escrita direta lança"
+      ],
+      "count": 7
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/domain/entities/user.entity.spec.ts",
+      "titles": [
+        "gera id ULID, emailVerified=false, attempts=0, lockedUntil=null, timestamps",
+        "normaliza email para lowercase",
+        "nasce fora do atendimento a cliente, e entra quando pedido",
+        "registra quem criou a conta",
+        "false quando lockedUntil é null",
+        "true quando lockedUntil > now",
+        "borda: lockedUntil == now conta como NÃO locked (> estrito)",
+        "false quando lockedUntil já passou",
+        "incrementa attempts sem lockear antes do threshold",
+        "ao atingir threshold, seta lockedUntil = now + durationSeconds",
+        "acima do threshold continua re-aplicando lock a partir de now",
+        "retorna nova instância sem mutar a original",
+        "zera attempts e lockedUntil",
+        "retorna nova instância sem mutar a original",
+        "rehashPassword troca o hash em nova instância sem mutar a original",
+        "verifyEmail marca emailVerified sem mutar a original",
+        "markResetRequested carimba o instante sem mutar a original",
+        "markVerificationRequested carimba campo separado do reset",
+        "props é congelado: escrita direta lança",
+        "create() cria usuário pending, sem senha, não-verificado, não-master",
+        "create() segue ativo com senha",
+        "activate() ativa, verifica, seta senha/nome/nascimento (nova instância)",
+        "activate() seta o avatar resolvido",
+        "activate() em usuário não-pending lança InvalidAccountStateError",
+        "activate() com data futura lança InvalidBirthDateError",
+        "activate() com idade > 120 lança InvalidBirthDateError",
+        "activate() com data impossível (31/02) lança InvalidBirthDateError",
+        "limpa deletedAt e mantém status/senha",
+        "lança InvalidAccountStateError se a conta não está excluída",
+        "atualiza nome e perfil retornando nova instância",
+        "liga o atendimento a cliente sem mexer no perfil",
+        "desliga o atendimento a cliente preservando a instância anterior",
+        "true só quando accessProfile=master",
+        "atualiza nome (trim) e nascimento sem tocar em accessProfile/email",
+        "rejeita data de nascimento inválida",
+        "troca avatarAttachmentId em nova instância",
+        "requestEmailChange desativa a conta e guarda pendingEmail sem destruir o email atual",
+        "recordEmailChangeAttempt só carimba o cooldown, sem mexer na conta",
+        "recordEmailChangeAttempt vale para conta não-active (a recusa também paga)",
+        "requestEmailChange em conta não-active lança InvalidAccountStateError",
+        "confirmEmailChange promove pendingEmail a email e reativa a conta",
+        "confirmEmailChange sem troca pendente lança InvalidAccountStateError",
+        "cancelEmailChange reativa com o e-mail antigo e descarta pendingEmail",
+        "cancelEmailChange sem troca pendente lança InvalidAccountStateError",
+        "hasPendingEmailChange retorna false quando não há troca pendente",
+        "confirmEmailChange preserva updatedAt com o instante passado",
+        "cancelEmailChange preserva updatedAt e mantém emailVerified inalterado",
+        "delete() marca deletedAt e updatedAt na nova instância",
+        "isDeleted() retorna true após delete()",
+        "isDeleted() retorna false para usuário ativo",
+        "abaixo do threshold preserva lockedUntil pré-existente (não zera)",
+        "data válida no passado próximo é aceita sem lançar",
+        "data com dia inválido para o mês (29/02 em ano não-bissexto) lança InvalidBirthDateError",
+        "data com dia zero (2000-01-00) lança InvalidBirthDateError",
+        "sem birthDate mantém o valor anterior intacto sem validar",
+        "birthDate undefined com birthDate atual null mantém null",
+        "idade exatamente acima de 120 anos lança InvalidBirthDateError"
+      ],
+      "count": 57
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/domain/entities/verification-token.entity.spec.ts",
+      "titles": [
+        "gera id ULID, consumedAt=null, createdAt e preserva type",
+        "true quando não consumido e não expirado",
+        "false quando já consumido",
+        "false quando expirado",
+        "borda: expiresAt == now é inválido (> estrito)",
+        "false quando consumido e também expirado (ambas condições falsas)",
+        "props é congelado: escrita direta lança"
+      ],
+      "count": 7
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/domain/errors.spec.ts",
+      "titles": [
+        "todos os erros estendem DomainError",
+        "InvalidCredentialsError: status 401, type estável, título pt-BR",
+        "InvalidCredentialsError é UMA classe estável em todos os caminhos (anti-enumeração)",
+        "WeakPasswordError: status 422",
+        "InvalidResetTokenError: status 400",
+        "SessionNotFoundError: status 404",
+        "RateLimitedError: status 429 e carrega retryAfterSeconds",
+        "PasswordHashingSaturatedError: status 503, type estável, Retry-After 2s",
+        "BreachCheckUnavailableError: status 503, type estável, Retry-After 5s",
+        "BreachCheckUnavailableError nunca se confunde com senha vazada",
+        "PermissionGrantNotAllowedError: status 403, type permission-grant-not-allowed",
+        "os erros lêem a tabela única de mensagens do entry, inalterada por padrão",
+        "os três types novos são únicos entre si e distintos dos existentes"
+      ],
+      "count": 13
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/domain/password-policy.spec.ts",
+      "titles": [
+        "lança WeakPasswordError quando zxcvbnScore < minZxcvbnScore",
+        "não lança quando score atende",
+        "borda: score exatamente igual a minZxcvbnScore é aceito",
+        "não chama zxcvbn: usa o score recebido (pureza)",
+        "mensagem de erro de fraqueza é a descrição de força insuficiente"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/domain/permissions/catalog/admin.catalog.spec.ts",
+      "titles": [
+        "as features são users, permission_templates, tags, audit e usage",
+        "toda chave é única e prefixada por admin.",
+        "total de permissões é 24 (9 users + 5 permission_templates + 8 tags + 1 audit + 1 usage)",
+        "%s tem read como raiz e o grafo canônico de lixeira",
+        "admin.audit.read não exige leitura de nenhuma feature",
+        "feature %s tem admin.%s.audit.read com label 'Ver logs' e requires do read",
+        "existe com label 'Uso do sistema' e uma única permissão",
+        "admin.usage.read tem label 'Ver painel de uso' e não exige outra chave",
+        "a feature não tem chave de trilha (não é dona de tabela auditada)",
+        "toda chave do ADMIN_CATALOG está em PERMISSION_KEYS"
+      ],
+      "count": 10
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/domain/permissions/permission-catalog.spec.ts",
+      "titles": [
+        "chaves são únicas no catálogo inteiro",
+        "toda chave segue o prefixo do módulo que a contém",
+        "todo requires aponta para chave existente do mesmo módulo",
+        "requires não tem ciclo (fecho transitivo termina)",
+        "requiresOf devolve lista vazia",
+        "moduleOf lança erro identificando a chave",
+        "featureOf lança erro identificando a chave",
+        "isPermissionKey discrimina chave válida de inválida",
+        "o base-set traz só o módulo admin; o resto entra pelo slot de produto",
+        "PERMISSION_KEYS = soma das chaves do catálogo",
+        "devolve a feature dona com o label em pt-BR",
+        "chaves da mesma feature compartilham o mesmo dono",
+        "toda chave do catálogo tem feature com label não-vazio",
+        "existe no catálogo e não exige nenhuma outra chave",
+        "pertence à feature 'Uso do sistema' do módulo admin",
+        "não entra nas chaves de trilha (a feature não é dona de tabela)",
+        "o base-set (só admin) tem 3 chaves de auditoria; o slot de produto só acrescenta",
+        "a trilha completa não entra na lista por dono de tabela",
+        "@RequirePermission aceita chave do catálogo e a grava na metadata",
+        "@RequirePermission grava chave fora do catálogo — PermissionKey é string no kernel"
+      ],
+      "count": 21
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/domain/ports/ports.spec.ts",
+      "titles": [
+        "todos os tokens são Symbol",
+        "todos os tokens são únicos (sem colisão entre portas)",
+        "descrição de %s é \"%s\" (protege contra copiar/colar da string errada)",
+        "tem exatamente clear | breached | skipped (nunca um boolean)"
+      ],
+      "count": 4
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/identity.config.spec.ts",
+      "titles": [
+        "aplica defaults seguros de argon2",
+        "rejeita ARGON_MEMORY_KIB abaixo do floor OWASP (19456)",
+        "rejeita PASSWORD_PEPPER curto",
+        "exige WEB_ORIGIN (link de e-mail / CSRF)",
+        "exige BREACH_CHECK_MODE explícito (sem default)",
+        "rejeita SESSION_TOUCH_INTERVAL >= SESSION_IDLE_TTL",
+        "rejeita COOKIE_SAMESITE=none sem CSRF_SECRET",
+        "coage REQUIRE_EMAIL_VERIFICATION de string para boolean",
+        "rejeita COOKIE_NAME __Host- com COOKIE_SECURE=false",
+        "aceita COOKIE_SECURE=false com COOKIE_NAME/DEVICE_COOKIE_NAME sem prefixo",
+        "rejeita DEVICE_COOKIE_NAME __Host- com COOKIE_SECURE=false",
+        "BREACH_CHECK_ENABLED coage 'true'/'false' (sem default)",
+        "exige BREACH_CHECK_ENABLED: ausente falha nomeando a variável",
+        "rejeita BREACH_CHECK_ENABLED com valor fora do literal",
+        "aplica os defaults dos limites de login e de hashing",
+        "coage os três limites novos de string para número",
+        "rejeita limite de login zero ou negativo (desligaria o teto em silêncio)",
+        "lê de process.env e memoiza (mesma instância singleton)",
+        "memoização é imune a mutação posterior de process.env",
+        "fail-fast: parseIdentityConfig (base do load) lança em env inválido"
+      ],
+      "count": 20
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/identity.module.spec.ts",
+      "titles": [
+        "sem slot profissional, o IdentityModule importa apenas RateLimitModule",
+        "os casos de uso de imagem resolvem sem nenhum provider de PROFILE_IMAGE_STORE"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/infrastructure/hashing/argon2-password-hasher.spec.ts",
+      "titles": [
+        "faz round-trip: hash verifica com a senha correta",
+        "rejeita senha errada",
+        "o pepper muda o hash: hash de outro pepper não verifica",
+        "needsRehash é false para hash dos params correntes",
+        "needsRehash é true quando os params subiram"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/infrastructure/hashing/bounded-password-hasher.spec.ts",
+      "titles": [
+        "a 9ª chamada com 8 em voo é 503 e não chega ao argon2",
+        "verify passa pelo mesmo gate que hash (o verify dummy também)",
+        "vaga liberada deixa a próxima chamada passar",
+        "a vaga volta mesmo quando o hasher interno lança",
+        "needsRehash não consome vaga (é puro, não toca o pool)"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/infrastructure/hashing/crypto-token-generator.spec.ts",
+      "titles": [
+        "generate retorna raw base64url e hash sha256 consistente",
+        "dois generate produzem raws distintos",
+        "safeEqual é true para iguais e false para diferentes",
+        "safeEqual com comprimentos diferentes retorna false sem lançar",
+        "safeEqual strings vazias (comprimento zero igual) retorna true via timingSafeEqual",
+        "safeEqual string vazia vs não-vazia (comprimentos distintos) retorna false sem chegar ao timingSafeEqual"
+      ],
+      "count": 6
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/infrastructure/hashing/hmac-csrf.spec.ts",
+      "titles": [
+        "verify aceita o token assinado para a mesma sessão",
+        "verify rejeita token de outra sessão",
+        "verify rejeita token adulterado",
+        "verify rejeita assinatura de outro secret",
+        "construtor lança para secret vazio ou curto (<32)",
+        "construtor aceita secret de 32 chars",
+        "construtor aceita secret maior que 32 chars",
+        "construtor lança para secret com exatamente 31 chars (boundary)",
+        "sign é determinístico: mesma sessão produz mesmo token",
+        "sign produz tokens distintos para sessões distintas",
+        "verify rejeita token de mesmo comprimento mas conteúdo diferente (timingSafeEqual retorna false)",
+        "verify rejeita token vazio (comprimento diferente do esperado)"
+      ],
+      "count": 12
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/infrastructure/password/breach-check.spec.ts",
+      "titles": [
+        "nunca reporta vazamento",
+        "fail_open devolve 'skipped' quando a rede falha",
+        "fail_closed lança BreachCheckUnavailableError quando a rede falha",
+        "falha de rede NUNCA vira 'breached' — o usuário não paga pela queda",
+        "suffix presente na range → 'breached'",
+        "suffix ausente → 'clear'",
+        "suffix em lowercase na resposta → ainda 'breached' (case-insensitive)",
+        "CRLF e padding (Add-Padding count 0) não quebram o match",
+        "res.ok=false respeita o modo (fail_open → 'skipped')",
+        "res.ok=false sob fail_closed lança, não vira veredito",
+        "aborta a consulta pendurada em ~2 s e trata como erro, não como 'clear'",
+        "sob fail_closed o estouro do timeout vira 503, nunca 'breached'"
+      ],
+      "count": 12
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-auth-event.repository.int-spec.ts",
+      "titles": [
+        "record grava um evento de falha (fora da tx)",
+        "append-only: UPDATE em auth_events lança",
+        "append-only: DELETE em auth_events lança",
+        "deleteOlderThan purga o vencido e mantém o recente (escape hatch em tx)",
+        "deleteOlderThan exige tx aberta (GUC é transaction-scoped)",
+        "deleteOlderThan retorna 0 quando nada vencido",
+        "deleteOlderThan preserva evento exatamente no cutoff (corte estrito <)",
+        "recordInTx some quando a tx de negócio dá rollback",
+        "recordInTx grava exatamente uma linha quando a tx de negócio comita",
+        "record lança dentro de uma transação de negócio (pede 2ª conexão)",
+        "recordInTx lança fora de uma transação",
+        "filtra pela allowlist, ordena desc por created_at e pagina",
+        "allowlist vazia retorna página vazia",
+        "escopa por user (não vaza eventos de outro dono)",
+        "gate IP+conta estourado (login.use-case.ts:91) grava rate_limited_burst fora da tx",
+        "senha incorreta (login.use-case.ts:124) grava login_failed fora da tx"
+      ],
+      "count": 16
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-device.repository.int-spec.ts",
+      "titles": [
+        "respeita unique (user_id, cookie_token_hash)",
+        "findByUserAndCookieHash escopa por user",
+        "listActiveByUser agrega só sessões ativas, com ip/ua da mais recente e count",
+        "deleteById faz cascade nas sessões e escopa por dono"
+      ],
+      "count": 4
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-permission-template.repository.int-spec.ts",
+      "titles": [
+        "insert + findById fazem round-trip com permissões",
+        "findByName resolve e null para inexistente",
+        "update troca o set inteiro (overwrite)",
+        "listAll ordena por nome",
+        "deleteById cascateia as permissões"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-professional-assignment.repository.int-spec.ts",
+      "titles": [
+        "agrupa vínculos por serviço com isDefault, na ordem do vínculo",
+        "retorna Map vazio para lista vazia",
+        "retorna os serviços vinculados do usuário",
+        "retorna só quem NÃO tem a área",
+        "retorna vazio para set vazio",
+        "atribui a área uma vez para profissionais distintos dos serviços informados",
+        "não escreve para uma lista de serviços vazia",
+        "filtra professional+active+vivo (paridade com o diretório)",
+        "insere vínculos novos com isDefault e auto-atribui a área ausente",
+        "remove quem saiu do set e atualiza isDefault de quem ficou",
+        "set vazio limpa os vínculos do serviço sem tocar em áreas",
+        "não toca vínculos de OUTROS serviços do mesmo usuário",
+        "apaga os vínculos dos serviços informados",
+        "lista vazia é no-op"
+      ],
+      "count": 14
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-session.repository.int-spec.ts",
+      "titles": [
+        "touch abaixo do intervalo não grava; a partir dele grava",
+        "deleteById de sessão de OUTRO dono retorna 0 (anti-IDOR)",
+        "deleteById do próprio dono retorna 1",
+        "deleteOthers preserva a sessão corrente e remove as demais",
+        "deleteOldestOverCap remove as mais antigas além do cap",
+        "deleteByDevice remove só as sessões do device alvo",
+        "persiste e hidrata deviceId; cascade do device some com a sessão"
+      ],
+      "count": 7
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-usage-stats.reader.int-spec.ts",
+      "titles": [
+        "soma as entradas por dia no fuso de Brasília",
+        "entrada às 23h fica no dia local, não no dia seguinte",
+        "conta só entrada bem-sucedida — falha, bloqueio e saída ficam de fora",
+        "ignora entrada fora da janela pedida",
+        "agrega por semana quando a unidade é semana",
+        "usa a sessão mais recente como último acesso",
+        "sem sessão, cai na última entrada registrada na trilha",
+        "sessão viva vence a entrada antiga da trilha",
+        "entrada da trilha mais recente que a sessão vence a sessão",
+        "quem nunca acessou vem com último acesso nulo e a data de criação",
+        "entrada que falhou não conta como acesso",
+        "colaborador excluído fica fora da lista",
+        "devolve nome e perfil de acesso do colaborador"
+      ],
+      "count": 13
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-user.repository.int-spec.ts",
+      "titles": [
+        "insert e findByEmail fazem round-trip",
+        "atendimento a cliente: insert grava a marcação e update a desliga",
+        "gate da configuração de horários segue a marcação, não o perfil",
+        "findByEmail retorna null para e-mail inexistente",
+        "update persiste lockout (failedLoginAttempts + lockedUntil)",
+        "lastResetRequestedAt: novo usuário é null e update persiste (cooldown)",
+        "lastVerificationRequestedAt persiste independente do lastResetRequestedAt",
+        "N=threshold tentativas concorrentes travam a conta (sem lost-update)",
+        "N<threshold incrementa mas não trava",
+        "retorna null quando o user não existe",
+        "default sort createdAt desc + paginação (página 1)",
+        "última página devolve o resto",
+        "página além do fim: data vazia, total preservado",
+        "sort por name asc e desc",
+        "filtro emailVerified=false",
+        "search ILIKE OR sobre nome e email (case-insensitive)",
+        "search por email",
+        "search sem match: total=0 e totalPages=0",
+        "escapa metacaractere LIKE no search (% não vira coringa)",
+        "paginação estável com createdAt empatado (desempate por PK, sem dup/omissão)",
+        "pending com token válido: accessLinkExpiresAt preenchido, accessLinkExpired = false",
+        "pending com token expirado: accessLinkExpiresAt = null, accessLinkExpired = true",
+        "pending sem token: accessLinkExpiresAt = null, accessLinkExpired = true",
+        "filtro status='pending' retorna só os pending",
+        "filtro status='active' retorna só os active",
+        "sanity: active → accessLinkExpiresAt = null, accessLinkExpired = false",
+        "list oculta usuários soft-deleted",
+        "findVisibleById oculta soft-deleted; findById (integridade) ainda enxerga",
+        "findByEmail (integridade) enxerga soft-deleted — unique-email/reativação",
+        "list({deleted:true}) devolve só soft-deleted; default esconde",
+        "findByIds devolve os existentes (inclui soft-deleted); hardDeleteByIds remove a linha",
+        "list({deleted:true, sort:'deletedAt'}) ordena pelo instante da exclusão",
+        "replacePermissions grava e findPermissions lê o set",
+        "replacePermissions com set menor remove as ausentes (overwrite)",
+        "findByIdWithPermissions devolve user + set em 1 chamada",
+        "findByIdWithPermissions com set vazio devolve permissions []",
+        "list devolve permissions por item",
+        "inclui master sem a chave e quem tem a chave; exclui sem chave, pendente e excluído",
+        "não duplica quando o master também tem a chave",
+        "enxerga linha soft-deleted (sem filtro de visibilidade)",
+        "desligamento commitado após o snapshot aparece na releitura da tx"
+      ],
+      "count": 41
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-user.repository.profile-extension.int-spec.ts",
+      "titles": [
+        "insert e findById fazem round-trip do perfil registrado pelo produto",
+        "a coluna access_profile guarda o valor acrescentado ao enum"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-user.repository.scope.int-spec.ts",
+      "titles": [
+        "preserva is_default dos serviços mantidos e zera nos novos",
+        "lista vazia limpa a tabela do usuário",
+        "substitui o conjunto inteiro de áreas de agendamento",
+        "lista vazia limpa a tabela do usuário",
+        "não toca as áreas de atuação do Profissional (relações independentes)",
+        "devolve as áreas de agendamento na linha da listagem"
+      ],
+      "count": 6
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-verification-token.repository.int-spec.ts",
+      "titles": [
+        "consumeByHash devolve userId e marca consumido",
+        "consumo concorrente: exatamente 1 sucesso",
+        "consumeByHash retorna null para token expirado",
+        "invalidateAllForUser marca todos os pendentes do tipo",
+        "findActiveByHash retorna token válido e null para expirado",
+        "findLatestForUser retorna o token mais recente por createdAt"
+      ],
+      "count": 6
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/infrastructure/repositories/professional-directory.facade.int-spec.ts",
+      "titles": [
+        "perfil não-profissional marcado é profissional atribuível",
+        "perfil Profissional sem a marcação fica fora",
+        "retorna true para professional ativo e vivo",
+        "retorna false para admin ativo",
+        "retorna false para professional com status pending",
+        "retorna false para professional soft-deleted",
+        "retorna false para id inexistente",
+        "lista só professionals ativos, paginado",
+        "exclui professionals soft-deleted",
+        "retorna email e avatarAttachmentId nos itens",
+        "q filtra por nome",
+        "q filtra por email",
+        "mapeia ids → {id, name, email, avatarAttachmentId} filtrando só professionals ativos",
+        "exclui professionals inativos e deletados (órfãos)",
+        "ids inexistentes não aparecem no mapa",
+        "lista vazia → mapa vazio sem query",
+        "lista só profissional ativo e visível, ordenado por nome",
+        "retorna email e avatarAttachmentId nos refs",
+        "lista só profissionais ativos vinculados à área, ordenados por nome",
+        "exclui inativos, deletados e quem não tem a área",
+        "agrupa áreas por profissional em ordem de usuário e área",
+        "retorna só o profissional ativo habilitado pro serviço",
+        "agrupa por serviceId quando vários serviços são consultados",
+        "exclui professional soft-deleted",
+        "lista vazia → mapa vazio sem query",
+        "devolve a flag de padrão junto do id",
+        "exclui profissional inativo, pendente ou deletado",
+        "agrupa por serviceId quando vários serviços são consultados",
+        "lista vazia devolve Map vazio sem query"
+      ],
+      "count": 29
+    },
+    {
+      "file": "catalog/identity/single-tenant/api/testing/seeds/master-user.seed.spec.ts",
+      "titles": [
+        "SEED_MASTER_PASSWORD setado: retorna o valor do env, generated=false",
+        "SEED_MASTER_PASSWORD ausente: gera uma senha de 32 caracteres, generated=true",
+        "SEED_MASTER_PASSWORD ausente: imprime a senha gerada exatamente uma vez"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/identity/single-tenant/parity/access-policy.parity.spec.ts",
+      "titles": [
+        "libera rota pública sem ator",
+        "responde 401 em rota autenticada sem ator (contrato do front na v0.2)",
+        "responde 401 em rota por permissão sem ator",
+        "libera rota autenticada para qualquer ator, mesmo sem permissões",
+        "libera qualquer permissão para o perfil master",
+        "libera a permissão concedida ao ator",
+        "nega a permissão ausente do ator",
+        "aplica OR em anyPermission",
+        "nega quando o AuthMiddleware não publicou o acesso do identity (fail closed)",
+        "concede chave que o ator possui",
+        "nega conceder chave que o ator não possui",
+        "nega revogar chave que o ator não possui",
+        "conjunto inalterado passa, mesmo fora do conjunto do ator",
+        "master edita qualquer chave"
+      ],
+      "count": 14
+    },
+    {
+      "file": "catalog/identity/single-tenant/parity/contract.parity.spec.ts",
+      "titles": [
+        "congela as 34 operações que o identity expunha na v0.2",
+        "o openapi do child mantém toda operação do snapshot com os mesmos campos obrigatórios"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/identity/single-tenant/parity/csrf.parity.spec.ts",
+      "titles": [
+        "deixa passar método seguro sem Origin",
+        "barra mutação sem Origin nem Referer",
+        "barra mutação com Origin de outro site",
+        "aceita mutação com Origin do front",
+        "aceita mutação sem Origin quando o Referer é do front",
+        "exige double-submit em rota autenticada quando SameSite=none",
+        "aceita double-submit com token assinado para a sessão",
+        "barra double-submit com token de outra sessão",
+        "dispensa double-submit em rota pública (pré-login não tem sessão)",
+        "dispensa a checagem de Origin em rota máquina-a-máquina",
+        "CSRF roda ANTES do rate limiter (Origin forjada não gasta bucket)"
+      ],
+      "count": 11
+    },
+    {
+      "file": "catalog/identity/single-tenant/parity/profiles.parity.spec.ts",
+      "titles": [
+        "mantém os três perfis da v0.2 como enum do banco (AD-002, AD-004)",
+        "liga o perfil do usuário ao enum, com admin como padrão",
+        "mantém servesClients desacoplado do perfil (AD-003)"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/identity/single-tenant/parity/route-access.parity.spec.ts",
+      "titles": [
+        "expõe exatamente as rotas da v0.2, sem rota nova nem removida",
+        "%s mantém a exigência de acesso da v0.2",
+        "nenhuma rota depende do default fail-closed do kernel",
+        "as rotas self-service declaram authenticated explicitamente",
+        "exatamente as rotas não autenticadas de auth são critical",
+        "as demais rotas com rate-limit seguem sem critical (fail open na queda)"
+      ],
+      "count": 6
+    },
+    {
+      "file": "catalog/identity/single-tenant/web/core/permissions.test.ts",
+      "titles": [
+        "libera qualquer chave para o perfil master, mesmo sem permissões explícitas",
+        "libera a chave concedida explicitamente a um perfil não-master",
+        "nega a chave ausente da lista de um perfil não-master",
+        "nega qualquer chave para o perfil professional sem permissões"
+      ],
+      "count": 4
+    },
+    {
+      "file": "catalog/identity/single-tenant/web/core/resolve-access.test.ts",
+      "titles": [
+        "permite rota pública para visitante anônimo",
+        "permite rota pública para usuário logado",
+        "devolve anon para visitante em rota autenticada",
+        "devolve anon para visitante em rota por permissão",
+        "permite rota autenticada para qualquer usuário logado",
+        "permite rota por permissão quando o usuário tem a chave",
+        "devolve forbidden quando o usuário logado não tem a chave",
+        "permite rota por permissão para o perfil master"
+      ],
+      "count": 8
+    },
+    {
+      "file": "catalog/identity/single-tenant/web/core/route-access.test.ts",
+      "titles": [
+        "mantém raiz e login públicos e o início autenticado (paridade v0.2)",
+        "reproduz requireAnon: visitante entra no login, logado é barrado da rota autenticada",
+        "reproduz requireAccess: logado sem permissão alguma ainda alcança o início"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/notification/api/__e2e__/notifications-product-extension.e2e-spec.ts",
+      "titles": [
+        "sample_welcome renderiza o template do produto no layout compartilhado e entrega por e-mail"
+      ],
+      "count": 1
+    },
+    {
+      "file": "catalog/notification/api/api/contracts/notification.contract.spec.ts",
+      "titles": [
+        "query: defaults de paginação + filter opcional validado",
+        "item: union discriminada por type tipa a metadata",
+        "deepLink só aceita path relativo (anti open-redirect)"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/notification/api/api/controllers/stream/sse.controller.spec.ts",
+      "titles": [
+        "registra a conexão pro recipient autenticado e fecha no close do request",
+        "sem userId no contexto → lança (rota exige sessão)",
+        "Origin igual a WEB_ORIGIN registra normalmente",
+        "Origin diferente de WEB_ORIGIN → 403, sem registrar a conexão"
+      ],
+      "count": 4
+    },
+    {
+      "file": "catalog/notification/api/api/events/notification-requested.event.spec.ts",
+      "titles": [
+        "monta o envelope com aggregate = recipient (FIFO-local por destinatário)"
+      ],
+      "count": 1
+    },
+    {
+      "file": "catalog/notification/api/application/catalog/notification-catalog.spec.ts",
+      "titles": [
+        "cobre todos os tipos do contrato do kernel",
+        "valida data de access_link_sent e rejeita campo faltante",
+        "aceita link https e http, rejeita javascript: e data:",
+        "metadata de tipo in-app NUNCA contém token/link",
+        "todo tipo com canal system tem renderInApp e metadata",
+        "renderInApp de password_set monta título/corpo pt-BR",
+        "renderInApp de password_changed formata o instante em pt-BR",
+        "renderInApp de device_new_login inclui label e instante",
+        "renderInApp de device_revoked tem corpo fixo sem dados do device",
+        "NOTIFICATION_MESSAGES expõe a tabela única de assuntos, inalterada por padrão",
+        "formatDateTime usa o locale entry-owned (DEFAULT_LOCALE) e reproduz a formatação de hoje por padrão",
+        "formatDateTime honra um DEFAULT_LOCALE não padrão",
+        "formatDateTime não exige um ambiente validado — não lança sem DATABASE_URL/REDIS_URL/WEB_ORIGIN"
+      ],
+      "count": 13
+    },
+    {
+      "file": "catalog/notification/api/application/event-handlers/external/notification-requested.handler.int-spec.ts",
+      "titles": [
+        "email-only: enfileira delivery sem linha in-app",
+        "email+inapp: grava feed e delivery na mesma tx, com metadata projetada",
+        "é idempotente por eventId (markIfNew)",
+        "data inválida → throw (tx aborta, marca desfeita, outbox reentrega)"
+      ],
+      "count": 4
+    },
+    {
+      "file": "catalog/notification/api/application/event-handlers/external/notification-requested.handler.spec.ts",
+      "titles": [
+        "evento duplicado (markIfNew=false) não toca repos",
+        "tipo fora do catálogo → throw (retry/dead-letter do outbox)",
+        "tipo contribuído por outro módulo é entregue pela entrada da fonte registrada",
+        "informational respeita preferences: sem 'system' permitido → nada gravado",
+        "security IGNORA preferences: password_changed grava in-app e enfileira e-mail",
+        "nudge SSE registrado via onCommit só quando grava in-app",
+        "email-only (access_link_sent) não grava in-app nem registra nudge"
+      ],
+      "count": 7
+    },
+    {
+      "file": "catalog/notification/api/application/mappers/notification.mapper.spec.ts",
+      "titles": [
+        "serializa datas em ISO e preserva metadata/actions",
+        "actions retornadas são cópia (mutação não vaza pra entidade congelada)"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/notification/api/application/require-recipient.spec.ts",
+      "titles": [
+        "retorna o userId autenticado",
+        "lança ForbiddenError sem userId (defesa em profundidade; guard já barrou)"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/notification/api/application/templates/notification-template-registry.spec.ts",
+      "titles": [
+        "semeia os 10 tipos base no construtor",
+        "os 8 tipos de e-mail têm binding `email`",
+        "os 2 tipos só-sistema não têm binding `email`",
+        "registrar o mesmo tipo duas vezes lança nomeando o tipo",
+        "require de um tipo não registrado lança nomeando o tipo",
+        "findByTemplate resolve o binding de e-mail pelo nome do template"
+      ],
+      "count": 6
+    },
+    {
+      "file": "catalog/notification/api/application/use-cases/archive-notification/archive-notification.use-case.spec.ts",
+      "titles": [
+        "carrega com escopo de dono, arquiva pela entidade e persiste",
+        "id alheio/inexistente → no-op silencioso (sem oráculo de existência)",
+        "contexto sem userId → lança ForbiddenError antes de consultar o repositório"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/notification/api/application/use-cases/get-unseen-count/get-unseen-count.use-case.spec.ts",
+      "titles": [
+        "conta não-vistas do recipient logado"
+      ],
+      "count": 1
+    },
+    {
+      "file": "catalog/notification/api/application/use-cases/list-notifications/list-notifications.use-case.spec.ts",
+      "titles": [
+        "lista com escopo de dono e devolve itens mapeados + paginação",
+        "sem userId no contexto → lança (rota exige sessão)"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/notification/api/application/use-cases/mark-all-read/mark-all-read.use-case.spec.ts",
+      "titles": [
+        "marca todas como lidas (implica vistas) com o instante do clock"
+      ],
+      "count": 1
+    },
+    {
+      "file": "catalog/notification/api/application/use-cases/mark-all-seen/mark-all-seen.use-case.spec.ts",
+      "titles": [
+        "marca todas as não-vistas do recipient com o instante do clock"
+      ],
+      "count": 1
+    },
+    {
+      "file": "catalog/notification/api/application/use-cases/mark-read/mark-read.use-case.spec.ts",
+      "titles": [
+        "carrega com escopo de dono, transiciona pela entidade e persiste",
+        "id alheio/inexistente → no-op silencioso (sem oráculo de existência)"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/notification/api/domain/entities/notification.entity.spec.ts",
+      "titles": [
+        "nasce não-vista, não-lida e não-arquivada, com ULID",
+        "markSeen retorna nova instância e preserva a original (freeze)",
+        "markSeen é no-op quando já vista (timestamp original preservado)",
+        "markRead implica seen (item lido não conta no badge)",
+        "markRead é no-op quando já lida (timestamp original preservado)",
+        "markRead preserva seenAt anterior",
+        "archive marca archivedAt sem mexer em read/seen; no-op se repetido",
+        "markSeen: segunda chamada retorna a mesma instância (branch no-op)",
+        "markRead: segunda chamada retorna a mesma instância (branch no-op)",
+        "archive: segunda chamada retorna a mesma instância (branch no-op)",
+        "markRead preenche seenAt com readAt quando notificação nunca foi vista (branch ?? at)"
+      ],
+      "count": 11
+    },
+    {
+      "file": "catalog/notification/api/infrastructure/channels/email.channel.spec.ts",
+      "titles": [
+        "$type: mesmo template/assunto do v0.1, to = data.email, idempotencyKey = delivery.id",
+        "aplica o `view` do binding antes de renderizar (password_changed formata o instante)",
+        "usa `recipient` do binding quando presente, em vez de data.email",
+        "tipo sem binding de e-mail → EmailBindingMissingError (retry/dead-letter no dispatcher)",
+        "recipient ausente e data.email não é string → EmailRecipientMissingError"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/notification/api/infrastructure/delivery/delivery.dispatcher.int-spec.ts",
+      "titles": [
+        "envia pending, marca sent e REDIGE o link do payload",
+        "falha → failed com backoff; novo poll dentro da lease NÃO re-envia",
+        "MAX_ATTEMPTS → dead_letter com payload redigido",
+        "token expirado → dead_letter SEM enviar",
+        "canal sem channel port (push) → failed com erro descritivo, sem enviar",
+        "dois polls concorrentes entregam cada delivery uma vez (lease preservada)",
+        "purgeTerminal remove sent/dead_letter com 30d+; preserva pending e terminais recentes"
+      ],
+      "count": 7
+    },
+    {
+      "file": "catalog/notification/api/infrastructure/delivery/delivery.dispatcher.spec.ts",
+      "titles": [
+        "expone com cap de 5min + jitter ≤30s",
+        "redige o link (token) e preserva o resto",
+        "payload sem link passa intacto",
+        "redige token e link juntos, não só link"
+      ],
+      "count": 4
+    },
+    {
+      "file": "catalog/notification/api/infrastructure/mailer/handlebars-template-renderer.spec.ts",
+      "titles": [
+        "resolve um template base pelo diretório padrão do módulo, com auto-escape",
+        "resolve template registrado por um produto a partir do templateDir da própria fonte",
+        "template desconhecido → throw com mensagem descritiva"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/notification/api/infrastructure/mailer/log-mailer.spec.ts",
+      "titles": [
+        "loga to, subject, idempotencyKey e os links extraídos do html",
+        "html sem links → links vazio"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/notification/api/infrastructure/mailer/resend-mailer.spec.ts",
+      "titles": [
+        "envia to/subject/html com o from configurado e a idempotencyKey do provider",
+        "sem idempotencyKey, chama o provider sem a option",
+        "lança MailDeliveryError quando o provedor retorna erro"
+      ],
+      "count": 3
+    },
+    {
+      "file": "catalog/notification/api/infrastructure/mailer/templates.guard.spec.ts",
+      "titles": [
+        "contém exatamente a allowlist genérica",
+        "só tem o partial compartilhado"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/notification/api/infrastructure/realtime/realtime.int-spec.ts",
+      "titles": [
+        "publish no canal dispara nudge na conexão registrada"
+      ],
+      "count": 1
+    },
+    {
+      "file": "catalog/notification/api/infrastructure/realtime/sse-connection-registry.spec.ts",
+      "titles": [
+        "notifyNew entrega {type:new} a todas as conexões do recipient",
+        "close remove a conexão (sem vazamento)",
+        "cap de 5 conexões/user: a 6ª derruba a mais antiga",
+        "heartbeat emite ping periódico a toda conexão registrada",
+        "shutdown completa todos os streams e limpa o registro"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/notification/api/infrastructure/repositories/drizzle-notification.repository.int-spec.ts",
+      "titles": [
+        "insert + findByIdForRecipient roundtrip; id alheio → null",
+        "list aplica filtro de lifecycle e pagina por offset",
+        "countUnseen conta só não-vistas não-arquivadas do recipient",
+        "markAllSeen zera o badge sem tocar read; markAllRead implica seen",
+        "update persiste transição da entidade"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/notification/api/notification.config.spec.ts",
+      "titles": [
+        "defaults: transport log, 8 tentativas",
+        "resend exige RESEND_API_KEY e MAIL_FROM (fail-fast)",
+        "resend com chaves presentes parseia",
+        "DELIVERY_MAX_ATTEMPTS coage string e rejeita não-positivo",
+        "NODE_ENV=staging parseia (mesmo enum do kernel)"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/notification/parity/contract.parity.spec.ts",
+      "titles": [
+        "mantém no openapi.json do child as operações do snapshot"
+      ],
+      "count": 1
+    },
+    {
+      "file": "catalog/notification/parity/mailer.parity.spec.ts",
+      "titles": [
+        "a porta Mailer só expõe send(message) de um argumento",
+        "LogMailer registra to, subject, idempotencyKey e os hrefs extraídos do HTML"
+      ],
+      "count": 2
+    },
+    {
+      "file": "catalog/notification/parity/template-registry.parity.spec.ts",
+      "titles": [
+        "registra os tipos do base-set pelo mesmo registry usado pelo produto",
+        "fonte registrada tem a forma { type, catalog, email? }",
+        "templateDir ausente no base-set — usa a pasta de templates do próprio módulo",
+        "recipient ausente cai para data.email",
+        "view ausente cai para identidade — o payload inteiro vai pro renderer"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/tag/api/__e2e__/tags.e2e-spec.ts",
+      "titles": [
+        "cria a tag → 201",
+        "conflito de nome entre vivas → 409 tag-conflict",
+        "nega criação sem permissão → 403",
+        "uso zerado sem reader de uso registrado",
+        "?deleted=true sem admin.tags.trash.read → 403",
+        "?deleted=true com admin.tags.trash.read → 200",
+        "libera quem lê a central → 200",
+        "nega quem não lê a central → 403",
+        "não lista tag inativa nem na lixeira",
+        "delete manda para a lixeira e restore devolve",
+        "purga tag da lixeira → 200 e a tag some do catálogo",
+        "purge de tag fora da lixeira → 409 tag-not-in-trash"
+      ],
+      "count": 12
+    },
+    {
+      "file": "catalog/tag/api/application/use-cases/list-tags/list-tags.use-case.spec.ts",
+      "titles": [
+        "deleted=true sem admin.tags.trash.read responde 403 e não consulta o port",
+        "deleted=true com admin.tags.trash.read lista a lixeira",
+        "deleted=false não exige a permissão de lixeira",
+        "soma o uso de todos os readers registrados",
+        "sem reader registrado o uso é zero",
+        "tag que nenhum reader conta fica zerada"
+      ],
+      "count": 6
+    },
+    {
+      "file": "catalog/tag/api/application/use-cases/purge-tags/purge-tags.use-case.spec.ts",
+      "titles": [
+        "remove as tags da lixeira e emite tag.purged com os ids removidos",
+        "remove mesmo com vínculos — purge não checa mais uso",
+        "tag fora da lixeira → TagNotInTrashError, sem remoção nem evento",
+        "nenhum id encontrado → não emite evento"
+      ],
+      "count": 4
+    },
+    {
+      "file": "catalog/tag/api/domain/errors.spec.ts",
+      "titles": [
+        "todos os erros estendem DomainError",
+        "TagNotFoundError: status 404, título vem da tabela única de mensagens",
+        "TagConflictError: status 409, título inalterado por padrão",
+        "TagNotInTrashError: status 409"
+      ],
+      "count": 4
+    },
+    {
+      "file": "catalog/tag/api/infrastructure/repositories/drizzle-tag.repository.int-spec.ts",
+      "titles": [
+        "insert + findViewById faz round-trip",
+        "nome duplicado entre tags vivas → TagConflictError",
+        "existingLiveIds oculta tag na lixeira",
+        "describeByIds devolve nome e cor só das tags vivas",
+        "list devolve a tag viva com a paginação preenchida"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/tag/parity/contract.parity.spec.ts",
+      "titles": [
+        "mantém no openapi.json do child as operações do snapshot"
+      ],
+      "count": 1
+    },
+    {
+      "file": "catalog/tag/parity/facade.parity.spec.ts",
+      "titles": [
+        "expõe TagDirectoryFacade.findLiveTagIds(ids) e describeTags(ids)",
+        "expõe TagUsageRegistry.register(reader) e totalsFor — vazio quando ninguém registrou"
+      ],
+      "count": 2
+    }
+  ]
+}

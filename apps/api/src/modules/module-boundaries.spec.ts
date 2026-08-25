@@ -892,7 +892,7 @@ function ruleDOffensesIn(
   return offenses
 }
 
-function ruleDOffenses(): string[] {
+function catalogRuleDOffenses(): string[] {
   const entries = catalogEntries()
   const dependsOn = new Map(
     entries.map((entry) => [entry.name, entry.dependsOn])
@@ -917,6 +917,86 @@ function ruleDOffenses(): string[] {
   return offenses.sort()
 }
 
+// Layout do filho: `module add` copia só `api/`, `web/` e `db/` da entrada
+// (`scripts/platform/lib/plan.mjs`), então o `module.json` — e com ele o
+// `dependsOn` — não chega lá; `catalog/` também não é copiado (`copier.yml`
+// `_exclude`). A metade de RULE D que os próprios imports provam continua
+// conferível no filho: nenhuma aresta `<a> → <b>/testing` pode fechar ciclo
+// (AD-025). É essa varredura que roda quando não há `catalog/`.
+const CHILD_ENTRY = /^modules\/([^/]+)\//
+
+type ChildFile = { path: string; source: string }
+
+type TestingEdge = { from: string; to: string; where: string }
+
+function childTestingEdges(files: ChildFile[]): TestingEdge[] {
+  const edges: TestingEdge[] = []
+  for (const file of files) {
+    const entry = CHILD_ENTRY.exec(file.path)?.[1]
+    if (entry === undefined) continue
+    for (const statement of ruleDStatementsIn(file.source)) {
+      const target = testingEntryOf(file.path, statement.specifier)
+      if (target === null || target === entry) continue
+      edges.push({
+        from: entry,
+        to: target,
+        where: `apps/api/src/${file.path}:${String(statement.line)}`,
+      })
+    }
+  }
+  return edges
+}
+
+function childRuleDOffensesIn(files: ChildFile[]): string[] {
+  const edges = childTestingEdges(files)
+  const graph = new Map<string, string[]>()
+  for (const edge of edges) {
+    graph.set(edge.from, [...(graph.get(edge.from) ?? []), edge.to])
+  }
+  const offenses: string[] = []
+  for (const edge of edges) {
+    const cycle = cycleThrough(graph, edge.from, edge.to)
+    if (cycle) {
+      offenses.push(`${edge.where} → ciclo em testing/: ${cycle.join(" -> ")}`)
+    }
+  }
+  return offenses.sort()
+}
+
+function childModuleFiles(): ChildFile[] {
+  const files: ChildFile[] = []
+  for (const entry of readdirSync(MODULES_DIR, {
+    recursive: true,
+    encoding: "utf8",
+  })) {
+    const rel = toPosix(entry)
+    if (!rel.endsWith(".ts") && !rel.endsWith(".tsx")) continue
+    const abs = resolve(MODULES_DIR, rel)
+    if (!statSync(abs).isFile()) continue
+    files.push({ path: `modules/${rel}`, source: readFileSync(abs, "utf8") })
+  }
+  return files
+}
+
+// A guarda vale nos dois layouts (spec § Edge Cases): o catálogo no template,
+// as entradas instaladas em `apps/api/src/modules/` no filho — que não tem
+// `catalog/` e não pode falhar por causa disso.
+function ruleDOffenses(): string[] {
+  return existsSync(CATALOG_ROOT)
+    ? catalogRuleDOffenses()
+    : childRuleDOffensesIn(childModuleFiles())
+}
+
+// `catalogEntries()` devolve `[]` sem `catalog/` — no template as cinco entradas
+// do catálogo têm de continuar sendo exigidas, no filho o esperado é o vazio que
+// a ausência do catálogo dita. Mesma função, mesmo teste, esperado do layout.
+const EXPECTED_CATALOG_ENTRIES = existsSync(CATALOG_ROOT)
+  ? ["attachment", "audit", "identity", "notification", "tag"]
+  : []
+const EXPECTED_IDENTITY_DEPENDS_ON = existsSync(CATALOG_ROOT)
+  ? ["notification"]
+  : undefined
+
 describe("module-boundaries — RULE D: import de testing/ segue o dependsOn", () => {
   const identity: CatalogEntry = {
     name: "identity",
@@ -931,20 +1011,60 @@ describe("module-boundaries — RULE D: import de testing/ segue o dependsOn", (
 
   it("o catálogo do template é lido com nome, diretório e dependsOn", () => {
     const entries = catalogEntries()
-    expect(entries.map((entry) => entry.name).sort()).toEqual([
-      "attachment",
-      "audit",
-      "identity",
-      "notification",
-      "tag",
-    ])
+    expect(entries.map((entry) => entry.name).sort()).toEqual(
+      EXPECTED_CATALOG_ENTRIES
+    )
     expect(
       entries.find((entry) => entry.name === "identity")?.dependsOn
-    ).toEqual(["notification"])
+    ).toEqual(EXPECTED_IDENTITY_DEPENDS_ON)
   })
 
-  it("nenhum import de testing/ no catálogo viola dependsOn ou fecha ciclo", () => {
+  it("nenhum import de testing/ viola dependsOn ou fecha ciclo no layout presente", () => {
     expect(ruleDOffenses()).toEqual([])
+  })
+
+  it("a varredura do filho roda sobre modules/ sem exigir catalog/", () => {
+    expect(childRuleDOffensesIn(childModuleFiles())).toEqual([])
+  })
+
+  it("no filho, aresta entre barrels testing/ que fecha ciclo é reprovada", () => {
+    expect(
+      childRuleDOffensesIn([
+        {
+          path: "modules/identity/__e2e__/a.e2e-spec.ts",
+          source: `import { seedTag } from "../../tag/testing"\n`,
+        },
+        {
+          path: "modules/tag/__e2e__/b.e2e-spec.ts",
+          source: `const { loginAs } = await import("../../identity/testing")\n`,
+        },
+      ])
+    ).toEqual([
+      "apps/api/src/modules/identity/__e2e__/a.e2e-spec.ts:1 → ciclo em testing/: identity -> tag -> identity",
+      "apps/api/src/modules/tag/__e2e__/b.e2e-spec.ts:1 → ciclo em testing/: tag -> identity -> tag",
+    ])
+  })
+
+  it("no filho, aresta que não volta entre barrels testing/ passa", () => {
+    expect(
+      childRuleDOffensesIn([
+        {
+          path: "modules/identity/__e2e__/a.e2e-spec.ts",
+          source: `import { findSent } from "../../notification/testing"\n`,
+        },
+      ])
+    ).toEqual([])
+  })
+
+  it("no filho, o próprio barrel e o pacote externo não viram aresta", () => {
+    expect(
+      childTestingEdges([
+        {
+          path: "modules/identity/__e2e__/a.e2e-spec.ts",
+          source: `import { seedUser } from "../testing"\nimport { Test } from "@nestjs/testing"\n`,
+        },
+      ])
+    ).toEqual([])
   })
 
   it("o specifier do catálogo resolve no layout do filho", () => {

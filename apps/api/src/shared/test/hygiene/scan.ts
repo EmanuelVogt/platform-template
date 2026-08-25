@@ -10,6 +10,12 @@ export type Violation = {
 
 export type Baseline = Record<string, Record<string, number>>
 
+const CATALOG_ROOT = "catalog/"
+const CHILD_MODULES_ROOT = "apps/api/src/modules/"
+const ENTRY_KEY_PREFIX = "module:"
+const ENTRY_SOURCE_DIRS = new Set(["api", "parity"])
+const PARITY_DIR = "__parity__"
+
 const IGNORED_SEGMENT =
   /(?:^|\/)(?:node_modules|dist|coverage|\.catalog-stage|__snapshots__)(?:\/|$)/
 
@@ -253,10 +259,85 @@ export function formatViolation(violation: Violation): string {
   return `${violation.rule} · ${violation.file}:${violation.line} · ${violation.snippet}`
 }
 
-function countByFile(violations: Violation[]): Map<string, number> {
+/**
+ * A identidade de um arquivo, igual nos dois layouts. O template guarda uma
+ * entrada em `catalog/<entrada>/[<variante>/]{api|parity}/<resto>` e a
+ * instalação copia isso para `apps/api/src/modules/<entrada>/<resto>` — o
+ * parity sob `__parity__/` (`scripts/platform/lib/plan.mjs:100,123`). O
+ * baseline é escrito nesta forma neutra para que um registro feito no template
+ * case com o mesmo arquivo já instalado num filho. Arquivo do kernel — e o que
+ * só existe no template, como `catalog/<entrada>/web/**` — fica com o próprio
+ * caminho.
+ */
+export function canonicalKey(file: string): string {
+  if (file.startsWith(CHILD_MODULES_ROOT)) {
+    const [entry, ...rest] = file.slice(CHILD_MODULES_ROOT.length).split("/")
+    if (entry === undefined || entry === "" || rest.length === 0) return file
+    return `${ENTRY_KEY_PREFIX}${entry}/${rest.join("/")}`
+  }
+  if (!file.startsWith(CATALOG_ROOT)) return file
+
+  const parts = file.slice(CATALOG_ROOT.length).split("/")
+  const entry = parts[0]
+  // `catalog/attachment/api/api/**` existe: o `api/` da entrada vem antes do
+  // `api/` interno, então a variante só é considerada quando o segmento 1 não é
+  // ele próprio um diretório de origem.
+  const sourceIndex = ENTRY_SOURCE_DIRS.has(parts[1] ?? "") ? 1 : 2
+  const source = parts[sourceIndex]
+  const rest = parts.slice(sourceIndex + 1)
+  if (entry === undefined || entry === "") return file
+  if (source === undefined || !ENTRY_SOURCE_DIRS.has(source)) return file
+  if (rest.length === 0) return file
+
+  const tail = source === "parity" ? [PARITY_DIR, ...rest] : rest
+  return `${ENTRY_KEY_PREFIX}${entry}/${tail.join("/")}`
+}
+
+function entryOfKey(key: string): string | null {
+  if (!key.startsWith(ENTRY_KEY_PREFIX)) return null
+  const name = key.slice(ENTRY_KEY_PREFIX.length).split("/")[0]
+  return name === undefined || name === "" ? null : name
+}
+
+/** As entradas presentes na árvore varrida, em qualquer um dos dois layouts. */
+export function entriesOf(files: readonly string[]): Set<string> {
+  const entries = new Set<string>()
+  for (const file of files) {
+    const entry = entryOfKey(canonicalKey(file))
+    if (entry !== null) entries.add(entry)
+  }
+  return entries
+}
+
+// SPEC_DEVIATION: design § 6 says "a baseline entry that no longer matches also
+// fails", unconditionally. A record out of this tree's reach is inert instead.
+// Reason: the baseline ships from the template, where every entry and /catalog
+// exist, so the rule is unchanged there; a child installs only some entries and
+// never gets /catalog (AD-013), so the unconditional reading made the guard red
+// on day one in every child — a baseline of files it cannot have.
+/**
+ * Um registro só é cobrado onde o arquivo que ele nomeia pode existir: a
+ * entrada instalada nesta árvore, ou o `catalog/` — âncora do copier (AD-013),
+ * que nunca chega num filho. Isto separa *não instalado* de *defasado*; não
+ * afrouxa nada, porque um registro fora de alcance não tem como esconder
+ * violação alguma: apagar a entrada apaga junto os arquivos que a violariam.
+ */
+function isObservable(
+  key: string,
+  installed: ReadonlySet<string>,
+  hasCatalog: boolean
+): boolean {
+  const entry = entryOfKey(key)
+  if (entry !== null) return installed.has(entry)
+  if (key.startsWith(CATALOG_ROOT)) return hasCatalog
+  return true
+}
+
+function countByKey(violations: Violation[]): Map<string, number> {
   const counts = new Map<string, number>()
   for (const violation of violations) {
-    counts.set(violation.file, (counts.get(violation.file) ?? 0) + 1)
+    const key = canonicalKey(violation.file)
+    counts.set(key, (counts.get(key) ?? 0) + 1)
   }
   return counts
 }
@@ -264,30 +345,37 @@ function countByFile(violations: Violation[]): Map<string, number> {
 /**
  * GA-9: o baseline só encolhe. Uma violação acima do registrado reprova; um
  * registro que já não corresponde reprova também — senão o arquivo vira
- * allow-list e o ban perde a força.
+ * allow-list e o ban perde a força. `scanned` é a lista de arquivos varridos:
+ * é dela que sai o alcance de cada registro (ver `isObservable`).
  */
 export function compareToBaseline(
   rule: string,
   violations: Violation[],
-  baseline: Baseline
+  baseline: Baseline,
+  scanned: readonly string[]
 ): { unrecorded: string[]; stale: string[] } {
-  const counts = countByFile(violations.filter((v) => v.rule === rule))
+  const matching = violations.filter((v) => v.rule === rule)
+  const counts = countByKey(matching)
+  const installed = entriesOf(scanned)
+  const hasCatalog = scanned.some((file) => file.startsWith(CATALOG_ROOT))
   const unrecorded: string[] = []
   const stale: string[] = []
 
-  for (const violation of violations.filter((v) => v.rule === rule)) {
-    const recorded = baseline[violation.file]?.[rule] ?? 0
-    const found = counts.get(violation.file) ?? 0
+  for (const violation of matching) {
+    const key = canonicalKey(violation.file)
+    const recorded = baseline[key]?.[rule] ?? 0
+    const found = counts.get(key) ?? 0
     if (found > recorded) unrecorded.push(formatViolation(violation))
   }
 
-  for (const [file, rules] of Object.entries(baseline)) {
+  for (const [key, rules] of Object.entries(baseline)) {
     const recorded = rules[rule]
     if (recorded === undefined) continue
-    const found = counts.get(file) ?? 0
+    if (!isObservable(key, installed, hasCatalog)) continue
+    const found = counts.get(key) ?? 0
     if (found < recorded) {
       stale.push(
-        `${rule} · ${file} · baseline registra ${String(recorded)}, a árvore tem ${String(found)} — rode o gerador do baseline`
+        `${rule} · ${key} · baseline registra ${String(recorded)}, a árvore tem ${String(found)} — rode o gerador do baseline`
       )
     }
   }

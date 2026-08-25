@@ -5,8 +5,10 @@ import { dirname, resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 
 import {
+  canonicalKey,
   collectScanFiles,
   compareToBaseline,
+  entriesOf,
   formatViolation,
   scanSource,
   type Baseline,
@@ -180,8 +182,62 @@ describe("scan — cada ban reprova a violação semeada e aceita a forma corret
   })
 })
 
+describe("scan — a identidade de um arquivo é a mesma nos dois layouts", () => {
+  it("o barrel da entrada tem uma chave só no template e no filho", () => {
+    expect(canonicalKey(TEMPLATE_BARREL)).toBe("module:sample/testing/index.ts")
+    expect(canonicalKey(CHILD_BARREL)).toBe("module:sample/testing/index.ts")
+  })
+
+  it("o spec da entrada tem uma chave só no template e no filho", () => {
+    expect(canonicalKey(TEMPLATE_SPEC)).toBe(
+      "module:sample/application/create-sample.use-case.spec.ts"
+    )
+    expect(canonicalKey(CHILD_SPEC)).toBe(
+      "module:sample/application/create-sample.use-case.spec.ts"
+    )
+  })
+
+  it("o parity cai onde a instalação o põe — __parity__/ no filho", () => {
+    expect(
+      canonicalKey("catalog/notification/parity/mailer.parity.spec.ts")
+    ).toBe("module:notification/__parity__/mailer.parity.spec.ts")
+    expect(
+      canonicalKey(
+        "apps/api/src/modules/notification/__parity__/mailer.parity.spec.ts"
+      )
+    ).toBe("module:notification/__parity__/mailer.parity.spec.ts")
+  })
+
+  it("a entrada com variante fica com o nome do módulo, sem a variante", () => {
+    expect(
+      canonicalKey("catalog/identity/single-tenant/api/testing/index.ts")
+    ).toBe("module:identity/testing/index.ts")
+  })
+
+  it("o api/ interno da entrada não é confundido com a raiz api/", () => {
+    expect(
+      canonicalKey("catalog/attachment/api/api/attachment.controller.ts")
+    ).toBe("module:attachment/api/attachment.controller.ts")
+  })
+
+  it("o kernel e o que só existe no template ficam com o próprio caminho", () => {
+    expect(canonicalKey(HARNESS)).toBe(HARNESS)
+    const webFile = "catalog/identity/single-tenant/web/core/session.types.ts"
+    expect(canonicalKey(webFile)).toBe(webFile)
+  })
+
+  it("as entradas presentes saem da árvore, em qualquer layout", () => {
+    expect([...entriesOf([TEMPLATE_BARREL, HARNESS])]).toEqual(["sample"])
+    expect([...entriesOf([CHILD_BARREL, HARNESS])]).toEqual(["sample"])
+    expect([...entriesOf([HARNESS])]).toEqual([])
+  })
+})
+
 describe("scan — o relato e o contrato do baseline", () => {
   const source = SEEDED.testingModule
+  const KEY = "module:sample/application/create-sample.use-case.spec.ts"
+  const TEMPLATE_TREE = [TEMPLATE_SPEC, TEMPLATE_BARREL]
+  const CHILD_TREE = [CHILD_SPEC, CHILD_BARREL]
 
   it("cada violação é relatada como rule · file:line · snippet", () => {
     const [violation] = scanSource(TEMPLATE_SPEC, `\n${source}`)
@@ -192,43 +248,114 @@ describe("scan — o relato e o contrato do baseline", () => {
 
   it("uma violação acima do registrado reprova (GA-9)", () => {
     const violations = scanSource(TEMPLATE_SPEC, `${source}\n${source}`)
-    const baseline: Baseline = {
-      [TEMPLATE_SPEC]: { "single-testing-module": 1 },
-    }
+    const baseline: Baseline = { [KEY]: { "single-testing-module": 1 } }
     const { unrecorded, stale } = compareToBaseline(
       "single-testing-module",
       violations,
-      baseline
+      baseline,
+      TEMPLATE_TREE
     )
     expect(unrecorded).toHaveLength(2)
     expect(stale).toEqual([])
   })
 
   it("um registro que já não corresponde reprova (o baseline só encolhe)", () => {
-    const baseline: Baseline = {
-      [TEMPLATE_SPEC]: { "single-testing-module": 3 },
-    }
+    const baseline: Baseline = { [KEY]: { "single-testing-module": 3 } }
     const { unrecorded, stale } = compareToBaseline(
       "single-testing-module",
       scanSource(TEMPLATE_SPEC, source),
-      baseline
+      baseline,
+      TEMPLATE_TREE
     )
     expect(unrecorded).toEqual([])
     expect(stale).toEqual([
-      `single-testing-module · ${TEMPLATE_SPEC} · baseline registra 3, a árvore tem 1 — rode o gerador do baseline`,
+      `single-testing-module · ${KEY} · baseline registra 3, a árvore tem 1 — rode o gerador do baseline`,
     ])
   })
 
   it("a violação registrada exatamente passa", () => {
-    const baseline: Baseline = {
-      [TEMPLATE_SPEC]: { "single-testing-module": 1 },
-    }
+    const baseline: Baseline = { [KEY]: { "single-testing-module": 1 } }
     const { unrecorded, stale } = compareToBaseline(
       "single-testing-module",
       scanSource(TEMPLATE_SPEC, source),
-      baseline
+      baseline,
+      TEMPLATE_TREE
     )
     expect(unrecorded).toEqual([])
     expect(stale).toEqual([])
+  })
+
+  it("o registro feito no template vale para o mesmo arquivo instalado no filho", () => {
+    const baseline: Baseline = { [KEY]: { "single-testing-module": 1 } }
+    const { unrecorded, stale } = compareToBaseline(
+      "single-testing-module",
+      scanSource(CHILD_SPEC, source),
+      baseline,
+      CHILD_TREE
+    )
+    expect(unrecorded).toEqual([])
+    expect(stale).toEqual([])
+  })
+
+  it("uma violação nova no filho reprova mesmo sem catalog/ na árvore", () => {
+    const { unrecorded } = compareToBaseline(
+      "single-testing-module",
+      scanSource(CHILD_SPEC, source),
+      {},
+      CHILD_TREE
+    )
+    expect(unrecorded).toEqual([
+      `single-testing-module · ${CHILD_SPEC}:1 · ${source}`,
+    ])
+  })
+
+  it("o registro de uma entrada instalada exige casamento exato", () => {
+    const baseline: Baseline = { [KEY]: { "single-testing-module": 1 } }
+    const { stale } = compareToBaseline(
+      "single-testing-module",
+      [],
+      baseline,
+      CHILD_TREE
+    )
+    expect(stale).toEqual([
+      `single-testing-module · ${KEY} · baseline registra 1, a árvore tem 0 — rode o gerador do baseline`,
+    ])
+  })
+
+  it("o registro de uma entrada que esta árvore não instalou é inerte", () => {
+    const baseline: Baseline = { [KEY]: { "single-testing-module": 1 } }
+    const { unrecorded, stale } = compareToBaseline(
+      "single-testing-module",
+      [],
+      baseline,
+      [HARNESS]
+    )
+    expect(unrecorded).toEqual([])
+    expect(stale).toEqual([])
+  })
+
+  it("o registro do kernel é cobrado mesmo num filho sem entrada alguma", () => {
+    const baseline: Baseline = { [HARNESS]: { "single-testing-module": 1 } }
+    const { stale } = compareToBaseline("single-testing-module", [], baseline, [
+      HARNESS,
+    ])
+    expect(stale).toEqual([
+      `single-testing-module · ${HARNESS} · baseline registra 1, a árvore tem 0 — rode o gerador do baseline`,
+    ])
+  })
+
+  it("o registro de um arquivo só-do-template é inerte no filho e cobrado no template", () => {
+    const webFile = "catalog/identity/single-tenant/web/core/session.types.ts"
+    const baseline: Baseline = { [webFile]: { "single-testing-module": 1 } }
+    expect(
+      compareToBaseline("single-testing-module", [], baseline, [CHILD_SPEC])
+        .stale
+    ).toEqual([])
+    expect(
+      compareToBaseline("single-testing-module", [], baseline, [TEMPLATE_SPEC])
+        .stale
+    ).toEqual([
+      `single-testing-module · ${webFile} · baseline registra 1, a árvore tem 0 — rode o gerador do baseline`,
+    ])
   })
 })

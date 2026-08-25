@@ -23,6 +23,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   Sem a correção, `import-x/order` e `@typescript-eslint/non-nullable-type-assertion-style`
   reprovavam o `pnpm check` de todo filho que instala a entrada — `catalog/` está fora de toda
   invocação de ESLint do template, então o desvio só aparece no filho. Ver `ADV-20260825-01`.
+- `drizzle-activity-stats.reader.int-spec.ts`: as asserções embutem `-03:00` no bucket esperado
+  e asseveram o dia local de Brasília, mas esta mesma versão fez o default do kernel ser `UTC` e
+  o spec nunca declarava `APP_TIMEZONE`. São 7 falhas no `pnpm test:db` de todo filho que instala
+  a entrada; o spec agora declara o fuso que testa. Ver `ADV-20260825-04`.
 
 ## [2.1.2]
 

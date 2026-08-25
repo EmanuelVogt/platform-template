@@ -275,6 +275,24 @@ instructs the child to do nothing — and the assertion was shrunk to expect **z
 **Also recorded:** `ADV-YYYYMMDD-NN.md` is read as a spec § Edge-Cases placeholder; AUD-04 exempts the
 two historical records (the changelog and `docs/platform_template/`), blast radius pinned.
 
+### Residual discovered at Execute, not closed by this feature
+
+**The module installer is a second delivery channel the guard does not model.** The shipped set is
+`git ls-files` minus `copier.yml` `_exclude`, so `/catalog` puts every `catalog/*/README.md` outside
+it and the guard skips them. But those READMEs reach the child anyway, vendored by
+`pnpm platform module add`. An entry README naming `.github/workflows/release.yml` misleads a child
+reader exactly as much as a `docs/` file would, and nothing catches it.
+
+Surfaced 2026-08-25 by a parallel session whose `test-suite-refactor` rewrote the § *Tests* section
+of all five entry READMEs and asked which side of the boundary they fell on. The honest answer is
+that the spec's `docs/**` scope ruling does not cover the question — it settles which *directory*
+the contract governs, not which *channels* deliver to a child. Both AUD-03 and AUD-05 are written
+against the copier shipped set alone.
+
+**Not fixed here** — closing it means teaching `shippedSet()` about `.platform-modules.lock` and the
+installer's copy semantics, which is a feature, not a task. Recorded so the next session does not
+read the guard's green as covering catalog entries.
+
 ### Corrections this wave forced on the plan
 
 **1. T12's premise is void — `v2.4.1` is tagged.** A parallel session pushed the marker commit

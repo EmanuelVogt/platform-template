@@ -57,9 +57,6 @@ function makeDeps(over: Record<string, any> = {}) {
       .mockResolvedValue({ areaIds: [], serviceIds: [] }),
     update: vi.fn().mockResolvedValue(undefined),
     replacePermissions: vi.fn().mockResolvedValue(undefined),
-    replaceProfessionalAreas: vi.fn().mockResolvedValue(undefined),
-    replaceProfessionalServices: vi.fn().mockResolvedValue(undefined),
-    replaceSchedulingAreas: vi.fn().mockResolvedValue(undefined),
   }
   const clock = over.clock ?? {
     now: () => new Date("2026-06-12T12:00:00.000Z"),
@@ -91,9 +88,6 @@ describe("UpdateUserUseCase", () => {
         }),
         update: vi.fn().mockResolvedValue(undefined),
         replacePermissions: vi.fn().mockResolvedValue(undefined),
-        replaceProfessionalAreas: vi.fn().mockResolvedValue(undefined),
-        replaceProfessionalServices: vi.fn().mockResolvedValue(undefined),
-        replaceSchedulingAreas: vi.fn().mockResolvedValue(undefined),
       },
     })
     await uc.execute({
@@ -148,9 +142,6 @@ describe("UpdateUserUseCase", () => {
         }),
         update: vi.fn().mockResolvedValue(undefined),
         replacePermissions: vi.fn().mockResolvedValue(undefined),
-        replaceProfessionalAreas: vi.fn().mockResolvedValue(undefined),
-        replaceProfessionalServices: vi.fn().mockResolvedValue(undefined),
-        replaceSchedulingAreas: vi.fn().mockResolvedValue(undefined),
       },
       ctx: fakeRequestContext(() => ({
         correlationId: "c1",
@@ -267,9 +258,6 @@ describe("UpdateUserUseCase", () => {
           .mockResolvedValue({ areaIds: [], serviceIds: [] }),
         update: vi.fn().mockResolvedValue(undefined),
         replacePermissions: vi.fn().mockResolvedValue(undefined),
-        replaceProfessionalAreas: vi.fn().mockResolvedValue(undefined),
-        replaceProfessionalServices: vi.fn().mockResolvedValue(undefined),
-        replaceSchedulingAreas: vi.fn().mockResolvedValue(undefined),
       },
       ctx: fakeRequestContext(() => ({
         correlationId: "c1",
@@ -280,26 +268,6 @@ describe("UpdateUserUseCase", () => {
     })
     await uc.execute(BASE_INPUT)
     expect(users.update).toHaveBeenCalledTimes(1)
-  })
-
-  it("áreas de agendamento informadas substituem as do alvo", async () => {
-    const { uc, users } = makeDeps()
-    await uc.execute({
-      ...BASE_INPUT,
-      accessProfile: "admin",
-      permissions: ["admin.tags.read"],
-      schedulingAreaIds: ["area-1", "area-2"],
-    })
-    expect(users.replaceSchedulingAreas).toHaveBeenCalledWith("u-target", [
-      "area-1",
-      "area-2",
-    ])
-  })
-
-  it("sem áreas de agendamento no input as do alvo são limpas", async () => {
-    const { uc, users } = makeDeps()
-    await uc.execute(BASE_INPUT)
-    expect(users.replaceSchedulingAreas).toHaveBeenCalledWith("u-target", [])
   })
   it("set sem closure → InvalidPermissionSetError", async () => {
     const { uc } = makeDeps()
@@ -332,9 +300,6 @@ describe("UpdateUserUseCase", () => {
           .mockResolvedValue(over.scope ?? { areaIds: [], serviceIds: [] }),
         update: vi.fn().mockResolvedValue(undefined),
         replacePermissions: vi.fn().mockResolvedValue(undefined),
-        replaceProfessionalAreas: vi.fn().mockResolvedValue(undefined),
-        replaceProfessionalServices: vi.fn().mockResolvedValue(undefined),
-        replaceSchedulingAreas: vi.fn().mockResolvedValue(undefined),
       }
       return makeDeps({
         users,
@@ -413,9 +378,6 @@ describe("UpdateUserUseCase", () => {
             .mockResolvedValue({ areaIds: [], serviceIds: [] }),
           update: vi.fn().mockResolvedValue(undefined),
           replacePermissions: vi.fn().mockResolvedValue(undefined),
-          replaceProfessionalAreas: vi.fn().mockResolvedValue(undefined),
-          replaceProfessionalServices: vi.fn().mockResolvedValue(undefined),
-          replaceSchedulingAreas: vi.fn().mockResolvedValue(undefined),
         },
       })
 
@@ -425,12 +387,7 @@ describe("UpdateUserUseCase", () => {
         schedulingAreaIds: ["area-1"],
       })
 
-      expect(users.replaceProfessionalAreas).toHaveBeenCalledWith("u-target", [
-        "a-1",
-      ])
-      expect(users.replaceSchedulingAreas).toHaveBeenCalledWith("u-target", [
-        "area-1",
-      ])
+      expect(users.update).toHaveBeenCalledTimes(1)
     })
   })
 })

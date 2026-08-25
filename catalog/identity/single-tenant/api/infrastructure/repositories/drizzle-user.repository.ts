@@ -354,59 +354,6 @@ export class DrizzleUserRepository implements UserRepository {
       .values(permissions.map((permission) => ({ userId, permission })))
   }
 
-  async replaceProfessionalAreas(
-    userId: string,
-    areaIds: readonly string[]
-  ): Promise<void> {
-    await this.db
-      .delete(userProfessionalAreas)
-      .where(eq(userProfessionalAreas.userId, userId))
-    if (areaIds.length === 0) return
-    await this.db
-      .insert(userProfessionalAreas)
-      .values(areaIds.map((areaId) => ({ userId, areaId })))
-  }
-
-  async replaceProfessionalServices(
-    userId: string,
-    serviceIds: readonly string[]
-  ): Promise<void> {
-    // Preserva o is_default definido pelo form de serviço (ADR 0060): o form
-    // de usuário não edita padrões, então o replace não pode apagá-los.
-    const current = await this.db
-      .select({
-        serviceId: userProfessionalServices.serviceId,
-        isDefault: userProfessionalServices.isDefault,
-      })
-      .from(userProfessionalServices)
-      .where(eq(userProfessionalServices.userId, userId))
-    const defaults = new Map(current.map((r) => [r.serviceId, r.isDefault]))
-    await this.db
-      .delete(userProfessionalServices)
-      .where(eq(userProfessionalServices.userId, userId))
-    if (serviceIds.length === 0) return
-    await this.db.insert(userProfessionalServices).values(
-      serviceIds.map((serviceId) => ({
-        userId,
-        serviceId,
-        isDefault: defaults.get(serviceId) ?? false,
-      }))
-    )
-  }
-
-  async replaceSchedulingAreas(
-    userId: string,
-    areaIds: readonly string[]
-  ): Promise<void> {
-    await this.db
-      .delete(userSchedulingAreas)
-      .where(eq(userSchedulingAreas.userId, userId))
-    if (areaIds.length === 0) return
-    await this.db
-      .insert(userSchedulingAreas)
-      .values(areaIds.map((areaId) => ({ userId, areaId })))
-  }
-
   async findProfessionalScope(
     userId: string
   ): Promise<{ areaIds: readonly string[]; serviceIds: readonly string[] }> {

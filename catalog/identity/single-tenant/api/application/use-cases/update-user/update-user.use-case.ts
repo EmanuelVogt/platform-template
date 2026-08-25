@@ -89,15 +89,6 @@ export class UpdateUserUseCase implements UseCaseContract<
       )
     )
     await this.users.replacePermissions(user.props.id, access.permissions)
-    await this.users.replaceProfessionalAreas(user.props.id, access.areaIds)
-    await this.users.replaceProfessionalServices(
-      user.props.id,
-      access.serviceIds
-    )
-    await this.users.replaceSchedulingAreas(
-      user.props.id,
-      access.schedulingAreaIds
-    )
   }
 
   /**

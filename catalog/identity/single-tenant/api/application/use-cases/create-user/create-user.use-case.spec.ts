@@ -24,9 +24,6 @@ function makeDeps(over: Record<string, any> = {}) {
     findByEmail: vi.fn().mockResolvedValue(null),
     insert: vi.fn().mockResolvedValue(undefined),
     replacePermissions: vi.fn().mockResolvedValue(undefined),
-    replaceProfessionalAreas: vi.fn().mockResolvedValue(undefined),
-    replaceProfessionalServices: vi.fn().mockResolvedValue(undefined),
-    replaceSchedulingAreas: vi.fn().mockResolvedValue(undefined),
   }
   const scope = over.scope ?? {
     assertValid: vi.fn().mockResolvedValue(undefined),
@@ -165,7 +162,7 @@ describe("CreateUserUseCase", () => {
     ).rejects.toBeInstanceOf(InvalidPermissionSetError)
     expect(t.users.insert).not.toHaveBeenCalled()
   })
-  it("quem atende persiste permissões de outros módulos + áreas", async () => {
+  it("persiste permissões de outros módulos em qualquer perfil", async () => {
     const t = makeDeps()
     t.scope.assertValid.mockResolvedValue(undefined)
     await t.uc.execute({
@@ -180,10 +177,6 @@ describe("CreateUserUseCase", () => {
     expect(t.users.replacePermissions).toHaveBeenCalledWith(
       expect.any(String),
       ["admin.users.read"]
-    )
-    expect(t.users.replaceProfessionalAreas).toHaveBeenCalledWith(
-      expect.any(String),
-      ["area-1"]
     )
   })
   it("quem atende sem permissão de módulo é válido (piso = ≥1 área de atuação)", async () => {

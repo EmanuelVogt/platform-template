@@ -102,21 +102,6 @@ export interface UserRepository {
     userId: string,
     permissions: readonly PermissionKey[]
   ): Promise<void>
-  /** Substitui as áreas de atuação do Profissional (delete + insert na mesma tx). */
-  replaceProfessionalAreas(
-    userId: string,
-    areaIds: readonly string[]
-  ): Promise<void>
-  /** Substitui os serviços de atuação do Profissional (delete + insert na mesma tx). */
-  replaceProfessionalServices(
-    userId: string,
-    serviceIds: readonly string[]
-  ): Promise<void>
-  /** Substitui as áreas restritas por perfil (delete + insert na mesma tx). */
-  replaceSchedulingAreas(
-    userId: string,
-    areaIds: readonly string[]
-  ): Promise<void>
   /** Áreas/serviços de atuação persistidos do usuário (vazios para não-Profissional). */
   findProfessionalScope(
     userId: string

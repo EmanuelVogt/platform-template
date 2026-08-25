@@ -64,6 +64,19 @@ const envSchema = z
     // Seleciona o pacote de mensagens do kernel (shared/kernel/i18n). O
     // default reproduz as strings de hoje sem nenhuma mudança.
     DEFAULT_LOCALE: z.string().min(1).default("pt-BR"),
+    // Fuso da agregação por dia/semana. Vira literal SQL em
+    // shared/kernel/clock/bucket-sql.ts, então o boot recusa qualquer nome fora
+    // do conjunto IANA que o runtime conhece. Ausente → UTC lá, com aviso.
+    APP_TIMEZONE: z
+      .string()
+      .refine(
+        (v) => v === "UTC" || Intl.supportedValuesOf("timeZone").includes(v),
+        {
+          message:
+            "APP_TIMEZONE deve ser um fuso IANA conhecido pelo runtime (ex.: UTC, America/Sao_Paulo)",
+        }
+      )
+      .optional(),
 
     // --- rede / proxy (consumido pelo app shell: CORS, trust proxy) ---
     // Cada módulo declara num config próprio o que ele consome; aqui só entra

@@ -43,6 +43,15 @@
 > - **The `it`-count baselines in `tasks.md` predate v2.4.0.** GA-7's non-weakening probe must re-record
 >   its per-file baselines at wave 1 rather than trust the stored numbers.
 >
+> **SCOPE CUT 2026-08-24 — read `tasks.md` § *Scope cut* first.** 40 tasks / 10 clusters / 5 waves
+> became **18 / 7 / 4**, on the owner's call ("arranca fora e diminua o trabalho — a duplicação de
+> código é um problema real"). The bulk migration of ~250 test files, the coverage fills, the ratchet
+> and the two audit gaps left scope; the harness, the entry barrels and the enforcement stayed,
+> because those are what carry the template multiplier. **GA-9 is what makes the cut sound rather
+> than merely smaller** — enforcement ships at full strength against a baseline that can only shrink,
+> so nothing is postponed, only redistributed onto whoever next touches a file. The Goals and
+> § *Out of Scope* below are amended in place and say which line was cut.
+>
 > **Gate CLEARED 2026-08-24.** The ten rows that were marked `n` are confirmed and GA-8 was added, on
 > the owner's explicit delegation — not on a row-by-row owner review; § *Assumptions* says so in the
 > rows themselves. `context.md:15` ("defaults set by the agent") is superseded by that table. **Design
@@ -56,9 +65,10 @@ The test *setup* is strong (unit / int / e2e tiers on testcontainers, per-worker
 ## Goals
 
 - [ ] One importable, module-agnostic api harness (`apps/api/src/shared/test/{unit,int,e2e}`) plus entry-owned `api/testing/` barrels; zero inline app bootstraps and zero local login/cookie/truncate/poll/storage helpers in any test file.
-- [ ] Unit and int specs build doubles and fixtures from shared factories; zero `Record<string, any>` deps in specs, `as never` / `as unknown as` only inside the harness.
-- [ ] Every test proves a value: lint blocks `.only`/`.skip`, assertion-less tests and existence-only asserts; the weak spots found by the audit are strengthened, none deleted; the `it` count never decreases.
+- [ ] Unit and int specs build doubles and fixtures from shared factories; zero `Record<string, any>` deps in specs, `as never` / `as unknown as` only inside the harness. **(Cut 2026-08-24: enforced forward from the baseline, not retrofitted across the tree.)**
+- [ ] Every test proves a value: lint blocks `.only`/`.skip`, assertion-less tests and existence-only asserts; the `it` count never decreases. **(Cut 2026-08-24: the audit's weak spots are recorded in the baseline instead of being strengthened in a sweep — the count can only fall.)**
 - [ ] The duplication bans are executable: a committed guard spec fails when a banned helper, bootstrap or literal reappears — no grep-in-a-review as the only defence.
+- [ ] **The bans are enforceable on day one without a 250-file sweep** — every rule ships at full strength against a generated baseline of what already exists, and the baseline can only shrink (GA-9).
 - [ ] Gates exist and run: CI covers quality → unit → coverage (int + e2e) → contract; pre-push stays the AD-027 gate (`pnpm test:coverage`, Docker), whose floors are already 90 % on every metric — this feature is what makes the api tree actually clear them.
 - [ ] `docs/test/testing.md` describes the real harness, the entry convention, the lint rules and the real CI (absorbs v1 T26).
 
@@ -74,6 +84,10 @@ The test *setup* is strong (unit / int / e2e tiers on testcontainers, per-worker
 | `packages/api-client` tests | generated output — only an explicit no-op `test` script (DOC-02) |
 | In-memory fake repositories for every port | GA-3: typed mocks by default, stateful fakes only where state is asserted |
 | Rewriting `docs/arch/back.md` § Conformance specs | owned by v1 HBK-02; this feature updates `docs/test/testing.md` and links |
+| **Migrating the ~250 existing test files** (cut 2026-08-24) | the majority of the cost and of the risk for the smallest marginal return — and refactoring tests fails silently, since a test broken into silence still passes. The harness and the enforcement stop **new** duplication; the existing files enter the GA-9 baseline and migrate when someone next touches them. Only the e2e move now, inside the task that builds the barrel they consume |
+| **Filling coverage** (cut 2026-08-24) | done by events — `audit-2026-08-23-remediation` closed COV-11 at 96.5 / 94.4 / 94.9 / 96.8 over a 90 floor. Only COV-04's denominator survives, in T5, because the entry-barrel exclude is still a live defect in the child |
+| **Raising the coverage bar above 90** (cut 2026-08-24) | AD-012 is superseded by AD-027; the ratchet is a new owner decision on AD-027, cheap today and still available, but not charged here |
+| **The two audit gaps** GAP-01/GAP-02 (cut 2026-08-24) | real, but unrelated to duplication — their own follow-up |
 
 ## Assumptions & Open Questions
 
@@ -87,6 +101,7 @@ The test *setup* is strong (unit / int / e2e tiers on testcontainers, per-worker
 | GA-6 CI | `.github/workflows/ci.yml` already exists (jobs `quality`, `test-unit`, `test-coverage`); this feature fills the gaps (contract job, shuffled e2e) and never duplicates `catalog.yml`; pre-push is the AD-027 gate and needs Docker | the pipeline `testing.md` promised was born with vitest-migration, still short of the contract job | **y (delegated 2026-08-24)** — with the standing follow-up: three workflow files carry the same gate block and two fire on the same trigger; GA-6 consolidates rather than adding a fourth |
 | GA-7 non-weakening proof | `it` count per original file ≥ before, sensor mutants killed, lint blocks skips | the refactor must not buy brevity with lost proof | **y (delegated 2026-08-24)** — baselines are re-recorded at wave 1, not read from `tasks.md` (they predate v2.4.0) |
 | **GA-8 web shell** (new, 2026-08-24) | the web harness lands in **both** shells at the identical relative path `src/shared/test/` — `apps/web-vite/` and `apps/web-next/` here, `apps/web/` in the child. The shell-agnostic half (`renderWithProviders`, `makeTestQueryClient`, `createQueryWrapper`, `resetAuthState`, `useMswServer`) is byte-identical; **the router helper is the only permitted divergence** (`mockRouter` over `@tanstack/react-router` vs the Next router), and the guard spec asserts that parity so the two cannot drift | a rendered child has exactly **one** web app, so a seam built in one shell only is a seam a `web_stack=next` child silently loses — the failure v2.4.0's Fix 5 names. Both shells are live surfaces today (own `vitest.config.ts`, 24 and 18 test files), so neither is a stub that can be deferred. A shared package was rejected: it would be copied into the child carrying the other shell's dead code | **y (delegated 2026-08-24)** |
+| **GA-9 enforcement baseline** (new, 2026-08-24 — the decision the scope cut rests on) | every new rule ships **at full strength immediately**, measured against a *generated* baseline of the violations that already exist: `eslint.suppressions.json` for the lint rules (native to ESLint 10, which this repo is on — `eslint@10.4.0`) and `harness-hygiene-baseline.json` for the guard spec. A violation **not** in the baseline fails. A baseline entry that no longer matches **also** fails, so the file can only shrink — a fixed violation must be removed from it in the same commit | it is what makes the 250-file sweep unnecessary instead of merely postponed. The old plan put enforcement last (wave 3 of 5) for a real reason — a rule switched on early turns the repository red mid-flight — but that is only true when you enforce retroactively in one step. Baselined, enforcement lands early and holds forever, and the migration becomes opportunistic: whoever touches a file pays for that file. Rejected alternative: scoping the rules to changed files via the pre-commit hook — it is invisible to CI, silently skipped by `--no-verify`, and depends on git context a fresh clone lacks | **y (delegated 2026-08-24)** |
 | Bans are enforced by a guard spec, not by greps | `apps/api/src/shared/test/hygiene/harness-hygiene.spec.ts` scans `apps/api/**` and `catalog/**` test files | a spec is a gate that survives the feature; a grep in a review is not (also keeps the feature within the ≤3-probe budget) | **y (delegated 2026-08-24)** — scan widened to both web shells for the GA-8 parity assertion |
 | Coverage denominator | excludes test files, `*.d.ts`, `main.ts(x)`, `apps/api/src/shared/test/**`, `catalog/*/api/testing/**` (child: `apps/api/src/modules/*/testing/**`), generated client | inherits COV-04 + GA-2 | **y (delegated 2026-08-24)** — `**/shared/test/**` is already excluded at `vitest.coverage.mts:51`; the entry-barrel exclude is the piece T39/C10 still owes the child |
 | Ordered `it` chains | split into independent `it`s sharing a `beforeEach` seed; the "seed master" pseudo-test is removed | it asserts nothing — the only removal allowed in this feature | **y (delegated 2026-08-24)** |

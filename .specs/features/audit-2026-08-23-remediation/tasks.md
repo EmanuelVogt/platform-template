@@ -1854,7 +1854,7 @@ The number is kept rather than reused so that the earlier handoff's `T49c/T49d/T
 
 ---
 
-### T49f: The child's `pnpm test:db` — 21 failures unmasked by T49c/T49e — **OWNER-GATED, NOT STARTED**
+### T49f: The child's `pnpm test:db` — 21 failures unmasked by T49c/T49e — **RULED 2026-08-25, NOT STARTED**
 
 **What**: Clearing the lint made `catalog:check` reach the child's `pnpm test:db` for the first time in this feature. It is red: **Test Files 8 failed | 63 passed (71); Tests 19 failed | 488 passed | 5 skipped (512)**, one of the eight being a failed *suite*, for 21 entries in total. **None of it is a regression from T49c/T49e** — it is the third mask in one chain (`MISSING_DEPS` hid the lint; the lint hid the tests), and all 21 trace to wave 8's own T52/T53.
 
@@ -1878,7 +1878,11 @@ The number is kept rather than reused so that the earlier handoff's `T49c/T49d/T
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
-- [ ] The owner has ruled on A (the kernel env seam) and on B (what the SameSite=none e2e becomes)
+- [x] The owner has ruled on A and on B — **2026-08-25, do not re-ask.** **A**: `appTimeZone()` reads `process.env.APP_TIMEZONE` **directly**, with its own IANA validation and `UTC` default, not through the kernel env schema — the narrow seam, chosen because it fixes the blast radius and not merely the tests (rejected: fixing the harnesses; rejected: fallback-on-parse-failure). **B**: `auth-csrf-none.e2e-spec.ts` is **reconfigured to same-host** `API_ORIGIN`, keeping the CSRF-under-`none` coverage in a shape T53 considers legal (rejected: deleting the suite). **C**: one round — A + B + C land together, no early partial (rejected: shipping the six renames first)
+- [ ] **A** — `bucket-sql.ts:57` becomes `resolveTimeZone(process.env.APP_TIMEZONE, onFallback)` and the `env` import goes. `resolveTimeZone` (`:32`) is **already pure** and already carries the IANA check and the `UTC` default, so this is one line plus the import. `env.ts:73-82` keeps `APP_TIMEZONE` as `.optional()` with no `.default` — the default has always lived here, so the schema field stays for boot-time validation. **No lint rule forbids `process.env`** (nothing in `packages/eslint-config/**`, `apps/api/eslint.config.mjs`, `docs/arch/back.md` or `docs/code-quality.md`); the kernel's one non-test precedent is `transactional.decorator.ts:24`
+- [ ] **A's trap** — `bucket-sql.spec.ts` stubs nothing and relies on `APP_TIMEZONE` being absent from the test process; its `:17-27` asserts the **module-level memoisation** (`resolved ??=`, `:48`/`:57`) by calling `appTimeZone` twice and expecting one fallback callback. Any stub, or any reset of that cache, changes what that test means. Read it before touching the seam
+- [ ] The A commit stages **no `catalog/` path**, so no advisory is due on it (`CODE_PATH_RE` matches only `catalog/<entry>/{api,web,migrations,parity}/`)
+- [ ] **B/C in one commit for the identity entry**, with `ADV-20260825-03` staged in it — one entry, one advisory. `audit`'s int-spec, if it needs one, is a separate commit with `ADV-20260825-04`
 - [ ] `auth-csrf-none.e2e-spec.ts`'s `afterAll` is guarded regardless of the B ruling — an unguarded teardown masks the real cause of any future setup failure
 - [ ] The two int-spec test names that still say "fuso de Brasília"/"dia local" are re-read against T52's UTC default; the assertions may describe the old behaviour
 - [ ] An advisory per entry touched, staged in the same commit (see T49c's Done-when for the mechanics); `ADV-20260825-03` is free

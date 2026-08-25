@@ -1,20 +1,13 @@
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { createE2eApp } from "../../../../test/setup/app-factory"
-import { setCookies } from "../../../../test/setup/cookies"
-import {
-  createTestPool,
-  seedEmail,
-  truncateIdentity,
-  truncateKernel,
-  truncateTag,
-} from "../../../../test/setup/test-db"
-import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
-import { allowAllRateLimiter } from "../../identity/testing/allow-all-rate-limiter"
-import { seedUser } from "../../identity/testing/seed-user"
+import { createE2eApp, withE2ePool } from "../../../shared/test/e2e/app"
+import { resetDb } from "../../../shared/test/int/db"
+import { loginAs, seedEmail, seedUser } from "../../identity/testing"
+import { seedTag } from "../testing"
 
 import type { INestApplication } from "@nestjs/common"
+import type { Pool } from "pg"
 
 const ORIGIN = "http://localhost:5173"
 const PASSWORD = "Senha-Tags-Muito-Forte-2026!"
@@ -34,20 +27,17 @@ const ALL_TAG_PERMISSIONS = [
 ]
 
 describe("Tags (e2e)", () => {
+  const db = withE2ePool()
   let app: INestApplication
   let readerCookie: string[]
   let managerCookie: string[]
   let noPermCookie: string[]
 
   beforeAll(async () => {
-    const pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await truncateTag(pool)
+    const pool: Pool = db.pool
+    await resetDb(pool, ["identity", "_kernel", "tag"])
 
-    app = await createE2eApp((b) =>
-      b.overrideProvider(RATE_LIMITER).useValue(allowAllRateLimiter)
-    )
+    app = (await createE2eApp()).app
 
     await seedUser(app, pool, {
       email: readerEmail,
@@ -67,11 +57,22 @@ describe("Tags (e2e)", () => {
       accessProfile: "admin",
       permissions: [],
     })
-    await pool.end()
 
-    readerCookie = await login(app, readerEmail)
-    managerCookie = await login(app, managerEmail)
-    noPermCookie = await login(app, noPermEmail)
+    readerCookie = await loginAs(
+      request(app.getHttpServer()),
+      readerEmail,
+      PASSWORD
+    )
+    managerCookie = await loginAs(
+      request(app.getHttpServer()),
+      managerEmail,
+      PASSWORD
+    )
+    noPermCookie = await loginAs(
+      request(app.getHttpServer()),
+      noPermEmail,
+      PASSWORD
+    )
   })
 
   afterAll(async () => {
@@ -96,7 +97,7 @@ describe("Tags (e2e)", () => {
     })
 
     it("conflito de nome entre vivas → 409 tag-conflict", async () => {
-      await createTag(app, managerCookie, "Facial")
+      await seedTag(app, managerCookie, "Facial")
       const res = await request(app.getHttpServer())
         .post("/v1/admin/tags")
         .set("Origin", ORIGIN)
@@ -120,7 +121,7 @@ describe("Tags (e2e)", () => {
     // Sem consumidor registrado no TagUsageRegistry o uso é sempre zero: o
     // produto que registrar um reader é quem passa a alimentar este número.
     it("uso zerado sem reader de uso registrado", async () => {
-      const tagId = await createTag(app, managerCookie, "Sem uso")
+      const tagId = await seedTag(app, managerCookie, "Sem uso")
       const res = await request(app.getHttpServer())
         .get("/v1/admin/tags?q=Sem uso")
         .set("Origin", ORIGIN)
@@ -167,8 +168,8 @@ describe("Tags (e2e)", () => {
     })
 
     it("não lista tag inativa nem na lixeira", async () => {
-      const inactiveId = await createTag(app, managerCookie, "Inativa", false)
-      const trashedId = await createTag(app, managerCookie, "Na lixeira")
+      const inactiveId = await seedTag(app, managerCookie, "Inativa", false)
+      const trashedId = await seedTag(app, managerCookie, "Na lixeira")
       await request(app.getHttpServer())
         .delete(`/v1/admin/tags/${trashedId}`)
         .set("Origin", ORIGIN)
@@ -188,7 +189,7 @@ describe("Tags (e2e)", () => {
 
   describe("lixeira", () => {
     it("delete manda para a lixeira e restore devolve", async () => {
-      const tagId = await createTag(app, managerCookie, "Vai e volta")
+      const tagId = await seedTag(app, managerCookie, "Vai e volta")
       await request(app.getHttpServer())
         .delete(`/v1/admin/tags/${tagId}`)
         .set("Origin", ORIGIN)
@@ -215,7 +216,7 @@ describe("Tags (e2e)", () => {
     })
 
     it("purga tag da lixeira → 200 e a tag some do catálogo", async () => {
-      const tagId = await createTag(app, managerCookie, "Purgável")
+      const tagId = await seedTag(app, managerCookie, "Purgável")
       await request(app.getHttpServer())
         .delete(`/v1/admin/tags/${tagId}`)
         .set("Origin", ORIGIN)
@@ -238,7 +239,7 @@ describe("Tags (e2e)", () => {
     })
 
     it("purge de tag fora da lixeira → 409 tag-not-in-trash", async () => {
-      const tagId = await createTag(app, managerCookie, "Viva demais")
+      const tagId = await seedTag(app, managerCookie, "Viva demais")
       const res = await request(app.getHttpServer())
         .delete("/v1/admin/tags/purge")
         .set("Origin", ORIGIN)
@@ -249,27 +250,3 @@ describe("Tags (e2e)", () => {
     })
   })
 })
-
-async function login(app: INestApplication, email: string): Promise<string[]> {
-  const res = await request(app.getHttpServer())
-    .post("/v1/auth/login")
-    .set("Origin", ORIGIN)
-    .send({ email, password: PASSWORD })
-    .expect(200)
-  return setCookies(res)
-}
-
-async function createTag(
-  app: INestApplication,
-  cookie: string[],
-  name: string,
-  isActive = true
-): Promise<string> {
-  const res = await request(app.getHttpServer())
-    .post("/v1/admin/tags")
-    .set("Origin", ORIGIN)
-    .set("Cookie", cookie)
-    .send({ name, isActive })
-    .expect(201)
-  return res.body.id as string
-}

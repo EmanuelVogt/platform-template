@@ -2,6 +2,20 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [2.1.0]
+
+### Added
+
+- Barril `testing/index.ts`: `makeTag` (entidade `Tag` pronta pra spec) e `seedTag`
+  (cria uma tag via HTTP — a central não expõe atalho de banco). O e2e da entrada
+  passa a importar do barril em vez de definir o próprio `createTag`/`login` locais
+  (`login` vira `loginAs` do barril de identity).
+
+### Changed
+
+- `__e2e__/tags.e2e-spec.ts` migrado para o harness de e2e do kernel
+  (`createE2eApp`/`withE2ePool`/`resetDb`) em vez do `test/setup/app-factory` local.
+
 ## [2.0.2]
 
 ### Changed

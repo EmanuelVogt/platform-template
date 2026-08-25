@@ -2,6 +2,23 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [2.1.0]
+
+### Added
+
+- Barril `testing/index.ts`: `makeAuditEntry`/`seedAuditEntry` (linha de
+  `audit.entries` pronta pra spec / semeada direto no banco — a trilha é
+  append-only e normalmente gerada por trigger). `reattachIdentityTables`,
+  `detachIdentityTables`, `reattachTagTables` e `detachTagTables` (já existiam
+  soltos em `testing/`) passam a sair também do barril, sem segunda
+  implementação.
+
+### Changed
+
+- Os dois e2e da entrada (`audit.e2e-spec.ts`, `audit-product-extension.e2e-spec.ts`)
+  migrados para o harness de e2e do kernel
+  (`createE2eApp`/`withE2ePool`/`resetDb`) em vez do `test/setup/app-factory` local.
+
 ## [2.0.2]
 
 ### Changed

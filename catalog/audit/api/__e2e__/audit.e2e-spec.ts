@@ -1,21 +1,10 @@
 import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { createE2eApp } from "../../../../test/setup/app-factory"
-import { setCookies } from "../../../../test/setup/cookies"
-import {
-  createTestPool,
-  seedEmail,
-  truncateIdentity,
-  truncateKernel,
-} from "../../../../test/setup/test-db"
-import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
-import { allowAllRateLimiter } from "../../identity/testing/allow-all-rate-limiter"
-import { seedUser } from "../../identity/testing/seed-user"
-import {
-  detachIdentityTables,
-  reattachIdentityTables,
-} from "../testing/reattach-identity-tables"
+import { createE2eApp, withE2ePool } from "../../../shared/test/e2e/app"
+import { resetDb } from "../../../shared/test/int/db"
+import { loginAs, seedEmail, seedUser } from "../../identity/testing"
+import { detachIdentityTables, reattachIdentityTables } from "../testing"
 
 import type { INestApplication } from "@nestjs/common"
 
@@ -37,24 +26,22 @@ type AuditItem = {
 }
 
 describe("Audit log (e2e)", () => {
+  const db = withE2ePool()
   let app: INestApplication
   let auditorCookie: string[]
   let noAuditCookie: string[]
   let userAuditorCookie: string[]
 
   beforeAll(async () => {
-    const pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
+    const pool = db.pool
+    await resetDb(pool, ["identity", "_kernel"])
     // SPEC_DEVIATION: reanexa as tabelas do identity ao trigger.
     // Reason: mesma causa de audit-trigger.int-spec.ts — a migration custom
     // do identity roda antes de `audit.attach` existir num `catalog:check
     // audit`; simula o passo manual que um produto reaplicaria.
     await reattachIdentityTables(pool)
 
-    app = await createE2eApp((b) =>
-      b.overrideProvider(RATE_LIMITER).useValue(allowAllRateLimiter)
-    )
+    app = (await createE2eApp()).app
 
     // SPEC_DEVIATION: veículo trocado de /v1/admin/tags para
     // /v1/admin/permission-templates. Reason: audit não depende de tag
@@ -84,18 +71,27 @@ describe("Audit log (e2e)", () => {
       accessProfile: "admin",
       permissions: ["admin.users.read", "admin.users.audit.read"],
     })
-    await pool.end()
 
-    auditorCookie = await login(app, auditorEmail)
-    noAuditCookie = await login(app, noAuditEmail)
-    userAuditorCookie = await login(app, userAuditorEmail)
+    auditorCookie = await loginAs(
+      request(app.getHttpServer()),
+      auditorEmail,
+      PASSWORD
+    )
+    noAuditCookie = await loginAs(
+      request(app.getHttpServer()),
+      noAuditEmail,
+      PASSWORD
+    )
+    userAuditorCookie = await loginAs(
+      request(app.getHttpServer()),
+      userAuditorEmail,
+      PASSWORD
+    )
   })
 
   afterAll(async () => {
     await app.close()
-    const pool = createTestPool()
-    await detachIdentityTables(pool)
-    await pool.end()
+    await detachIdentityTables(db.pool)
   })
 
   it("reflete create + update do ator no GET /v1/audit", async () => {
@@ -191,12 +187,3 @@ describe("Audit log (e2e)", () => {
     }
   })
 })
-
-async function login(app: INestApplication, email: string): Promise<string[]> {
-  const res = await request(app.getHttpServer())
-    .post("/v1/auth/login")
-    .set("Origin", ORIGIN)
-    .send({ email, password: PASSWORD })
-    .expect(200)
-  return setCookies(res)
-}

@@ -27,8 +27,7 @@ context, impact, steps.
 scripts, the harness hooks, copier — not in a catalog entry. Its `affects` matches
 the child's installed template version (`_commit` in `.copier-answers.yml`)
 instead of a `.platform-modules.lock` entry; it is reported even when the child
-has no lock yet. `pnpm catalog:lint` accepts `kernel` or any entry name discovered
-under `catalog/` (`<name>` or `<name>/<variant>`) as `module` — nothing else.
+has no lock yet.
 
 - `pnpm platform advisory detect <id>` runs the advisory's `detect` and maps its
   exit status to three distinct outcomes: **1 = child affected**, **0 = not
@@ -40,9 +39,6 @@ under `catalog/` (`<name>` or `<name>/<variant>`) as `module` — nothing else.
   advisories affect the installed modules (`.platform-modules.lock`) and the
   installed template version, that are not yet listed in `APPLIED.md`, and shows
   a summary.
-- A fix in `catalog/**` without a matching advisory is blocked at commit time
-  (`scripts/platform/advisory-required.mjs`); `module: kernel` advisories are
-  never demanded by this rule (it only watches `catalog/**` paths).
 - **Remote feed**: `.claude/hooks/template-behind.mjs` also fetches the advisories
   published at the latest template tag (merged with the child's local copy, the
   remote version winning by id) and reports pending `kernel` advisories even

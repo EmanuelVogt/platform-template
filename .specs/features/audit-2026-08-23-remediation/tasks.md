@@ -3423,3 +3423,59 @@ installed. **The gate was green locally and red in CI for one reason: an unprovi
 - [ ] The guard fails when either `pipx install copier` line is removed — prove it
 - [ ] Gate passes: `pnpm test:scripts`
 **Commit**: `fix(ci): provision copier in every job that runs the script tests`
+
+### Fix Round 2 — GATED GREEN (2026-08-24/25)
+
+Four clusters, 11 commits, `bb65eb0..eda2a12`. Authored on the owner's instruction after `v2.4.0`
+was dispatched; CG4 was added mid-round because the release itself found the defect.
+
+| Cluster | Tasks | Commits | Worker's own gate |
+| --- | --- | --- | --- |
+| CG1 (sonnet) | GT1 → GT4 | `62c7775`, `97d6cab`, `f50b511`, `eda2a12` | web-next unit + `pnpm test:scripts` 605/605 |
+| CG2 (sonnet) | GT5 | `bb65eb0` | `pnpm test:scripts` 592/592 |
+| CG3 (opus) | GT6 | `15a4fc2` | `pnpm test:scripts` 600/600 · `catalog:lint` exit 0 |
+| CG4 (sonnet) | GT7 | `a77d17c` | `pnpm test:scripts` 594/594 |
+
+**Build gate 6/6 GREEN** at `eda2a12`: `check` (7/7) · `test` **620/620 / 90 files** · `test:scripts`
+**605/605** (+13 vs the round's start) · `catalog:typecheck` · `catalog:lint` · `format:check`.
+
+**All three open items are closed, and a fourth was found by shipping.**
+
+- **GT5 (`bb65eb0`)** de-branded `docs/dev/template-changelog.md:67` and removed its `KNOWN_EXCEPTIONS`
+  entry, so the domain scan now covers the file for real. `:515`'s `attends_guests` was re-checked
+  and still does not match `/\bguests?\b/i` — no pattern was widened.
+- **GT6 (`15a4fc2`)** closed the REL-04 trap. `entryChangedWithoutBump` gained a
+  `"head" | "staged"` mode; staged compares with `git diff --cached <tag>` and reads the index via
+  `git show :<path>`. The default comes from an unset `PLATFORM_ENTRY_BUMP_STATE`, so **CI and
+  `release-preflight` are byte-identical to before**; an unknown value throws rather than falling
+  back silently. `lefthook-local.yml` sets the variable only on the `pre-commit` catalog-lint
+  command. The test builds a real git repo and reproduces the 2026-08-24 incident; three of its six
+  new tests go red against the unfixed rule while T33's seven stay green.
+- **GT1–GT4 (`62c7775`…`eda2a12`)** gave the Next shell the three seams it lacked, mirroring the
+  requirement rather than the Vite file layout: `NEXT_PUBLIC_APP_NAME` / `NEXT_PUBLIC_LOCALE` instead
+  of a port of `import.meta.env`, and Next's own `title.template` composition instead of Vite's
+  `pageTitle()` helper. GT4's parity guard was proved by reverting each of the three seams in turn.
+
+#### FINDING — the local gate and the CI gate were not measuring the same machine
+
+**The `v2.4.0` release run `32795089578` FAILED, and it failed on this feature's own work.** `Verify`
+returned `pnpm test:scripts` **577/592, 15 failures**, every one `copier copy falhou: undefined` with
+`status === null` — the binary was absent, so the spawn never ran. The 15 were exactly the
+render-based tests **Fix Round 1 added**: `brand-hygiene.test.mjs` 64-72 (its `before` hook renders,
+so even the self-tests fell) and `locale-threading.test.mjs` 363-368. No product defect was involved.
+
+`copier` was provisioned only in `ci.yml:187` (`catalog`), `ci.yml:207` (`smoke`) and
+`release.yml:99` (`catalog`) — **not** in the two jobs that actually run `pnpm test:scripts`
+(`release.yml` `verify`, `ci.yml` `gates`). **GT7 (`a77d17c`)** installs it in both and guards the
+invariant by deriving the set of jobs from the workflow files rather than pinning line numbers.
+
+**Two things this cost, both worth keeping:**
+
+1. **Every Build gate and the Final gate in this feature ran only on the workstation**, where
+   `copier` sits at `/opt/homebrew/bin/copier` (9.17.2) — Homebrew, outside any repo-managed
+   toolchain. A gate that is green locally and red in CI is not noise; it is the gate measuring the
+   wrong machine. The Verifier's Final gate had the same blind spot.
+2. **Follow-up, no task**: the failure surfaced as `copier copy falhou: undefined` instead of
+   "copier is not installed". Nothing in the repo declares `copier` a prerequisite for
+   `pnpm test:scripts`, so a fresh developer machine reproduces these 15 failures with the same
+   unhelpful message. A named precondition check would have turned a release failure into one line.

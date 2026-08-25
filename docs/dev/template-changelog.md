@@ -4,6 +4,30 @@ Version truth = git tag + this entry (AD-006); `package.json` is not bumped on
 release. Each version lists the contract-breaking changes and the steps for the child
 to apply on `copier update`.
 
+## v2.5.0
+
+A doc's directory now decides whether it reaches a child: `docs/platform/` is addressed to
+whoever works in the template and never ships. A guard derived from `copier.yml` keeps the
+docs that do ship from naming what the child does not have.
+
+### Changes
+
+1. **Docs are delivered by where they live** (`copier.yml`, `docs/platform/`,
+   `scripts/platform/__tests__/`): the four template-only docs moved into `docs/platform/`,
+   anchored in `_exclude` as `/docs/platform`; the per-file entry that used to exclude
+   `docs/catalog/README-contract.md` went with them, so no `docs/` entry names an individual
+   file any more. The child keeps every other doc, including the branch, commit, worktree and
+   spec rules that used to sit next to the template's own release mechanics in
+   `docs/agents/workflow.md`. A guard recomputes the shipped set from `copier.yml` on every
+   run and fails, with `file:line` and the token, when a shipped doc names a path or an
+   excluded workflow the child never receives. A mention that is correct precisely because
+   the thing is absent is annotated in the doc itself, at the end of the line, with
+   `<!-- audience-contract: <token> — <reason> -->`.
+
+### Child migration steps
+
+None — copier update is enough.
+
 ## v2.4.1
 
 `v2.4.0` was tagged by a release workflow that never rendered a Next child, so it shipped a

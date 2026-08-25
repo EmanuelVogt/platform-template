@@ -14,6 +14,12 @@ Corroborated across multiple features. Safe to apply as guidance.
 - evidence: DOC-03 / docs/advisories/README.md (docs) (+1 more)
 - last seen: 2026-08-24T21:39:14Z
 
+### L-044 — Verify only on a quiescent checkout: a concurrent agent committing mid-run broke 5 of 9 Final-gate stages on an unrelated half-finished refactor and forced the mutation sensor to be skipped — check git log timestamps and git status before the gate, not after.
+- signal: `gate_fail` · recurrence: 2 feature(s) · scope: `.specs` · harmful: 0
+- features: test-suite-refactor, docs-audience-contract
+- evidence: validation.md § Blocking environmental defect (.specs) (+1 more)
+- last seen: 2026-08-25T07:15:05Z
+
 ## Candidates (under observation — do NOT load as guidance yet)
 
 Seen once or not yet corroborated. Tracked, not trusted.
@@ -251,6 +257,36 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - features: audit-2026-08-23-remediation
 - evidence: .github/workflows/ci.yml:132 pipx install copier vs copier-questions.test.mjs:78 (ci)
 - last seen: 2026-08-25T01:19:12Z
+
+### L-041 — An import-boundary rule built on a /from ['"]…['"]/ regex silently misses dynamic await import('…') and any non-relative specifier — probe every specifier form (static, deep, /index, type-only, dynamic, aliased) before calling the rule enforced.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `scripts/platform` · harmful: 0
+- features: test-suite-refactor
+- evidence: scripts/platform/catalog-lint.mjs:110 (scripts/platform)
+- last seen: 2026-08-25T06:46:15Z
+
+### L-042 — When a scope cut retires some ACs because a baseline/suppression file now enforces them forward-only, sweep every remaining AC with the same absolute wording ('SHALL appear in no spec') and amend it too — otherwise a green guard over a 535-entry baseline reads as a met absolute.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `.specs` · harmful: 0
+- features: test-suite-refactor
+- evidence: spec.md HRN-01, ENT-05, UNT-01, UNT-02, UNT-03 (.specs)
+- last seen: 2026-08-25T06:46:15Z
+
+### L-043 — A ban stated in an AC but absent from the guard's rule list is prose, not enforcement — count the shipped rules against the banned behaviours the ACs name (here 9 rules vs a setTimeout-as-proof ban that has none).
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `apps/api/src/shared/test` · harmful: 0
+- features: test-suite-refactor
+- evidence: spec.md HRN-03 AC3; apps/api/src/shared/test/hygiene/scan.ts (apps/api/src/shared/test)
+- last seen: 2026-08-25T06:46:15Z
+
+### L-045 — An AC that quantifies over an unnamed set ('the four interaction-heaviest specs') is unverifiable — name the files in the spec or the criterion can never be proved or disproved.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `.specs` · harmful: 0
+- features: test-suite-refactor
+- evidence: spec.md UNT-04 AC5 (.specs)
+- last seen: 2026-08-25T06:46:15Z
+
+### L-046 — When a guard's exemption list deviates from the spec/plan's declared scope, assert the exemption's blast radius explicitly — removing the exemption must confine every resulting finding to exactly the named prefix or file, not just assert the constant's literal value.
+- signal: `spec_deviation` · recurrence: 1 feature(s) · scope: `scripts/platform` · harmful: 0
+- features: docs-audience-contract
+- evidence: scripts/platform/__tests__/lib/audience-contract.mjs:172-179 (EXEMPT_DOC_PREFIXES = ['.agents/skills/'], narrowing the plan's wider guard scope) (scripts/platform)
+- last seen: 2026-08-25T07:15:10Z
 
 ## Quarantined (failed when applied — ignore)
 

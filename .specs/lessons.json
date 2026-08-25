@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 41,
+  "next_id": 47,
   "lessons": [
     {
       "id": "L-001",
@@ -727,6 +727,116 @@
       ],
       "created": "2026-08-25T01:19:12Z",
       "last_seen": "2026-08-25T01:19:12Z"
+    },
+    {
+      "id": "L-041",
+      "key": "surviving_mutant::an import boundary rule built on a from regex silently misses dynamic await import and any non relative specifier probe every specifier form static deep index type only dynamic aliased before calling the rule enforced",
+      "text": "An import-boundary rule built on a /from ['\"]…['\"]/ regex silently misses dynamic await import('…') and any non-relative specifier — probe every specifier form (static, deep, /index, type-only, dynamic, aliased) before calling the rule enforced.",
+      "signal": "surviving_mutant",
+      "scope": "scripts/platform",
+      "status": "candidate",
+      "features": [
+        "test-suite-refactor"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "scripts/platform/catalog-lint.mjs:110 (scripts/platform)"
+      ],
+      "created": "2026-08-25T06:46:15Z",
+      "last_seen": "2026-08-25T06:46:15Z"
+    },
+    {
+      "id": "L-042",
+      "key": "spec_precision_gap::when a scope cut retires some acs because a baseline suppression file now enforces them forward only sweep every remaining ac with the same absolute wording shall appear in no spec and amend it too otherwise a green guard over a 535 entry baseline reads as a met absolute",
+      "text": "When a scope cut retires some ACs because a baseline/suppression file now enforces them forward-only, sweep every remaining AC with the same absolute wording ('SHALL appear in no spec') and amend it too — otherwise a green guard over a 535-entry baseline reads as a met absolute.",
+      "signal": "spec_precision_gap",
+      "scope": ".specs",
+      "status": "candidate",
+      "features": [
+        "test-suite-refactor"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "spec.md HRN-01, ENT-05, UNT-01, UNT-02, UNT-03 (.specs)"
+      ],
+      "created": "2026-08-25T06:46:15Z",
+      "last_seen": "2026-08-25T06:46:15Z"
+    },
+    {
+      "id": "L-043",
+      "key": "ac_gap::a ban stated in an ac but absent from the guard s rule list is prose not enforcement count the shipped rules against the banned behaviours the acs name here 9 rules vs a settimeout as proof ban that has none",
+      "text": "A ban stated in an AC but absent from the guard's rule list is prose, not enforcement — count the shipped rules against the banned behaviours the ACs name (here 9 rules vs a setTimeout-as-proof ban that has none).",
+      "signal": "ac_gap",
+      "scope": "apps/api/src/shared/test",
+      "status": "candidate",
+      "features": [
+        "test-suite-refactor"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "spec.md HRN-03 AC3; apps/api/src/shared/test/hygiene/scan.ts (apps/api/src/shared/test)"
+      ],
+      "created": "2026-08-25T06:46:15Z",
+      "last_seen": "2026-08-25T06:46:15Z"
+    },
+    {
+      "id": "L-044",
+      "key": "gate_fail::verify only on a quiescent checkout a concurrent agent committing mid run broke 5 of 9 final gate stages on an unrelated half finished refactor and forced the mutation sensor to be skipped check git log timestamps and git status before the gate not after",
+      "text": "Verify only on a quiescent checkout: a concurrent agent committing mid-run broke 5 of 9 Final-gate stages on an unrelated half-finished refactor and forced the mutation sensor to be skipped — check git log timestamps and git status before the gate, not after.",
+      "signal": "gate_fail",
+      "scope": ".specs",
+      "status": "confirmed",
+      "features": [
+        "test-suite-refactor",
+        "docs-audience-contract"
+      ],
+      "recurrence": 2,
+      "harmful": 0,
+      "evidence": [
+        "validation.md § Blocking environmental defect (.specs)",
+        "Final gate: pnpm check / pnpm template:smoke fail at apps/api/src/shared/infra/storage/null-storage.adapter.spec.ts (commit d5cfcaf, outside this feature's 20-commit list and outside its docs/**+scripts/platform/__tests__/**+copier.yml+.claude/hooks/** diff surface) (.specs)"
+      ],
+      "created": "2026-08-25T06:46:15Z",
+      "last_seen": "2026-08-25T07:15:05Z"
+    },
+    {
+      "id": "L-045",
+      "key": "spec_precision_gap::an ac that quantifies over an unnamed set the four interaction heaviest specs is unverifiable name the files in the spec or the criterion can never be proved or disproved",
+      "text": "An AC that quantifies over an unnamed set ('the four interaction-heaviest specs') is unverifiable — name the files in the spec or the criterion can never be proved or disproved.",
+      "signal": "spec_precision_gap",
+      "scope": ".specs",
+      "status": "candidate",
+      "features": [
+        "test-suite-refactor"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "spec.md UNT-04 AC5 (.specs)"
+      ],
+      "created": "2026-08-25T06:46:15Z",
+      "last_seen": "2026-08-25T06:46:15Z"
+    },
+    {
+      "id": "L-046",
+      "key": "spec_deviation::when a guard s exemption list deviates from the spec plan s declared scope assert the exemption s blast radius explicitly removing the exemption must confine every resulting finding to exactly the named prefix or file not just assert the constant s literal value",
+      "text": "When a guard's exemption list deviates from the spec/plan's declared scope, assert the exemption's blast radius explicitly — removing the exemption must confine every resulting finding to exactly the named prefix or file, not just assert the constant's literal value.",
+      "signal": "spec_deviation",
+      "scope": "scripts/platform",
+      "status": "candidate",
+      "features": [
+        "docs-audience-contract"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "scripts/platform/__tests__/lib/audience-contract.mjs:172-179 (EXEMPT_DOC_PREFIXES = ['.agents/skills/'], narrowing the plan's wider guard scope) (scripts/platform)"
+      ],
+      "created": "2026-08-25T07:15:10Z",
+      "last_seen": "2026-08-25T07:15:10Z"
     }
   ]
 }

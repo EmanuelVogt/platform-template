@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 38,
+  "next_id": 41,
   "lessons": [
     {
       "id": "L-001",
@@ -673,6 +673,60 @@
       ],
       "created": "2026-08-24T21:39:14Z",
       "last_seen": "2026-08-24T21:39:14Z"
+    },
+    {
+      "id": "L-038",
+      "key": "gate_fail::a test that shells out to a binary outside the repo toolchain copier docker rg passes on a workstation that happens to have it and fails in ci provision it in every job that runs that suite and note the blast radius is the whole file not the render test a failing test before takes the file s copier independent assertions down with it",
+      "text": "A test that shells out to a binary outside the repo toolchain (copier, docker, rg) passes on a workstation that happens to have it and fails in CI: provision it in EVERY job that runs that suite, and note the blast radius is the whole file, not the render test — a failing test.before() takes the file's copier-independent assertions down with it.",
+      "signal": "gate_fail",
+      "scope": "ci",
+      "status": "candidate",
+      "features": [
+        "audit-2026-08-23-remediation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "release run 32795089578 — test:scripts 577/592; fixed by a77d17c (ci)"
+      ],
+      "created": "2026-08-25T01:19:12Z",
+      "last_seen": "2026-08-25T01:19:12Z"
+    },
+    {
+      "id": "L-039",
+      "key": "gate_fail::the verifier s final gate runs on the workstation so it cannot see a ci provisioning gap when a round adds a test that invokes an external binary re run the suite with that binary hidden from path before reporting the gate green",
+      "text": "The Verifier's Final gate runs on the workstation, so it cannot see a CI provisioning gap — when a round adds a test that invokes an external binary, re-run the suite with that binary hidden from PATH before reporting the gate green.",
+      "signal": "gate_fail",
+      "scope": "verify",
+      "status": "candidate",
+      "features": [
+        "audit-2026-08-23-remediation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "round-2 Final gate ran with Homebrew copier 9.17.2 on PATH; CI had none (verify)"
+      ],
+      "created": "2026-08-25T01:19:12Z",
+      "last_seen": "2026-08-25T01:19:12Z"
+    },
+    {
+      "id": "L-040",
+      "key": "spec_precision_gap::pin the version of an external tool ci installs when any assertion was derived empirically from that tool s behaviour an unpinned install lets a major bump change the semantics the guard encodes while every gate stays green",
+      "text": "Pin the version of an external tool CI installs when any assertion was derived empirically from that tool's behaviour — an unpinned install lets a major bump change the semantics the guard encodes while every gate stays green.",
+      "signal": "spec_precision_gap",
+      "scope": "ci",
+      "status": "candidate",
+      "features": [
+        "audit-2026-08-23-remediation"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        ".github/workflows/ci.yml:132 pipx install copier vs copier-questions.test.mjs:78 (ci)"
+      ],
+      "created": "2026-08-25T01:19:12Z",
+      "last_seen": "2026-08-25T01:19:12Z"
     }
   ]
 }

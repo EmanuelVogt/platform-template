@@ -10,10 +10,122 @@ design and were **not** judged — the release boundary is binding.
 | Round | Date | Range | Verdict |
 | --- | --- | --- | --- |
 | 1 | 2026-08-24 | `92b4120..0422727` | ❌ FAIL — 2 blockers, 5/6 sensor |
-| 2 | 2026-08-24 | `ac679f5..a0584f3` (13 fix + 3 spec commits) | ✅ **PASS** — 0 blockers, 7/7 sensor |
+| 2 | 2026-08-24 | `ac679f5..a0584f3` (13 fix + 3 spec commits) | ✅ PASS — 0 blockers, 7/7 sensor |
+| 3 | 2026-08-25 | `bb65eb0..6813df7` (GT1–GT7) — **post-hoc, `v2.4.0` already tagged** | ✅ **PASS** — 6/6 sensor, 1 process finding |
 
 **Current verdict: ✅ PASS.** 41/43 requirements fully covered with `file:line` evidence; the 2
 remaining are CAT-05 (owner-gated, not a code gap) and TOOL-12 (spec-adjudicated "half-refuted").
+Round 3 additionally confirms LOC-03, LOC-06 and SEAM-04 now hold on the `web_stack=next` shell,
+closing the cross-feature Fix 5.
+
+**Qualification on round 2.** Between fix round 1 and GT7 (`a77d17c`), the two guards that closed
+round 2's blockers — `brand-hygiene.test.mjs` and `locale-threading.test.mjs`, 15 tests — could not
+execute in CI: `copier` was provisioned only in the `catalog` and `smoke` jobs. My round-2 Final
+gate was green only because my workstation carries Homebrew `copier` 9.17.2, outside any
+repo-managed toolchain. The assertions were sound; the enforcement was absent. See Round 3, Q1–Q4.
+
+---
+
+# Round 3 — post-hoc review of what shipped in `v2.4.0`
+
+**Diff range**: `bb65eb0..6813df7` · GT1–GT7 · **already tagged**: `v2.4.0` was cut from `6813df7`
+on gates alone, after the round-2 PASS. This pass is not gate-keeping; it records what went out.
+
+**Instrument note (deliberate).** I did **not** re-run the workstation Final gate. The defect this
+round is about is precisely that a workstation gate over-reports; CI at `6813df7` (all 8 release
+jobs green, including the five `catalog:check` entries) is the stronger instrument for a shipped
+tag. What CI could *not* tell me — the exact blast radius of the copier gap — I measured directly
+by hiding the binary (probe P1 below).
+
+## The copier-provisioning gap — my judgement
+
+**Reproduced.** With `/opt/homebrew/bin` stripped from `PATH` at HEAD:
+`pnpm test:scripts` → exit 1, **`# tests 605 · # pass 590 · # fail 15`**. Exactly the coordinator's
+15, and the failing set is **the entirety of two files**, not a subset:
+
+- `brand-hygiene.test.mjs` — tests 64–72, **all 9**, including the four self-tests
+  (`o termo excluído "preservar" não dispara`, the three brand-token self-tests) that need no
+  copier at all. They die with the file because `test.before()` renders the child.
+- `locale-threading.test.mjs` — tests 369–374, **all 6**, including the three pure file-read
+  assertions (`AGENTS.md.jinja interpolates product_locale`, `code-quality.md's and
+  communication.md's language rules point at AGENTS.md`, `issue-tracker.md.jinja stops hardcoding
+  pt-BR (LOC-01)`).
+
+**Q1 — does it invalidate round-2 evidence beyond those 15 tests? No, but it invalidates a claim
+I made.** The other 590 tests are copier-independent and ran identically in CI, so the evidence for
+the other 41 requirements stands unchanged. What does not stand is a sentence from my round-2
+report: *"the pattern that let round 1's mutant survive cannot recur."* That was true of the
+repository and false of the pipeline. Both round-2 blocker closures — Fix 1 (the hygiene gate) and
+Fix 2 (LOC-01) — were **100% dark in CI**, not partially, for the whole window between the fix
+round and GT7. The assertions I certified were real and discriminating; their *enforcement* was
+absent. A regression in either would have reached the tag. It did not, but nothing was watching.
+
+**Q2 — is anything else green-dependent on an unprovisioned local tool? No.** Audited
+systematically: `renderChild` (`lib/child.mjs:36-54`) takes an **injectable `run`**, so of the seven
+test files that reference it only two invoke the real binary — `brand-hygiene.test.mjs:165` and
+`locale-threading.test.mjs:29`; the other five stub the exec. The only other external binaries
+reached from the script tests are `git` and `sh` (both always present). `docker` is needed by
+`template:smoke` and `catalog:check`, which run only in jobs that already provisioned copier, on
+`ubuntu-latest` where docker is present. `rg` and `gh` are stubbed. The blast radius is exactly
+those two files, and GT7 closes it.
+
+**Q3 — a residual risk nobody has flagged.** GT7 provisions with `- run: pipx install copier`,
+**unpinned**, in `ci.yml:132` and `release.yml:50`. But this repo's `_tasks` guard semantics were
+derived *empirically* from one copier version — `copier-questions.test.mjs:78` states
+*"verificado empiricamente com copier 9.17.2 — `_apply_update` chama `run_copy` três vezes por
+`copier update`"*, which is the whole basis of TOOL-13. My workstation is pinned at 9.17.2 by
+Homebrew while CI now floats. The two instruments can diverge again, in the opposite direction, and
+a copier major changing `_copier_operation` semantics would break TOOL-13's guarantee in a child
+with every gate green. **Recommend pinning (`pipx install 'copier==9.17.2'`) and asserting the pin
+in the GT7 guard.** Minor, follow-up, not a blocker.
+
+**Q4 — the process finding.** The Verifier's Final gate runs on the workstation by construction, so
+it is *structurally incapable* of detecting a provisioning gap — the exact class of defect that
+shipped here. Only CI can. The cheap countermeasure is what I did in one command: when a round adds
+a test that shells out to an external binary, re-run the suite with that binary hidden.
+
+## What GT1–GT6 delivered
+
+| Item | Verdict | Evidence |
+| --- | --- | --- |
+| **LOC-06 on `web_stack=next`** | ✅ met | `apps/web-next/public/favicon.ico` is **byte-identical** to the Vite shell's (md5 `563abc664dca79dd4f09faa8d6b5350a`, 137 B both) — GT1's "ship the favicon the Vite shell already ships" is literally true. Wired at `root-layout.tsx:31` `icons: { icon: "/favicon.ico" }`. The Vite shell needed an nginx `location = /favicon.ico` block because its SPA fallback would swallow the request; the App Router has no such fallback and serves `public/` at the root, so the absence of an nginx-equivalent assertion is a real difference in mechanism, not a gap. Guarded by `next-shell-seam-parity.test.mjs:21-38` |
+| **LOC-03 on `web_stack=next`** | ✅ met | `root-layout.tsx:14,18` — `process.env.NEXT_PUBLIC_APP_NAME ?? "Platform"` / `NEXT_PUBLIC_LOCALE ?? "pt-BR"`; `:27` `title: { default: appName, template: \`%s · ${appName}\` }`; `:36` `<html lang={resolveLocale()}>`. Next's `title.template` composition reproduces the Vite `pageTitle("Início") → "Início · Platform"` shape. Build-time inlining of `NEXT_PUBLIC_*` matches Vite's `import.meta.env.VITE_*` — same semantics, so parity holds and the AC ("a product **sets** the vars") is satisfied on both. `.env.example` documents both with defaults equal to the code fallbacks, so no shipped string moves |
+| **SEAM-04 on `web_stack=next`** | ✅ met | `routes.ts:30-32` `registerProtectedRoute` adds to `PROTECTED_ROUTES`; consumed by `last-location.ts:10,17,24` (`toSafeProtectedRoute`) and `auth-redirect.ts:14` (`redirectIntent`), with the tracker wired at `last-location-tracker.tsx:15`. Both consumers the AC names are reached. `routes.test.ts:48-63` registers `/produto/painel` and asserts both resolvers pick it up |
+| **GT5 — `booking` exception removed** | ✅ confirmed | `docs/dev/template-changelog.md` now has **zero** `booking` hits; `KNOWN_EXCEPTIONS:75-77` is back to `["Cloudflare", "Traefik"]`, so the file is fully domain-scanned. `:515`'s `attends_guests` proven not to match: `/\bguests?\b/i.test("...attends_guests...")` → `false` (no word boundary after `_`), while `"the guests arrive"` → `true`. My round-2 caveat is closed, and wave-7's reword precedent won over wave-6's except precedent — the right call |
+| **GT6 — REL-04 both old callers unchanged** | ✅ confirmed | `release-preflight.mjs:98` `currentState = currentStateFromEnv()`; `:83-85` returns `"head"` when the env var is unset **or empty**. In head mode the git args are `["diff","--quiet",previousTag,"HEAD","--",relDir]` and the version ref is `"HEAD"` — **byte-identical to the pre-GT6 implementation** I read in round 1. Neither `lib/lint.mjs:231` nor `release-preflight.mjs:119` passes `currentState`, so both inherit the default. `lefthook-local.yml` sets the env only on pre-commit |
+
+## Discrimination Sensor — round 3
+
+| # | Target | Mutation | Gate | Killed? |
+| --- | --- | --- | --- | --- |
+| P1 | environment | `/opt/homebrew/bin` stripped from `PATH` (removes `copier`) | `pnpm test:scripts` → exit 1, 590/605, 15 failures in exactly 2 files | ✅ detected |
+| 2 | `apps/web-next/src/_app/layout/root-layout.tsx:36` | `<html lang={resolveLocale()}>` → `<html lang="pt-BR">` | `root-layout.test.tsx` exit 1 **and** `next-shell-seam-parity.test.mjs` exit 1 | ✅ Killed (twice) |
+| 3 | `apps/web-next/src/shared/config/routes.ts:31` | `registerProtectedRoute` body → `void template` (no-op seam) | `routes.test.ts` exit 1 | ✅ Killed |
+| 4 | `apps/web-next/public/favicon.ico` | Deleted the shipped asset | `next-shell-seam-parity.test.mjs` → `not ok 1 - both shells ship a non-empty …/favicon.ico` | ✅ Killed |
+| 5 | `release-preflight.mjs:84` | Collapsed the two modes — unset env now yields `"staged"` instead of `"head"` | `entry-bump-lint.test.mjs` exit 1, 2 failures | ✅ Killed |
+| 6 | `.github/workflows/ci.yml:132` | Removed `- run: pipx install copier` before `pnpm test:scripts` | `workflow-copier-provisioning.test.mjs` → `not ok 1 - GT7: todo job … provisiona copier antes dele` | ✅ Killed |
+
+Each injected once, run once, restored with `git checkout -- <file>`, `git status --short` empty
+before the next. **Result: 6/6 — ✅ PASS.** Mutation 5 is the one the coordinator asked for
+specifically: collapsing the modes is exactly the invisible regression GT6 risked, and the head-mode
+callers notice.
+
+**Cumulative across three rounds**: 19 injected, 18 killed; the single round-1 survivor died in
+round 2.
+
+## Round-3 verdict
+
+**✅ PASS, with the shipped tag qualified.** GT1–GT6 are correct and discriminating; the Next-shell
+seams are genuinely new code and all three ACs hold on that shell. The tag itself is sound — CI at
+`6813df7` is green on all 8 jobs *with* copier provisioned, so `v2.4.0` was verified by the
+pipeline before it shipped, not only by a workstation.
+
+What is qualified is my **round-2 PASS**, not the release: for the window between the fix round and
+GT7, the two guards that closed round 2's blockers could not execute in CI. Nothing regressed, but
+the assurance I reported was stronger than the assurance that existed.
+
+Open follow-ups: pin copier in both workflows and assert the pin (Q3); CAT-05's `catalog/*` tags;
+TOOL-12's declared half-refutation.
 
 ---
 

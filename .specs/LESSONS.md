@@ -234,6 +234,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: docs/agents/issue-tracker.md.jinja:21 (LOC-01) (docs)
 - last seen: 2026-08-24T21:39:14Z
 
+### L-038 — A test that shells out to a binary outside the repo toolchain (copier, docker, rg) passes on a workstation that happens to have it and fails in CI: provision it in EVERY job that runs that suite, and note the blast radius is the whole file, not the render test — a failing test.before() takes the file's copier-independent assertions down with it.
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `ci` · harmful: 0
+- features: audit-2026-08-23-remediation
+- evidence: release run 32795089578 — test:scripts 577/592; fixed by a77d17c (ci)
+- last seen: 2026-08-25T01:19:12Z
+
+### L-039 — The Verifier's Final gate runs on the workstation, so it cannot see a CI provisioning gap — when a round adds a test that invokes an external binary, re-run the suite with that binary hidden from PATH before reporting the gate green.
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `verify` · harmful: 0
+- features: audit-2026-08-23-remediation
+- evidence: round-2 Final gate ran with Homebrew copier 9.17.2 on PATH; CI had none (verify)
+- last seen: 2026-08-25T01:19:12Z
+
+### L-040 — Pin the version of an external tool CI installs when any assertion was derived empirically from that tool's behaviour — an unpinned install lets a major bump change the semantics the guard encodes while every gate stays green.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `ci` · harmful: 0
+- features: audit-2026-08-23-remediation
+- evidence: .github/workflows/ci.yml:132 pipx install copier vs copier-questions.test.mjs:78 (ci)
+- last seen: 2026-08-25T01:19:12Z
+
 ## Quarantined (failed when applied — ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

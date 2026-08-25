@@ -3499,3 +3499,45 @@ test that would notice is the one whose expectations came from the old version.
 - [ ] The guard goes red when any pin is dropped or made to disagree — prove both
 - [ ] Gate passes: `pnpm test:scripts`
 **Commit**: `fix(ci): pin copier to the version TOOL-13 was derived from`
+
+### Fix Round 2, addendum — GT8 (2026-08-25)
+
+**CG5 = GT8 (sonnet), `0e01a00`.** `pnpm test:scripts` **607/607**. Verifier round 3 item 4: GT7 had
+fixed one risk and introduced another by installing `copier` unpinned, while TOOL-13's guarantee was
+derived empirically from **9.17.2** (`copier-questions.test.mjs:78`, provenance comment at `:62`).
+
+**All five provisioning sites** — `ci.yml` (`gates`, `catalog`, `smoke`) and `release.yml`
+(`verify`, `catalog`) — are pinned to `'copier==9.17.2'`. GT7's guard was **extended in place**, not
+duplicated: it now also asserts a pin exists at every site and that all sites agree on one version,
+scanning every job rather than only the ones matching the render pattern. Proved red both ways —
+a dropped pin gives 3 failures, two sites disagreeing gives 2.
+
+### Verifier round 3 (post-hoc) — PASS
+
+Judged `bb65eb0..6813df7`, work that **was already inside the `v2.4.0` tag**. Sensor 6 injected,
+6 killed (cumulative 19/18). The Verifier **deliberately did not re-run the workstation Final gate**
+— that instrument is what over-reported — and took CI at `6813df7` (8/8, copier provisioned) as the
+authority for a shipped tag.
+
+**Fix 5 is closed**: LOC-03, LOC-06 and SEAM-04 hold on `web_stack=next`. The favicon is
+byte-identical to Vite's (md5 `563abc664dca79dd4f09faa8d6b5350a`, 137 B); `NEXT_PUBLIC_*` is
+build-time-inlined exactly as Vite's `import.meta.env.VITE_*`, so mirroring rather than porting was
+the right call; `registerProtectedRoute` reaches both consumers the AC names (`last-location.ts:10,17,24`,
+`auth-redirect.ts:14`). GT5 and GT6 confirmed — GT6's head-mode git arguments are byte-identical to
+pre-GT6, and `attends_guests` is proven not to match `/\bguests?\b/i`.
+
+**On the environment finding, the Verifier's own judgement:**
+
+1. **Reproduced.** Stripping `/opt/homebrew/bin` from `PATH` gives **605 / 590 pass / 15 fail**. The
+   failing set is the **entirety of two files**, including their copier-independent assertions — a
+   dead `test.before()` takes the whole file down.
+2. **It does not invalidate the other 41 requirements** (the 590 copier-independent tests ran the
+   same in CI). **It does invalidate a sentence round 2 asserted**: *"the pattern that let round 1's
+   mutant survive cannot recur."* Both round-2 blocker closures were **100 % dark in CI** for the
+   whole window until GT7. The assertions were sound; the enforcement was absent.
+3. **Nothing else is exposed.** `renderChild` takes an injectable `run`, so only 2 of the 7 files
+   referencing it hit the real binary; the rest stub it.
+4. **A workstation Final gate is structurally blind to provisioning gaps**, and the countermeasure
+   costs one command: hide the binary and re-run. That is how the Verifier reproduced it.
+
+Lessons L-038, L-039, L-040 recorded.

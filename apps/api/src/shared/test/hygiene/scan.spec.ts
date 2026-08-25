@@ -21,6 +21,12 @@ const CHILD_SPEC =
   "apps/api/src/modules/sample/application/create-sample.use-case.spec.ts"
 const CHILD_BARREL = "apps/api/src/modules/sample/testing/index.ts"
 const TEMPLATE_BARREL = "catalog/sample/api/testing/index.ts"
+const TEMPLATE_PARITY = "catalog/sample/parity/contract.parity.spec.ts"
+const CHILD_PARITY =
+  "apps/api/src/modules/sample/__parity__/contract.parity.spec.ts"
+// Só existe no template: a casca web de uma entrada não é copiada para
+// `apps/api` num filho, e `catalog/` é a âncora do copier (AD-013).
+const TEMPLATE_WEB = "catalog/sample/web/core/access.ts"
 const HARNESS = "apps/api/src/shared/test/e2e/app.ts"
 const HARNESS_SPEC = "apps/api/src/shared/test/e2e/wait-for.spec.ts"
 
@@ -198,32 +204,29 @@ describe("scan — a identidade de um arquivo é a mesma nos dois layouts", () =
   })
 
   it("o parity cai onde a instalação o põe — __parity__/ no filho", () => {
-    expect(
-      canonicalKey("catalog/notification/parity/mailer.parity.spec.ts")
-    ).toBe("module:notification/__parity__/mailer.parity.spec.ts")
-    expect(
-      canonicalKey(
-        "apps/api/src/modules/notification/__parity__/mailer.parity.spec.ts"
-      )
-    ).toBe("module:notification/__parity__/mailer.parity.spec.ts")
+    expect(canonicalKey(TEMPLATE_PARITY)).toBe(
+      "module:sample/__parity__/contract.parity.spec.ts"
+    )
+    expect(canonicalKey(CHILD_PARITY)).toBe(
+      "module:sample/__parity__/contract.parity.spec.ts"
+    )
   })
 
   it("a entrada com variante fica com o nome do módulo, sem a variante", () => {
-    expect(
-      canonicalKey("catalog/identity/single-tenant/api/testing/index.ts")
-    ).toBe("module:identity/testing/index.ts")
+    expect(canonicalKey("catalog/sample/variant/api/testing/index.ts")).toBe(
+      "module:sample/testing/index.ts"
+    )
   })
 
   it("o api/ interno da entrada não é confundido com a raiz api/", () => {
-    expect(
-      canonicalKey("catalog/attachment/api/api/attachment.controller.ts")
-    ).toBe("module:attachment/api/attachment.controller.ts")
+    expect(canonicalKey("catalog/sample/api/api/sample.controller.ts")).toBe(
+      "module:sample/api/sample.controller.ts"
+    )
   })
 
   it("o kernel e o que só existe no template ficam com o próprio caminho", () => {
     expect(canonicalKey(HARNESS)).toBe(HARNESS)
-    const webFile = "catalog/identity/single-tenant/web/core/session.types.ts"
-    expect(canonicalKey(webFile)).toBe(webFile)
+    expect(canonicalKey(TEMPLATE_WEB)).toBe(TEMPLATE_WEB)
   })
 
   it("as entradas presentes saem da árvore, em qualquer layout", () => {
@@ -345,8 +348,9 @@ describe("scan — o relato e o contrato do baseline", () => {
   })
 
   it("o registro de um arquivo só-do-template é inerte no filho e cobrado no template", () => {
-    const webFile = "catalog/identity/single-tenant/web/core/session.types.ts"
-    const baseline: Baseline = { [webFile]: { "single-testing-module": 1 } }
+    const baseline: Baseline = {
+      [TEMPLATE_WEB]: { "single-testing-module": 1 },
+    }
     expect(
       compareToBaseline("single-testing-module", [], baseline, [CHILD_SPEC])
         .stale
@@ -355,7 +359,7 @@ describe("scan — o relato e o contrato do baseline", () => {
       compareToBaseline("single-testing-module", [], baseline, [TEMPLATE_SPEC])
         .stale
     ).toEqual([
-      `single-testing-module · ${webFile} · baseline registra 1, a árvore tem 0 — rode o gerador do baseline`,
+      `single-testing-module · ${TEMPLATE_WEB} · baseline registra 1, a árvore tem 0 — rode o gerador do baseline`,
     ])
   })
 })

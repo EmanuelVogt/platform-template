@@ -8,13 +8,10 @@ import {
 
 import type { PermissionKey } from "../../domain/permissions/permission-catalog"
 
-// Superfície pública dos erros e do DTO de rota que módulos de produto (hoje o
-// professional) reusam: o `type` RFC 7807 e o shape do param são contrato de
-// fio, então re-exportar é o que mantém openapi.json e respostas idênticos.
-export {
-  InvalidProfessionalScopeError,
-  UserNotFoundError,
-} from "../../domain/errors"
+// Superfície pública dos erros e do DTO de rota que outras entradas reusam: o
+// `type` RFC 7807 e o shape do param são contrato de fio, então re-exportar é o
+// que mantém openapi.json e respostas idênticos.
+export { UserNotFoundError } from "../../domain/errors"
 export { UpdateUserParamsDto } from "../contracts/identity.contract"
 
 /**
@@ -35,10 +32,6 @@ export class UserDirectoryFacade {
 
   findIdsByNameLike(term: string): Promise<string[]> {
     return this.users.findIdsByNameLike(term)
-  }
-
-  existsProfessional(userId: string): Promise<boolean> {
-    return this.users.existsProfessional(userId)
   }
 
   async findNameById(userId: string): Promise<string | null> {

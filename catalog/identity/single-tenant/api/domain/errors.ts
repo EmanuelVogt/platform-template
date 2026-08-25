@@ -25,11 +25,6 @@ const MESSAGES = {
   cannotRevokeCurrentDevice:
     "Não é possível encerrar o dispositivo atual. Use o logout.",
   invalidPermissionSet: "Conjunto de permissões inválido",
-  invalidProfessionalScope: "Áreas ou serviços de atuação inválidos",
-  invalidSchedulingAreas: "Áreas de agendamento inválidas",
-  professionalHasCommitmentsTitle: "A pessoa ainda tem compromisso marcado",
-  professionalHasCommitmentsDetail:
-    "Remarque os atendimentos e conduções listados antes de tirá-la do atendimento a clientes.",
   permissionTemplateNotFound: "Modelo de permissões não encontrado",
   permissionTemplateNameInUse:
     "Já existe um modelo de permissões com este nome",
@@ -200,46 +195,6 @@ export class InvalidPermissionSetError extends DomainError {
 
   constructor(detail?: string) {
     super(MESSAGES.invalidPermissionSet, detail)
-  }
-}
-
-/** Áreas/serviços do perfil Profissional inválidos: inexistentes, inativos ou
- *  serviço fora de uma área selecionada. */
-export class InvalidProfessionalScopeError extends DomainError {
-  readonly status = 422
-  readonly type = `${TYPE_BASE}/invalid-professional-scope`
-
-  constructor(detail?: string) {
-    super(MESSAGES.invalidProfessionalScope, detail)
-  }
-}
-
-/** Áreas de agendamento do perfil Agendamentos inválidas: ausentes, inexistentes ou inativas. */
-export class InvalidSchedulingAreasError extends DomainError {
-  readonly status = 422
-  readonly type = `${TYPE_BASE}/invalid-scheduling-areas`
-
-  constructor(detail?: string) {
-    super(MESSAGES.invalidSchedulingAreas, detail)
-  }
-}
-
-/**
- * Tirar do atendimento a cliente quem ainda tem compromisso marcado. Recusa
- * seca (sem confirmação): a pessoa sai da escala inteira, então deixar passar
- * deixaria cliente marcado com quem o sistema não reconhece mais como executor.
- */
-export class ProfessionalHasCommitmentsError extends DomainError {
-  readonly status = 409
-  readonly type = `${TYPE_BASE}/professional-has-commitments`
-  override readonly extensions: Record<string, unknown>
-
-  constructor(commitments: readonly ProfessionalCommitmentOffender[]) {
-    super(
-      MESSAGES.professionalHasCommitmentsTitle,
-      MESSAGES.professionalHasCommitmentsDetail
-    )
-    this.extensions = { commitments }
   }
 }
 

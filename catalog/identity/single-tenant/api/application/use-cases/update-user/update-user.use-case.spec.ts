@@ -71,11 +71,8 @@ function makeDeps(over: Record<string, any> = {}) {
       userAgent: null,
       access: { permissions: new Set<string>(), isMaster: true },
     }))
-  const scope = over.scope ?? {
-    assertValid: vi.fn().mockResolvedValue(undefined),
-  }
-  const uc = new UpdateUserUseCase(users, clock, ctx, scope)
-  return { uc, users, scope }
+  const uc = new UpdateUserUseCase(users, clock, ctx)
+  return { uc, users }
 }
 
 describe("UpdateUserUseCase", () => {

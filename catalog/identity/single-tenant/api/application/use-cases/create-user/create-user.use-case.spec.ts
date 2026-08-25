@@ -25,9 +25,6 @@ function makeDeps(over: Record<string, any> = {}) {
     insert: vi.fn().mockResolvedValue(undefined),
     replacePermissions: vi.fn().mockResolvedValue(undefined),
   }
-  const scope = over.scope ?? {
-    assertValid: vi.fn().mockResolvedValue(undefined),
-  }
   const verificationTokens = over.verificationTokens ?? {
     create: vi.fn().mockResolvedValue(undefined),
   }
@@ -63,10 +60,9 @@ function makeDeps(over: Record<string, any> = {}) {
     authEvents,
     clock,
     ctx,
-    config,
-    scope
+    config
   )
-  return { uc, users, verificationTokens, tokens, outbox, authEvents, scope }
+  return { uc, users, verificationTokens, tokens, outbox, authEvents }
 }
 
 describe("CreateUserUseCase", () => {
@@ -164,7 +160,6 @@ describe("CreateUserUseCase", () => {
   })
   it("persiste permissões de outros módulos em qualquer perfil", async () => {
     const t = makeDeps()
-    t.scope.assertValid.mockResolvedValue(undefined)
     await t.uc.execute({
       name: "Pro Cross",
       email: "pro.cross@example.com",
@@ -179,9 +174,8 @@ describe("CreateUserUseCase", () => {
       ["admin.users.read"]
     )
   })
-  it("quem atende sem permissão de módulo é válido (piso = ≥1 área de atuação)", async () => {
+  it("perfil sem piso de permissão aceita conjunto vazio", async () => {
     const t = makeDeps()
-    t.scope.assertValid.mockResolvedValue(undefined)
     await t.uc.execute({
       name: "Pro Vazio",
       email: "pro.vazio@example.com",

@@ -36,30 +36,11 @@ export interface ListUsersInput {
   deleted?: boolean
 }
 
-export interface SearchAssignableProfessionalsInput {
-  q?: string
-  page: number
-  pageSize: number
-}
-
-export interface AssignableProfessionalRow {
-  id: string
-  name: string
-  email: string
-  avatarAttachmentId: string | null
-}
-
 /** Destinatário de e-mail resolvido por permissão (ou master). */
 export interface NotificationTarget {
   id: string
   email: string
   name: string
-}
-
-/** Vínculo profissional↔serviço com a marcação de padrão do "Serviços de atuação". */
-export interface AssignableProfessionalLink {
-  userId: string
-  isDefault: boolean
 }
 
 export interface UserRepository {
@@ -119,42 +100,6 @@ export interface UserRepository {
   findStaleEmailChanges(now: Date): Promise<User[]>
   /** Hard delete em lote. FKs com ON DELETE CASCADE levam sessions/devices/tokens. */
   hardDeleteByIds(ids: string[]): Promise<void>
-  /** true se o id atende cliente, está vivo e ativo (gate de atribuição
-   *  cross-module). O perfil de acesso não entra no critério — ADR 0082. */
-  existsActiveProfessional(userId: string): Promise<boolean>
-  /** true se o id atende cliente e está vivo, qualquer status — config de horário pelo admin não espera ativação. */
-  existsProfessional(userId: string): Promise<boolean>
-  /** Busca paginada de quem atende cliente, vivo e ativo; `q` casa nome ou email (seletor de atribuição). */
-  searchAssignableProfessionals(
-    input: SearchAssignableProfessionalsInput
-  ): Promise<PaginatedResult<AssignableProfessionalRow>>
-  /** Lookup por id, só quem atende cliente, vivo e ativo — valida atribuição e resolve a view cross-module. */
-  findProfessionalsByIds(
-    ids: string[]
-  ): Promise<Map<string, AssignableProfessionalRow>>
-  /** Todos que atendem cliente, vivos e ativos, ordenados por nome (consumido por outro módulo). */
-  listActiveProfessionals(): Promise<AssignableProfessionalRow[]>
-  /**
-   * Quem atende cliente, vivo e ativo, com a área em "Áreas de atuação",
-   * ordenado por nome (filtro por área, consumido por outro módulo).
-   */
-  listActiveProfessionalsByArea(
-    areaId: string
-  ): Promise<AssignableProfessionalRow[]>
-  /**
-   * Ids de quem atende cliente, vivo e ativo, com o serviço em "Serviços de
-   * atuação", agrupados por serviceId (leitura cross-module por outro módulo).
-   */
-  findActiveProfessionalIdsByServices(
-    serviceIds: string[]
-  ): Promise<Map<string, string[]>>
-  /**
-   * Como `findActiveProfessionalIdsByServices`, acrescido da flag de padrão do
-   * vínculo — outro módulo aloca só os padrões.
-   */
-  findActiveProfessionalLinksByServices(
-    serviceIds: string[]
-  ): Promise<Map<string, AssignableProfessionalLink[]>>
   /**
    * Nome de exibição por id, SEM filtro de perfil/status (inclui admin, master,
    * inativo e da lixeira). A trilha de auditoria resolve o ator de qualquer

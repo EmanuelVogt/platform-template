@@ -16,10 +16,6 @@ import {
   type AuthEventRepository,
 } from "../../../domain/ports/auth-event.repository"
 import {
-  PROFESSIONAL_SCOPE,
-  type ProfessionalScope,
-} from "../../../domain/ports/professional-scope.port"
-import {
   TOKEN_GENERATOR,
   type TokenGenerator,
 } from "../../../domain/ports/token-generator"
@@ -54,8 +50,7 @@ export class CreateUserUseCase implements UseCaseContract<
     private readonly authEvents: AuthEventRepository,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly ctx: RequestContext,
-    @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig,
-    @Inject(PROFESSIONAL_SCOPE) private readonly scope: ProfessionalScope
+    @Inject(IDENTITY_CONFIG) private readonly config: IdentityConfig
   ) {}
 
   @Transactional()
@@ -69,7 +64,7 @@ export class CreateUserUseCase implements UseCaseContract<
       // sempre publicou o access; ausente aqui é erro de configuração, não caso de uso.
       throw new ForbiddenError()
     }
-    const access = await resolveUserAccess(input, this.scope, {
+    const access = resolveUserAccess(input, {
       actor: actorAccess,
       current: [],
     })

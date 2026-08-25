@@ -1,10 +1,8 @@
-import { type Mock, describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 
 import { BASE_ACCESS_PROFILES } from "../domain/access/access-profile.types"
 import {
   InvalidPermissionSetError,
-  InvalidProfessionalScopeError,
-  InvalidSchedulingAreasError,
   PermissionGrantNotAllowedError,
 } from "../domain/errors"
 
@@ -16,7 +14,6 @@ import {
 } from "./access-policy"
 
 import type { GrantContext } from "./access-policy"
-import type { ProfessionalScope } from "../domain/ports/professional-scope.port"
 
 describe("assertValidPermissionSet (closure de requires)", () => {
   it("aceita set vazio", () => {
@@ -108,117 +105,29 @@ describe("assertProfileFloor (piso do perfil)", () => {
   })
 })
 
-function makeScope(): ProfessionalScope & { assertValid: Mock } {
-  return { assertValid: vi.fn().mockResolvedValue(undefined) }
-}
-
 const MASTER_GRANT: GrantContext = {
   actor: { permissions: new Set<string>(), isMaster: true },
   current: [],
 }
 
-describe("resolveUserAccess — atendimento e áreas de agendamento", () => {
-  it("sem área de agendamento resolve lista vazia sem tocar o port", async () => {
-    const scope = makeScope()
-    const access = await resolveUserAccess(
-      {
-        accessProfile: "admin",
-        permissions: ["admin.users.read"],
-        areaIds: [],
-        serviceIds: [],
-        schedulingAreaIds: [],
-      },
-      scope,
+describe("resolveUserAccess", () => {
+  it("resolve só o conjunto de permissões — a fatia profissional saiu da entrada", () => {
+    const access = resolveUserAccess(
+      { accessProfile: "admin", permissions: ["admin.users.read"] },
       MASTER_GRANT
     )
-    expect(access.schedulingAreaIds).toEqual([])
-    expect(scope.assertValid).not.toHaveBeenCalled()
+    expect(access).toEqual({ permissions: ["admin.users.read"] })
   })
 
-  it("áreas de agendamento informadas são validadas no port e preservadas", async () => {
-    const scope = makeScope()
-    const access = await resolveUserAccess(
-      {
-        accessProfile: "admin",
-        permissions: ["admin.users.read"],
-        areaIds: [],
-        serviceIds: [],
-        schedulingAreaIds: ["area-1", "area-2"],
-      },
-      scope,
-      MASTER_GRANT
-    )
-    expect(access).toEqual({
-      permissions: ["admin.users.read"],
-      areaIds: [],
-      serviceIds: [],
-      schedulingAreaIds: ["area-1", "area-2"],
-    })
-    expect(scope.assertValid).toHaveBeenCalledWith(["area-1", "area-2"], [])
-  })
-
-  it("falha do port (área inexistente/inativa) vira InvalidSchedulingAreasError", async () => {
-    const scope = makeScope()
-    scope.assertValid.mockRejectedValue(
-      new InvalidProfessionalScopeError("área inativa")
-    )
-    await expect(
+  it("propaga a recusa do piso do perfil sem resolver nada", () => {
+    expect(() =>
       resolveUserAccess(
-        {
-          accessProfile: "admin",
-          permissions: ["admin.users.read"],
-          areaIds: [],
-          serviceIds: [],
-          schedulingAreaIds: ["area-morta"],
-        },
-        scope,
+        { accessProfile: "admin", permissions: [] },
         MASTER_GRANT
       )
-    ).rejects.toBeInstanceOf(InvalidSchedulingAreasError)
-  })
-
-  it("quem atende guarda áreas e serviços de atuação, em qualquer perfil", async () => {
-    const scope = makeScope()
-    const access = await resolveUserAccess(
-      {
-        accessProfile: "professional",
-        permissions: [],
-        areaIds: ["area-1"],
-        serviceIds: ["svc-1"],
-        schedulingAreaIds: [],
-      },
-      scope,
-      MASTER_GRANT
-    )
-    expect(access).toEqual({
-      permissions: [],
-      areaIds: ["area-1"],
-      serviceIds: ["svc-1"],
-      schedulingAreaIds: [],
-    })
-    expect(scope.assertValid).toHaveBeenCalledWith(["area-1"], ["svc-1"])
-  })
-  it("atuação e agendamento coexistem sem uma zerar a outra", async () => {
-    const access = await resolveUserAccess(
-      {
-        accessProfile: "admin",
-        permissions: ["admin.users.read"],
-        areaIds: ["atuacao-1"],
-        serviceIds: ["svc-1"],
-        schedulingAreaIds: ["agenda-1"],
-      },
-      makeScope(),
-      MASTER_GRANT
-    )
-    expect(access).toEqual({
-      permissions: ["admin.users.read"],
-      areaIds: ["atuacao-1"],
-      serviceIds: ["svc-1"],
-      schedulingAreaIds: ["agenda-1"],
-    })
+    ).toThrow(InvalidPermissionSetError)
   })
 })
-
 describe("assertCanGrant (concessão limitada ao ator)", () => {
   function actorOf(keys: string[]): GrantContext["actor"] {
     return { permissions: new Set(keys), isMaster: false }

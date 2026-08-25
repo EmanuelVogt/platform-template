@@ -8,10 +8,6 @@ import { Transactional } from "../../../../../shared/kernel/transactional/transa
 import { UseCase } from "../../../../../shared/kernel/use-case/use-case.decorator"
 import { UserNotFoundError } from "../../../domain/errors"
 import {
-  PROFESSIONAL_SCOPE,
-  type ProfessionalScope,
-} from "../../../domain/ports/professional-scope.port"
-import {
   USER_REPOSITORY,
   type UserRepository,
 } from "../../../domain/ports/user.repository"
@@ -42,8 +38,7 @@ export class UpdateUserUseCase implements UseCaseContract<
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(CLOCK) private readonly clock: Clock,
-    private readonly ctx: RequestContext,
-    @Inject(PROFESSIONAL_SCOPE) private readonly scope: ProfessionalScope
+    private readonly ctx: RequestContext
   ) {}
 
   @Transactional()
@@ -74,10 +69,7 @@ export class UpdateUserUseCase implements UseCaseContract<
     if (actorAccess === undefined) {
       throw new ForbiddenError()
     }
-    const access = await resolveUserAccess(input, this.scope, {
-      actor: actorAccess,
-      current,
-    })
+    const access = resolveUserAccess(input, { actor: actorAccess, current })
 
     await this.users.update(
       user.updateProfile(

@@ -49,9 +49,9 @@ Prefixo global `/v1`. `Acesso` é a `AccessRequirement` que o `AccessGuard` do k
 | PUT    | `/v1/admin/permission-templates/{id}`     | `updatePermissionTemplate` | permission `admin.permission_templates.update` | —                        | —                         |
 | DELETE | `/v1/admin/permission-templates/{id}`     | `deletePermissionTemplate` | permission `admin.permission_templates.delete` | —                        | —                         |
 
-Facades **exportadas** para outras entradas: `UserDirectoryFacade` (nome/e-mail/avatar por id),
-`UsageAccessFacade` (checagem de uso antes de apagar) e `ProfessionalDirectoryFacade` (usuários
-que atendem cliente). `IdentityModule` é `global: true` e exporta o token `ACCESS_POLICY`.
+Facades **exportadas** para outras entradas: `UserDirectoryFacade` (nome/e-mail/avatar por id) e
+`UsageAccessFacade` (checagem de uso antes de apagar). `IdentityModule` é `global: true` e exporta
+o token `ACCESS_POLICY`.
 
 Porta **consumida** pela entrada e ligada por quem quiser: `PROFILE_IMAGE_STORE`
 (`shared/kernel/profile-image/profile-image-store.port`), com `upload`, `delete` e `exists` para as

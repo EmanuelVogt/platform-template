@@ -7,7 +7,6 @@ import { RateLimitModule } from "../../shared/kernel/rate-limit/rate-limit.modul
 
 import { IdentityAccessPolicy } from "./api/access/identity-access.policy"
 import { CONTROLLERS } from "./api/controllers"
-import { ProfessionalDirectoryFacade } from "./api/facades/professional-directory.facade"
 import { UsageAccessFacade } from "./api/facades/usage-access.facade"
 import { UserDirectoryFacade } from "./api/facades/user-directory.facade"
 import { CsrfGuard } from "./api/guards/csrf.guard"
@@ -59,8 +58,6 @@ import { DEVICE_REPOSITORY } from "./domain/ports/device.repository"
 import { PASSWORD_HASHER } from "./domain/ports/password-hasher"
 import { PASSWORD_STRENGTH } from "./domain/ports/password-strength"
 import { PERMISSION_TEMPLATE_REPOSITORY } from "./domain/ports/permission-template.repository"
-import { PROFESSIONAL_COMMITMENTS } from "./domain/ports/professional-commitments.port"
-import { PROFESSIONAL_SCOPE } from "./domain/ports/professional-scope.port"
 import { SESSION_REPOSITORY } from "./domain/ports/session.repository"
 import { TOKEN_GENERATOR } from "./domain/ports/token-generator"
 import { USAGE_STATS_READER } from "./domain/ports/usage-stats.reader"
@@ -74,10 +71,6 @@ import { HmacCsrf } from "./infrastructure/hashing/hmac-csrf"
 import { HibpBreachCheck } from "./infrastructure/password/hibp-breach-check"
 import { NoopBreachCheck } from "./infrastructure/password/noop-breach-check"
 import { ZxcvbnPasswordStrength } from "./infrastructure/password/zxcvbn-password-strength"
-import {
-  NullProfessionalCommitments,
-  NullProfessionalScope,
-} from "./infrastructure/professional/null-professional-adapters"
 import { DrizzleAuthEventRepository } from "./infrastructure/repositories/drizzle-auth-event.repository"
 import { DrizzleDeviceRepository } from "./infrastructure/repositories/drizzle-device.repository"
 import { DrizzlePermissionTemplateRepository } from "./infrastructure/repositories/drizzle-permission-template.repository"
@@ -86,15 +79,12 @@ import { DrizzleUsageStatsReader } from "./infrastructure/repositories/drizzle-u
 import { DrizzleUserRepository } from "./infrastructure/repositories/drizzle-user.repository"
 import { DrizzleVerificationTokenRepository } from "./infrastructure/repositories/drizzle-verification-token.repository"
 
-import type { ProfessionalCommitments } from "./domain/ports/professional-commitments.port"
-import type { ProfessionalScope } from "./domain/ports/professional-scope.port"
 import type { IdentityConfig } from "./identity.config"
 import type {
   DynamicModule,
   MiddlewareConsumer,
   NestModule,
   Provider,
-  Type,
 } from "@nestjs/common"
 
 // Ports → impls. Os adapters sem dependência (breach/token/strength) não têm
@@ -199,17 +189,6 @@ const USE_CASES = [
   DeletePermissionTemplateUseCase,
 ]
 
-/**
- * Slot de produto: o identity não conhece scheduling nem service, então quem
- * sabe validar áreas/serviços e ler compromissos entra pela raiz de composição.
- * Ausente (repo base, sem os módulos de agenda) → null objects.
- */
-export interface IdentityProfessionalSlot {
-  module: Type<unknown>
-  scope: Type<ProfessionalScope>
-  commitments: Type<ProfessionalCommitments>
-}
-
 // SharedKernelModule é @Global — não reimportar Transactional/Context/Outbox/Clock aqui.
 @Module({})
 export class IdentityModule implements NestModule {
@@ -217,26 +196,7 @@ export class IdentityModule implements NestModule {
     consumer.apply(AuthMiddleware).forRoutes(AUTH_MIDDLEWARE_ROUTE)
   }
 
-  static forRoot(
-    options: { professional?: IdentityProfessionalSlot } = {}
-  ): DynamicModule {
-    const { professional } = options
-    const slot: Provider[] = professional
-      ? [
-          { provide: PROFESSIONAL_SCOPE, useExisting: professional.scope },
-          {
-            provide: PROFESSIONAL_COMMITMENTS,
-            useExisting: professional.commitments,
-          },
-        ]
-      : [
-          { provide: PROFESSIONAL_SCOPE, useClass: NullProfessionalScope },
-          {
-            provide: PROFESSIONAL_COMMITMENTS,
-            useClass: NullProfessionalCommitments,
-          },
-        ]
-
+  static forRoot(): DynamicModule {
     return {
       module: IdentityModule,
       // Global porque o módulo virou dinâmico: quem importa `IdentityModule`
@@ -247,17 +207,12 @@ export class IdentityModule implements NestModule {
       // (addDynamicModules) e gera uma SEGUNDA instância do módulo alvo.
       // RateLimitModule (@Global) provê RATE_LIMITER = composite resiliente;
       // o kernel não registra o guard, a ordem com o CSRF é decidida aqui.
-      imports: [
-        RateLimitModule,
-        ...(professional ? [professional.module] : []),
-      ],
+      imports: [RateLimitModule],
       controllers: CONTROLLERS,
       providers: [
         { provide: IDENTITY_CONFIG, useFactory: loadIdentityConfig },
         ...PORTS,
-        ...slot,
         ...USE_CASES,
-        ProfessionalDirectoryFacade,
         UsageAccessFacade,
         UserDirectoryFacade,
         CreateSessionService,
@@ -279,7 +234,6 @@ export class IdentityModule implements NestModule {
         // O AccessGuard vive no SharedKernelModule: a policy precisa sair daqui
         // (módulo global) para o injector dele enxergar o token.
         ACCESS_POLICY,
-        ProfessionalDirectoryFacade,
         UsageAccessFacade,
         UserDirectoryFacade,
       ],

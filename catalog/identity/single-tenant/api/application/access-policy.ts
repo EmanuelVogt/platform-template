@@ -1,8 +1,6 @@
 import { requiresPermissionFloor } from "../domain/access/permission.types"
 import {
   InvalidPermissionSetError,
-  InvalidProfessionalScopeError,
-  InvalidSchedulingAreasError,
   PermissionGrantNotAllowedError,
 } from "../domain/errors"
 import { moduleOf, requiresOf } from "../domain/permissions/permission-catalog"
@@ -13,7 +11,6 @@ import type {
   AssignableAccessProfile,
 } from "../domain/access/permission.types"
 import type { PermissionKey } from "../domain/permissions/permission-catalog"
-import type { ProfessionalScope } from "../domain/ports/professional-scope.port"
 
 export function assertValidPermissionSet(
   permissions: readonly PermissionKey[]
@@ -45,9 +42,6 @@ export function assertProfileFloor(
 
 export type ResolvedUserAccess = {
   permissions: PermissionKey[]
-  areaIds: string[]
-  serviceIds: string[]
-  schedulingAreaIds: string[]
 }
 
 export type GrantContext = {
@@ -79,60 +73,16 @@ export function assertCanGrant(
   }
 }
 
-export async function resolveUserAccess(
+export function resolveUserAccess(
   input: {
     accessProfile: AssignableAccessProfile
     permissions: readonly PermissionKey[]
-    areaIds: readonly string[]
-    serviceIds: readonly string[]
-    schedulingAreaIds: readonly string[]
   },
-  scope: ProfessionalScope,
   grant: GrantContext
-): Promise<ResolvedUserAccess> {
+): ResolvedUserAccess {
   assertCanGrant(grant, input.permissions)
   assertValidPermissionSet(input.permissions)
   assertProfileFloor(input.accessProfile, input.permissions)
 
-  // Duas perguntas independentes: o escopo de atuação e as áreas restritas por
-  // perfil são vínculos distintos. Uma nunca zera a outra.
-  const attendance = await resolveAttendanceScope(input, scope)
-  const schedulingAreaIds = await resolveSchedulingAreas(input, scope)
-
-  return {
-    permissions: [...input.permissions],
-    ...attendance,
-    schedulingAreaIds,
-  }
-}
-
-async function resolveAttendanceScope(
-  input: {
-    areaIds: readonly string[]
-    serviceIds: readonly string[]
-  },
-  scope: ProfessionalScope
-): Promise<{ areaIds: string[]; serviceIds: string[] }> {
-  if (input.areaIds.length === 0) return { areaIds: [], serviceIds: [] }
-  await scope.assertValid(input.areaIds, input.serviceIds)
-  return { areaIds: [...input.areaIds], serviceIds: [...input.serviceIds] }
-}
-
-async function resolveSchedulingAreas(
-  input: { schedulingAreaIds: readonly string[] },
-  scope: ProfessionalScope
-): Promise<string[]> {
-  if (input.schedulingAreaIds.length === 0) return []
-  // Reusa a validação estrutural do port (existência/atividade da área);
-  // o erro sai traduzido com o type da relação restrita por perfil, não o do
-  // escopo de atuação — são vínculos independentes.
-  try {
-    await scope.assertValid(input.schedulingAreaIds, [])
-  } catch (error) {
-    if (error instanceof InvalidProfessionalScopeError) {
-      throw new InvalidSchedulingAreasError(error.message)
-    }
-    throw error
-  }
-  return [...input.schedulingAreaIds]
+  return { permissions: [...input.permissions] }
 }

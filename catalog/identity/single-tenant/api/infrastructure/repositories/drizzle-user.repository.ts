@@ -25,12 +25,6 @@ import { toPaginated } from "../../../../shared/kernel/listing/paginated"
 import { TransactionManager } from "../../../../shared/kernel/transactional/transaction-manager"
 import { User } from "../../domain/entities/user.entity"
 import { EmailAlreadyInUseError } from "../../domain/errors"
-import {
-  ASSIGNABLE_LISTING_CONFIG,
-  assignableProfessionalFilters,
-  assignableProfessionalSelection,
-  toAssignableProfessionalRow,
-} from "../professional-query.helpers"
 import { userPermissions } from "../tables/user-permission.table"
 import { userProfessionalAreas } from "../tables/user-professional-area.table"
 import { userProfessionalServices } from "../tables/user-professional-service.table"
@@ -42,11 +36,8 @@ import type { DrizzleExecutor } from "../../../../shared/infra/database/drizzle.
 import type { PaginatedResult } from "../../../../shared/kernel/listing/paginated"
 import type { PermissionKey } from "../../domain/permissions/permission-catalog"
 import type {
-  AssignableProfessionalLink,
-  AssignableProfessionalRow,
   ListUsersInput,
   NotificationTarget,
-  SearchAssignableProfessionalsInput,
   UserListRow,
   UserRepository,
 } from "../../domain/ports/user.repository"
@@ -80,144 +71,6 @@ export class DrizzleUserRepository implements UserRepository {
 
   private get db(): DrizzleExecutor {
     return this.tx.getExecutor()
-  }
-
-  async existsActiveProfessional(userId: string): Promise<boolean> {
-    const rows = await this.db
-      .select({ id: users.id })
-      .from(users)
-      .where(and(eq(users.id, userId), eq(users.status, "active"), visible))
-      .limit(1)
-    return rows.length > 0
-  }
-
-  async existsProfessional(userId: string): Promise<boolean> {
-    const rows = await this.db
-      .select({ id: users.id })
-      .from(users)
-      .where(and(eq(users.id, userId), visible))
-      .limit(1)
-    return rows.length > 0
-  }
-
-  async searchAssignableProfessionals(
-    input: SearchAssignableProfessionalsInput
-  ): Promise<PaginatedResult<AssignableProfessionalRow>> {
-    const { where, orderBy, limit, offset } = buildListingClauses(
-      input,
-      ASSIGNABLE_LISTING_CONFIG,
-      assignableProfessionalFilters()
-    )
-    const rows = await this.db
-      .select(assignableProfessionalSelection)
-      .from(users)
-      .where(where)
-      .orderBy(...orderBy)
-      .limit(limit)
-      .offset(offset)
-    const counted = await this.db
-      .select({ n: sql<number>`count(*)::int` })
-      .from(users)
-      .where(where)
-    return toPaginated(
-      rows.map(toAssignableProfessionalRow),
-      counted[0]?.n ?? 0,
-      input.page,
-      input.pageSize
-    )
-  }
-
-  async findProfessionalsByIds(
-    ids: string[]
-  ): Promise<Map<string, AssignableProfessionalRow>> {
-    if (ids.length === 0) return new Map()
-    const rows = await this.db
-      .select(assignableProfessionalSelection)
-      .from(users)
-      .where(and(inArray(users.id, ids), ...assignableProfessionalFilters()))
-    return new Map(rows.map((r) => [r.id, toAssignableProfessionalRow(r)]))
-  }
-
-  async listActiveProfessionals(): Promise<AssignableProfessionalRow[]> {
-    const rows = await this.db
-      .select(assignableProfessionalSelection)
-      .from(users)
-      .where(and(...assignableProfessionalFilters()))
-      .orderBy(asc(users.name))
-    return rows.map(toAssignableProfessionalRow)
-  }
-
-  async listActiveProfessionalsByArea(
-    areaId: string
-  ): Promise<AssignableProfessionalRow[]> {
-    const rows = await this.db
-      .select(assignableProfessionalSelection)
-      .from(users)
-      .innerJoin(
-        userProfessionalAreas,
-        eq(userProfessionalAreas.userId, users.id)
-      )
-      .where(
-        and(
-          eq(userProfessionalAreas.areaId, areaId),
-          ...assignableProfessionalFilters()
-        )
-      )
-      .orderBy(asc(users.name))
-    return rows.map(toAssignableProfessionalRow)
-  }
-
-  async findActiveProfessionalIdsByServices(
-    serviceIds: string[]
-  ): Promise<Map<string, string[]>> {
-    if (serviceIds.length === 0) return new Map()
-    const rows = await this.db
-      .select({
-        serviceId: userProfessionalServices.serviceId,
-        userId: users.id,
-      })
-      .from(userProfessionalServices)
-      .innerJoin(users, eq(users.id, userProfessionalServices.userId))
-      .where(
-        and(
-          inArray(userProfessionalServices.serviceId, serviceIds),
-          ...assignableProfessionalFilters()
-        )
-      )
-    const map = new Map<string, string[]>()
-    for (const row of rows) {
-      const ids = map.get(row.serviceId) ?? []
-      ids.push(row.userId)
-      map.set(row.serviceId, ids)
-    }
-    return map
-  }
-
-  async findActiveProfessionalLinksByServices(
-    serviceIds: string[]
-  ): Promise<Map<string, AssignableProfessionalLink[]>> {
-    if (serviceIds.length === 0) return new Map()
-    const rows = await this.db
-      .select({
-        serviceId: userProfessionalServices.serviceId,
-        userId: users.id,
-        isDefault: userProfessionalServices.isDefault,
-      })
-      .from(userProfessionalServices)
-      .innerJoin(users, eq(users.id, userProfessionalServices.userId))
-      .where(
-        and(
-          inArray(userProfessionalServices.serviceId, serviceIds),
-          ...assignableProfessionalFilters()
-        )
-      )
-    const map = new Map<string, AssignableProfessionalLink[]>()
-    for (const row of rows) {
-      const links = map.get(row.serviceId) ?? []
-      links.push({ userId: row.userId, isDefault: row.isDefault })
-      map.set(row.serviceId, links)
-    }
-    return map
   }
 
   async findNamesByIds(ids: string[]): Promise<Map<string, string>> {

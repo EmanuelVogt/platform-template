@@ -3541,3 +3541,46 @@ pre-GT6, and `attends_guests` is proven not to match `/\bguests?\b/i`.
    costs one command: hide the binary and re-run. That is how the Verifier reproduced it.
 
 Lessons L-038, L-039, L-040 recorded.
+
+### Fix Round 3 — what shipped broken in `v2.4.0`, and the gate that let it (2026-08-25)
+
+**CI run `32797563529` on `53c11a6` FAILED, and the pattern is exact: every `next` variant red,
+every `vite` variant green.** `template:smoke (next)` exit 7:
+`apps/web (--web-stack next) não deveria conter "VITE_" — encontrado em
+apps/web/src/_app/layout/root-layout.tsx`. The five `catalog:check (* / next)` entries fell for the
+same reason. **This is inside the `v2.4.0` tag** — GT3 (`f50b511`) shipped it.
+
+#### GT9: the Next shell carries no `VITE_` literal, comment or not (haiku)
+
+**What**: `apps/web-next/src/_app/layout/root-layout.tsx:11` documents the parallel to the Vite shell
+in a comment — *"Mesmo seam de `VITE_APP_NAME`/`VITE_LOCALE`"*. `assertWebShell` (ACC-06) rejects any
+`VITE_` occurrence in a rendered `next` child, comments included, and it is right to: the string is
+what a product greps for. **The code was correct; the comment was the defect.**
+**Touches**: `apps/web-next/**`
+**Done when**:
+- [ ] No `VITE_` literal survives anywhere under `apps/web-next/**` — sweep, do not fix only `:11`
+- [ ] The comment still explains the seam; name the Vite variables without writing the prefix, or
+      point at the Vite file instead of quoting it
+- [ ] `node scripts/template-smoke.mjs --web-stack next` exits 0 — **run it, this is the gate that
+      caught it and the unit tests did not**
+**Commit**: `fix(web-next): drop the VITE_ literal the next shell must never carry`
+
+#### GT10: the release gate stops being weaker than CI (sonnet)
+
+**What**: **`release.yml` never runs `template:smoke` and its `catalog:check` matrix has no
+`web_stack` dimension**, while `ci.yml` has both. So the release Verify job cannot see a defect that
+only affects the non-default shell — which is precisely how GT3's leak reached a tag while its own
+release run reported 8/8 green. **A release gate weaker than the branch gate certifies less than the
+branch it ships.**
+**Touches**: `.github/workflows/release.yml`, a new guard under `scripts/platform/__tests__/`
+**Done when**:
+- [ ] The release `verify` job runs `template:smoke` for **every** `web_stack` choice, and
+      `catalog:check` gains the same `web_stack` dimension `ci.yml` uses
+- [ ] A guard asserts the invariant, not the current lists: **every check `ci.yml` performs on
+      `push: main`, the release workflow also performs**, across both the command set and the matrix
+      dimensions. Derive both from the workflow files so a check added to CI later cannot silently
+      go missing from the release
+- [ ] The guard goes red when a command or a matrix dimension is removed from the release side —
+      prove both
+- [ ] Gate passes: `pnpm test:scripts`
+**Commit**: `fix(ci): the release gate covers everything the branch gate covers`

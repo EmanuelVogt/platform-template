@@ -308,7 +308,7 @@ tag and does not push (AD-006/AD-034).
 | Platform scripts / tooling (`scripts/**`) | unit (`node:test`) | Every branch of the repaired defect + one regression case per repaired site | `scripts/platform/__tests__/*.test.mjs` | `pnpm test:scripts` |
 | Claude hooks (`.claude/hooks/**`) | unit (`node:test`) | Every decision branch of the hook's contract | `scripts/platform/__tests__/*.test.mjs` | `pnpm test:scripts` |
 | Docs, `.jinja`, manifests, workflows, `copier.yml` | none — gate only | Build/lint gate; **plus** a committed guard spec wherever the AC's proof is `gate` | — | `pnpm check`, `pnpm catalog:lint`, `pnpm template:smoke` |
-| Contract artefacts (`openapi.json`, `packages/api-client/src/**`) | gate | `pnpm contract` then an empty `git diff --exit-code` | — | `pnpm contract && git diff --exit-code openapi.json packages/api-client/src` |
+| Contract artefacts (`openapi.json`, `packages/api-client/generated/**`, `packages/api-client/src/**`) | gate | `pnpm contract` then an empty `git diff --exit-code` | — | `pnpm contract && git diff --exit-code openapi.json packages/api-client/src packages/api-client/generated` — **corrected by T57a**; the pathspec T36 shipped omitted Kubb's actual output directory |
 
 **Provenance note.** `apps/api` and `apps/web` have **no `test` script** — the repo root is the only
 runner (AD-028). `docs/agents/workflow.md:108` still cites a Jest `testRegex`; that is doc drift and
@@ -385,7 +385,7 @@ Wave 7:  [C13: T48]  (owner-gated: v2.3.0 must be tagged)
 ─────────────────────────────── v3.0.0 ───────────────────────────────
 Wave 8:  [C14: T49→T49a→T51→T52→T53]  ∥ [C15: T54→T55→T56]     (T50 retired — § 0.8)
 Wave 9:  [C16: T57] (exclusive — contract regen, cookie rename)
-Wave 10: [C17: T58→…→T63]     ∥ [C18: T64→T65→T66]
+Wave 10: [C17: T58→…→T63]     ∥ [C18: T64→T65→T66] ∥ [C16a: T57a]
 Wave 11: [C19: T67→…→T72]     ∥ [C20: T73→T74→T75]
 Wave 12: [C21: T76] (exclusive — contract regen + parity re-snapshot)
 Wave 13: [C22: T77→T78]
@@ -1254,7 +1254,7 @@ steps** (AD-034). Anything that would force a child decision belongs to `v3.0.0`
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
-- [ ] `contract:check` = `pnpm contract && git diff --exit-code openapi.json packages/api-client/src`, wired into `ci.yml`
+- [ ] `contract:check` = `pnpm contract && git diff --exit-code openapi.json packages/api-client/src`, wired into `ci.yml` — **this pathspec is WRONG and shipped: Kubb writes `packages/api-client/generated`, not `src/`. Left as authored because it is the record of what landed; corrected by T57a**
 - [ ] A test asserts the step is **not** inside `TEMPLATE_ONLY_FILES` — it must ship to the child
 - [ ] The claims at `README.md.jinja:23`, `docs/arch/back.md:78`, `.github/README.md:38` are now true
 - [ ] **`format:check` is NOT added to `ci.yml`** (§ 0.2) — a test asserts its absence
@@ -2086,6 +2086,45 @@ so the wave-8 cross-references in this file, in `design.md` and in `STATE.md` do
 
 ---
 
+### T57a: The contract-drift guard covers the directory Kubb actually writes to
+
+**What**: `contract:check` diffs `packages/api-client/src`, but Kubb's output path is
+`packages/api-client/generated` (`kubb.config.ts:10-13`); `src/` holds only the hand-written
+`client.ts` and `index.ts`. `generated/` **is tracked** — 12 files, only `generated/.kubb/` is
+ignored — and it is what the web app imports. **A stale generated client therefore passes
+`ci.yml:71` and `release.yml:57` silently.** Found by wave 9's gate; see the wave-9 finding.
+**Where**: `package.json:13`
+**Touches**: `package.json`, `scripts/platform/__tests__/contract-check-ci.test.mjs`
+**Depends on**: T57
+**Exclusive**: no
+**Reuses**: T36's guard file and its four existing tests; GT10's *derive-the-invariant* pattern in
+`release-gate-parity.test.mjs` — assert against the config, never against a copied literal
+**Requirement**: TOOL-11 (F-tests-quality-gates-2) — the half T36 shipped pointing at the wrong path
+
+**Tools**: MCP: NONE · Skill: NONE
+
+**Done when**:
+- [ ] `contract:check` covers Kubb's real output path as well as `openapi.json` and the hand-written
+      `src/` — a regen that changes models, zod or hooks and is not committed must fail it
+- [ ] The guard **derives** that path from `kubb.config.ts`'s `output.path` rather than repeating the
+      string, so moving Kubb's output moves the assertion with it (GT10's pattern). A guard that
+      hardcodes `generated` reproduces exactly the defect being fixed, one level up
+- [ ] The guard is proved **red** by narrowing the pathspec back to `src` alone — demonstrate it,
+      do not assert it
+- [ ] `generated/.kubb/` stays ignored and the check does not trip on it
+- [ ] **T36's shipped-to-child property survives**: the step stays out of `TEMPLATE_ONLY_FILES` and
+      T36's four existing tests still pass, including the one asserting `format:check` is absent
+      from `ci.yml` (§ 0.2)
+- [ ] `pnpm contract:check` exits 0 on the current tree — this is what proves `generated/` is in
+      sync today and that the widened check is not landing already-red
+- [ ] Gate passes: `pnpm test:scripts`
+
+**Tests**: unit (`node:test`) · **Gate**: quick
+
+**Commit**: `fix(ci): the contract guard watches the path Kubb writes to`
+
+---
+
 ### T58: `catalog/professional/` skeleton
 
 **What**: Create the new entry from the `catalog/tag/` skeleton (**48 files on disk**, not the 43 the ledger recorded): `module.json`, `README.md`, `CHANGELOG.md`, the module file.
@@ -2505,7 +2544,7 @@ so the wave-8 cross-references in this file, in `design.md` and in `STATE.md` do
 **Done when**:
 - [ ] `profiles.parity.spec.ts` and `contract.snapshot.json` — which **fail by design** after T70/T71 — are re-snapshotted, and the diff is reviewed as the deliberate record of the break
 - [ ] The new entry has its own parity snapshot
-- [ ] `git diff --exit-code openapi.json packages/api-client/src` is empty afterwards
+- [ ] `git diff --exit-code openapi.json packages/api-client/src packages/api-client/generated` is empty afterwards — **the `generated` half is the one that matters here**: T70/T71 change models and zod, which is exactly what T57a's widened pathspec exists to catch, and what the pre-T57a check could not see
 - [ ] The commit contains only regenerated artefacts
 - [ ] Gate passes: `pnpm check && pnpm test`
 
@@ -2602,7 +2641,7 @@ Wave 7:  [C13: T48]  (owner-gated)
          ► Verifier pass 1 (v2.4.0 scope) ► owner dispatches release → v2.4.0
 Wave 8:  [C14: T49→T49a→T51→T52→T53] ∥ [C15: T54→T55→T56]   (T50 retired — § 0.8)
 Wave 9:  [C16: T57] (exclusive)
-Wave 10: [C17: T58→T59→T60→T61→T62→T63] ∥ [C18: T64→T65→T66]
+Wave 10: [C17: T58→T59→T60→T61→T62→T63] ∥ [C18: T64→T65→T66] ∥ [C16a: T57a]
 Wave 11: [C19: T67→T68→T69→T70→T71→T72] ∥ [C20: T73→T74→T75]
 Wave 12: [C21: T76] (exclusive)
 Wave 13: [C22: T77→T78]

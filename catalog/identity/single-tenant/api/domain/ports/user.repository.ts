@@ -12,11 +12,6 @@ export interface UserListRow {
   accessLinkExpiresAt: Date | null
   accessLinkExpired: boolean
   permissions: readonly PermissionKey[]
-  /** Áreas/serviços de atuação (perfil Profissional). Vazios para os demais perfis. */
-  areaIds: readonly string[]
-  serviceIds: readonly string[]
-  /** Áreas restritas a determinados perfis. Vazias para os demais perfis. */
-  schedulingAreaIds: readonly string[]
 }
 
 /**
@@ -83,13 +78,6 @@ export interface UserRepository {
     userId: string,
     permissions: readonly PermissionKey[]
   ): Promise<void>
-  /** Áreas/serviços de atuação persistidos do usuário (vazios para não-Profissional). */
-  findProfessionalScope(
-    userId: string
-  ): Promise<{ areaIds: readonly string[]; serviceIds: readonly string[] }>
-  findProfessionalAreaIdsByUserIds(
-    userIds: string[]
-  ): Promise<Map<string, readonly string[]>>
   /** Busca em lote pela PK — inclui soft-deleted (leitura de integridade da lixeira). */
   findByIds(ids: string[]): Promise<User[]>
   /**

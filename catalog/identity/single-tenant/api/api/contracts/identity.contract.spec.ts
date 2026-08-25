@@ -106,32 +106,6 @@ describe("identity.contract", () => {
       })
     ).toThrow()
   })
-
-  it("areaIds, serviceIds e schedulingAreaIds duplicados são recusados", () => {
-    expect(() =>
-      createUserSchema.parse({ ...CREATE_USER_BASE, areaIds: ["a", "a"] })
-    ).toThrow()
-    expect(() =>
-      createUserSchema.parse({ ...CREATE_USER_BASE, serviceIds: ["s", "s"] })
-    ).toThrow()
-    expect(() =>
-      createUserSchema.parse({
-        ...CREATE_USER_BASE,
-        schedulingAreaIds: ["a", "a"],
-      })
-    ).toThrow()
-  })
-
-  it("listas sem repetição continuam válidas", () => {
-    const out = createUserSchema.parse({
-      ...CREATE_USER_BASE,
-      areaIds: ["a-1", "a-2"],
-      serviceIds: ["s-1", "s-2"],
-      schedulingAreaIds: ["a-1", "a-3"],
-    })
-    expect(out.areaIds).toEqual(["a-1", "a-2"])
-  })
-
   it("idParamSchema exige id de 1 a 64 caracteres", () => {
     expect(idParamSchema.parse({ id: rep("x", 64) }).id).toHaveLength(64)
     expect(() => idParamSchema.parse({ id: "" })).toThrow()

@@ -26,9 +26,6 @@ import { TransactionManager } from "../../../../shared/kernel/transactional/tran
 import { User } from "../../domain/entities/user.entity"
 import { EmailAlreadyInUseError } from "../../domain/errors"
 import { userPermissions } from "../tables/user-permission.table"
-import { userProfessionalAreas } from "../tables/user-professional-area.table"
-import { userProfessionalServices } from "../tables/user-professional-service.table"
-import { userSchedulingAreas } from "../tables/user-scheduling-area.table"
 import { users, type UserRow } from "../tables/user.table"
 import { verificationTokens } from "../tables/verification-token.table"
 
@@ -205,49 +202,6 @@ export class DrizzleUserRepository implements UserRepository {
     await this.db
       .insert(userPermissions)
       .values(permissions.map((permission) => ({ userId, permission })))
-  }
-
-  async findProfessionalScope(
-    userId: string
-  ): Promise<{ areaIds: readonly string[]; serviceIds: readonly string[] }> {
-    const [areaRows, serviceRows] = await Promise.all([
-      this.db
-        .select({ areaId: userProfessionalAreas.areaId })
-        .from(userProfessionalAreas)
-        .where(eq(userProfessionalAreas.userId, userId)),
-      this.db
-        .select({ serviceId: userProfessionalServices.serviceId })
-        .from(userProfessionalServices)
-        .where(eq(userProfessionalServices.userId, userId)),
-    ])
-    return {
-      areaIds: areaRows.map((r) => r.areaId),
-      serviceIds: serviceRows.map((r) => r.serviceId),
-    }
-  }
-
-  async findProfessionalAreaIdsByUserIds(
-    userIds: string[]
-  ): Promise<Map<string, readonly string[]>> {
-    if (userIds.length === 0) return new Map()
-    const rows = await this.db
-      .select({
-        userId: userProfessionalAreas.userId,
-        areaId: userProfessionalAreas.areaId,
-      })
-      .from(userProfessionalAreas)
-      .where(inArray(userProfessionalAreas.userId, userIds))
-      .orderBy(
-        asc(userProfessionalAreas.userId),
-        asc(userProfessionalAreas.areaId)
-      )
-    const groupedAreaIds = new Map<string, string[]>()
-    for (const row of rows) {
-      const areaIds = groupedAreaIds.get(row.userId) ?? []
-      areaIds.push(row.areaId)
-      groupedAreaIds.set(row.userId, areaIds)
-    }
-    return groupedAreaIds
   }
 
   async findByIds(ids: string[]): Promise<User[]> {
@@ -436,67 +390,15 @@ export class DrizzleUserRepository implements UserRepository {
       list.push(row.permission as PermissionKey)
       permissionsByUser.set(row.userId, list)
     }
-    const userIds = entities.map((u) => u.props.id)
-    const areaRows = userIds.length
-      ? await this.db
-          .select({
-            userId: userProfessionalAreas.userId,
-            areaId: userProfessionalAreas.areaId,
-          })
-          .from(userProfessionalAreas)
-          .where(inArray(userProfessionalAreas.userId, userIds))
-      : []
-    const serviceRows = userIds.length
-      ? await this.db
-          .select({
-            userId: userProfessionalServices.userId,
-            serviceId: userProfessionalServices.serviceId,
-          })
-          .from(userProfessionalServices)
-          .where(inArray(userProfessionalServices.userId, userIds))
-      : []
-    const schedulingAreaRows = userIds.length
-      ? await this.db
-          .select({
-            userId: userSchedulingAreas.userId,
-            areaId: userSchedulingAreas.areaId,
-          })
-          .from(userSchedulingAreas)
-          .where(inArray(userSchedulingAreas.userId, userIds))
-      : []
-    const areasByUser = new Map<string, string[]>()
-    for (const row of areaRows) {
-      const list = areasByUser.get(row.userId) ?? []
-      list.push(row.areaId)
-      areasByUser.set(row.userId, list)
-    }
-    const servicesByUser = new Map<string, string[]>()
-    for (const row of serviceRows) {
-      const list = servicesByUser.get(row.userId) ?? []
-      list.push(row.serviceId)
-      servicesByUser.set(row.userId, list)
-    }
-    const schedulingAreasByUser = new Map<string, string[]>()
-    for (const row of schedulingAreaRows) {
-      const list = schedulingAreasByUser.get(row.userId) ?? []
-      list.push(row.areaId)
-      schedulingAreasByUser.set(row.userId, list)
-    }
     const now = new Date()
     const data: UserListRow[] = entities.map((user) => {
       const permissions = permissionsByUser.get(user.props.id) ?? []
-      const areaIds = areasByUser.get(user.props.id) ?? []
-      const serviceIds = servicesByUser.get(user.props.id) ?? []
-      const schedulingAreaIds = schedulingAreasByUser.get(user.props.id) ?? []
       if (user.props.status !== "pending") {
         return {
           user,
           accessLinkExpiresAt: null,
           accessLinkExpired: false,
           permissions,
-          areaIds,
-          serviceIds,
-          schedulingAreaIds,
         }
       }
       const token = accessLinkByUser.get(user.props.id)
@@ -509,9 +411,6 @@ export class DrizzleUserRepository implements UserRepository {
         accessLinkExpiresAt: expiresAt,
         accessLinkExpired: expiresAt === null,
         permissions,
-        areaIds,
-        serviceIds,
-        schedulingAreaIds,
       }
     })
 

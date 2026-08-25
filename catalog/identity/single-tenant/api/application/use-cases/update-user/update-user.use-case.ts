@@ -16,19 +16,13 @@ import { IDENTITY_ACCESS } from "../../identity-context"
 
 import type { UpdateUserInput } from "./types"
 import type { UseCase as UseCaseContract } from "../../../../../shared/kernel/use-case/use-case"
-import type { User } from "../../../domain/entities/user.entity"
 
 /** Erro único da auto-edição — mesmo `type` (403 forbidden) das duas regras. */
 class SelfEditError extends ForbiddenError {
   constructor() {
-    super(
-      "Não é possível alterar o próprio perfil de acesso, permissões ou escopo."
-    )
+    super("Não é possível alterar o próprio perfil de acesso ou permissões.")
   }
 }
-
-const sameIds = (a: readonly string[], b: readonly string[]): boolean =>
-  a.length === b.length && new Set([...a, ...b]).size === new Set(a).size
 
 @UseCase()
 export class UpdateUserUseCase implements UseCaseContract<
@@ -62,7 +56,6 @@ export class UpdateUserUseCase implements UseCaseContract<
       if (!sameProfile || !sameSet) {
         throw new SelfEditError()
       }
-      await this.assertNoSelfScopeChange(user, input)
     }
 
     const actorAccess = this.ctx.getExtension(IDENTITY_ACCESS)
@@ -81,33 +74,5 @@ export class UpdateUserUseCase implements UseCaseContract<
       )
     )
     await this.users.replacePermissions(user.props.id, access.permissions)
-  }
-
-  /**
-   * O próprio escopo também não se auto-edita: marcar-se como atendente ou
-   * ampliar áreas/serviços/áreas restritas por perfil é decisão de outro ator com
-   * permissão, nunca do dono da conta. Master não passa por aqui — editar o
-   * usuário master já é recusado acima.
-   *
-   * SPEC_DEVIATION: para `schedulingAreaIds` a regra é "auto-edição não carrega
-   * essa área", não "não pode mudar".
-   * Reason: o port não tem leitura das áreas restritas por perfil de UM usuário
-   * (só a listagem devolve o campo) e criar essa leitura sai do escopo desta
-   * tarefa; fail-closed é o lado seguro.
-   */
-  private async assertNoSelfScopeChange(
-    user: User,
-    input: UpdateUserInput
-  ): Promise<void> {
-    if (input.schedulingAreaIds.length > 0) {
-      throw new SelfEditError()
-    }
-    const scope = await this.users.findProfessionalScope(user.props.id)
-    if (
-      !sameIds(scope.areaIds, input.areaIds) ||
-      !sameIds(scope.serviceIds, input.serviceIds)
-    ) {
-      throw new SelfEditError()
-    }
   }
 }

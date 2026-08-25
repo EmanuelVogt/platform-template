@@ -14,9 +14,6 @@ const NOW = new Date("2026-06-08T00:00:00.000Z")
 const BASE_ACCESS = {
   accessProfile: "admin" as const,
   permissions: ["admin.users.read" as const],
-  areaIds: [] as string[],
-  serviceIds: [] as string[],
-  schedulingAreaIds: [] as string[],
 }
 
 function makeDeps(over: Record<string, any> = {}) {
@@ -135,9 +132,6 @@ describe("CreateUserUseCase", () => {
         email: "ana@x.test",
         accessProfile: "admin",
         permissions: ["admin.users.create"],
-        areaIds: [],
-        serviceIds: [],
-        schedulingAreaIds: [],
       })
     ).rejects.toBeInstanceOf(InvalidPermissionSetError)
     expect(t.users.insert).not.toHaveBeenCalled()
@@ -151,9 +145,6 @@ describe("CreateUserUseCase", () => {
         email: "ana@x.test",
         accessProfile: "admin",
         permissions: [],
-        areaIds: [],
-        serviceIds: [],
-        schedulingAreaIds: [],
       })
     ).rejects.toBeInstanceOf(InvalidPermissionSetError)
     expect(t.users.insert).not.toHaveBeenCalled()
@@ -165,9 +156,6 @@ describe("CreateUserUseCase", () => {
       email: "pro.cross@example.com",
       accessProfile: "professional",
       permissions: ["admin.users.read"],
-      areaIds: ["area-1"],
-      serviceIds: [],
-      schedulingAreaIds: [],
     })
     expect(t.users.replacePermissions).toHaveBeenCalledWith(
       expect.any(String),
@@ -181,9 +169,6 @@ describe("CreateUserUseCase", () => {
       email: "pro.vazio@example.com",
       accessProfile: "professional",
       permissions: [],
-      areaIds: ["area-1"],
-      serviceIds: [],
-      schedulingAreaIds: [],
     })
     expect(t.users.replacePermissions).toHaveBeenCalledWith(
       expect.any(String),

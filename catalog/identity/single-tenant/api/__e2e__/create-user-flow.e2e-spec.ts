@@ -235,9 +235,6 @@ describe("Fluxo de criação de usuário (e2e)", () => {
   it("master cria Profissional com áreas/serviços; listagem não vaza a system perm", async () => {
     // Sem módulo de produto montado o slot profissional usa os adapters nulos:
     // área/serviço são referências opacas, validadas por quem preencher o slot.
-    const areaId = "area-e2e-pro"
-    const serviceId = "svc-e2e-pro"
-
     await e2e.http
       .post("/v1/admin/users")
       .set("Origin", E2E_ORIGIN)
@@ -248,8 +245,6 @@ describe("Fluxo de criação de usuário (e2e)", () => {
         email: "pedro@example.com",
         accessProfile: "professional",
         permissions: [],
-        areaIds: [areaId],
-        serviceIds: [serviceId],
       })
       .expect(201)
 
@@ -265,13 +260,9 @@ describe("Fluxo de criação de usuário (e2e)", () => {
     expect(pedro).toBeDefined()
     expect(pedro.accessProfile).toBe("professional")
     expect(pedro.permissions).toEqual([])
-    expect(pedro.areaIds).toEqual([areaId])
-    expect(pedro.serviceIds).toEqual([serviceId])
   })
 
   it("cria profissional com permissão de outro módulo", async () => {
-    const areaId = "area-e2e-pro-admin"
-
     const res = await e2e.http
       .post("/v1/admin/users")
       .set("Origin", E2E_ORIGIN)
@@ -282,8 +273,6 @@ describe("Fluxo de criação de usuário (e2e)", () => {
         email: "pro.admin@example.com",
         accessProfile: "professional",
         permissions: ["admin.users.read"],
-        areaIds: [areaId],
-        serviceIds: [],
       })
       .expect(201)
 
@@ -301,41 +290,7 @@ describe("Fluxo de criação de usuário (e2e)", () => {
     expect(proadmin).toBeDefined()
     expect(proadmin.accessProfile).toBe("professional")
     expect(proadmin.permissions).toContain("admin.users.read")
-    expect(proadmin.areaIds.length).toBeGreaterThan(0)
   })
-
-  it("master cria usuário com áreas de agendamento; listagem devolve as áreas", async () => {
-    const areaId = "area-e2e-sched"
-
-    await e2e.http
-      .post("/v1/admin/users")
-      .set("Origin", E2E_ORIGIN)
-      .set("Cookie", masterCookie)
-      .set("Idempotency-Key", "create-user-sched")
-      .send({
-        name: "Sofia Agenda",
-        email: "sofia@example.com",
-        accessProfile: "admin",
-        permissions: ["admin.tags.read"],
-        schedulingAreaIds: [areaId],
-      })
-      .expect(201)
-
-    const list = await e2e.http
-      .get("/v1/admin/users")
-      .set("Cookie", masterCookie)
-      .query({ q: "sofia@example.com" })
-      .expect(200)
-
-    const sofia = list.body.data.find(
-      (u: { email: string }) => u.email === "sofia@example.com"
-    )
-    expect(sofia).toBeDefined()
-    expect(sofia.accessProfile).toBe("admin")
-    expect(sofia.schedulingAreaIds).toEqual([areaId])
-    expect(sofia.areaIds).toEqual([])
-  })
-
   // GA-7: o pseudo-teste "seed master e promoção via SQL" (um
   // `expect(masterId).toBeTruthy()` sobre o seed) saiu com a quebra da cadeia
   // ordenada — é a única remoção que este refactor autoriza. O que ele

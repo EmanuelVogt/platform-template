@@ -43,19 +43,6 @@ export const permissionSetSchema = z
 
 // Áreas/serviços de atuação e as áreas restritas por perfil. Schemas PLANOS de
 // propósito (sem superRefine): ZodEffects quebraria a introspecção
-// OpenAPI→Kubb — o `.refine` de duplicata é um check simples do Zod 4, que
-// preserva o shape de array na introspecção. A regra cross-field (quem atende exige ≥1 área de atuação;
-// quem não atende ignora os arrays) é validada no server (use-case) e
-// espelhada no front. Ver ADR 0032 e 0082.
-export const areaIdsSchema = z
-  .array(z.string().min(1))
-  .max(100)
-  .refine(noDuplicates, NO_DUPLICATES)
-export const serviceIdsSchema = z
-  .array(z.string().min(1))
-  .max(2000)
-  .refine(noDuplicates, NO_DUPLICATES)
-
 // password no contrato só valida presença/limites grosseiros; força real
 // (zxcvbn + breach) é checada no use-case (spec §7 — não é teatro de cliente).
 const password = z.string().min(1, "Senha obrigatória.").max(256)
@@ -134,11 +121,6 @@ export const userListItemSchema = z.object({
   emailVerified: z.boolean(),
   accessProfile: accessProfileSchema,
   permissions: permissionSetSchema,
-  // Áreas/serviços de atuação (quem atende cliente). Vazios para os demais.
-  areaIds: z.array(z.string()),
-  serviceIds: z.array(z.string()),
-  // Áreas restritas a determinados perfis. Vazias para os demais.
-  schedulingAreaIds: z.array(z.string()),
   avatarAttachmentId: z.string().nullable(),
   createdAt: z.string(),
   status: z.enum(["pending", "active"]),
@@ -178,11 +160,6 @@ export const createUserSchema = z.object({
   email,
   accessProfile: assignableAccessProfileSchema,
   permissions: permissionSetSchema,
-  // Quem atende cliente. Omitidos/[] para os demais (o server os ignora).
-  areaIds: areaIdsSchema.default([]),
-  serviceIds: serviceIdsSchema.default([]),
-  // Restrito a determinados perfis. Omitido/[] nos demais perfis (o server o ignora).
-  schedulingAreaIds: areaIdsSchema.default([]),
 })
 export class CreateUserDto extends createZodDto(createUserSchema) {}
 export type CreateUserInput = z.infer<typeof createUserSchema>
@@ -193,11 +170,6 @@ export const updateUserSchema = z.object({
   name,
   accessProfile: assignableAccessProfileSchema,
   permissions: permissionSetSchema,
-  // Quem atende cliente. Omitidos/[] para os demais (o server os ignora).
-  areaIds: areaIdsSchema.default([]),
-  serviceIds: serviceIdsSchema.default([]),
-  // Restrito a determinados perfis. Omitido/[] nos demais perfis (o server o ignora).
-  schedulingAreaIds: areaIdsSchema.default([]),
 })
 export const updateUserParamsSchema = idParamSchema
 export class UpdateUserDto extends createZodDto(updateUserSchema) {}

@@ -68,9 +68,6 @@ function makeUserRow(over: Partial<UserListRow> = {}): UserListRow {
     accessLinkExpiresAt: null,
     accessLinkExpired: false,
     permissions: [],
-    areaIds: [],
-    serviceIds: [],
-    schedulingAreaIds: [],
     ...over,
   }
 }
@@ -284,9 +281,6 @@ describe("ListUsersUseCase", () => {
       accessLinkExpiresAt: null,
       accessLinkExpired: false,
       permissions: [],
-      areaIds: [],
-      serviceIds: [],
-      schedulingAreaIds: [],
     }
     const { uc } = makeDeps({ listResult: makePaginatedResult([row]) })
 
@@ -294,16 +288,6 @@ describe("ListUsersUseCase", () => {
 
     expect(out.data[0]!.deletedAt).toBe("2026-05-15T08:00:00.000Z")
   })
-
-  it("schedulingAreaIds da row são repassadas para a view", async () => {
-    const row = makeUserRow({ schedulingAreaIds: ["area-1", "area-2"] })
-    const { uc } = makeDeps({ listResult: makePaginatedResult([row]) })
-
-    const out = await uc.execute({ page: 1, pageSize: 20 })
-
-    expect(out.data[0]!.schedulingAreaIds).toEqual(["area-1", "area-2"])
-  })
-
   it("permissions da row são repassadas para a view sem modificação", async () => {
     const row = makeUserRow({
       permissions: ["admin.users.read", "admin.users.create"],

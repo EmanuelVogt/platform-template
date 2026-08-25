@@ -28,11 +28,6 @@ export type UserListItemView = {
   emailVerified: boolean
   accessProfile: AccessProfile
   permissions: readonly PermissionKey[]
-  // Áreas/serviços de atuação (quem atende cliente). Vazios para os demais.
-  areaIds: readonly string[]
-  serviceIds: readonly string[]
-  // Áreas de agendamento (perfil Agendamentos). Vazias para os demais.
-  schedulingAreaIds: readonly string[]
   avatarAttachmentId: string | null
   createdAt: string
   status: UserStatus
@@ -66,9 +61,6 @@ export function toUserListItemView(row: UserListRow): UserListItemView {
     emailVerified: props.emailVerified,
     accessProfile: props.accessProfile,
     permissions: row.permissions,
-    areaIds: row.areaIds,
-    serviceIds: row.serviceIds,
-    schedulingAreaIds: row.schedulingAreaIds,
     avatarAttachmentId: props.avatarAttachmentId,
     createdAt: props.createdAt.toISOString(),
     status: props.status,

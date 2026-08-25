@@ -37,9 +37,6 @@ export class UpdateUserController {
       name: dto.name,
       accessProfile: dto.accessProfile,
       permissions: dto.permissions,
-      areaIds: dto.areaIds,
-      serviceIds: dto.serviceIds,
-      schedulingAreaIds: dto.schedulingAreaIds,
     })
   }
 }

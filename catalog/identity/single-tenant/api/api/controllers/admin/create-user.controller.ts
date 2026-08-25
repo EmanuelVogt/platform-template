@@ -24,9 +24,6 @@ export class CreateUserController {
       email: dto.email,
       accessProfile: dto.accessProfile,
       permissions: dto.permissions,
-      areaIds: dto.areaIds,
-      serviceIds: dto.serviceIds,
-      schedulingAreaIds: dto.schedulingAreaIds,
     })
   }
 }

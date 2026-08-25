@@ -6,9 +6,4 @@ export type UpdateUserInput = {
   name: string
   accessProfile: AssignableAccessProfile
   permissions: PermissionKey[]
-  // Quem atende cliente: áreas de atuação e o subconjunto de serviços. Vazios para os demais.
-  areaIds: string[]
-  serviceIds: string[]
-  // Perfil Agendamentos: áreas em que o usuário pode agendar. Vazio nos demais.
-  schedulingAreaIds: string[]
 }

@@ -16,9 +16,6 @@ const BASE_INPUT = {
   name: "Novo Nome",
   accessProfile: "admin" as const,
   permissions: ["admin.users.read" as const],
-  areaIds: [] as string[],
-  serviceIds: [] as string[],
-  schedulingAreaIds: [] as string[],
 }
 
 function makeUser(over: Partial<UserProps> = {}): User {
@@ -278,113 +275,5 @@ describe("UpdateUserUseCase", () => {
     await expect(
       uc.execute({ ...BASE_INPUT, permissions: [] })
     ).rejects.toThrow(InvalidPermissionSetError)
-  })
-
-  describe("auto-edição não amplia o próprio escopo", () => {
-    function selfDeps(
-      over: {
-        user?: Partial<UserProps>
-        scope?: { areaIds: string[]; serviceIds: string[] }
-      } = {}
-    ) {
-      const users = {
-        findByIdWithPermissions: vi.fn().mockResolvedValue({
-          user: makeUser(over.user),
-          permissions: ["admin.users.read"],
-        }),
-        findProfessionalScope: vi
-          .fn()
-          .mockResolvedValue(over.scope ?? { areaIds: [], serviceIds: [] }),
-        update: vi.fn().mockResolvedValue(undefined),
-        replacePermissions: vi.fn().mockResolvedValue(undefined),
-      }
-      return makeDeps({
-        users,
-        ctx: fakeRequestContext(() => ({
-          correlationId: "c1",
-          locale: "pt-BR",
-          userId: "u-target",
-          access: {
-            permissions: new Set(["admin.users.read"]),
-            isMaster: false,
-          },
-        })),
-      })
-    }
-    it("mudar as próprias áreas de atuação → 403", async () => {
-      const { uc, users } = selfDeps({
-        scope: { areaIds: ["a-1"], serviceIds: [] },
-      })
-
-      await expect(
-        uc.execute({
-          ...BASE_INPUT,
-          areaIds: ["a-1", "a-2"],
-        })
-      ).rejects.toThrow(ForbiddenError)
-      expect(users.update).not.toHaveBeenCalled()
-    })
-
-    it("mudar os próprios serviços de atuação → 403", async () => {
-      const { uc, users } = selfDeps({
-        scope: { areaIds: ["a-1"], serviceIds: ["s-1"] },
-      })
-
-      await expect(
-        uc.execute({
-          ...BASE_INPUT,
-          areaIds: ["a-1"],
-          serviceIds: ["s-1", "s-2"],
-        })
-      ).rejects.toThrow(ForbiddenError)
-      expect(users.update).not.toHaveBeenCalled()
-    })
-
-    it("carregar área de agendamento na auto-edição → 403", async () => {
-      const { uc, users } = selfDeps()
-
-      await expect(
-        uc.execute({ ...BASE_INPUT, schedulingAreaIds: ["area-1"] })
-      ).rejects.toThrow(ForbiddenError)
-      expect(users.update).not.toHaveBeenCalled()
-    })
-
-    it("reenviar o mesmo escopo (no-op) passa", async () => {
-      const { uc, users } = selfDeps({
-        scope: { areaIds: ["a-1"], serviceIds: ["s-1"] },
-      })
-
-      await uc.execute({
-        ...BASE_INPUT,
-        areaIds: ["a-1"],
-        serviceIds: ["s-1"],
-      })
-
-      expect(users.update).toHaveBeenCalledTimes(1)
-    })
-
-    it("a regra é só da auto-edição: master muda o escopo de outro usuário", async () => {
-      const { uc, users } = makeDeps({
-        users: {
-          findByIdWithPermissions: vi.fn().mockResolvedValue({
-            user: makeUser(),
-            permissions: [],
-          }),
-          findProfessionalScope: vi
-            .fn()
-            .mockResolvedValue({ areaIds: [], serviceIds: [] }),
-          update: vi.fn().mockResolvedValue(undefined),
-          replacePermissions: vi.fn().mockResolvedValue(undefined),
-        },
-      })
-
-      await uc.execute({
-        ...BASE_INPUT,
-        areaIds: ["a-1"],
-        schedulingAreaIds: ["area-1"],
-      })
-
-      expect(users.update).toHaveBeenCalledTimes(1)
-    })
   })
 })

@@ -1,0 +1,481 @@
+{
+  "apps/api/src/openapi/docs-reference.spec.ts": {
+    "no-unsafe-cast": 1
+  },
+  "apps/api/src/openapi/openapi-config.spec.ts": {
+    "single-testing-module": 1,
+    "no-unsafe-cast": 1
+  },
+  "apps/api/src/shared/config/env.spec.ts": {
+    "no-harness-literal": 1
+  },
+  "apps/api/src/shared/infra/database/application-pool.int-spec.ts": {
+    "no-harness-literal": 1
+  },
+  "apps/api/src/shared/infra/database/connection-config.spec.ts": {
+    "no-harness-literal": 1
+  },
+  "apps/api/src/shared/infra/database/dedicated-client.int-spec.ts": {
+    "no-harness-literal": 2
+  },
+  "apps/api/src/shared/infra/database/managed-dedicated-client.spec.ts": {
+    "no-unsafe-cast": 7
+  },
+  "apps/api/src/shared/infra/rate-limit/redis-rate-limiter.int-spec.ts": {
+    "no-container-in-int-spec": 3
+  },
+  "apps/api/src/shared/infra/redis/redis.module.spec.ts": {
+    "no-unsafe-cast": 2
+  },
+  "apps/api/src/shared/infra/redis/redis.provider.spec.ts": {
+    "no-harness-literal": 1
+  },
+  "apps/api/src/shared/infra/storage/r2-storage.adapter.spec.ts": {
+    "no-unsafe-cast": 2
+  },
+  "apps/api/src/shared/kernel/access/access.guard.spec.ts": {
+    "no-unsafe-cast": 1
+  },
+  "apps/api/src/shared/kernel/context/request-context.middleware.spec.ts": {
+    "no-unsafe-cast": 2
+  },
+  "apps/api/src/shared/kernel/errors/nested-acquisition.error.spec.ts": {
+    "no-unsafe-cast": 1
+  },
+  "apps/api/src/shared/kernel/errors/problem-details.filter.spec.ts": {
+    "no-unsafe-cast": 2
+  },
+  "apps/api/src/shared/kernel/health/health.controller.spec.ts": {
+    "no-unsafe-cast": 3
+  },
+  "apps/api/src/shared/kernel/i18n/message-pack.spec.ts": {
+    "no-harness-literal": 1
+  },
+  "apps/api/src/shared/kernel/idempotency/idempotency.interceptor.spec.ts": {
+    "no-unsafe-cast": 3
+  },
+  "apps/api/src/shared/kernel/logging/log.interceptor.spec.ts": {
+    "no-unsafe-cast": 2,
+    "no-harness-literal": 5
+  },
+  "apps/api/src/shared/kernel/logging/log.redact.spec.ts": {
+    "no-harness-literal": 3
+  },
+  "apps/api/src/shared/kernel/logging/logger.factory.spec.ts": {
+    "no-unsafe-cast": 1
+  },
+  "apps/api/src/shared/kernel/outbox/outbox.int-spec.ts": {
+    "no-harness-literal": 2,
+    "no-unsafe-cast": 1
+  },
+  "apps/api/src/shared/kernel/rate-limit/rate-limit.guard.spec.ts": {
+    "no-unsafe-cast": 1
+  },
+  "apps/api/src/shared/kernel/rate-limit/resilient-rate-limiter.spec.ts": {
+    "no-unsafe-cast": 1
+  },
+  "apps/api/src/shared/kernel/scheduling/maintenance-runtime.int-spec.ts": {
+    "no-harness-literal": 1
+  },
+  "apps/api/src/shared/kernel/transactional/transaction-context.spec.ts": {
+    "no-unsafe-cast": 2
+  },
+  "apps/api/test/security-bootstrap.e2e-spec.ts": {
+    "no-harness-literal": 2
+  },
+  "apps/api/test/setup/app-factory.ts": {
+    "runner-setup-allowlist": 1
+  },
+  "apps/api/test/setup/cookies.ts": {
+    "runner-setup-allowlist": 1
+  },
+  "apps/api/test/setup/test-db.ts": {
+    "runner-setup-allowlist": 1
+  },
+  "apps/api/test/setup/test-logger.ts": {
+    "runner-setup-allowlist": 1
+  },
+  "catalog/attachment/api/__e2e__/access-link-avatar-ownership.e2e-spec.ts": {
+    "no-harness-literal": 3,
+    "no-local-helper": 2,
+    "no-unsafe-cast": 1
+  },
+  "catalog/attachment/api/__e2e__/attachment-delete.e2e-spec.ts": {
+    "no-harness-literal": 2,
+    "no-local-helper": 1
+  },
+  "catalog/attachment/api/__e2e__/attachment-download.e2e-spec.ts": {
+    "no-harness-literal": 23,
+    "no-unsafe-cast": 1
+  },
+  "catalog/attachment/api/__e2e__/attachment-upload.e2e-spec.ts": {
+    "no-harness-literal": 5,
+    "no-unsafe-cast": 5
+  },
+  "catalog/attachment/api/api/controllers/multipart-files.spec.ts": {
+    "no-unsafe-cast": 2
+  },
+  "catalog/attachment/api/api/controllers/upload-attachments.controller.spec.ts": {
+    "no-unsafe-cast": 10
+  },
+  "catalog/attachment/api/api/facades/attachment.facade.spec.ts": {
+    "no-unsafe-cast": 6
+  },
+  "catalog/attachment/api/application/jobs/purge-pending-attachments.job.spec.ts": {
+    "no-unsafe-cast": 7
+  },
+  "catalog/attachment/api/application/use-cases/confirm-uploads/confirm-uploads.use-case.spec.ts": {
+    "no-unsafe-cast": 3
+  },
+  "catalog/attachment/api/application/use-cases/delete-attachment/delete-attachment.use-case.spec.ts": {
+    "no-unsafe-cast": 2
+  },
+  "catalog/attachment/api/application/use-cases/get-attachment-for-download/get-attachment-for-download.use-case.spec.ts": {
+    "no-from-props": 1,
+    "no-unsafe-cast": 1
+  },
+  "catalog/attachment/api/application/use-cases/list-attachment-access-log/list-attachment-access-log.use-case.spec.ts": {
+    "no-unsafe-cast": 2
+  },
+  "catalog/attachment/api/application/use-cases/upload-attachment/upload-attachment.use-case.int-spec.ts": {
+    "no-local-helper": 1,
+    "no-unsafe-cast": 1
+  },
+  "catalog/attachment/api/application/use-cases/upload-attachment/upload-attachment.use-case.spec.ts": {
+    "no-unsafe-cast": 2
+  },
+  "catalog/attachment/api/application/use-cases/upload-attachments-batch/upload-attachments-batch.use-case.spec.ts": {
+    "no-unsafe-cast": 8
+  },
+  "catalog/audit/api/__e2e__/audit-product-extension.e2e-spec.ts": {
+    "no-harness-literal": 2
+  },
+  "catalog/audit/api/__e2e__/audit.e2e-spec.ts": {
+    "no-harness-literal": 2
+  },
+  "catalog/audit/api/application/list-audit-entries/list-audit-entries.use-case.spec.ts": {
+    "no-unsafe-cast": 7
+  },
+  "catalog/identity/single-tenant/api/__e2e__/access-link-activation.e2e-spec.ts": {
+    "no-harness-literal": 3
+  },
+  "catalog/identity/single-tenant/api/__e2e__/auth-anti-enum.e2e-spec.ts": {
+    "no-harness-literal": 4
+  },
+  "catalog/identity/single-tenant/api/__e2e__/auth-csrf-none.e2e-spec.ts": {
+    "no-local-helper": 1,
+    "no-harness-literal": 1
+  },
+  "catalog/identity/single-tenant/api/__e2e__/auth-login.e2e-spec.ts": {
+    "no-harness-literal": 1,
+    "no-local-helper": 1
+  },
+  "catalog/identity/single-tenant/api/__e2e__/auth-reset-token-logging.e2e-spec.ts": {
+    "no-harness-literal": 1
+  },
+  "catalog/identity/single-tenant/api/__e2e__/create-user-flow.e2e-spec.ts": {
+    "no-harness-literal": 4
+  },
+  "catalog/identity/single-tenant/api/__e2e__/notifications-inapp.e2e-spec.ts": {
+    "no-harness-literal": 2
+  },
+  "catalog/identity/single-tenant/api/api/contracts/identity.contract.spec.ts": {
+    "no-harness-literal": 7
+  },
+  "catalog/identity/single-tenant/api/api/controllers/auth/confirm-email-change.controller.spec.ts": {
+    "no-unsafe-cast": 5
+  },
+  "catalog/identity/single-tenant/api/api/controllers/session/upload-avatar.controller.spec.ts": {
+    "no-unsafe-cast": 3
+  },
+  "catalog/identity/single-tenant/api/api/guards/cookie.spec.ts": {
+    "no-unsafe-cast": 1
+  },
+  "catalog/identity/single-tenant/api/api/guards/csrf.guard.spec.ts": {
+    "no-harness-literal": 8,
+    "no-unsafe-cast": 2
+  },
+  "catalog/identity/single-tenant/api/api/middleware/auth-seam.spec.ts": {
+    "no-from-props": 1,
+    "single-testing-module": 1
+  },
+  "catalog/identity/single-tenant/api/api/middleware/auth.middleware.spec.ts": {
+    "no-from-props": 1,
+    "no-unsafe-cast": 15
+  },
+  "catalog/identity/single-tenant/api/application/rate-limiter-outage.listener.spec.ts": {
+    "no-unsafe-cast": 1
+  },
+  "catalog/identity/single-tenant/api/application/services/create-session.service.spec.ts": {
+    "no-from-props": 1,
+    "no-unsafe-cast": 3
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/cancel-access-link/cancel-access-link.use-case.spec.ts": {
+    "typed-deps": 1
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/change-password/change-password.use-case.int-spec.ts": {
+    "no-from-props": 1,
+    "no-unsafe-cast": 10,
+    "no-harness-literal": 6
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/change-password/change-password.use-case.spec.ts": {
+    "no-from-props": 1,
+    "typed-deps": 1,
+    "no-harness-literal": 2
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/confirm-email-change/confirm-email-change.use-case.spec.ts": {
+    "no-from-props": 1,
+    "typed-deps": 1
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/create-permission-template/create-permission-template.use-case.spec.ts": {
+    "typed-deps": 1
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/create-user/create-user.use-case.spec.ts": {
+    "typed-deps": 1
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/delete-permission-template/delete-permission-template.use-case.spec.ts": {
+    "no-from-props": 1,
+    "no-unsafe-cast": 4
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/delete-user/delete-user.use-case.spec.ts": {
+    "no-from-props": 1,
+    "typed-deps": 1
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/get-current-user/get-current-user.use-case.spec.ts": {
+    "no-from-props": 1,
+    "typed-deps": 1
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/get-permission-template/get-permission-template.use-case.spec.ts": {
+    "no-from-props": 3,
+    "no-unsafe-cast": 5
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/list-access-history/list-access-history.use-case.spec.ts": {
+    "no-unsafe-cast": 2
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/list-devices/list-devices.use-case.spec.ts": {
+    "no-unsafe-cast": 2
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/list-permission-templates/list-permission-templates.use-case.spec.ts": {
+    "no-from-props": 2,
+    "typed-deps": 1
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/list-users/list-users.use-case.spec.ts": {
+    "no-from-props": 2,
+    "no-unsafe-cast": 1
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/login/login.use-case.spec.ts": {
+    "no-from-props": 3,
+    "typed-deps": 1,
+    "no-harness-literal": 21
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/logout/logout.use-case.spec.ts": {
+    "typed-deps": 1,
+    "no-unsafe-cast": 1
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/purge-users/purge-users.use-case.spec.ts": {
+    "no-from-props": 1,
+    "no-unsafe-cast": 2
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/request-email-change/email-change-flow.int-spec.ts": {
+    "no-harness-literal": 3,
+    "no-from-props": 3
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/request-email-change/request-email-change.use-case.spec.ts": {
+    "no-from-props": 1,
+    "typed-deps": 1,
+    "no-harness-literal": 21
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/request-password-reset/request-password-reset.use-case.spec.ts": {
+    "no-from-props": 1,
+    "typed-deps": 1
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/resend-access-link/resend-access-link.use-case.spec.ts": {
+    "typed-deps": 1
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/resend-verification/resend-verification.use-case.spec.ts": {
+    "no-from-props": 1,
+    "typed-deps": 1
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/reset-password/reset-password.use-case.int-spec.ts": {
+    "no-from-props": 1,
+    "no-harness-literal": 4,
+    "no-unsafe-cast": 7
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/reset-password/reset-password.use-case.spec.ts": {
+    "typed-deps": 1,
+    "no-from-props": 1,
+    "no-harness-literal": 13
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/restore-users/restore-users.use-case.spec.ts": {
+    "no-from-props": 1,
+    "no-unsafe-cast": 1
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/revoke-device/revoke-device.use-case.spec.ts": {
+    "no-unsafe-cast": 9
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/revoke-other-devices/revoke-other-devices.use-case.spec.ts": {
+    "no-unsafe-cast": 2
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/set-password/set-password.use-case.spec.ts": {
+    "no-harness-literal": 2,
+    "no-from-props": 2,
+    "no-unsafe-cast": 3,
+    "typed-deps": 1
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/update-my-profile/update-my-profile.use-case.spec.ts": {
+    "no-from-props": 1,
+    "typed-deps": 1
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/update-permission-template/update-permission-template.use-case.spec.ts": {
+    "no-from-props": 2,
+    "typed-deps": 1
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/update-user/update-user.use-case.spec.ts": {
+    "no-from-props": 1,
+    "typed-deps": 1
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/upload-access-link-avatar/upload-access-link-avatar.use-case.spec.ts": {
+    "typed-deps": 1
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/upload-avatar/upload-avatar.use-case.spec.ts": {
+    "no-from-props": 1,
+    "typed-deps": 1,
+    "no-unsafe-cast": 1
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/validate-access-link/validate-access-link.use-case.spec.ts": {
+    "typed-deps": 1
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/validate-email-change/validate-email-change.use-case.spec.ts": {
+    "no-from-props": 1,
+    "no-unsafe-cast": 3
+  },
+  "catalog/identity/single-tenant/api/application/use-cases/verify-email/verify-email.use-case.spec.ts": {
+    "no-from-props": 1,
+    "typed-deps": 1
+  },
+  "catalog/identity/single-tenant/api/domain/entities/device.entity.spec.ts": {
+    "no-from-props": 1
+  },
+  "catalog/identity/single-tenant/api/domain/entities/user.entity.spec.ts": {
+    "no-from-props": 10
+  },
+  "catalog/identity/single-tenant/api/domain/entities/verification-token.entity.spec.ts": {
+    "no-from-props": 4
+  },
+  "catalog/identity/single-tenant/api/domain/errors.ts": {
+    "no-harness-literal": 1
+  },
+  "catalog/identity/single-tenant/api/identity.config.spec.ts": {
+    "no-harness-literal": 1
+  },
+  "catalog/identity/single-tenant/api/identity.module.spec.ts": {
+    "single-testing-module": 1
+  },
+  "catalog/identity/single-tenant/api/infrastructure/hashing/bounded-password-hasher.spec.ts": {
+    "no-unsafe-cast": 2
+  },
+  "catalog/identity/single-tenant/api/infrastructure/password/breach-check.spec.ts": {
+    "no-unsafe-cast": 2,
+    "no-harness-literal": 1
+  },
+  "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-auth-event.repository.int-spec.ts": {
+    "no-from-props": 6,
+    "no-harness-literal": 3,
+    "no-unsafe-cast": 4
+  },
+  "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-device.repository.int-spec.ts": {
+    "no-local-helper": 1
+  },
+  "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-professional-assignment.repository.int-spec.ts": {
+    "no-local-helper": 1
+  },
+  "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-session.repository.int-spec.ts": {
+    "no-local-helper": 1,
+    "no-from-props": 5
+  },
+  "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-user.repository.int-spec.ts": {
+    "no-from-props": 13,
+    "no-local-helper": 1
+  },
+  "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-user.repository.profile-extension.int-spec.ts": {
+    "no-from-props": 1
+  },
+  "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-user.repository.scope.int-spec.ts": {
+    "no-local-helper": 1
+  },
+  "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-verification-token.repository.int-spec.ts": {
+    "no-from-props": 6
+  },
+  "catalog/identity/single-tenant/api/infrastructure/repositories/professional-directory.facade.int-spec.ts": {
+    "no-local-helper": 1
+  },
+  "catalog/identity/single-tenant/api/testing/seeds/master-user.seed.spec.ts": {
+    "no-unsafe-cast": 1
+  },
+  "catalog/identity/single-tenant/parity/access-policy.parity.spec.ts": {
+    "no-unsafe-cast": 1
+  },
+  "catalog/identity/single-tenant/parity/csrf.parity.spec.ts": {
+    "no-unsafe-cast": 1
+  },
+  "catalog/identity/single-tenant/parity/route-access.parity.spec.ts": {
+    "no-unsafe-cast": 1
+  },
+  "catalog/notification/api/api/controllers/stream/sse.controller.spec.ts": {
+    "no-harness-literal": 1,
+    "no-unsafe-cast": 12
+  },
+  "catalog/notification/api/application/event-handlers/external/notification-requested.handler.spec.ts": {
+    "no-unsafe-cast": 7
+  },
+  "catalog/notification/api/application/require-recipient.spec.ts": {
+    "no-unsafe-cast": 1
+  },
+  "catalog/notification/api/application/templates/notification-template-registry.spec.ts": {
+    "no-unsafe-cast": 1
+  },
+  "catalog/notification/api/application/use-cases/archive-notification/archive-notification.use-case.spec.ts": {
+    "no-unsafe-cast": 5
+  },
+  "catalog/notification/api/application/use-cases/get-unseen-count/get-unseen-count.use-case.spec.ts": {
+    "no-unsafe-cast": 2
+  },
+  "catalog/notification/api/application/use-cases/list-notifications/list-notifications.use-case.spec.ts": {
+    "no-unsafe-cast": 4
+  },
+  "catalog/notification/api/application/use-cases/mark-all-read/mark-all-read.use-case.spec.ts": {
+    "no-unsafe-cast": 2
+  },
+  "catalog/notification/api/application/use-cases/mark-all-seen/mark-all-seen.use-case.spec.ts": {
+    "no-unsafe-cast": 2
+  },
+  "catalog/notification/api/application/use-cases/mark-read/mark-read.use-case.spec.ts": {
+    "no-unsafe-cast": 3
+  },
+  "catalog/notification/api/infrastructure/channels/email.channel.spec.ts": {
+    "no-unsafe-cast": 1
+  },
+  "catalog/notification/api/infrastructure/mailer/handlebars-template-renderer.spec.ts": {
+    "no-unsafe-cast": 1
+  },
+  "catalog/notification/api/infrastructure/mailer/log-mailer.spec.ts": {
+    "no-unsafe-cast": 1
+  },
+  "catalog/notification/api/infrastructure/realtime/realtime.int-spec.ts": {
+    "no-container-in-int-spec": 2
+  },
+  "catalog/notification/parity/mailer.parity.spec.ts": {
+    "no-unsafe-cast": 1
+  },
+  "catalog/tag/api/__e2e__/tags.e2e-spec.ts": {
+    "no-harness-literal": 2
+  },
+  "catalog/tag/api/application/use-cases/list-tags/list-tags.use-case.spec.ts": {
+    "no-unsafe-cast": 2
+  },
+  "catalog/tag/api/application/use-cases/purge-tags/purge-tags.use-case.spec.ts": {
+    "no-from-props": 1,
+    "typed-deps": 1,
+    "no-unsafe-cast": 1
+  }
+}

@@ -181,7 +181,7 @@ leaks stack, SQL or paths; the `correlationId` is shown in support and toast sur
 
 | You are creating                                          | Put it in                                                                                                                                                  |
 | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Domain-free primitive (button, input, dialog)             | the UI kit package (`packages/ui`)                                                                                                                         |
+| Domain-free primitive (button, input, dialog)             | `shared/ui/`                                                                                                                                               |
 | App-specific composition; controlled form field           | `shared/ui/`; `shared/ui/form/` (`Rhf*`)                                                                                                                   |
 | Entity component; form model/editor reused by 2+ features | `entities/<resource>/ui/`; `entities/<resource>/` (`model/` + `ui/`)                                                                                       |
 | Composed block; user action or form                       | `widgets/<slice>/`; `features/<action>/`                                                                                                                   |

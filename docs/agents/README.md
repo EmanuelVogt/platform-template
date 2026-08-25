@@ -6,7 +6,7 @@ talk to the user, infra access, issue tracker. They are written in
 reload.
 
 Everything else under `docs/` is a **human** handbook — `code-quality.md`, `arch/`, `test/`,
-`dev/`, `catalog/`, `adr/`. All docs are English; replies to the user follow
+`dev/`, `docs/catalog/`, `adr/`. All docs are English; replies to the user follow
 [`communication.md`](communication.md).
 
 | File                                   | When to read it                                                                   |

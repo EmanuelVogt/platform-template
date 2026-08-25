@@ -33,7 +33,7 @@
   "apps/api/src/shared/infra/redis/redis.provider.spec.ts": {
     "no-harness-literal": 1
   },
-  "apps/api/src/shared/infra/storage/s3-storage.adapter.spec.ts": {
+  "apps/api/src/shared/infra/storage/r2-storage.adapter.spec.ts": {
     "no-unsafe-cast": 2
   },
   "apps/api/src/shared/kernel/access/access.guard.spec.ts": {
@@ -165,9 +165,6 @@
   },
   "catalog/audit/api/application/list-audit-entries/list-audit-entries.use-case.spec.ts": {
     "no-unsafe-cast": 7
-  },
-  "catalog/audit/api/infrastructure/repositories/drizzle-activity-stats.reader.spec.ts": {
-    "no-unsafe-cast": 1
   },
   "catalog/identity/single-tenant/api/__e2e__/access-link-activation.e2e-spec.ts": {
     "no-harness-literal": 3
@@ -405,9 +402,6 @@
   "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-session.repository.int-spec.ts": {
     "no-local-helper": 1,
     "no-from-props": 5
-  },
-  "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-usage-stats.reader.spec.ts": {
-    "no-unsafe-cast": 1
   },
   "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-user.repository.int-spec.ts": {
     "no-from-props": 13,

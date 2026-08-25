@@ -231,3 +231,42 @@ zero additional evidence, for the reason established above.
 
 **Disposition**: accepted. Feature moved to `.specs/features/done/docs-audience-contract/`; the
 `## Handoff` bullet archived to `handoff-archive.md` alongside this report.
+
+### Post-closeout re-measurement (2026-08-25, HEAD `fe15a39`)
+
+`tsr-verify` was merged into `main` at `ced8745` shortly after this feature was closed, clearing the
+RULE D blocker. `pnpm template:smoke` was re-run to convert the waiver into a real measurement.
+
+**It did not go green.** Exit 7, still at gate 1/4, now on a **fourth** independent foreign defect:
+
+```
+template:smoke — "pnpm test:db" falhou no child (código 1)
+ FAIL |api-int| src/shared/kernel/outbox/outbox.int-spec.ts > Outbox (integração) >
+   no-listeners: não marca published, reentra com lastError 'sem listener'
+ AssertionError: expected +0 to be 1
+```
+
+`apps/api/src/shared/kernel/outbox/**` is kernel code, outside this feature's diff surface
+(`docs/**`, `scripts/platform/__tests__/**`, `copier.yml`, `.claude/hooks/**`). RULE D is confirmed
+gone — the run got past it.
+
+**This strengthens the waiver rather than weakening it.** The Final gate has now been blocked, in
+sequence, by four unrelated foreign defects:
+
+| # | Defect | Cleared by |
+| --- | --- | --- |
+| 1 | `null-storage.adapter.spec.ts` 5× TS2554 (`d5cfcaf`) | `03e74f2` |
+| 2 | `harness-hygiene-baseline.json` drift (`ab81666`) | worktree-local grandfather entries |
+| 3 | `module-boundaries.spec.ts` RULE D in the child (`ef9f9f8`) | `ced8745` |
+| 4 | `outbox.int-spec.ts` no-listeners case | open |
+
+Each clearance revealed the next. `main` is a shared checkout with several features in flight —
+another session was committing to it during this very measurement — so gating this feature's closeout
+on a quiescent green was a treadmill, not a milestone. The evidentiary point stands unchanged and is
+what actually matters: none of the four gates reads `docs/`, `_exclude`, or the rendered doc tree, so
+none of these runs could have added or removed evidence for any of the 11 ACs. The rendered-child
+inspection remains this feature's end-to-end proof.
+
+Defect 4 is recorded here as an observation for whoever owns the kernel outbox, not as a task of this
+feature. It was measured on a non-quiescent checkout (see `L-044`) and should be reproduced in
+isolation before being treated as real.

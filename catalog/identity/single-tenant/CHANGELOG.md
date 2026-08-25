@@ -4,6 +4,16 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 [semver](https://semver.org/lang/pt-BR/). Toda versão que leva código lista os advisories
 (`docs/advisories/ADV-*.md`) que carrega.
 
+## [2.1.1]
+
+### Fixed
+
+- `README.md`: três referências tratavam `api/testing/fake-mailer.ts` como arquivo desta
+  entrada — o arquivo mora em `notification/api/testing/fake-mailer.ts` desde a v2.1.0
+  (`test-suite-refactor` T17) e é reexportado por `api/testing/index.ts`. Sem mudança de
+  código; a versão sobe porque REL-04 exige que qualquer mudança no diretório da entrada
+  desde a tag anterior mova a versão, inclusive uma mudança só de documentação.
+
 ## [2.1.0]
 
 ### Added

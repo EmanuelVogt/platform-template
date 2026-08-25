@@ -2,6 +2,17 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [2.1.1]
+
+### Changed
+
+- `README.md`: § Paridade passa a dizer onde vivem os helpers de teste da entrada
+  (`api/testing/` — `fakeMailer`, `DELIVERY_DISPATCHERS`, `findSent`, `makeNotification`,
+  `sample-templates/`) e quem os importa hoje (`identity`, por `dependsOn: notification`,
+  reexportando `fakeMailer` do próprio barril para `audit`/`attachment`/`tag`). Sem mudança de
+  código; a versão sobe porque REL-04 exige que qualquer mudança no diretório da entrada desde a
+  tag anterior mova a versão, inclusive uma mudança só de documentação.
+
 ## [2.1.0]
 
 ### Added

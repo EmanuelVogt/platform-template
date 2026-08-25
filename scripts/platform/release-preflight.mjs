@@ -50,6 +50,41 @@ function moduleVersionAt({ repoRoot, exec, ref, entryDir }) {
   }
 }
 
+// Os chamadores da regra não concordam sobre o que é "o estado atual":
+// - `head`   — CI e `release-preflight`: medem o commit que vai virar tag;
+// - `staged` — hook de pre-commit: mede o **índice**, porque ali `HEAD` é o
+//   *pai* e o conserto que está sendo commitado é invisível.
+// Ler `HEAD` dentro do hook travou o repositório em 2026-08-24: um commit que
+// editou o CHANGELOG de uma entrada sem mover a versão deixou o commit
+// seguinte sob `catalog/**` sem como passar — e o commit que consertava era
+// justamente o barrado. O modo viaja pelo ambiente porque quem precisa dele
+// é o `catalog-lint.mjs` chamado pelo lefthook, sem parâmetro para repassar
+// (ver `lefthook-local.yml`); ausente, o modo é `head` — CI e
+// `release-preflight` seguem inalterados.
+export const ENTRY_BUMP_STATE_ENV = "PLATFORM_ENTRY_BUMP_STATE"
+
+const ENTRY_BUMP_STATES = ["head", "staged"]
+
+// `git show :<caminho>` (ref vazia) lê o estágio 0 do índice — o conteúdo
+// exato que o commit em curso vai gravar.
+const INDEX_REF = ""
+
+function assertEntryBumpState(state) {
+  if (!ENTRY_BUMP_STATES.includes(state)) {
+    throw new Error(
+      `estado inválido para a regra de bump: "${state}" — use "head" (CI, release-preflight) ou "staged" (hook de pre-commit)`
+    )
+  }
+  return state
+}
+
+export function currentStateFromEnv(env = process.env) {
+  const value = env[ENTRY_BUMP_STATE_ENV]
+  return value === undefined || value === ""
+    ? "head"
+    : assertEntryBumpState(value)
+}
+
 // REL-04: uma entrada cujo diretório mudou desde a tag anterior mas cujo
 // `module.json.version` permanece igual é a classe de bug do issue #9
 // (colisão em 2.0.0). Entradas novas (sem baseline na tag anterior) ficam
@@ -59,11 +94,15 @@ export function entryChangedWithoutBump({
   exec,
   previousTag,
   entryDir,
+  currentState = currentStateFromEnv(),
 }) {
+  const staged = assertEntryBumpState(currentState) === "staged"
   const relDir = path.relative(repoRoot, entryDir)
   const diffResult = exec(
     "git",
-    ["diff", "--quiet", previousTag, "HEAD", "--", relDir],
+    staged
+      ? ["diff", "--cached", "--quiet", previousTag, "--", relDir]
+      : ["diff", "--quiet", previousTag, "HEAD", "--", relDir],
     { cwd: repoRoot }
   )
   if (diffResult.status === 0) return false
@@ -77,7 +116,7 @@ export function entryChangedWithoutBump({
   const currentVersion = moduleVersionAt({
     repoRoot,
     exec,
-    ref: "HEAD",
+    ref: staged ? INDEX_REF : "HEAD",
     entryDir,
   })
   return currentVersion !== undefined && currentVersion === previousVersion

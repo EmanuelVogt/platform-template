@@ -12,6 +12,14 @@ pre-push:
     catalog-typecheck:
       priority: 3
       run: node scripts/platform/catalog-stage.mjs
+    # priority 5: depois de test-coverage (4). `test:coverage` é Vitest sobre
+    # `apps/**` e nunca executa `scripts/platform/__tests__/*.test.mjs` — sem esta
+    # entrada, a suíte que verifica o contrato do template com o filho só rodava no
+    # job Gates da CI, depois do push, num check que não barra nada (a `main` não
+    # tem branch protection, e § No pull requests dispensa o fluxo de PR).
+    platform-scripts:
+      priority: 5
+      run: node --test scripts/platform/__tests__/*.test.mjs
 
 pre-commit:
   commands:

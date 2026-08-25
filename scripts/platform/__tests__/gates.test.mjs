@@ -135,13 +135,14 @@ test("GAT-05: lefthook-local.yml mantém catalog-typecheck no pre-push", () => {
 // comentário sobre `migrations`), não de AD-027 — AD-027 decide o gate de
 // cobertura (`pnpm test:coverage`, com Docker) e os pisos por glob; não decide
 // ordem de execução do pre-push.
-test("T38: pre-push roda mais barato primeiro — migrations → typecheck → catalog-typecheck → test-coverage", () => {
+test("T38: pre-push roda mais barato primeiro — migrations → typecheck → catalog-typecheck → test-coverage → platform-scripts", () => {
   const commands = mergedPrePushCommands()
   for (const name of [
     "migrations",
     "typecheck",
     "catalog-typecheck",
     "test-coverage",
+    "platform-scripts",
   ]) {
     assert.equal(
       typeof commands[name]?.priority,
@@ -154,7 +155,17 @@ test("T38: pre-push roda mais barato primeiro — migrations → typecheck → c
     "typecheck",
     "catalog-typecheck",
     "test-coverage",
+    "platform-scripts",
   ])
+})
+
+// `test:coverage` é Vitest sobre `apps/**` e não coleta
+// `scripts/platform/__tests__/*.test.mjs`. Sem este passo a suíte que verifica o
+// contrato do template com o filho não tem gate local nenhum — só o job Gates da
+// CI, depois do push, e a `main` não tem branch protection.
+test("T38: o pre-push do template roda a suíte de scripts da plataforma", () => {
+  const command = mergedPrePushCommands()["platform-scripts"]
+  assert.match(command?.run ?? "", /scripts\/platform\/__tests__/)
 })
 
 test("T38: num filho renderizado (sem lefthook-local.yml) a ordem continua mais barato primeiro — migrations → typecheck → test-coverage", () => {

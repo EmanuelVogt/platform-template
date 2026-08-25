@@ -366,11 +366,11 @@ wave, and the major's waves start only after the minor's Verifier passes and the
 | 9 (exclusive) | C16 | T57 | `openapi.json`, `packages/api-client/src/` | contract regen after the cookie rename — alone · gate: full-unit |
 | 10 | C17 | T58 → T59 → T60 → T61 → T62 → T63 | `catalog/professional/` | new `professional` entry (AD-035) · gate: **full-unit** |
 | 10 | C18 | T64 → T65 → T66 | `catalog/audit/api/domain/base-audit-registrations.ts`, `catalog/audit/api/domain/audit-coverage.ts`, `catalog/audit/api/testing/reattach-identity-tables.ts`, `catalog/audit/api/__e2e__/audit.e2e-spec.ts`, `docs/advisories/ADV-20260824-01.md`, `docs/advisories/ADV-20260824-02.md` | audit entry + the two `breaking` advisories · gate: scoped |
-| 11 | C19 | T67 → T68 → T69 → T70 → T71 → T72 | `catalog/identity/single-tenant/api/domain/entities/user.entity.ts`, `catalog/identity/single-tenant/api/domain/ports/user.repository.ts`, `catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-user.repository.ts`, `catalog/identity/single-tenant/api/identity.module.ts`, `catalog/identity/single-tenant/api/infrastructure/professional/`, `catalog/identity/single-tenant/api/api/contracts/identity.contract.ts`, `catalog/identity/single-tenant/api/domain/access/access-profile.types.ts`, `catalog/identity/single-tenant/api/domain/permissions/permission.types.ts`, `catalog/identity/single-tenant/api/infrastructure/tables/user.table.ts`, `catalog/identity/single-tenant/api/testing/seed-user.ts`, `catalog/identity/single-tenant/api/application/use-cases/create-user/`, `catalog/identity/single-tenant/api/application/use-cases/update-user/update-user.use-case.ts`, `catalog/identity/single-tenant/module.json`, `catalog/identity/single-tenant/migrations/custom/04_audit_attach_hook.sql`, `apps/api/test/setup/test-db.ts` | identity slimming · gate: **full-unit** |
-| 11 | C20 | T73 → T74 → T75 | `scripts/platform/migrations/v3.0.0.mjs`, `scripts/platform/lib/commands/template.mjs`, `scripts/platform/__tests__/migration-v3.test.mjs` | executable child migration (AD-034) · gate: scoped |
-| 12 (exclusive) | C21 | T76 | `openapi.json`, `packages/api-client/src/`, `catalog/identity/single-tenant/parity/`, `catalog/professional/parity/` | contract regen + parity re-snapshot — alone · gate: full-unit |
-| 13 | C22 | T77 → T78 | `catalog/professional/README.md`, `catalog/professional/CHANGELOG.md`, `.specs/STATE.md`, `scripts/platform/__tests__/catalog-check-professional.test.mjs` | IDENT-02 proof + AD-035 record · gate: scoped |
-| 14 (owner-gated) | C23 | T79 | `docs/dev/template-changelog.md` | **BLOCKED** until `v2.4.0` is tagged · gate: scoped |
+| 11 | C19 | T67 → T68 → T69 → T70 → T71 → T72 | `catalog/identity/single-tenant/api/domain/entities/user.entity.ts`, `catalog/identity/single-tenant/api/domain/ports/user.repository.ts`, `catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-user.repository.ts`, `catalog/identity/single-tenant/api/identity.module.ts`, `catalog/identity/single-tenant/api/infrastructure/professional/`, `catalog/identity/single-tenant/api/api/contracts/identity.contract.ts`, `catalog/identity/single-tenant/api/domain/access/access-profile.types.ts`, `catalog/identity/single-tenant/api/domain/access/permission.types.ts`, `catalog/identity/single-tenant/api/infrastructure/tables/user.table.ts`, `catalog/identity/single-tenant/api/testing/seed-user.ts`, `catalog/identity/single-tenant/api/application/use-cases/create-user/`, `catalog/identity/single-tenant/api/application/use-cases/update-user/update-user.use-case.ts`, `catalog/identity/single-tenant/module.json`, `catalog/identity/single-tenant/migrations/custom/04_audit_attach_hook.sql`, `apps/api/test/setup/test-db.ts` | identity slimming · gate: **full-unit** · **ownership was widened in execution to `catalog/identity/single-tenant/**` minus `parity/` (C21's)** — the file list above omits ~45 consumers of `servesClients`/`birthDate` (`views.ts`, `access-policy.ts`, `make-user.ts`, `set-password/`, `update-my-profile/`, four controllers, ~35 specs), which makes T67 impossible inside the literal grant; see Execution Log § Wave 11, deviation 2 |
+| 11 | C20 | T73 → T74 → T75 | `scripts/platform/migrations/v3.0.0.mjs`, `scripts/platform/lib/commands/template-migrate.mjs` (**corrected — `template.mjs` never existed**), `scripts/platform/__tests__/migration-v3.test.mjs` | executable child migration (AD-034) · gate: scoped |
+| 12 (exclusive) | C21 | T76 | `openapi.json`, `packages/api-client/src/`, `packages/api-client/generated/`, `catalog/identity/single-tenant/parity/`, `catalog/professional/parity/`, and — **added in wave 11's Touches audit** — `catalog/notification/parity/`, `catalog/attachment/parity/`, `catalog/audit/parity/`, `catalog/tag/parity/`, `apps/api/test/openapi-contract.e2e-spec.ts` (all read the same regenerated `openapi.json`; `kubb.config.ts:9-13` wipes `generated/` with `clean: true`) | contract regen + parity re-snapshot — alone · gate: full-unit |
+| 13 | C22 | T77 → T78 | `catalog/professional/README.md`, `catalog/professional/CHANGELOG.md`, `.specs/STATE.md`, `scripts/platform/__tests__/catalog-check-professional.test.mjs` (T77 **creates** it), `.github/workflows/ci.yml` (**added in wave 11's Touches audit** — the `professional` leg joins the `entry:` matrix at `ci.yml:154`; the plan's `catalog.yml` does not exist) | IDENT-02 proof + AD-035 record · gate: scoped |
+| 14 (owner-gated) | C23 | T79 | `docs/dev/template-changelog.md`, `catalog/identity/single-tenant/module.json`, `catalog/attachment/module.json`, `catalog/audit/module.json`, `catalog/notification/module.json`, `catalog/tag/module.json`, `catalog/professional/module.json` (**widened in wave 11's Touches audit** — the row listed only the changelog, but T79's own body and AD-033 require the six `kernelRange` openings in the SAME commit as the heading; `lintKernelRange` (`scripts/platform/lib/lint.mjs:148`) reads the changelog's latest heading via `readLatestChangelogVersion` (`scripts/platform/lib/kernel-version.mjs:26`), so heading and ranges are green only together) | **BLOCKED** until `v2.4.0` is tagged · gate: `pnpm catalog:lint` |
 
 ```
 ─────────────────────────────── v2.4.0 ───────────────────────────────
@@ -2418,7 +2418,7 @@ ignored — and it is what the web app imports. **A stale generated client there
 
 **What**: Remove the profile from the code-derived enum, and with it the product-specific seed derivation.
 **Where**: `catalog/identity/single-tenant/api/domain/access/access-profile.types.ts:16-21`
-**Touches**: `catalog/identity/single-tenant/api/domain/access/access-profile.types.ts`, `catalog/identity/single-tenant/api/domain/permissions/permission.types.ts`, `catalog/identity/single-tenant/api/infrastructure/tables/user.table.ts`, `catalog/identity/single-tenant/api/testing/seed-user.ts`
+**Touches**: `catalog/identity/single-tenant/api/domain/access/access-profile.types.ts`, `catalog/identity/single-tenant/api/domain/access/permission.types.ts`, `catalog/identity/single-tenant/api/infrastructure/tables/user.table.ts`, `catalog/identity/single-tenant/api/testing/seed-user.ts`
 **Depends on**: T70
 **Exclusive**: no
 **Reuses**: `user.table.ts:18` derives the PG enum from `permission.types.ts:7-19 defineAccessProfiles([...BASE, ...PRODUCT])`; no migration in this repo writes it — a child generates it with drizzle-kit
@@ -2489,8 +2489,10 @@ ignored — and it is what the web app imports. **A stale generated client there
 ### T74: `platform template migrate` runs migrations ascending
 
 **What**: Wire, or verify, the runner that applies `v<X.Y.Z>.mjs` in order.
-**Where**: `scripts/platform/lib/commands/template.mjs`
-**Touches**: `scripts/platform/lib/commands/template.mjs`
+**Where**: `scripts/platform/lib/commands/template-migrate.mjs` — **corrected in wave 11**. The plan
+said `template.mjs`, which has never existed in this tree; the runner shipped in `68da35e`, is wired
+through `cli.mjs`, and is covered by `scripts/platform/__tests__/template-migrate.test.mjs`.
+**Touches**: `scripts/platform/lib/commands/template-migrate.mjs`
 **Depends on**: T73
 **Exclusive**: no
 **Reuses**: `EXIT_CODES`; T20's exit-code convention
@@ -2498,10 +2500,11 @@ ignored — and it is what the web app imports. **A stale generated client there
 
 **Tools**: MCP: NONE · Skill: NONE
 
-**Done when**:
-- [ ] Migrations run ascending by semver, skipping those already applied
-- [ ] A failing migration exits non-zero and names the file
-- [ ] Gate passes: `pnpm test:scripts`
+**Done when**: — **all three already satisfied at `da02aca`; wave 11 verified by gate and took no
+commit.** Creating a file under the stale `template.mjs` name would have been dead code.
+- [x] Migrations run ascending by semver, skipping those already applied
+- [x] A failing migration exits non-zero and names the file
+- [x] Gate passes: `pnpm test:scripts`
 
 **Tests**: unit (`node:test`) · **Gate**: quick
 
@@ -2533,10 +2536,17 @@ ignored — and it is what the web app imports. **A stale generated client there
 
 **What**: Regenerate the contract after the split and re-snapshot the parity fixtures **as an explicit, separately-committed change**, so the diff is reviewable rather than incidental.
 **Where**: `openapi.json`
-**Touches**: `openapi.json`, `packages/api-client/src/`, `catalog/identity/single-tenant/parity/`, `catalog/professional/parity/`
+**Touches**: `openapi.json`, `packages/api-client/src/`, **`packages/api-client/generated/`**,
+`catalog/identity/single-tenant/parity/`, `catalog/professional/parity/` (**does not exist yet — T76
+creates it**), and, **added in wave 11's Touches audit**, the four sibling parity dirs that read the
+same regenerated `openapi.json`: `catalog/notification/parity/`, `catalog/attachment/parity/`,
+`catalog/audit/parity/`, `catalog/tag/parity/`, plus the kernel guard
+`apps/api/test/openapi-contract.e2e-spec.ts`.
 **Depends on**: T72, T75
 **Exclusive**: yes
-**Reuses**: `pnpm contract`; `catalog/tag/parity/` as the shape for the new entry's snapshot
+**Reuses**: `pnpm contract` (root `package.json:12` → `apps/api` `export-openapi.ts` writes
+`openapi.json`; `@platform/api-client` `kubb generate` writes **and wipes** `packages/api-client/generated/`,
+`kubb.config.ts:9-13` `clean: true`); `catalog/tag/parity/` as the shape for the new entry's snapshot
 **Requirement**: IDENT-01, IDENT-02 (F-catalog-entries-6 **C**)
 
 **Tools**: MCP: NONE · Skill: NONE
@@ -2546,6 +2556,13 @@ ignored — and it is what the web app imports. **A stale generated client there
 - [ ] The new entry has its own parity snapshot
 - [ ] `git diff --exit-code openapi.json packages/api-client/src packages/api-client/generated` is empty afterwards — **the `generated` half is the one that matters here**: T70/T71 change models and zod, which is exactly what T57a's widened pathspec exists to catch, and what the pre-T57a check could not see
 - [ ] The commit contains only regenerated artefacts
+- [ ] **The four sibling entries' `contract.parity.spec.ts` still pass** (`notification`, `attachment`,
+      `audit`, `tag`). `openapi.json` is shared surface: a regen that drops or renumbers operations
+      breaks snapshots this task did not set out to touch, and wave 11's audit found nobody owned
+      them. Any sibling snapshot that must move is a **reviewed** diff in this same commit, never a
+      silent one
+- [ ] `profiles.parity.spec.ts:9` holds its expected profiles as an **inline literal**
+      (`["master","admin","professional"]`), not a JSON fixture — re-snapshotting it is a source edit
 - [ ] Gate passes: `pnpm check && pnpm test`
 
 **Tests**: parity snapshot · **Gate**: build (full-unit)
@@ -2558,17 +2575,21 @@ ignored — and it is what the web app imports. **A stale generated client there
 
 **What**: The gate IDENT-02 asks for: `catalog:check` passes for `identity` and for `professional`, each alone, in a kernel-only child.
 **Where**: `scripts/platform/__tests__/catalog-check-professional.test.mjs`
-**Touches**: `catalog/professional/README.md`, `catalog/professional/CHANGELOG.md`, `scripts/platform/__tests__/catalog-check-professional.test.mjs`
+**Touches**: `catalog/professional/README.md`, `catalog/professional/CHANGELOG.md`, `scripts/platform/__tests__/catalog-check-professional.test.mjs`, `.github/workflows/ci.yml` (**added in wave 11's Touches audit**)
 **Depends on**: T76
 **Exclusive**: no
-**Reuses**: `.github/workflows/catalog.yml:38-80`'s matrix job — `professional` joins it
+**Reuses**: `.github/workflows/ci.yml:154`'s `entry:` matrix — **corrected in wave 11**. The plan cited
+`.github/workflows/catalog.yml:38-80`, which does not exist; `.github/workflows/` holds only
+`ci.yml`, `format.yml` and `release.yml`. The matrix currently reads
+`[identity, attachment, audit, notification, tag]` and is consumed at `ci.yml:200`; `professional` is
+absent, so **adding its leg is an edit to `ci.yml`, not to a file this task already owned**.
 **Requirement**: IDENT-02 (F-catalog-entries-6 **C**)
 
 **Tools**: MCP: NONE · Skill: `catalog-modules`
 
 **Done when**:
 - [ ] `pnpm catalog:check identity` and `pnpm catalog:check professional` both pass in a kernel-only child
-- [ ] `professional` is added to the `catalog.yml` matrix
+- [ ] `professional` is added to the `entry:` matrix at `.github/workflows/ci.yml:154` (**not** `catalog.yml` — no such file)
 - [ ] The entry's README and CHANGELOG are complete, including the declared debt from T63
 - [ ] Gate passes: `pnpm catalog:lint && pnpm catalog:typecheck`
 
@@ -3843,6 +3864,35 @@ is wave 11 (`bffb0af` 5, `e13eb91` 2, `ea308b8` 2, `bb07227` 3); additions are t
 
 **Owed to the plan before wave 12:** the Touches audit (deviation 2), and the T74/`permission.types.ts`
 path corrections (deviations 1, 3).
+
+### Wave 11 — Touches audit over C21/C22/C23 (2026-08-25)
+
+Mandatory at the feature's **second** ownership stop (orchestrator card § 0). One `repo-scout`
+(sonnet) per undispatched cluster, over the whole vertical it owns. **All three rows were wrong**,
+and in three different ways. Corrections landed in the Wave Plan rows and in the task bodies.
+
+| Cluster | What the row said | What the tree says | Fix |
+| --- | --- | --- | --- |
+| C21 (T76) | `packages/api-client/src/` | Kubb writes **and wipes** `packages/api-client/generated/` (`kubb.config.ts:9-13`, `clean: true`); `src/` holds only the hand-written `client.ts`/`index.ts` | `generated/` added |
+| C21 (T76) | two `parity/` dirs | **four more** entries own a `contract.parity.spec.ts` reading the same `openapi.json` — `notification`, `attachment`, `audit`, `tag` — plus the kernel guard `apps/api/test/openapi-contract.e2e-spec.ts` | all five added; a new Done-when makes sibling breakage a reviewed diff, never silent |
+| C22 (T77) | `Reuses: .github/workflows/catalog.yml:38-80` | **no such file** — `.github/workflows/` holds `ci.yml`, `format.yml`, `release.yml`. The leg list is the `entry:` matrix at `ci.yml:154`, currently `[identity, attachment, audit, notification, tag]`, consumed at `:200`; `professional` is absent | `Reuses` corrected, `.github/workflows/ci.yml` added to `Touches`, Done-when re-pointed |
+| C23 (T79) | only `docs/dev/template-changelog.md` | T79's own body already listed all six `module.json`; the **Wave Plan row** was the stale half. AD-033 requires the six `kernelRange` openings in the same commit as the heading — `lintKernelRange` (`lint.mjs:148`) reads the changelog's latest heading (`kernel-version.mjs:26`), so they are green only together | row widened to the six manifests; gate stated as `pnpm catalog:lint` |
+
+**Two paths are absent by design, not stale** — `catalog/professional/parity/` (T76 creates it) and
+`scripts/platform/__tests__/catalog-check-professional.test.mjs` (T77 creates it). Distinguishing
+these from a phantom reference is the point of the audit: T74's `template.mjs` was a phantom, these
+two are deliverables.
+
+**Measured, and left as an owed task rather than absorbed:** `scripts/platform/it-count.mjs:8`
+`REQUIRED_ENTRIES` still lists **five** entries. It does not go red — `:42` uses it as an existence
+check (`existsSync`), not an exhaustive allowlist — so `professional` is simply **unmeasured** by the
+it-count guard. This is the same family as wave 10's "sixth of one shape" note: a guard that looks
+like a tripwire but silently under-covers. **No task owns it.**
+
+**Also re-measured, and wave 10's finding is now stale in the good direction:** the three hard-coded
+five-entry allowlists all list six now — `module-boundaries.spec.ts:998`,
+`docs-shipped-paths.test.mjs:247-253`, `lint.test.mjs:389-395`. They went red when `professional` was
+born and C17 paid them, exactly as designed.
 
 ## Fix Round 1 (`v2.4.0` scope) — authored 2026-08-24 after Verifier pass 1 FAIL
 

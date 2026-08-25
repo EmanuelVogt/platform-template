@@ -13,7 +13,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/test-suite-refactor/design.md` — **Approved 2026-08-24**, reconciled to § *Scope cut* below
-**Status**: Execute — waves 1, 2 and 3 DONE, all three Build gates green. Next: wave 4 (C7 = T40, exclusive), then the Verifier.
+**Status**: Execute-complete — all four waves DONE, all Build gates green, AD-023 flipped `active`. Next: the Verifier.
 
 ### Execution log
 
@@ -612,9 +612,9 @@ parallelism the old plan bought there is not worth the merge surface for three t
 
 **Done when**:
 
-- [ ] AD-023 appended to `.specs/STATE.md` § *Decisions* with status `active`, dated, RULE D included
-- [ ] The Handoff entry for this feature reflects the wave plan actually executed
-- [ ] `node scripts/platform/it-count.mjs --check .specs/features/test-suite-refactor/baseline.json` passes with the single documented removal accounted for
+- [x] AD-023 appended to `.specs/STATE.md` § *Decisions* with status `active`, dated, RULE D included
+- [x] The Handoff entry for this feature reflects the wave plan actually executed
+- [x] `node scripts/platform/it-count.mjs --check .specs/features/test-suite-refactor/baseline.json` passes with the single documented removal accounted for
 
 **Tests**: none · **Gate**: quick
 **Commit**: `docs(specs): AD-023 active, test-suite-refactor closeout`

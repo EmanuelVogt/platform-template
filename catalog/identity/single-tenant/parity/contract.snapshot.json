@@ -1295,11 +1295,7 @@
           },
           "accessProfile": {
             "type": "string",
-            "enum": ["admin", "professional"]
-          },
-          "servesClients": {
-            "default": false,
-            "type": "boolean"
+            "enum": ["admin"]
           },
           "permissions": {
             "maxItems": 24,
@@ -1333,33 +1329,6 @@
                 "admin.usage.read"
               ]
             }
-          },
-          "areaIds": {
-            "default": [],
-            "maxItems": 100,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "serviceIds": {
-            "default": [],
-            "maxItems": 2000,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "schedulingAreaIds": {
-            "default": [],
-            "maxItems": 100,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1
-            }
           }
         },
         "required": ["name", "email", "accessProfile", "permissions"]
@@ -1388,7 +1357,7 @@
               },
               "accessProfile": {
                 "type": "string",
-                "enum": ["master", "admin", "professional"]
+                "enum": ["master", "admin"]
               },
               "permissions": {
                 "maxItems": 24,
@@ -1426,10 +1395,6 @@
               "avatarAttachmentId": {
                 "type": "string",
                 "nullable": true
-              },
-              "birthDate": {
-                "type": "string",
-                "nullable": true
               }
             },
             "required": [
@@ -1440,8 +1405,7 @@
               "pendingEmail",
               "accessProfile",
               "permissions",
-              "avatarAttachmentId",
-              "birthDate"
+              "avatarAttachmentId"
             ]
           }
         },
@@ -1606,10 +1570,7 @@
                 },
                 "accessProfile": {
                   "type": "string",
-                  "enum": ["master", "admin", "professional"]
-                },
-                "servesClients": {
-                  "type": "boolean"
+                  "enum": ["master", "admin"]
                 },
                 "permissions": {
                   "maxItems": 24,
@@ -1644,24 +1605,6 @@
                     ]
                   }
                 },
-                "areaIds": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "serviceIds": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "schedulingAreaIds": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
                 "avatarAttachmentId": {
                   "type": "string",
                   "nullable": true
@@ -1691,11 +1634,7 @@
                 "email",
                 "emailVerified",
                 "accessProfile",
-                "servesClients",
                 "permissions",
-                "areaIds",
-                "serviceIds",
-                "schedulingAreaIds",
                 "avatarAttachmentId",
                 "createdAt",
                 "status",
@@ -1923,15 +1862,11 @@
             "type": "string",
             "minLength": 1
           },
-          "birthDate": {
-            "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-          },
           "avatarAttachmentId": {
             "type": "string"
           }
         },
-        "required": ["token", "password", "name", "birthDate"]
+        "required": ["token", "password", "name"]
       },
       "TrashUserIdsDto": {
         "type": "object",
@@ -1954,10 +1889,6 @@
           "name": {
             "type": "string",
             "minLength": 1
-          },
-          "birthDate": {
-            "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
           }
         },
         "required": ["name"]
@@ -1971,11 +1902,7 @@
           },
           "accessProfile": {
             "type": "string",
-            "enum": ["admin", "professional"]
-          },
-          "servesClients": {
-            "default": false,
-            "type": "boolean"
+            "enum": ["admin"]
           },
           "permissions": {
             "maxItems": 24,
@@ -2008,33 +1935,6 @@
                 "admin.audit.read",
                 "admin.usage.read"
               ]
-            }
-          },
-          "areaIds": {
-            "default": [],
-            "maxItems": 100,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "serviceIds": {
-            "default": [],
-            "maxItems": 2000,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "schedulingAreaIds": {
-            "default": [],
-            "maxItems": 100,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1
             }
           }
         },

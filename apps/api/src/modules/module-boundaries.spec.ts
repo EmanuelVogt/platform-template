@@ -850,6 +850,24 @@ function catalogEntries(): CatalogEntry[] {
   return entries
 }
 
+// `await import("…")` cria a mesma aresta em runtime que o import estático e
+// não tem cláusula `from` — sem esta forma, RULE D é contornável escrevendo o
+// import do barrel alheio como chamada. Só RULE D a usa: as regras de binding
+// (A, B) inspecionam a cláusula, que a forma dinâmica não tem.
+const DYNAMIC_IMPORT = /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g
+
+function ruleDStatementsIn(source: string): ImportStatement[] {
+  const statements = importStatementsIn(source)
+  for (const match of source.matchAll(DYNAMIC_IMPORT)) {
+    statements.push({
+      line: source.slice(0, match.index).split("\n").length,
+      clause: "",
+      specifier: match[1] ?? "",
+    })
+  }
+  return statements.sort((a, b) => a.line - b.line)
+}
+
 function ruleDOffensesIn(
   entry: CatalogEntry,
   dependsOn: Map<string, string[]>,
@@ -858,7 +876,7 @@ function ruleDOffensesIn(
 ): string[] {
   const childPath = `modules/${entry.name}/${relFromApi}`
   const offenses: string[] = []
-  for (const statement of importStatementsIn(source)) {
+  for (const statement of ruleDStatementsIn(source)) {
     const target = testingEntryOf(childPath, statement.specifier)
     if (target === null || target === entry.name) continue
     const where = `catalog/${entry.dir}/api/${relFromApi}:${String(statement.line)}`
@@ -964,6 +982,22 @@ describe("module-boundaries — RULE D: import de testing/ segue o dependsOn", (
 
   it("aceita import de testing/ de entrada declarada no dependsOn", () => {
     const source = `import { findSent } from "../../notification/testing"\n`
+    expect(
+      ruleDOffensesIn(identity, graph, "__e2e__/a.e2e-spec.ts", source)
+    ).toEqual([])
+  })
+
+  it("reprova import() dinâmico de testing/ fora do dependsOn", () => {
+    const source = `it("t", async () => {\n  const { seedTag } = await import("../../tag/testing")\n})\n`
+    expect(
+      ruleDOffensesIn(identity, graph, "__e2e__/a.e2e-spec.ts", source)
+    ).toEqual([
+      "catalog/identity/single-tenant/api/__e2e__/a.e2e-spec.ts:2 → tag/testing fora de dependsOn",
+    ])
+  })
+
+  it("aceita import() dinâmico de entrada declarada no dependsOn", () => {
+    const source = `const { findSent } = await import("../../notification/testing")\n`
     expect(
       ruleDOffensesIn(identity, graph, "__e2e__/a.e2e-spec.ts", source)
     ).toEqual([])

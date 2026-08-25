@@ -88,6 +88,35 @@ test("aceita import de testing/ declarado no dependsOn", () => {
   assert.deepEqual(lintTestingImports(dirs), [])
 })
 
+test("reprova import() dinâmico de testing/ fora do dependsOn", () => {
+  const dirs = entryFixture([
+    {
+      name: "identity",
+      dependsOn: [],
+      source:
+        'it("t", async () => {\n  const { seedTag } = await import("../../tag/testing")\n})\n',
+    },
+    { name: "tag", dependsOn: ["identity"] },
+  ])
+  const errors = lintTestingImports(dirs)
+  assert.equal(errors.length, 1)
+  assert.match(errors[0], /importa tag\/testing sem tag em dependsOn$/)
+  assert.match(errors[0], /flow\.e2e-spec\.ts:2:/)
+})
+
+test("aceita import() dinâmico de entrada declarada no dependsOn", () => {
+  const dirs = entryFixture([
+    {
+      name: "identity",
+      dependsOn: ["notification"],
+      source:
+        'const { findSent } = await import("../../notification/testing")\n',
+    },
+    { name: "notification", dependsOn: [] },
+  ])
+  assert.deepEqual(lintTestingImports(dirs), [])
+})
+
 test("aceita o barrel da própria entrada", () => {
   const dirs = entryFixture([
     {

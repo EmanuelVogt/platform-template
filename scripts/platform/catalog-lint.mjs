@@ -110,15 +110,25 @@ function lintEntry(entryDir, contractHeadings, kernelVersion) {
 const IMPORT_SPECIFIER =
   /\b(?:import|export)\s+[^"';]*?\s*from\s*["']([^"']+)["']/g
 
+// `await import("…")` cria a mesma aresta em runtime que o import estático e
+// não tem cláusula `from` — sem esta forma, RULE D é contornável escrevendo o
+// import do barrel alheio como chamada.
+const DYNAMIC_IMPORT_SPECIFIER = /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g
+
 function importSpecifiers(content) {
   const found = []
-  for (const match of content.matchAll(IMPORT_SPECIFIER)) {
-    found.push({
-      line: content.slice(0, match.index).split("\n").length,
-      specifier: match[1] ?? "",
-    })
+  for (const pattern of [IMPORT_SPECIFIER, DYNAMIC_IMPORT_SPECIFIER]) {
+    for (const match of content.matchAll(pattern)) {
+      found.push({
+        index: match.index,
+        line: content.slice(0, match.index).split("\n").length,
+        specifier: match[1] ?? "",
+      })
+    }
   }
   return found
+    .sort((a, b) => a.index - b.index)
+    .map(({ line, specifier }) => ({ line, specifier }))
 }
 
 function resolvePosix(fromDir, specifier) {

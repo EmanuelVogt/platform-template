@@ -2075,10 +2075,10 @@ so the wave-8 cross-references in this file, in `design.md` and in `STATE.md` do
 **Tools**: MCP: NONE · Skill: NONE
 
 **Done when**:
-- [ ] `pnpm contract` run; `openapi.json:37,48,49` carry the neutral names
-- [ ] `git diff --exit-code openapi.json packages/api-client/src` is empty afterwards (T36's CI step is green)
-- [ ] The commit contains **only** regenerated artefacts — no hand edits
-- [ ] Gate passes: `pnpm check && pnpm test`
+- [x] `pnpm contract` run; `openapi.json:37,48,49` carry the neutral names
+- [x] `git diff --exit-code openapi.json packages/api-client/src` is empty afterwards (T36's CI step is green)
+- [x] The commit contains **only** regenerated artefacts — no hand edits
+- [x] Gate passes: `pnpm check && pnpm test`
 
 **Tests**: none (generated) · **Gate**: build (full-unit)
 
@@ -3486,6 +3486,87 @@ literal survives" is therefore **not** proven for `catalog/**` by any wave-8 tas
 **Also outstanding:** `CSRF_COOKIE_NAME` and `API_ORIGIN` are absent from
 `catalog/identity/single-tenant/module.json`'s `env` list (§ 0.8 barred a second manifest touch in
 wave 8); the advisory carries them for now. A later wave must land them in the manifest.
+
+---
+
+### Wave 9 — GATED GREEN, 8/8 (2026-08-25)
+
+| Cluster | Tasks | Commits | Worker's own gate |
+| --- | --- | --- | --- |
+| C16 (opus) | T57 | `d1e9237` | `pnpm check` exit 0; `pnpm test` exit 0 — 109 files / 762 tests |
+
+**T57 landed as a pure artefact commit: 3 lines, one file.** `openapi.json:37` lost
+`` `__Host-rit_session` `` → `` `__Host-app_session` `` and `` `rit_csrf` `` → `` `app_csrf` ``; `:48`
+and `:49` took the same rename. The same regen also carried *"entrada `identity`"* → *"entrada de
+identidade"* from `apps/api/src/openapi/openapi-config.ts:29` — wave 8's edit, unreleased into the
+contract until now. **`grep -c "rit_" openapi.json` is 0.** No hand edit, no `Advisory:` trailer
+(no `catalog/` path is touched, so none was due), no tag, no push.
+
+**`packages/api-client/` produced zero diff, and that is the correct outcome, not a miss.** Kubb
+projects `paths` and `components.schemas` into models/zod/hooks; the cookie names live only in
+`info.description` and `securitySchemes`, which it does not emit. The regen was re-run after the
+commit and is idempotent — `git diff --exit-code openapi.json packages/api-client/src` exit 0.
+
+**Operational note for every later regen (T76 inherits it).** `pnpm contract` is fail-fast on env
+and dies before writing a byte without the `CONTRACT_ENV_DEFAULTS` set (`scripts/platform/lib/child.mjs:29`);
+export the same set `.github/workflows/ci.yml:72-84` does.
+
+**Build gate (`full-unit`, eight commands)** — logs under the session scratchpad `gate/*.log`:
+
+| Command | Exit | Result |
+| --- | --- | --- |
+| `pnpm check` | 0 | turbo 7/7 |
+| `pnpm test` | 0 | 109 files / 762 tests |
+| `pnpm test:scripts` | 0 | 689 / 689 |
+| `pnpm catalog:test` | 0 | 120 files / 887 tests |
+| `pnpm catalog:typecheck` | 0 | 5 entries staged |
+| `pnpm catalog:lint` | 0 | — |
+| `pnpm format:check` | 0 | — |
+| `pnpm catalog:check` | 0 | child 245/245 files, 1751/1751 unit; 71/71 files, 512/512 `test:db`; OK on all 5 entries |
+
+**`catalog:check` was clean and the contention signature did not appear.** Wave 8's warning
+(`Parse Error: Expected HTTP/, RTSP/ or ICE/` in `catalog/tag/api/__e2e__/tags.e2e-spec.ts`) was
+grepped for explicitly, along with `ECONNREFUSED`/`EADDRINUSE` — no hits, so no re-run was needed.
+The 512/512 `test:db` reading is the second independent confirmation that T49f's 21 are gone.
+
+**The tally is 8/8 but it was NOT taken over one frozen tree — recorded because the next
+orchestrator will hit the same thing.** A sibling session committed twice into this same checkout
+while the gate ran: `dbcf879` (`lefthook-local.yml`, `scripts/platform/__tests__/gates.test.mjs`)
+and `1f24af9` (`.github/workflows/ci.yml`, `release.yml`). Six of the eight commands read content
+neither commit touches — no `apps/**`, no `catalog/**` source, no contract — so those readings stand
+for `d1e9237`. The two that *are* exposed, `test:scripts` and `format:check`, were **re-run pinned
+at `1f24af9` with HEAD verified before and after**: 689/689 and clean. `1f24af9` edits the very
+workflow files `release-gate-parity.test.mjs` derives its expectations from, so re-running it was
+not a formality. **A shared checkout means a gate result is only as pinned as its slowest command;
+capture HEAD before and after, and re-run whatever the interleaved commits could reach.**
+
+#### Finding — the contract-drift guard is aimed at a directory Kubb does not write to
+
+**`contract:check` cannot see a stale generated client.** `package.json:13` is
+`pnpm contract && git diff --exit-code openapi.json packages/api-client/src`, but Kubb's output path
+is `packages/api-client/generated` (`kubb.config.ts:10-13`); `src/` holds only the hand-written
+`client.ts` and `index.ts`. `generated/` **is** tracked — 12 files, and only `generated/.kubb/` is
+ignored — and it is what the web app imports. So a regen that changes models, zod or hooks and is
+not committed passes `contract:check` silently, in `ci.yml:71` **and** in `release.yml:57`.
+
+**The wrong pathspec is written into three ACs of this plan, and T36 already shipped it**:
+T36 (`tasks.md:1257`, the AC that authored `package.json:13`), T57 (`:2079`, ticked truthfully — the
+diff *was* empty), and **T76 (`:2517`), which re-runs this exact regen in wave 12 after the identity
+split, when models and zod genuinely do change.** T57's own AC is therefore weaker than it reads,
+and T76's is the one that will actually be bitten.
+
+**Not fixed here**: `package.json` is outside T57's `Touches`, and widening an exclusive artefact
+commit is exactly what its third AC forbids. **T76's AC wants the pathspec corrected to cover
+`packages/api-client/generated` before wave 12 reaches it**, and the fix belongs beside T36's guard
+in `scripts/platform/__tests__/contract-check-ci.test.mjs`.
+
+**This is the fifth instance of one shape** — a guard pointed at the wrong surface: `brand-hygiene`
+scanning a render that a catalog entry never enters (T49f), `test:scripts` in no git hook (fixed by
+the sibling's `dbcf879`), the release gate weaker than the branch gate (GT10), `contract:check` on
+a directory the generator does not write to. Each was green while blind.
+
+**Wave 9 closes. Next: wave 10** — `C17` (T58→T63, opus) ∥ `C18` (T64→T66, opus), the `professional`
+entry extraction. Both depend on T57 and are now unblocked.
 
 ---
 

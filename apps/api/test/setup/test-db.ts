@@ -35,7 +35,6 @@ export async function truncateIdentity(pool: Pool): Promise<void> {
       identity.verification_tokens,
       identity.permission_templates,
       identity.sessions,
-      identity.professional_default_hours,
       identity.users
     RESTART IDENTITY CASCADE
   `)

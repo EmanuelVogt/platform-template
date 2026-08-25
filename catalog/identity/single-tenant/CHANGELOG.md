@@ -22,6 +22,16 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
   default `UTC`).
 - `COOKIE_SAMESITE=none` com a API em host diferente do host de `WEB_ORIGIN` passa a ser
   recusado no boot, em vez de emitir um cookie que o browser descarta.
+- A fatia profissional sai da entrada e vira a entrada `professional`. `identity.users`
+  perde `serves_clients` e `birth_date`; as cinco satélites (`user_professional_areas`,
+  `user_professional_services`, `user_scheduling_areas`,
+  `user_professional_schedule_configs` e `professional_default_hours`) saem do
+  `schemaExports`; `createUser`, `updateUser`, `listUsers`, `setPassword` e
+  `updateMyProfile` perdem `areaIds`, `serviceIds`, `schedulingAreaIds` e `birthDate`;
+  `IdentityModule.forRoot()` não aceita mais o slot `professional`; e `professional` sai
+  do conjunto base de `identity.access_profile`. `identity.attach_audit()` registra as 7
+  tabelas próprias — as 7 profissionais passam a `professional.attach_audit()`. Migração
+  de dado obrigatória antes de derrubar as colunas: ver `ADV-20260824-01`.
 
 ### Fixed
 

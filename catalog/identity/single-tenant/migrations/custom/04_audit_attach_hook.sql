@@ -38,13 +38,6 @@ BEGIN
   PERFORM audit.attach('identity', 'permission_templates', '{id}', '{}');
   PERFORM audit.attach('identity', 'permission_template_permissions', '{template_id,permission}', '{}');
   PERFORM audit.attach('identity', 'user_permissions', '{user_id,permission}', '{}');
-  PERFORM audit.attach('identity', 'user_professional_areas', '{user_id,area_id}', '{}');
-  PERFORM audit.attach('identity', 'user_professional_services', '{user_id,service_id}', '{}');
-  PERFORM audit.attach('identity', 'user_scheduling_areas', '{user_id,area_id}', '{}');
-  PERFORM audit.attach('identity', 'professional_default_hours', '{id}', '{}');
-  PERFORM audit.attach('identity', 'user_professional_schedule_configs', '{user_id}', '{}');
-  PERFORM audit.attach('identity', 'user_professional_schedule_config_slots', '{id}', '{}');
-  PERFORM audit.attach('identity', 'user_professional_schedule_config_blocks', '{id}', '{}');
 END;
 $$;
 --> statement-breakpoint

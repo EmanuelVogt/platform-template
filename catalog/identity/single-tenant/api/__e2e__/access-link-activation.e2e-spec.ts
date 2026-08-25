@@ -1,121 +1,58 @@
-import { type INestApplication, VersioningType } from "@nestjs/common"
-import { Test } from "@nestjs/testing"
-import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import {
-  createTestPool,
-  truncateIdentity,
-  truncateKernel,
-} from "../../../../test/setup/test-db"
-import { AppModule } from "../../../app.module"
-import { applySecurity } from "../../../main"
-import { RequestContext } from "../../../shared/kernel/context/request-context"
-import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
-import { OutboxDispatcher } from "../../../shared/kernel/outbox/outbox.dispatcher"
-import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
+import { createE2eApp, withE2ePool } from "../../../shared/test/e2e/app"
+import { E2E_ORIGIN } from "../../../shared/test/e2e/constants"
+import { cookieHeader } from "../../../shared/test/e2e/http"
+import { drainOutbox } from "../../../shared/test/e2e/outbox"
+import { resetDb } from "../../../shared/test/int/db"
 import { MAILER } from "../../notification/domain/ports/mailer"
-import { fakeMailer } from "../testing/fake-mailer"
-import { seedUser } from "../testing/seed-user"
+import {
+  fakeMailer,
+  loginAs,
+  seedUser,
+  TEST_PASSWORD,
+  tokenFromMail,
+} from "../testing"
 
-import type { EmailMessage } from "../../notification/domain/ports/mailer"
-
-const ORIGIN = "http://localhost:5173"
-
-const allowAll = {
-  consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
-  reset: () => Promise.resolve(),
-}
-
-/** Extrai o href renderizado no botão de ação do e-mail (link com token). */
-function linkFromHtml(html: string): string {
-  const match = /href="([^"]+)"/.exec(html)
-  if (!match) throw new Error("link não encontrado no e-mail")
-  return match[1]!
-}
-
-async function waitFor(
-  predicate: () => boolean,
-  timeoutMs = 4000
-): Promise<void> {
-  const start = Date.now()
-  while (!predicate()) {
-    if (Date.now() - start > timeoutMs) {
-      throw new Error("timeout esperando a condição")
-    }
-    await new Promise((resolve) => setTimeout(resolve, 25))
-  }
-}
+import type { E2eApp } from "../../../shared/test/e2e/app"
 
 describe("Ativação via access-link (e2e)", () => {
-  let app: INestApplication
-  let dispatcher: OutboxDispatcher
+  const db = withE2ePool()
+  let e2e: E2eApp
   let mailer: ReturnType<typeof fakeMailer>
 
   beforeAll(async () => {
-    const pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await pool.end()
-
+    await resetDb(db.pool, ["identity", "_kernel", "notification"])
     mailer = fakeMailer()
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
-    })
-      .overrideProvider(RATE_LIMITER)
-      .useValue(allowAll)
-      .overrideProvider(MAILER)
-      .useValue(mailer)
-      .compile()
-    app = moduleRef.createNestApplication()
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-    applySecurity(app)
-    app.use(createRequestContextMiddleware(app.get(RequestContext)))
-    await app.init()
-    dispatcher = app.get(OutboxDispatcher)
+    e2e = await createE2eApp({ overrides: [[MAILER, mailer]] })
   })
 
   afterAll(async () => {
-    await app.close()
+    await e2e.close()
   })
 
-  /** Helper: cria master, faz login, retorna cookie de sessão. */
+  /** Cria o master (o seed rebaixa o anterior), faz login e devolve os cookies. */
   async function setupMaster(email: string): Promise<string[]> {
-    const pool = createTestPool()
-    const masterId = await seedUser(app, pool, {
+    await seedUser(e2e.app, db.pool, {
       email,
       name: "Master",
-      password: "Senha-Master-Muito-Forte-2026!",
+      password: TEST_PASSWORD,
+      accessProfile: "master",
     })
-    // Índice único permite UM master por banco — demove o anterior antes de promover.
-    await pool.query(
-      "UPDATE identity.users SET access_profile = 'admin' WHERE access_profile = 'master'"
-    )
-    await pool.query(
-      "UPDATE identity.users SET access_profile = 'master' WHERE id = $1",
-      [masterId]
-    )
-    await pool.end()
-
-    const loginRes = await request(app.getHttpServer())
-      .post("/v1/auth/login")
-      .set("Origin", ORIGIN)
-      .send({ email, password: "Senha-Master-Muito-Forte-2026!" })
-      .expect(200)
-    return loginRes.headers["set-cookie"] as unknown as string[]
+    return loginAs(e2e.http, email)
   }
 
-  /** Helper: convida usuário e extrai o token do fakeMailer após poll do outbox. */
+  /** Convida o usuário e extrai o token do fakeMailer depois de girar o outbox. */
   async function inviteUser(
-    masterCookie: string[],
+    masterCookies: string[],
     email: string,
     name: string,
     idempotencyKey: string
   ): Promise<string> {
-    await request(app.getHttpServer())
+    await e2e.http
       .post("/v1/admin/users")
-      .set("Origin", ORIGIN)
-      .set("Cookie", masterCookie)
+      .set("Origin", E2E_ORIGIN)
+      .set("Cookie", masterCookies)
       .set("Idempotency-Key", idempotencyKey)
       .send({
         name,
@@ -125,31 +62,25 @@ describe("Ativação via access-link (e2e)", () => {
       })
       .expect(201)
 
-    await dispatcher.poll()
     // Casa pelo destinatário, não por índice: um envio alheio no mesmo run
     // deslocaria a posição e o teste leria o token de outro convidado.
-    const sentTo = (): EmailMessage | undefined =>
-      mailer.sent.find((message) => message.to === email)
-    await waitFor(() => sentTo() !== undefined)
-
-    const token = new URL(linkFromHtml(sentTo()!.html)).searchParams.get(
-      "token"
-    )
-    expect(token).toBeTruthy()
-    return token!
+    await drainOutbox(e2e.app, {
+      until: () => mailer.sent.find((message) => message.to === email),
+    })
+    return tokenFromMail(mailer, email)
   }
 
   it("ativa a conta (200 + cookie + sessão + birth_date) e mata o token", async () => {
-    const masterCookie = await setupMaster("master-act1@example.com")
+    const masterCookies = await setupMaster("master-act1@example.com")
     const token = await inviteUser(
-      masterCookie,
+      masterCookies,
       "ana-act@example.com",
       "Ana",
       "invite-ana-act"
     )
 
     // Pré-validação pública: retorna nome, e-mail e sem avatar.
-    const info = await request(app.getHttpServer())
+    const info = await e2e.http
       .get("/v1/auth/access-link")
       .query({ token })
       .expect(200)
@@ -160,9 +91,9 @@ describe("Ativação via access-link (e2e)", () => {
     })
 
     // Ativação: define nome completo, data de nascimento e senha.
-    const setRes = await request(app.getHttpServer())
+    const setRes = await e2e.http
       .post("/v1/auth/set-password")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .send({
         token,
         name: "Ana Maria",
@@ -174,18 +105,14 @@ describe("Ativação via access-link (e2e)", () => {
       name: "Ana Maria",
       email: "ana-act@example.com",
     })
-    const anaCookie = setRes.headers["set-cookie"]
-    expect(anaCookie).toBeDefined()
+    const anaCookies = cookieHeader(setRes)
+    expect(anaCookies.length).toBeGreaterThan(0)
 
     // Cookie de ativação autentica direto na sessão.
-    await request(app.getHttpServer())
-      .get("/v1/auth/session")
-      .set("Cookie", anaCookie!)
-      .expect(200)
+    await e2e.http.get("/v1/auth/session").set("Cookie", anaCookies).expect(200)
 
     // Verifica no banco: status active, birth_date e exatamente 1 sessão.
-    const pool = createTestPool()
-    const { rows } = await pool.query<{
+    const { rows } = await db.pool.query<{
       status: string
       birth_date: string | Date | null
     }>("SELECT status, birth_date FROM identity.users WHERE email = $1", [
@@ -200,17 +127,16 @@ describe("Ativação via access-link (e2e)", () => {
         : String(bd).slice(0, 10)
     expect(bdStr).toBe("1990-05-20")
 
-    const { rows: sessions } = await pool.query<{ count: string }>(
+    const { rows: sessions } = await db.pool.query<{ count: string }>(
       "SELECT COUNT(*) AS count FROM identity.sessions s JOIN identity.users u ON u.id = s.user_id WHERE u.email = $1",
       ["ana-act@example.com"]
     )
     expect(Number(sessions[0]?.count)).toBe(1)
-    await pool.end()
 
     // Reuso do token já consumido → 400.
-    await request(app.getHttpServer())
+    await e2e.http
       .post("/v1/auth/set-password")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .send({
         token,
         name: "Ana",
@@ -221,34 +147,32 @@ describe("Ativação via access-link (e2e)", () => {
   })
 
   it("recusar convite invalida o token; user segue pending", async () => {
-    const masterCookie = await setupMaster("master-act2@example.com")
+    const masterCookies = await setupMaster("master-act2@example.com")
     const token = await inviteUser(
-      masterCookie,
+      masterCookies,
       "bia-act@example.com",
       "Bia",
       "invite-bia-act"
     )
 
     // Cancelar o access-link.
-    await request(app.getHttpServer())
+    await e2e.http
       .post("/v1/auth/access-link/cancel")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .send({ token })
       .expect(204)
 
     // Verifica no banco: status permanece pending.
-    const pool = createTestPool()
-    const { rows } = await pool.query<{ status: string }>(
+    const { rows } = await db.pool.query<{ status: string }>(
       "SELECT status FROM identity.users WHERE email = $1",
       ["bia-act@example.com"]
     )
     expect(rows[0]?.status).toBe("pending")
-    await pool.end()
 
     // Tentativa de ativar com token cancelado → 400.
-    await request(app.getHttpServer())
+    await e2e.http
       .post("/v1/auth/set-password")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .send({
         token,
         name: "Bia",

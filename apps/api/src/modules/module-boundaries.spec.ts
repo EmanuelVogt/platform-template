@@ -23,7 +23,23 @@ const LAYERS = new Set(["api", "application", "domain", "infrastructure"])
 
 // Travessias cross-module autorizadas, par a par, com o motivo. Entrar nesta
 // lista é decisão de design, nunca conserto de teste vermelho.
-const CROSS_MODULE_ALLOWLIST = new Set<string>([])
+//
+// `professional/infrastructure/tables/** -> identity/infrastructure/tables/user.table`:
+// FK FÍSICA de schema, e só ela. A entrada `professional` é o recorte do próprio
+// agregado do identity (AD-035), não uma vizinha: as tabelas dela existem 1:1
+// com `identity.users` e `.references(() => users.id)` é o que impede linha
+// órfã no banco — attachment/notification, que são vizinhas de verdade, guardam
+// id lógico sem FK. O par é nomeado arquivo a arquivo de propósito: nenhuma
+// LEITURA da entrada entra aqui, e as três que existiam
+// (`professional-query.helpers.ts`, os dois repositories) passaram a ler pela
+// `UserDirectoryFacade` — é exatamente o que AD-035 existe para tirar.
+const CROSS_MODULE_ALLOWLIST = new Set<string>([
+  "professional/infrastructure/tables/professional-profile.table.ts -> identity/infrastructure/tables/user.table.ts",
+  "professional/infrastructure/tables/user-professional-area.table.ts -> identity/infrastructure/tables/user.table.ts",
+  "professional/infrastructure/tables/user-professional-schedule-config.table.ts -> identity/infrastructure/tables/user.table.ts",
+  "professional/infrastructure/tables/user-professional-service.table.ts -> identity/infrastructure/tables/user.table.ts",
+  "professional/infrastructure/tables/user-scheduling-area.table.ts -> identity/infrastructure/tables/user.table.ts",
+])
 
 // Exceções same-module, com o motivo.
 const SAME_MODULE_ALLOWLIST = new Set<string>([])
@@ -226,6 +242,51 @@ function violationOf(edge: Edge): string | null {
   return `cross-module fora de api/facades: ${pair}`
 }
 
+// As cinco tabelas que a allowlist nomeia e os três sítios de LEITURA que ela
+// tem de continuar reprovando — a prova de que o par é estreito e não um
+// curinga por pasta.
+const USER_TABLE_REL = "identity/infrastructure/tables/user.table.ts"
+const PROFESSIONAL_FK_TABLES = [
+  "professional/infrastructure/tables/professional-profile.table.ts",
+  "professional/infrastructure/tables/user-professional-area.table.ts",
+  "professional/infrastructure/tables/user-professional-schedule-config.table.ts",
+  "professional/infrastructure/tables/user-professional-service.table.ts",
+  "professional/infrastructure/tables/user-scheduling-area.table.ts",
+] as const
+const PROFESSIONAL_READ_SITES = [
+  "professional/infrastructure/professional-query.helpers.ts",
+  "professional/infrastructure/repositories/drizzle-professional-assignment.repository.ts",
+  "professional/infrastructure/repositories/drizzle-professional-directory.reader.ts",
+] as const
+
+function professionalUserTableEdge(importer: string): Edge {
+  return {
+    importer,
+    target: toPosix(resolve(MODULES_DIR, USER_TABLE_REL)),
+    importerModule: "professional",
+    importerLayer: layerOf(importer),
+  }
+}
+
+function isInstalledModule(name: string): boolean {
+  const dir = resolve(MODULES_DIR, name)
+  return existsSync(dir) && statSync(dir).isDirectory()
+}
+
+// Entrada morta = o módulo que IMPORTA está instalado e mesmo assim não faz
+// mais a travessia. Entrada de módulo ausente não é morta, é inaplicável: esta
+// allowlist viaja no kernel e `module add` instala a entrada depois — exigir a
+// aresta reprovaria o template (kernel-only) e todo filho sem a entrada.
+function staleAllowlistEntries(
+  allowlist: Iterable<string>,
+  pairs: ReadonlySet<string>,
+  installed: (module: string) => boolean
+): string[] {
+  return [...allowlist].filter(
+    (pair) => installed(pair.split("/")[0] ?? "") && !pairs.has(pair)
+  )
+}
+
 describe("module-boundaries — import entre camadas e módulos segue a tabela do handbook", () => {
   it("nenhuma travessia proibida fora das allowlists", () => {
     const offenders = collectEdges()
@@ -311,8 +372,29 @@ describe("module-boundaries — import entre camadas e módulos segue a tabela d
             `${e.importer} -> ${e.target.slice(toPosix(MODULES_DIR).length + 1)}`
         )
     )
-    const stale = [...CROSS_MODULE_ALLOWLIST].filter((p) => !pairs.has(p))
-    expect(stale).toEqual([])
+    expect(
+      staleAllowlistEntries(CROSS_MODULE_ALLOWLIST, pairs, isInstalledModule)
+    ).toEqual([])
+  })
+
+  it("entrada morta é só a do módulo instalado que perdeu a travessia", () => {
+    const pair = `${PROFESSIONAL_FK_TABLES[0]} -> ${USER_TABLE_REL}`
+    expect(staleAllowlistEntries([pair], new Set(), () => true)).toEqual([pair])
+    expect(staleAllowlistEntries([pair], new Set([pair]), () => true)).toEqual(
+      []
+    )
+    expect(staleAllowlistEntries([pair], new Set(), () => false)).toEqual([])
+  })
+
+  it("a allowlist do professional cobre a FK de schema e NÃO as leituras (AD-035)", () => {
+    for (const table of PROFESSIONAL_FK_TABLES) {
+      expect(violationOf(professionalUserTableEdge(table))).toBeNull()
+    }
+    for (const reader of PROFESSIONAL_READ_SITES) {
+      expect(violationOf(professionalUserTableEdge(reader))).toBe(
+        `cross-module fora de api/facades: ${reader} -> ${USER_TABLE_REL}`
+      )
+    }
   })
 })
 

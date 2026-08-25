@@ -115,6 +115,8 @@ function makeDeps(over: { listResult?: PaginatedResult<UserListRow> } = {}) {
     findNamesByIds: vi.fn(),
     findIdsByNameLike: vi.fn(),
     findNotificationTargetsByPermission: vi.fn(),
+    listActiveDirectoryByIds: vi.fn(),
+    searchActiveDirectory: vi.fn(),
   }
   const uc = new ListUsersUseCase(users)
   return { uc, users }

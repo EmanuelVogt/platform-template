@@ -29,8 +29,11 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 - Adapters das três portas em `api/infrastructure/repositories/`:
   `DrizzleProfessionalAssignmentRepository` (todo o SQL da entrada) e os null objects
   `NullProfessionalScope`/`NullProfessionalCommitments` para o filho sem produto montado.
-- `professional-query.helpers.ts`: "profissional atribuível" passa a juntar
-  `professional.professional_profile` — `serves_clients` não é mais coluna de `identity.users`.
+- `professional-query.helpers.ts`: "profissional atribuível" tem dois donos. O recorte
+  (`serves_clients`) é desta entrada e sai de `professional.professional_profile`; o estado da
+  conta (ativo, não excluído) e as colunas do usuário são do `identity` e chegam pela
+  `UserDirectoryFacade` (`listActiveByIds`, `searchActive`). Nenhuma leitura da entrada importa
+  `identity.users`: as tabelas mantêm a FK física, os SELECTs não atravessam.
 - Spec de integração do repositório com 5 casos, sobre o Postgres de teste (sem mock de banco).
 - Facades da entrada (`api/api/facades/`): `ProfessionalDirectoryFacade` (diretório de
   atribuíveis, agora sobre o port local `ProfessionalDirectoryReader` e não mais sobre o

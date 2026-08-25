@@ -3,9 +3,12 @@ import { Inject, Injectable } from "@nestjs/common"
 import {
   USER_REPOSITORY,
   type NotificationTarget,
+  type SearchUserDirectoryInput,
+  type UserDirectoryRow,
   type UserRepository,
 } from "../../domain/ports/user.repository"
 
+import type { PaginatedResult } from "../../../../shared/kernel/listing/paginated"
 import type { PermissionKey } from "../../domain/permissions/permission-catalog"
 
 // Superfície pública dos erros e do DTO de rota que outras entradas reusam: o
@@ -13,6 +16,10 @@ import type { PermissionKey } from "../../domain/permissions/permission-catalog"
 // que mantém openapi.json e respostas idênticos.
 export { UserNotFoundError } from "../../domain/errors"
 export { UpdateUserParamsDto } from "../contracts/identity.contract"
+export type {
+  SearchUserDirectoryInput,
+  UserDirectoryRow,
+} from "../../domain/ports/user.repository"
 
 /**
  * Superfície pública do identity para resolver nome de exibição de QUALQUER
@@ -43,5 +50,22 @@ export class UserDirectoryFacade {
     permission: PermissionKey
   ): Promise<NotificationTarget[]> {
     return this.users.findNotificationTargetsByPermission(permission)
+  }
+
+  /**
+   * Projeção de diretório dos ativos e vivos dentre `ids`, por nome. Existe
+   * para a entrada que tem o RECORTE mas não tem o usuário: ela manda os ids
+   * que o critério dela seleciona e o identity responde pelo estado da conta —
+   * ninguém de fora lê `identity.users` (AD-035).
+   */
+  listActiveByIds(ids: readonly string[]): Promise<UserDirectoryRow[]> {
+    return this.users.listActiveDirectoryByIds(ids)
+  }
+
+  /** Como `listActiveByIds`, paginada e com busca por nome/e-mail. */
+  searchActive(
+    input: SearchUserDirectoryInput
+  ): Promise<PaginatedResult<UserDirectoryRow>> {
+    return this.users.searchActiveDirectory(input)
   }
 }

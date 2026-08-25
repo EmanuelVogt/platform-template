@@ -1,18 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import { and, asc, eq, inArray, isNull, notInArray, sql } from "drizzle-orm"
 
-import { buildListingClauses } from "../../../../shared/kernel/listing/apply-listing"
-import { toPaginated } from "../../../../shared/kernel/listing/paginated"
 import { TransactionManager } from "../../../../shared/kernel/transactional/transaction-manager"
-import { users } from "../../../identity/infrastructure/tables/user.table"
+import { UserDirectoryFacade } from "../../../identity/api/facades/user-directory.facade"
 import {
-  ASSIGNABLE_LISTING_CONFIG,
-  assignableProfessionalFilters,
-  assignableProfessionalJoin,
-  assignableProfessionalSelection,
+  servesClientsUserIds,
   toAssignableProfessionalRow,
 } from "../professional-query.helpers"
-import { professionalProfile } from "../tables/professional-profile.table"
 import { userProfessionalAreas } from "../tables/user-professional-area.table"
 import { userProfessionalServices } from "../tables/user-professional-service.table"
 
@@ -31,14 +25,18 @@ import type {
  * Adapter drizzle do vínculo profissional↔serviço/área. Todo SQL da entrada
  * mora aqui: nada em `application/` ou `api/` toca o banco.
  *
- * Depois do corte do agregado (AD-035) `serves_clients` vive em
- * `professional.professional_profile`, então as leituras de "profissional
- * atribuível" juntam essa tabela ao `identity.users` — o join substitui a
- * coluna que saiu do usuário, sem mudar o que a consulta seleciona.
+ * Depois do corte do agregado (AD-035) "atribuível" tem dois donos: o recorte
+ * (`serves_clients`) é desta entrada e sai de `professional.professional_profile`;
+ * o estado da conta (ativo, não excluído) e as colunas do usuário são do
+ * identity e vêm pela `UserDirectoryFacade`. Nenhuma consulta daqui lê
+ * `identity.users` — a FK física das tabelas continua, a leitura não.
  */
 @Injectable()
 export class DrizzleProfessionalAssignmentRepository implements ProfessionalAssignmentRepository {
-  constructor(private readonly tx: TransactionManager) {}
+  constructor(
+    private readonly tx: TransactionManager,
+    private readonly identityUsers: UserDirectoryFacade
+  ) {}
 
   private get db(): DrizzleExecutor {
     return this.tx.getExecutor()
@@ -47,43 +45,22 @@ export class DrizzleProfessionalAssignmentRepository implements ProfessionalAssi
   async searchAssignable(
     input: SearchAssignableProfessionalsInput
   ): Promise<PaginatedResult<AssignableProfessionalRow>> {
-    const { where, orderBy, limit, offset } = buildListingClauses(
-      input,
-      ASSIGNABLE_LISTING_CONFIG,
-      assignableProfessionalFilters()
-    )
-    const rows = await this.db
-      .select(assignableProfessionalSelection)
-      .from(users)
-      .innerJoin(professionalProfile, assignableProfessionalJoin())
-      .where(where)
-      .orderBy(...orderBy)
-      .limit(limit)
-      .offset(offset)
-    const counted = await this.db
-      .select({ n: sql<number>`count(*)::int` })
-      .from(users)
-      .innerJoin(professionalProfile, assignableProfessionalJoin())
-      .where(where)
-    return toPaginated(
-      rows.map(toAssignableProfessionalRow),
-      counted[0]?.n ?? 0,
-      input.page,
-      input.pageSize
-    )
+    const candidates = await servesClientsUserIds(this.db)
+    const page = await this.identityUsers.searchActive({
+      ids: candidates,
+      q: input.q,
+      page: input.page,
+      pageSize: input.pageSize,
+    })
+    return { ...page, data: page.data.map(toAssignableProfessionalRow) }
   }
 
   async findAssignableByIds(
     ids: readonly string[]
   ): Promise<Map<string, AssignableProfessionalRow>> {
     if (ids.length === 0) return new Map()
-    const rows = await this.db
-      .select(assignableProfessionalSelection)
-      .from(users)
-      .innerJoin(professionalProfile, assignableProfessionalJoin())
-      .where(
-        and(inArray(users.id, [...ids]), ...assignableProfessionalFilters())
-      )
+    const candidates = await servesClientsUserIds(this.db, ids)
+    const rows = await this.identityUsers.listActiveByIds(candidates)
     return new Map(rows.map((r) => [r.id, toAssignableProfessionalRow(r)]))
   }
 

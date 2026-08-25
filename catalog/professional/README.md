@@ -111,6 +111,15 @@ superfície in-process é coberta pelos specs unitários e de integração da pr
 - `dependsOn`: `identity` (`>=3.0.0 <4.0.0`). A aresta é de produção: as tabelas do recorte
   referenciam `identity.users.id` e o perfil profissional é 1:1 com o usuário. Ela não fecha
   ciclo — depois do corte o `identity` não importa nada desta entrada.
+- A aresta tem **duas formas, com pesos diferentes**. (1) FK física: as tabelas do recorte
+  declaram `.references(() => users.id)` porque integridade referencial é do banco, e o recorte
+  é do próprio agregado do `identity` — não de uma vizinha (`attachment`/`notification` guardam
+  id lógico sem FK justamente por serem vizinhas). Os cinco pares estão nomeados, arquivo a
+  arquivo, na `CROSS_MODULE_ALLOWLIST` de `module-boundaries.spec.ts`. (2) Leitura: nenhuma. Os
+  adapters consomem `UserDirectoryFacade.listActiveByIds`/`searchActive` — a entrada manda os
+  ids que o critério dela seleciona e o `identity` responde pelo estado da conta. É o que
+  AD-035 existe para tirar, e a allowlist é estreita o bastante para continuar reprovando um
+  `SELECT` sobre `identity.users` vindo daqui.
 - `env`: nenhuma. A entrada não lê `process.env`.
 
 ## Parte web

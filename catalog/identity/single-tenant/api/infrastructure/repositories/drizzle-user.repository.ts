@@ -35,6 +35,8 @@ import type { PermissionKey } from "../../domain/permissions/permission-catalog"
 import type {
   ListUsersInput,
   NotificationTarget,
+  SearchUserDirectoryInput,
+  UserDirectoryRow,
   UserListRow,
   UserRepository,
 } from "../../domain/ports/user.repository"
@@ -61,6 +63,26 @@ const LIST_CONFIG: ListingConfig = {
 // leituras de INTEGRIDADE (unique-email, login, reativação) e precisam ver o
 // soft-deleted. Ver ADR de soft delete.
 const visible = isNull(users.deletedAt)
+
+/**
+ * Listagem de DIRETÓRIO: a que outra entrada consome via `UserDirectoryFacade`.
+ * Ordena por nome porque é o único critério que a projeção publica; o desempate
+ * por PK mantém a página estável (ver `buildListingClauses`).
+ */
+const DIRECTORY_CONFIG: ListingConfig = {
+  sortable: { name: users.name },
+  searchable: [users.name, users.email],
+  defaultSort: { key: "name", order: "asc" },
+  tiebreaker: users.id,
+}
+
+/** Colunas da projeção de diretório — o shape de `UserDirectoryRow`. */
+const DIRECTORY_SELECTION = {
+  id: users.id,
+  name: users.name,
+  email: users.email,
+  avatarAttachmentId: users.avatarAttachmentId,
+}
 
 @Injectable()
 export class DrizzleUserRepository implements UserRepository {
@@ -120,6 +142,44 @@ export class DrizzleUserRepository implements UserRepository {
       )
       .orderBy(asc(users.name))
     return rows
+  }
+
+  async listActiveDirectoryByIds(
+    ids: readonly string[]
+  ): Promise<UserDirectoryRow[]> {
+    if (ids.length === 0) return []
+    return this.db
+      .select(DIRECTORY_SELECTION)
+      .from(users)
+      .where(
+        and(inArray(users.id, [...ids]), eq(users.status, "active"), visible)
+      )
+      .orderBy(asc(users.name), asc(users.id))
+  }
+
+  async searchActiveDirectory(
+    input: SearchUserDirectoryInput
+  ): Promise<PaginatedResult<UserDirectoryRow>> {
+    if (input.ids.length === 0) {
+      return toPaginated([], 0, input.page, input.pageSize)
+    }
+    const { where, orderBy, limit, offset } = buildListingClauses(
+      input,
+      DIRECTORY_CONFIG,
+      [inArray(users.id, [...input.ids]), eq(users.status, "active"), visible]
+    )
+    const rows = await this.db
+      .select(DIRECTORY_SELECTION)
+      .from(users)
+      .where(where)
+      .orderBy(...orderBy)
+      .limit(limit)
+      .offset(offset)
+    const counted = await this.db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(users)
+      .where(where)
+    return toPaginated(rows, counted[0]?.n ?? 0, input.page, input.pageSize)
   }
 
   async findByEmail(email: string): Promise<User | null> {

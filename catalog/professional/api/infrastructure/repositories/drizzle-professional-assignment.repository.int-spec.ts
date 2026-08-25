@@ -4,6 +4,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { createTestDb, createTestPool } from "../../../../../test/setup/test-db"
 import { makeTestLogger } from "../../../../../test/setup/test-logger"
 import { TransactionManager } from "../../../../shared/kernel/transactional/transaction-manager"
+import { UserDirectoryFacade } from "../../../identity/api/facades/user-directory.facade"
+import { DrizzleUserRepository } from "../../../identity/infrastructure/repositories/drizzle-user.repository"
 
 import { DrizzleProfessionalAssignmentRepository } from "./drizzle-professional-assignment.repository"
 
@@ -16,8 +18,12 @@ describe("DrizzleProfessionalAssignmentRepository (int)", () => {
   beforeAll(() => {
     pool = createTestPool()
     const db = createTestDb(pool)
+    const txm = new TransactionManager(db, makeTestLogger().loggerFactory)
+    // As colunas do usuário vêm do identity pela facade (AD-035): o adapter da
+    // entrada só sabe quem atende cliente.
     repo = new DrizzleProfessionalAssignmentRepository(
-      new TransactionManager(db, makeTestLogger().loggerFactory)
+      txm,
+      new UserDirectoryFacade(new DrizzleUserRepository(txm))
     )
   })
 

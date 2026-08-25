@@ -1,55 +1,57 @@
-import { eq, isNull, type SQL } from "drizzle-orm"
-
-import { users } from "../../identity/infrastructure/tables/user.table"
+import { and, eq, inArray, type SQL } from "drizzle-orm"
 
 import { professionalProfile } from "./tables/professional-profile.table"
 
-import type { ListingConfig } from "../../../shared/kernel/listing/apply-listing"
+import type { DrizzleExecutor } from "../../../shared/infra/database/drizzle.provider"
+import type { UserDirectoryRow } from "../../identity/api/facades/user-directory.facade"
 import type { AssignableProfessionalRow } from "../domain/ports/professional-assignment.repository"
 
-export const ASSIGNABLE_LISTING_CONFIG: ListingConfig = {
-  sortable: { name: users.name },
-  searchable: [users.name, users.email],
-  defaultSort: { key: "name", order: "asc" },
-  tiebreaker: users.id,
-}
-
-/** Profissional atribuível: atende cliente, ativo e não soft-deletado. O perfil
- *  de acesso não entra — agendista e recepção também atendem (ADR 0082).
+/**
+ * Recorte que é DESTA entrada: quem tem perfil profissional que atende cliente.
+ * `serves_clients` deixou de ser coluna de `identity.users` no corte do agregado
+ * (AD-035) e mora em `professional.professional_profile`. O perfil de acesso não
+ * entra — agendista e recepção também atendem (ADR 0082).
  *
- *  `serves_clients` deixou de ser coluna de `identity.users` no corte do
- *  agregado (AD-035): quem consulta estes filtros precisa juntar
- *  `professional.professional_profile` — ver `assignableProfessionalJoin`. */
-export function assignableProfessionalFilters(): SQL[] {
-  return [
-    eq(professionalProfile.servesClients, true),
-    eq(users.status, "active"),
-    isNull(users.deletedAt),
-  ]
+ * Estado de CONTA (`active`, soft delete) não é recorte daqui: quem responde por
+ * ele é o identity, pela `UserDirectoryFacade`. A entrada mantém a FK física
+ * para `identity.users` (integridade referencial no schema), mas nenhuma
+ * LEITURA daqui seleciona colunas de lá.
+ */
+export function servesClientsFilter(): SQL {
+  return eq(professionalProfile.servesClients, true)
 }
 
-/** Condição do join 1:1 que traz `serves_clients` para junto do usuário. */
-export function assignableProfessionalJoin(): SQL {
-  return eq(professionalProfile.userId, users.id)
+/**
+ * Ids dos candidatos a profissional atribuível, opcionalmente restritos a um
+ * conjunto. `restrictTo` vazio devolve vazio — é um recorte válido, não "todos".
+ */
+export async function servesClientsUserIds(
+  db: DrizzleExecutor,
+  restrictTo?: readonly string[]
+): Promise<string[]> {
+  if (restrictTo !== undefined && restrictTo.length === 0) return []
+  const rows = await db
+    .select({ userId: professionalProfile.userId })
+    .from(professionalProfile)
+    .where(
+      restrictTo === undefined
+        ? servesClientsFilter()
+        : and(
+            servesClientsFilter(),
+            inArray(professionalProfile.userId, [...restrictTo])
+          )
+    )
+  return rows.map((row) => row.userId)
 }
 
-export const assignableProfessionalSelection = {
-  id: users.id,
-  name: users.name,
-  email: users.email,
-  avatarAttachmentId: users.avatarAttachmentId,
-}
-
-export function toAssignableProfessionalRow(r: {
-  id: string
-  name: string
-  email: string
-  avatarAttachmentId: string | null
-}): AssignableProfessionalRow {
+/** Projeção de diretório do identity → linha pública da entrada. */
+export function toAssignableProfessionalRow(
+  row: UserDirectoryRow
+): AssignableProfessionalRow {
   return {
-    id: r.id,
-    name: r.name,
-    email: r.email,
-    avatarAttachmentId: r.avatarAttachmentId ?? null,
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    avatarAttachmentId: row.avatarAttachmentId ?? null,
   }
 }

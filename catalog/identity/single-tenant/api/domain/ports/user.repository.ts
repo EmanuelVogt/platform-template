@@ -38,6 +38,31 @@ export interface NotificationTarget {
   name: string
 }
 
+/**
+ * Projeção mínima de usuário publicada para outra entrada montar um diretório:
+ * nome, e-mail e avatar. Nada de perfil de acesso, estado de conta ou segredo —
+ * quem precisa disso pede ao identity, não copia a coluna.
+ */
+export interface UserDirectoryRow {
+  id: string
+  name: string
+  email: string
+  avatarAttachmentId: string | null
+}
+
+/**
+ * Busca paginada de diretório restrita a `ids` — o conjunto que o chamador já
+ * recortou pelo critério DELE (ex.: quem tem perfil profissional que atende
+ * cliente). O identity aplica só o que é dele: ativo, vivo, busca por nome/
+ * e-mail, ordem por nome com desempate por PK e a paginação.
+ */
+export interface SearchUserDirectoryInput {
+  ids: readonly string[]
+  q?: string
+  page: number
+  pageSize: number
+}
+
 export interface UserRepository {
   findByEmail(email: string): Promise<User | null>
   findById(id: string): Promise<User | null>
@@ -106,6 +131,20 @@ export interface UserRepository {
   findNotificationTargetsByPermission(
     permission: PermissionKey
   ): Promise<NotificationTarget[]>
+  /**
+   * Projeção de diretório dos usuários ATIVOS e vivos dentre `ids`, ordenada
+   * por nome (asc) com desempate por PK. `ids` vazio devolve vazio — nunca
+   * "todos": o recorte é do chamador e um conjunto vazio é um recorte válido.
+   */
+  listActiveDirectoryByIds(ids: readonly string[]): Promise<UserDirectoryRow[]>
+  /**
+   * Como `listActiveDirectoryByIds`, paginada e com busca `q` sobre nome e
+   * e-mail. É a metade "usuário" de uma listagem que outra entrada filtra pela
+   * metade dela — ver `SearchUserDirectoryInput`.
+   */
+  searchActiveDirectory(
+    input: SearchUserDirectoryInput
+  ): Promise<PaginatedResult<UserDirectoryRow>>
 }
 
 export const USER_REPOSITORY: unique symbol = Symbol("UserRepository")

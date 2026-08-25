@@ -8,8 +8,8 @@ import type { ReactNode } from "react"
 
 // Nome e idioma vêm de `NEXT_PUBLIC_APP_NAME` / `NEXT_PUBLIC_LOCALE` — sem
 // default, o produto enxerga exatamente o comportamento de hoje (pt-BR,
-// "Platform"). Mesmo seam de `VITE_APP_NAME`/`VITE_LOCALE` em
-// apps/web-vite/src/app/router/shell.tsx.
+// "Platform"). Mesmo padrão em apps/web-vite/src/app/router/shell.tsx
+// (`APP_NAME` e `LOCALE` no Vite).
 function resolveAppName(): string {
   return process.env.NEXT_PUBLIC_APP_NAME ?? "Platform"
 }

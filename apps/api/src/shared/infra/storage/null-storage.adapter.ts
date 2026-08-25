@@ -1,18 +1,19 @@
 import { StorageUnavailableError } from "./storage-unavailable.error"
 
 import type { ObjectStoragePort } from "./object-storage.port"
+import type { Readable } from "node:stream"
 
 /** SEAM-05: liga sem `STORAGE_*` configurado — cada chamada real falha com `StorageUnavailableError`. */
 export class NullStorageAdapter implements ObjectStoragePort {
-  async put(): Promise<void> {
+  async put(_key: string, _body: Buffer, _contentType: string): Promise<void> {
     throw new StorageUnavailableError()
   }
 
-  async getStream(): Promise<NodeJS.ReadableStream> {
+  async getStream(_key: string): Promise<NodeJS.ReadableStream> {
     throw new StorageUnavailableError()
   }
 
-  async head(): Promise<{
+  async head(_key: string): Promise<{
     contentType: string
     sizeBytes: number
     etag: string
@@ -20,11 +21,15 @@ export class NullStorageAdapter implements ObjectStoragePort {
     throw new StorageUnavailableError()
   }
 
-  async delete(): Promise<void> {
+  async delete(_key: string): Promise<void> {
     throw new StorageUnavailableError()
   }
 
-  async putStream(): Promise<void> {
+  async putStream(
+    _key: string,
+    _body: Readable,
+    _contentType: string
+  ): Promise<void> {
     throw new StorageUnavailableError()
   }
 }

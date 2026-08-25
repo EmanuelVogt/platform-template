@@ -3,7 +3,10 @@
  *
  * As chaves (identificadores) seguem inglês; os paths (URL, conteúdo
  * user-facing) são pt-BR. Nunca usar path cru no app — sempre via `ROUTES`.
- * O produto acrescenta as próprias entradas aqui e em `ROUTE_ACCESS`.
+ * O produto acrescenta as próprias rotas como arquivos em `app/` (convenção
+ * do App Router) e as próprias entradas em `ROUTES`/`ROUTE_ACCESS`; os
+ * destinos protegidos correspondentes entram com `registerProtectedRoute`
+ * (abaixo), sem editar este arquivo.
  */
 export const ROUTES = {
   HOME: "/",
@@ -14,8 +17,19 @@ export const ROUTES = {
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES]
 
 /** Rotas protegidas (área logada) — destinos válidos para restaurar ou
- *  redirecionar um usuário autenticado. */
+ *  redirecionar um usuário autenticado. O produto acrescenta as próprias com
+ *  `registerProtectedRoute`. */
 const PROTECTED_ROUTES = new Set<string>([ROUTES.INICIO, "/inicio/$segment"])
+
+/**
+ * Ponto de extensão: registra um path (ou template com `$param`, ex.:
+ * `/admin/$id`) como destino protegido válido — participa de
+ * `toSafeProtectedRoute` e `resolveProtectedRouteTemplate` sem editar este
+ * arquivo.
+ */
+export function registerProtectedRoute(template: string): void {
+  PROTECTED_ROUTES.add(template)
+}
 
 function matchesRouteTemplate(pathname: string, template: string): boolean {
   const pathParts = pathname.split("/").filter(Boolean)

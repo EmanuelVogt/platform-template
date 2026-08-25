@@ -3321,3 +3321,78 @@ an owner ruling before a `web_stack=next` child is shipped. *CAT-05* — owner h
 **Execute is complete for the `v2.4.0` scope. The next act is the owner's**: dispatch the release
 (an empty `chore(release): v2.4.0` marker; the agent never tags and never pushes — AD-006/AD-034).
 Waves 8-14 (`v3.0.0`) do not start until that tag exists.
+
+---
+
+## Fix Round 2 — the three items left open at the `v2.4.0` tag (authored 2026-08-24)
+
+Authored on the owner's instruction after `v2.4.0` was dispatched (marker `aed1802`). None of these
+gated the tag; all three land after it and ship in the next release. Three clusters, disjoint file
+sets, dispatched in parallel.
+
+### Cluster CG1 — the Next shell gets the seams the Vite shell already has (sonnet)
+
+`validation.md` § *Fix 5*. `copier.yml:154-158` offers `web_stack` (default `vite`, choices
+`[vite, next]`), but T23–T27 built the seams in `apps/web-vite` only, so a `web_stack=next` child
+loses **LOC-03, LOC-06 and SEAM-04**. Mirror the seam, not the implementation: Next has its own
+router and its own env convention (`NEXT_PUBLIC_*`, not `VITE_*`). Read the Vite shell first and
+carry across **what the requirement asks for**, not the file layout.
+
+Owns `apps/web-next/**` and the new parity test.
+
+| Task | Requirement | What is missing in `apps/web-next` |
+| --- | --- | --- |
+| GT1 | LOC-06 | no favicon — `public/` holds only `.gitkeep` |
+| GT2 | SEAM-04 | no `product-routes.tsx`, no `registerProtectedRoute` |
+| GT3 | LOC-03 | no `VITE_APP_NAME` / `VITE_LOCALE` equivalent; `apps/web-next/src/shared/config/routes.ts:6` tells the product to edit `routes.ts` directly, which is the seam the requirement exists to remove |
+| GT4 | all three | a guard asserting the two shells stay at parity on these three seams, so the next shell cannot silently drift again |
+
+**Done when** (each): the seam works in the Next shell the way the requirement words it · one commit
+per task · GT4's guard fails when any one of GT1–GT3 is reverted — prove it.
+**Gate**: `pnpm test:scripts`, plus the web-next unit project if the task adds a component test.
+
+### Cluster CG2 — the `booking` exception stops being a widening blanket (sonnet)
+
+`validation.md` § round 2. FT1 excepted `docs/dev/template-changelog.md` from the domain scan for a
+genuine `booking` hit. The Verifier accepted it but flagged the precedent: **wave-7 deviation 2 did
+the opposite in an identical case** — the worker reworded `MySQL` rather than excepting it — and the
+changelog grows every release, so the exception widens with it.
+
+#### GT5: reword the hit and drop the exception
+
+**Where**: `docs/dev/template-changelog.md:67`
+**Touches**: `docs/dev/template-changelog.md`, `scripts/platform/__tests__/brand-hygiene.test.mjs`
+**Done when**:
+- [ ] `:67` no longer contains the domain term, and the sentence still says what it said — this is a
+      historical record; **do not restate the history, only de-brand the wording**
+- [ ] The file's `KNOWN_EXCEPTIONS` entry is removed and the end-to-end scan covers it for real
+- [ ] `:515`'s `attends_guests` is confirmed still not matching `/\bguests?\b/i` — if the reword
+      changes that, say so rather than widening the pattern
+- [ ] Gate passes: `pnpm test:scripts`
+**Commit**: `fix(changelog): de-brand the v2.4.0 entry and drop its hygiene exception`
+
+### Cluster CG3 — REL-04 stops being blind inside a pre-commit hook (opus)
+
+Wave 4, Finding 2, and the last item the handoff carried with no task. `lefthook-local.yml` runs
+`catalog-lint` on `pre-commit` for `{catalog/**,docs/advisories/**,docs/dev/template-changelog.md}`.
+`entryChangedWithoutBump` reads **`HEAD`** (`release-preflight.mjs:66,80`) — right from CI and from
+`release-preflight`, **wrong** in a pre-commit hook, where `HEAD` is the *parent* and the staged fix
+is invisible. **A commit that edits an entry's `CHANGELOG.md` without moving its version leaves the
+repo in a state where the next commit staging `catalog/**` cannot pass — and the commit that would
+repair it is precisely the one blocked.** `51daeb3` created that state on 2026-08-24; the escape was
+`git reset --soft` onto a parent where `catalog/` was clean, not a bypass.
+
+#### GT6: the bump rule reads the state being committed, not the parent
+
+**Where**: `scripts/platform/release-preflight.mjs:66,80`
+**Touches**: `scripts/platform/release-preflight.mjs`,
+`scripts/platform/__tests__/entry-bump-lint.test.mjs`, `lefthook-local.yml` if the fix needs it
+**Done when**:
+- [ ] The rule compares against the state actually being committed when it runs inside a hook, and
+      keeps its current `HEAD` semantics from CI and from `release-preflight` — **both callers stay
+      correct; do not fix one by breaking the other**
+- [ ] A test reproduces the trap as it happened: an entry `CHANGELOG.md` edited with no version
+      move, then a second commit staging `catalog/**` — it must pass now and must fail against the
+      unfixed rule. Put it beside T33's 7 tests, which pin the `HEAD` semantics
+- [ ] Gate passes: `pnpm test:scripts` and `pnpm catalog:lint`
+**Commit**: `fix(release): make the entry-bump rule see staged state in a pre-commit hook`

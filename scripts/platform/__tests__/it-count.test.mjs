@@ -1,6 +1,12 @@
 import assert from "node:assert/strict"
 import { spawnSync } from "node:child_process"
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { test } from "node:test"
@@ -236,10 +242,14 @@ test("sem modo o CLI sai 2 com o uso", () => {
 
 test("o baseline versionado da feature bate com a árvore do repositório", () => {
   const repoRoot = path.resolve(path.dirname(SCRIPT), "..", "..")
-  const baselinePath = path.join(
-    repoRoot,
-    ".specs/features/test-suite-refactor/baseline.json"
-  )
+  // Os dois caminhos são deliberados: colapsar num só rebenta no closeout.
+  const baselinePath = [
+    ".specs/features/test-suite-refactor/baseline.json",
+    ".specs/features/done/test-suite-refactor/baseline.json",
+  ]
+    .map((rel) => path.join(repoRoot, rel))
+    .find((candidate) => existsSync(candidate))
+  assert.ok(baselinePath, "baseline.json da test-suite-refactor não encontrado")
   const baseline = JSON.parse(readFileSync(baselinePath, "utf8"))
   assert.deepEqual(compareBaseline(baseline, measure(repoRoot)), [])
   assert.ok(

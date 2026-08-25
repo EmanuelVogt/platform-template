@@ -1,30 +1,19 @@
-import { type INestApplication, VersioningType } from "@nestjs/common"
-import { Test } from "@nestjs/testing"
-import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import {
-  createTestPool,
-  truncateIdentity,
-  truncateKernel,
-} from "../../../../test/setup/test-db"
-import { AppModule } from "../../../app.module"
-import { applySecurity } from "../../../main"
-import { RequestContext } from "../../../shared/kernel/context/request-context"
-import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
+import { createE2eApp, withE2ePool } from "../../../shared/test/e2e/app"
+import { E2E_ORIGIN } from "../../../shared/test/e2e/constants"
+import { resetDb } from "../../../shared/test/int/db"
 
-const ORIGIN = "http://localhost:5173"
+import type { E2eApp } from "../../../shared/test/e2e/app"
 
 describe("Reset — token nunca em corpo/instance/log (e2e)", () => {
-  let app: INestApplication
+  const db = withE2ePool()
+  let e2e: E2eApp
   const logged: string[] = []
   let originalWrite: typeof process.stdout.write
 
   beforeAll(async () => {
-    const pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await pool.end()
+    await resetDb(db.pool, ["identity", "_kernel"])
 
     // captura stdout (pino) para inspecionar vazamento de token
     originalWrite = process.stdout.write.bind(process.stdout)
@@ -35,27 +24,20 @@ describe("Reset — token nunca em corpo/instance/log (e2e)", () => {
       return true
     }
 
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile()
-    app = moduleRef.createNestApplication()
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-    applySecurity(app)
-    app.use(createRequestContextMiddleware(app.get(RequestContext)))
-    await app.init()
+    e2e = await createE2eApp({ rateLimiter: "real" })
   })
 
   afterAll(async () => {
     ;(process.stdout.write as unknown) = originalWrite
-    await app.close()
+    await e2e.close()
   })
 
   it("reset com token no body → token bruto não aparece no corpo, instance nem log", async () => {
     const FAKE_TOKEN = "token-secreto-de-reset-que-nao-pode-vazar-123456789"
 
-    const res = await request(app.getHttpServer())
+    const res = await e2e.http
       .post("/v1/auth/reset-password")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .set("Idempotency-Key", "reset-fake")
       .send({ token: FAKE_TOKEN, password: "Senha-Nova-Muito-Forte-2026!" })
 

@@ -1,150 +1,76 @@
-import { type INestApplication, VersioningType } from "@nestjs/common"
-import { Test } from "@nestjs/testing"
-import request from "supertest"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
-import {
-  createTestPool,
-  truncateIdentity,
-  truncateKernel,
-} from "../../../../test/setup/test-db"
-import { AppModule } from "../../../app.module"
-import { applySecurity } from "../../../main"
-import { RequestContext } from "../../../shared/kernel/context/request-context"
-import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
-import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
-import { seedUser } from "../testing/seed-user"
+import { createE2eApp, withE2ePool } from "../../../shared/test/e2e/app"
+import { E2E_ORIGIN } from "../../../shared/test/e2e/constants"
+import { cookieHeader } from "../../../shared/test/e2e/http"
+import { resetDb } from "../../../shared/test/int/db"
+import { loginAs, seedUser, TEST_PASSWORD } from "../testing"
 
-import type { Pool } from "pg"
+import type { E2eApp } from "../../../shared/test/e2e/app"
 
-const ORIGIN = "http://localhost:5173"
 const EMAIL = "logout-e2e@example.com"
-const PASSWORD = "Senha-Muito-Forte-2026!"
 const SESSION_COOKIE = "rit_session"
 
-const allowAll = {
-  consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
-  reset: () => Promise.resolve(),
-}
-
-/** Extrai o valor de um cookie específico do header Set-Cookie. */
-function extractCookieValue(
-  setCookie: string[] | string | undefined,
-  name: string
-): string | undefined {
-  const arr =
-    setCookie === undefined
-      ? []
-      : Array.isArray(setCookie)
-        ? setCookie
-        : [setCookie]
-  for (const entry of arr) {
-    const pair = entry.split(";", 1)[0] ?? ""
-    const eq = pair.indexOf("=")
-    if (eq > 0 && pair.slice(0, eq) === name) {
-      return pair.slice(eq + 1)
-    }
-  }
-  return undefined
-}
-
 describe("Logout — POST /v1/auth/logout (e2e)", () => {
-  let app: INestApplication
-  let pool: Pool
+  const db = withE2ePool()
+  let e2e: E2eApp
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
-    })
-      .overrideProvider(RATE_LIMITER)
-      .useValue(allowAll)
-      .compile()
-
-    app = moduleRef.createNestApplication()
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-    applySecurity(app)
-    app.use(createRequestContextMiddleware(app.get(RequestContext)))
-    await app.init()
-
-    pool = createTestPool()
+    e2e = await createE2eApp()
   })
 
   afterAll(async () => {
-    await pool.end()
-    await app.close()
+    await e2e.close()
   })
 
   beforeEach(async () => {
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await seedUser(app, pool, {
+    await resetDb(db.pool, ["identity", "_kernel"])
+    await seedUser(e2e.app, db.pool, {
       email: EMAIL,
       name: "Logout E2E",
-      password: PASSWORD,
+      password: TEST_PASSWORD,
     })
   })
 
-  /** Realiza login e devolve o valor bruto do cookie de sessão. */
-  async function login(): Promise<string> {
-    const res = await request(app.getHttpServer())
-      .post("/v1/auth/login")
-      .set("Origin", ORIGIN)
-      .send({ email: EMAIL, password: PASSWORD, rememberMe: false })
-      .expect(200)
-
-    const value = extractCookieValue(res.headers["set-cookie"], SESSION_COOKIE)
-    if (!value) throw new Error("login não emitiu cookie de sessão")
-    return value
-  }
-
   it("logout com sessão válida → 204 e cookie de sessão apagado", async () => {
-    const sessionValue = await login()
+    const cookies = await loginAs(e2e.http, EMAIL)
 
-    const res = await request(app.getHttpServer())
+    const res = await e2e.http
       .post("/v1/auth/logout")
-      .set("Origin", ORIGIN)
-      .set("Cookie", `${SESSION_COOKIE}=${sessionValue}`)
+      .set("Origin", E2E_ORIGIN)
+      .set("Cookie", cookies)
       .expect(204)
 
     expect(res.text).toBe("")
 
-    const setCookie = res.headers["set-cookie"] as string[] | string | undefined
-    const joined = Array.isArray(setCookie)
-      ? setCookie.join(";")
-      : (setCookie ?? "")
+    const joined = cookieHeader(res).join(";")
     expect(joined).toContain(`${SESSION_COOKIE}=;`)
     expect(joined).toMatch(/Max-Age=0/i)
   })
 
   it("após logout, rota autenticada retorna 401", async () => {
-    const sessionValue = await login()
+    const cookies = await loginAs(e2e.http, EMAIL)
 
-    await request(app.getHttpServer())
+    await e2e.http
       .post("/v1/auth/logout")
-      .set("Origin", ORIGIN)
-      .set("Cookie", `${SESSION_COOKIE}=${sessionValue}`)
+      .set("Origin", E2E_ORIGIN)
+      .set("Cookie", cookies)
       .expect(204)
 
-    await request(app.getHttpServer())
+    await e2e.http
       .get("/v1/auth/session")
-      .set("Origin", ORIGIN)
-      .set("Cookie", `${SESSION_COOKIE}=${sessionValue}`)
+      .set("Origin", E2E_ORIGIN)
+      .set("Cookie", cookies)
       .expect(401)
   })
 
   it("logout sem sessão (cookie ausente) → 401", async () => {
-    await request(app.getHttpServer())
-      .post("/v1/auth/logout")
-      .set("Origin", ORIGIN)
-      .expect(401)
+    await e2e.http.post("/v1/auth/logout").set("Origin", E2E_ORIGIN).expect(401)
   })
 
   it("logout sem Origin → 403 (CSRF guard rejeita por Origin ausente)", async () => {
-    const sessionValue = await login()
+    const cookies = await loginAs(e2e.http, EMAIL)
 
-    await request(app.getHttpServer())
-      .post("/v1/auth/logout")
-      .set("Cookie", `${SESSION_COOKIE}=${sessionValue}`)
-      .expect(403)
+    await e2e.http.post("/v1/auth/logout").set("Cookie", cookies).expect(403)
   })
 })

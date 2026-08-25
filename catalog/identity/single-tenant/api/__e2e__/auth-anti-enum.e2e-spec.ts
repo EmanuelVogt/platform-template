@@ -1,25 +1,18 @@
-import { type INestApplication, VersioningType } from "@nestjs/common"
-import { Test } from "@nestjs/testing"
-import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import {
-  createTestPool,
-  truncateIdentity,
-  truncateKernel,
-} from "../../../../test/setup/test-db"
-import { AppModule } from "../../../app.module"
-import { applySecurity } from "../../../main"
-import { RequestContext } from "../../../shared/kernel/context/request-context"
-import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
 import { InMemoryRateLimiter } from "../../../shared/kernel/rate-limit/in-memory-rate-limiter"
 import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
-import { allowAllRateLimiter } from "../testing/allow-all-rate-limiter"
-import { seedUser } from "../testing/seed-user"
+import { createE2eApp, withE2ePool } from "../../../shared/test/e2e/app"
+import { E2E_ORIGIN } from "../../../shared/test/e2e/constants"
+import { cookieHeader } from "../../../shared/test/e2e/http"
+import { resetDb } from "../../../shared/test/int/db"
+import { seedUser, TEST_PASSWORD } from "../testing"
 
-const ORIGIN = "http://localhost:5173"
+import type { E2eApp } from "../../../shared/test/e2e/app"
+
 const EXISTING = "anti-enum-existe@example.com"
-const PASSWORD = "Senha-Muito-Forte-2026!"
+
+const db = withE2ePool()
 
 function bodyShape(body: Record<string, unknown>) {
   // remove o que PODE variar (correlationId/instance); o resto deve ser
@@ -29,43 +22,26 @@ function bodyShape(body: Record<string, unknown>) {
 }
 
 describe("Login — anti-enumeração byte-idêntica (e2e)", () => {
-  let app: INestApplication
+  let e2e: E2eApp
 
   beforeAll(async () => {
-    const pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await pool.end()
-
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
-    })
-      .overrideProvider(RATE_LIMITER)
-      .useValue(allowAllRateLimiter)
-      .compile()
-    app = moduleRef.createNestApplication()
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-    applySecurity(app)
-    app.use(createRequestContextMiddleware(app.get(RequestContext)))
-    await app.init()
-
-    const seedPool = createTestPool()
-    await seedUser(app, seedPool, {
+    await resetDb(db.pool, ["identity", "_kernel"])
+    e2e = await createE2eApp()
+    await seedUser(e2e.app, db.pool, {
       email: EXISTING,
       name: "Existe",
-      password: PASSWORD,
+      password: TEST_PASSWORD,
     })
-    await seedPool.end()
   })
 
   afterAll(async () => {
-    await app.close()
+    await e2e.close()
   })
 
   it("inexistente e senha-errada produzem corpo byte-idêntico (401)", async () => {
-    const inexistente = await request(app.getHttpServer())
+    const inexistente = await e2e.http
       .post("/v1/auth/login")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .send({
         email: "nao-existe@example.com",
         password: "qualquer-coisa",
@@ -73,9 +49,9 @@ describe("Login — anti-enumeração byte-idêntica (e2e)", () => {
       })
       .expect(401)
 
-    const senhaErrada = await request(app.getHttpServer())
+    const senhaErrada = await e2e.http
       .post("/v1/auth/login")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .send({ email: EXISTING, password: "errada-errada", rememberMe: true })
       .expect(401)
 
@@ -87,58 +63,41 @@ describe("Login — anti-enumeração byte-idêntica (e2e)", () => {
   })
 
   it("não vaza token de sessão em login falho", async () => {
-    const res = await request(app.getHttpServer())
+    const res = await e2e.http
       .post("/v1/auth/login")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .send({ email: EXISTING, password: "errada", rememberMe: true })
       .expect(401)
-    const setCookie = res.headers["set-cookie"] as string[] | string | undefined
-    const joined = Array.isArray(setCookie)
-      ? setCookie.join(";")
-      : (setCookie ?? "")
+    const joined = cookieHeader(res).join(";")
     expect(joined).not.toMatch(/__Host-rit_session=[A-Za-z0-9_-]{20,}/)
   })
 })
 
 describe("Login — 429 do bucket por conta não distingue e-mail (e2e)", () => {
-  let app: INestApplication
+  let e2e: E2eApp
 
   beforeAll(async () => {
-    const pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await pool.end()
-
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
+    await resetDb(db.pool, ["identity", "_kernel"])
+    e2e = await createE2eApp({
+      rateLimiter: "real",
+      overrides: [[RATE_LIMITER, new InMemoryRateLimiter()]],
     })
-      .overrideProvider(RATE_LIMITER)
-      .useValue(new InMemoryRateLimiter())
-      .compile()
-    app = moduleRef.createNestApplication()
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-    applySecurity(app)
-    app.use(createRequestContextMiddleware(app.get(RequestContext)))
-    await app.init()
-
-    const seedPool = createTestPool()
-    await seedUser(app, seedPool, {
+    await seedUser(e2e.app, db.pool, {
       email: EXISTING,
       name: "Existe",
-      password: PASSWORD,
+      password: TEST_PASSWORD,
     })
-    await seedPool.end()
   })
 
   afterAll(async () => {
-    await app.close()
+    await e2e.close()
   })
 
   async function exhaust(email: string) {
     const attempt = () =>
-      request(app.getHttpServer())
+      e2e.http
         .post("/v1/auth/login")
-        .set("Origin", ORIGIN)
+        .set("Origin", E2E_ORIGIN)
         .send({ email, password: "senha-errada", rememberMe: false })
 
     let last = await attempt()

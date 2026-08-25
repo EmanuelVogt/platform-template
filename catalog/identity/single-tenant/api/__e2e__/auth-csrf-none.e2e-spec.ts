@@ -1,28 +1,20 @@
-import { type INestApplication, VersioningType } from "@nestjs/common"
-import { Test } from "@nestjs/testing"
-import request from "supertest"
-import { ulid } from "ulid"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import {
-  createTestPool,
-  truncateIdentity,
-  truncateKernel,
-} from "../../../../test/setup/test-db"
-import { AppModule } from "../../../app.module"
-import { applySecurity } from "../../../main"
-import { RequestContext } from "../../../shared/kernel/context/request-context"
-import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
 import { InMemoryRateLimiter } from "../../../shared/kernel/rate-limit/in-memory-rate-limiter"
 import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
+import { createE2eApp, withE2ePool } from "../../../shared/test/e2e/app"
+import { E2E_ORIGIN } from "../../../shared/test/e2e/constants"
+import { cookieValue } from "../../../shared/test/e2e/http"
+import { resetDb } from "../../../shared/test/int/db"
 import { PASSWORD_HASHER } from "../domain/ports/password-hasher"
 import { IDENTITY_CONFIG, parseIdentityConfig } from "../identity.config"
-import { allowAllRateLimiter } from "../testing/allow-all-rate-limiter"
+import { seedUser, TEST_PASSWORD } from "../testing"
 
-import type { Pool } from "pg"
+import type { E2eApp } from "../../../shared/test/e2e/app"
 
-const ORIGIN = "http://localhost:5173"
 const EMAIL = "csrf-none@example.com"
+
+const db = withE2ePool()
 
 const fakeHasher = {
   hash: () => Promise.resolve("argon2-fake"),
@@ -30,39 +22,13 @@ const fakeHasher = {
   needsRehash: () => false,
 }
 
-function cookieValue(
-  setCookie: string[] | undefined,
-  name: string
-): string | undefined {
-  for (const c of setCookie ?? []) {
-    const m = new RegExp(`^${name}=([^;]+)`).exec(c)
-    if (m?.[1] !== undefined) {
-      return decodeURIComponent(m[1])
-    }
-  }
-  return undefined
-}
-
-async function seedUser(pool: Pool): Promise<void> {
-  await pool.query(
-    `INSERT INTO identity.users
-       (id, name, email, email_verified, password_hash, pepper_version, failed_login_attempts)
-     VALUES ($1, $2, $3, true, $4, 1, 0)`,
-    [ulid(), "CSRF User", EMAIL, "argon2-dummy"]
-  )
-}
-
 describe("CSRF double-submit sob SameSite=none (e2e)", () => {
-  let app: INestApplication
-  let pool: Pool
+  let e2e: E2eApp
   let sessionCookie: string
   let csrfToken: string
 
   beforeAll(async () => {
-    pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await seedUser(pool)
+    await resetDb(db.pool, ["identity", "_kernel"])
 
     const cfg = parseIdentityConfig({
       ...process.env,
@@ -72,37 +38,30 @@ describe("CSRF double-submit sob SameSite=none (e2e)", () => {
       CSRF_SECRET: "z".repeat(40),
     })
 
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(IDENTITY_CONFIG)
-      .useValue(cfg)
-      .overrideProvider(PASSWORD_HASHER)
-      .useValue(fakeHasher)
-      .overrideProvider(RATE_LIMITER)
-      .useValue(allowAllRateLimiter)
-      .compile()
+    e2e = await createE2eApp({
+      overrides: [
+        [IDENTITY_CONFIG, cfg],
+        [PASSWORD_HASHER, fakeHasher],
+      ],
+    })
+    await seedUser(e2e.app, db.pool, {
+      email: EMAIL,
+      name: "CSRF User",
+      password: TEST_PASSWORD,
+    })
 
-    app = moduleRef.createNestApplication()
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-    applySecurity(app)
-    app.use(createRequestContextMiddleware(app.get(RequestContext)))
-    await app.init()
-
-    const login = await request(app.getHttpServer())
+    const login = await e2e.http
       .post("/v1/auth/login")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .send({ email: EMAIL, password: "qualquer", rememberMe: false })
       .expect(200)
 
-    const setCookie = login.headers["set-cookie"] as unknown as
-      | string[]
-      | undefined
-    sessionCookie = cookieValue(setCookie, "rit_session") ?? ""
-    csrfToken = cookieValue(setCookie, "rit_csrf") ?? ""
+    sessionCookie = cookieValue(login, "rit_session") ?? ""
+    csrfToken = cookieValue(login, "rit_csrf") ?? ""
   })
 
   afterAll(async () => {
-    await app.close()
-    await pool.end()
+    await e2e.close()
   })
 
   it("login emite o cookie rit_csrf legível", () => {
@@ -111,49 +70,46 @@ describe("CSRF double-submit sob SameSite=none (e2e)", () => {
   })
 
   it("mutação SEM X-CSRF-Token → 403", async () => {
-    await request(app.getHttpServer())
+    await e2e.http
       .delete("/v1/auth/devices")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .set("Cookie", `rit_session=${sessionCookie}`)
       .expect(403)
   })
 
   it("mutação COM X-CSRF-Token válido → 204", async () => {
-    await request(app.getHttpServer())
+    await e2e.http
       .delete("/v1/auth/devices")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .set("Cookie", `rit_session=${sessionCookie}`)
       .set("X-CSRF-Token", csrfToken)
       .expect(204)
   })
 
   it("mutação com X-CSRF-Token forjado → 403", async () => {
-    await request(app.getHttpServer())
+    await e2e.http
       .delete("/v1/auth/devices")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .set("Cookie", `rit_session=${sessionCookie}`)
       .set("X-CSRF-Token", "forjado-invalido")
       .expect(403)
   })
 
   it("GET /auth/session (safe) não exige X-CSRF-Token", async () => {
-    await request(app.getHttpServer())
+    await e2e.http
       .get("/v1/auth/session")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .set("Cookie", `rit_session=${sessionCookie}`)
       .expect(200)
   })
 })
 
 describe("Origin forjada não gasta bucket (e2e)", () => {
-  let app: INestApplication
-  let pool: Pool
+  let e2e: E2eApp
   let consumed: string[]
 
   beforeAll(async () => {
-    pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
+    await resetDb(db.pool, ["identity", "_kernel"])
 
     const inner = new InMemoryRateLimiter()
     consumed = []
@@ -169,28 +125,22 @@ describe("Origin forjada não gasta bucket (e2e)", () => {
       reset: (key: string) => inner.reset(key),
     }
 
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(PASSWORD_HASHER)
-      .useValue(fakeHasher)
-      .overrideProvider(RATE_LIMITER)
-      .useValue(spyingLimiter)
-      .compile()
-
-    app = moduleRef.createNestApplication()
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-    applySecurity(app)
-    app.use(createRequestContextMiddleware(app.get(RequestContext)))
-    await app.init()
+    e2e = await createE2eApp({
+      rateLimiter: "real",
+      overrides: [
+        [PASSWORD_HASHER, fakeHasher],
+        [RATE_LIMITER, spyingLimiter],
+      ],
+    })
   })
 
   afterAll(async () => {
-    await app.close()
-    await pool.end()
+    await e2e.close()
   })
 
   it("Origin de outro site é 403 e o bucket segue intacto para o pedido legítimo", async () => {
     const forgotPassword = (origin: string, i: number) =>
-      request(app.getHttpServer())
+      e2e.http
         .post("/v1/auth/forgot-password")
         .set("Origin", origin)
         .set("Idempotency-Key", `csrf-bucket-${origin}-${i}`)
@@ -204,7 +154,7 @@ describe("Origin forjada não gasta bucket (e2e)", () => {
     expect(consumed).toEqual([])
 
     for (let i = 0; i < 3; i++) {
-      const res = await forgotPassword(ORIGIN, i)
+      const res = await forgotPassword(E2E_ORIGIN, i)
       expect(res.status).not.toBe(429)
     }
     expect(consumed).toHaveLength(3)

@@ -290,17 +290,48 @@ the contract governs, not which *channels* deliver to a child. Both AUD-03 and A
 against the copier shipped set alone.
 
 **Corroborating instance, measured the same night.** That session's T35 rewrote the § *Tests* section
-of all five entry READMEs, and two of them now describe the kernel harness at
-`apps/api/src/shared/test/**` — a path the child receives by copier, never by `module add`, which
-vendors an entry into `apps/api/src/modules/<entry>/`. Cite
-`catalog/identity/single-tenant/README.md` § *Tests*. So the exact failure this feature exists to
-catch — a shipped doc sending a child reader to a path it does not have — was written that night,
-into files the guard structurally cannot reach. Two independent features demonstrated the same hole
-within hours of each other, which is the argument for closing it rather than living with it.
+of all five entry READMEs, and they point a child reader at `catalog/<entry>/api/testing/**`. That
+prefix is the AD-013 anchor: it never reaches a child. After `pnpm platform module add` the code
+lives at `apps/api/src/modules/<entry>/testing/**`, so the path named is one the reader cannot have.
+Cite `catalog/identity/single-tenant/README.md` § *Tests*.
+
+*(An earlier version of this note named `apps/api/src/shared/test/**` as the offending path. That was
+wrong and the peer session corrected it: the kernel harness ships to the child by copier with the
+rest of `apps/api/**`, so that path resolves fine. The correction sharpens the point rather than
+softening it — the misleading token is `catalog/`, the very prefix this template excludes.)*
+
+So the exact failure this feature exists to catch — a shipped doc sending a child reader to a path it
+does not have — was written that night, into files the guard structurally cannot reach. Two
+independent features demonstrated the same hole within hours, which is the argument for closing it
+rather than living with it.
 
 **Not fixed here** — closing it means teaching `shippedSet()` about `.platform-modules.lock` and the
 installer's copy semantics, which is a feature, not a task. Recorded so the next session does not
 read the guard's green as covering catalog entries.
+
+### A second confirmed instance of the defect class, from outside this feature
+
+The spec's Success Criteria say this feature "removes its only confirmed instance rather than
+claiming the class is closed". A second confirmed instance arrived the same night, from a parallel
+session, and it is worth citing because it is the thesis rather than a wording slip.
+
+`5c0ad20` (governance, `audit-2026-08-23-remediation`) rewrote a sentence in the half of
+`docs/agents/workflow.md` that ships, inside a paragraph opening "push = deploy": *"An agent may push
+`main` and cut release tags (AD-034)"*. In the template that publishes a tag; in a child it
+authorises an agent to deploy to the product's environment unattended. Its author reported having
+reasoned about exactly that hazard before editing and having intended to keep the deploy guard — and
+then wrote the sentence into the shipped file anyway. Correct intent, wrong audience.
+
+**A vocabulary gate reads that sentence clean, and so does this feature's own guard** — it names no
+path and no excluded workflow stem. Only the addressee test catches it, and the addressee test is a
+human reading. Repaired by its owner in `3acbe2f`, with the grant confined to
+`docs/platform/workflow.md` — the affordance this feature's T3 split created. Two further child-side
+copies of the same sentence went with it (`docs/dev/template.md:66`,
+`.agents/skills/template-update/SKILL.md:24`).
+
+This is the strongest available evidence for the spec's declared residual being real and worth
+stating: the path-bearing half of the class is now mechanically closed, and the prose-only half
+produced a fresh instance within hours of the guard landing.
 
 ### Corrections this wave forced on the plan
 

@@ -3584,3 +3584,24 @@ branch it ships.**
       prove both
 - [ ] Gate passes: `pnpm test:scripts`
 **Commit**: `fix(ci): the release gate covers everything the branch gate covers`
+
+#### Fix Round 3 — landed
+
+**GT9 `2100522`** (haiku): the `VITE_` literal is gone from `apps/web-next/**`, verified with
+`node scripts/template-smoke.mjs --web-stack next` exit 0 — the gate that caught it, which the unit
+tests could not.
+
+**GT10 `186ccb3`** (sonnet): `release.yml` gained the `web_stack` matrix dimension on
+`catalog:check` and a `smoke` job mirroring `ci.yml`'s, both wired into `tag.needs`. The new
+`release-gate-parity.test.mjs` derives what the release must run from the `ci.yml` jobs carrying a
+`web_stack` leg — not a hardcoded list — and is proved red two ways, by dropping a command and by
+dropping a matrix dimension. `pnpm test:scripts` 612/612.
+
+**FINDING — the release gate certified less than the branch it shipped.** `v2.4.0` went out with
+`web_stack=next` broken while its own release run reported **8/8 green**, because `release.yml` ran
+neither `template:smoke` nor any `web_stack` leg of `catalog:check`. The branch gate had both and
+would have caught it on the same commit. **Two gates over one tree, and the weaker one was the one
+holding the tag.** GT10 closes the asymmetry structurally; the guard is what keeps it closed.
+
+**Consequence for the tag:** `v2.4.0` is published with a defect on the non-default shell. It needs
+`v2.4.1`, and that is the owner's act.

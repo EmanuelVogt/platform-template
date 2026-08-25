@@ -2,17 +2,15 @@ import { Inject, Injectable } from "@nestjs/common"
 
 import {
   PROFESSIONAL_ASSIGNMENT_REPOSITORY,
+  type AssignableProfessionalRow,
   type EnsureAreaForServiceProfessionalsInput,
   type ProfessionalAssignmentLink,
   type ProfessionalAssignmentRepository,
   type ReplaceForServiceInput,
+  type SearchAssignableProfessionalsInput,
 } from "../../domain/ports/professional-assignment.repository"
 
 import type { PaginatedResult } from "../../../../shared/kernel/listing/paginated"
-import type {
-  AssignableProfessionalRow,
-  SearchAssignableProfessionalsInput,
-} from "../../domain/ports/professional-assignment.repository"
 
 export type { AssignableProfessionalRow } from "../../domain/ports/professional-assignment.repository"
 

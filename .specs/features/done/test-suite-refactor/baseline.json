@@ -1,7 +1,7 @@
 {
   "totals": {
-    "files": 317,
-    "sites": 2087
+    "files": 340,
+    "sites": 2163
   },
   "files": [
     {
@@ -84,14 +84,29 @@
         "KERNEL_SURFACE inclui apps/api/test, src/openapi e src/docs (BRAND-07)",
         "KERNEL_SURFACE inclui src/pages de cada casca web (BRAND-07)",
         "a varredura alcança de fato apps/api/test e apps/api/src/openapi",
-        "test-db.ts mantém identity.professional_default_hours (T72 apaga em v3.0.0), mas sai da varredura de token",
+        "a allowlist de test-db.ts é ganha: ele ainda ofende e por isso sai da varredura",
         "nenhum token de módulo sobrevive na casca do template",
         "reprova cada token da lista, com arquivo e linha",
         "é case-sensitive: `Identity` sozinho não casa com o token minúsculo",
         "não reprova palavra vizinha que só contém o token como prefixo alheio",
-        "libera fixture de teste sob shared/test, não o resto"
+        "libera fixture de teste sob shared/test, não o resto",
+        "o catálogo do template é lido com nome, diretório e dependsOn",
+        "nenhum import de testing/ viola dependsOn ou fecha ciclo no layout presente",
+        "a varredura do filho roda sobre modules/ sem exigir catalog/",
+        "no filho, aresta entre barrels testing/ que fecha ciclo é reprovada",
+        "no filho, aresta que não volta entre barrels testing/ passa",
+        "no filho, o próprio barrel e o pacote externo não viram aresta",
+        "o specifier do catálogo resolve no layout do filho",
+        "reprova import de testing/ de entrada fora do dependsOn, com arquivo e linha",
+        "aceita import de testing/ de entrada declarada no dependsOn",
+        "reprova import() dinâmico de testing/ fora do dependsOn",
+        "t",
+        "aceita import() dinâmico de entrada declarada no dependsOn",
+        "aceita import do próprio barrel da entrada",
+        "reprova a aresta que fecharia um ciclo, nomeando o ciclo (AD-025)",
+        "cycleThrough enxerga o ciclo indireto de três entradas"
       ],
-      "count": 38
+      "count": 53
     },
     {
       "file": "apps/api/src/modules/template-kernel-only.spec.ts",
@@ -122,6 +137,11 @@
         "declara título e versão da API",
         "declara o cookie de sessão como security scheme apiKey",
         "exige o cookie por default no documento inteiro",
+        "documenta o default de COOKIE_NAME como __Host-app_session",
+        "anuncia o cookie de sessão neutro na descrição do documento",
+        "anuncia o cookie de CSRF como app_csrf",
+        "não publica nenhum literal com o prefixo de marca do dono",
+        "descreve o provedor do CsrfGuard pela função, não pelo nome da entrada",
         "abre com security vazio o handler @Public com operationId",
         "abre também o método mutante público (post)",
         "mantém o default do documento no handler não-público",
@@ -134,7 +154,7 @@
         "controller sem handler não contribui path",
         "pula os wrappers inválidos e ainda abre a rota pública"
       ],
-      "count": 14
+      "count": 19
     },
     {
       "file": "apps/api/src/openapi/operation-id.spec.ts",
@@ -358,6 +378,17 @@
       "count": 3
     },
     {
+      "file": "apps/api/src/shared/infra/storage/null-storage.adapter.spec.ts",
+      "titles": [
+        "put rejeita com StorageUnavailableError",
+        "getStream rejeita com StorageUnavailableError",
+        "head rejeita com StorageUnavailableError",
+        "delete rejeita com StorageUnavailableError",
+        "putStream rejeita com StorageUnavailableError"
+      ],
+      "count": 5
+    },
+    {
       "file": "apps/api/src/shared/infra/storage/object-storage.port.spec.ts",
       "titles": [
         "é um symbol único para injeção"
@@ -365,9 +396,9 @@
       "count": 1
     },
     {
-      "file": "apps/api/src/shared/infra/storage/r2-storage.adapter.spec.ts",
+      "file": "apps/api/src/shared/infra/storage/s3-storage.adapter.spec.ts",
       "titles": [
-        "configura o client R2 (region auto, path-style, credenciais, requestHandler com timeout/maxSockets)",
+        "configura o client com a região explícita da config (sem 'auto' hard-coded), path-style, credenciais, requestHandler com timeout/maxSockets",
         "put envia PutObjectCommand com bucket/key/body/contentType e abortSignal",
         "put mapeia TimeoutError do SDK pra StorageUnavailableError (503)",
         "getStream retorna o Body do GetObjectCommand sem passar abortSignal",
@@ -389,9 +420,10 @@
         "rejeita endpoint não-URL",
         "rejeita chave faltando",
         "aplica os defaults de timeout/sockets quando ausentes",
-        "coage STORAGE_REQUEST_TIMEOUT_MS/STORAGE_MAX_SOCKETS de string pra number"
+        "coage STORAGE_REQUEST_TIMEOUT_MS/STORAGE_MAX_SOCKETS de string pra number",
+        "isStorageConfigured é falso sem nenhuma var STORAGE_* e verdadeiro com apenas uma presente"
       ],
-      "count": 5
+      "count": 6
     },
     {
       "file": "apps/api/src/shared/kernel/access/access.guard.spec.ts",
@@ -428,9 +460,15 @@
     {
       "file": "apps/api/src/shared/kernel/clock/bucket-sql.spec.ts",
       "titles": [
-        "retorna fragmento SQL para bucket diário e semanal"
+        "cai em UTC sem APP_TIMEZONE e avisa uma única vez no processo",
+        "relê APP_TIMEZONE a cada chamada, sem memoizar o valor",
+        "devolve o fuso IANA configurado",
+        "recusa fuso fora do conjunto conhecido pelo runtime",
+        "recusa texto que tentaria fechar o literal SQL",
+        "aplica o fuso resolvido como literal, sem bind",
+        "distingue o bucket diário do semanal"
       ],
-      "count": 1
+      "count": 7
     },
     {
       "file": "apps/api/src/shared/kernel/clock/clock.spec.ts",
@@ -1086,6 +1124,142 @@
       "count": 2
     },
     {
+      "file": "apps/api/src/shared/test/e2e/http.spec.ts",
+      "titles": [
+        "cookieHeader devolve todos os cookies da resposta",
+        "cookieHeader normaliza o header de valor único para lista",
+        "cookieHeader devolve lista vazia quando a resposta não põe cookie",
+        "cookieValue devolve o valor sem os atributos",
+        "cookieValue devolve undefined para um cookie ausente",
+        "cookieValue não confunde um cookie cujo nome é prefixo de outro"
+      ],
+      "count": 6
+    },
+    {
+      "file": "apps/api/src/shared/test/e2e/outbox.spec.ts",
+      "titles": [
+        "sem until dá uma volta em cada despachante",
+        "sem dispatchers gira o despachante do kernel, e nenhum de módulo",
+        "com until gira até o efeito aparecer e devolve o efeito",
+        "o efeito que nunca aparece rejeita com o prazo na mensagem"
+      ],
+      "count": 4
+    },
+    {
+      "file": "apps/api/src/shared/test/e2e/problem.spec.ts",
+      "titles": [
+        "passa quando content-type, status e campos batem",
+        "falha quando o corpo não é problem+json, mesmo com o status certo",
+        "falha quando o status do corpo não acompanha o status HTTP",
+        "falha quando o sufixo do type não bate",
+        "campo não pedido não é cobrado"
+      ],
+      "count": 5
+    },
+    {
+      "file": "apps/api/src/shared/test/e2e/wait-for.spec.ts",
+      "titles": [
+        "devolve o primeiro valor definido",
+        "estoura o prazo nomeando o que esperava e por quanto tempo",
+        "uma exceção no meio não interrompe a espera, e vira a causa do timeout",
+        "false conta como não-pronto, não como valor"
+      ],
+      "count": 4
+    },
+    {
+      "file": "apps/api/src/shared/test/hygiene/harness-hygiene.spec.ts",
+      "titles": [
+        "a varredura enxerga a árvore e ignora o stage do catálogo",
+        "o helper de entrada que a varredura alcança está atrás do barrel, no layout que esta árvore tiver",
+        "todo ban do scanner tem um it neste arquivo",
+        "HRN-01 — um único bootstrap do Nest em toda a árvore",
+        "HRN-06 — nenhuma redefinição local de helper do harness",
+        "HRN-06 — byte do PNG, origem web e senha literal só no harness e nos barrels",
+        "HRN-05 — o pool é do harness, nunca aberto dentro de um caso",
+        "UNT-01 — as dependências de um spec são tipadas",
+        "UNT-01 — as never e as unknown as só sob shared/test/**",
+        "UNT-03 — nenhum fromProps( num spec fora do barrel",
+        "HRN-02 — nenhum GenericContainer num int-spec",
+        "HRN-03 — nenhum setTimeout ou laço à mão como prova de efeito",
+        "ENT-05 — test/setup/ tem só o plumbing do runner"
+      ],
+      "count": 13
+    },
+    {
+      "file": "apps/api/src/shared/test/hygiene/scan.spec.ts",
+      "titles": [
+        "recolhe .ts do layout do produto e ignora node_modules, dist e coverage",
+        "ignora o próprio guard — ele nomeia cada token banido por definição",
+        "ignora apps/api/.catalog-stage/**",
+        "devolve lista vazia para uma raiz que não existe (produto sem catalog/)",
+        "o barrel do template não é reprovado",
+        "o barrel instalado no filho não é reprovado",
+        "o mesmo literal num spec do filho é reprovado",
+        "single-testing-module",
+        "no-local-helper",
+        "no-harness-literal",
+        "pool-owned-by-harness",
+        "typed-deps",
+        "no-unsafe-cast",
+        "no-from-props",
+        "no-container-in-int-spec",
+        "no-sleep-as-proof",
+        "runner-setup-allowlist",
+        "o barrel da entrada tem uma chave só no template e no filho",
+        "o spec da entrada tem uma chave só no template e no filho",
+        "o parity cai onde a instalação o põe — __parity__/ no filho",
+        "a entrada com variante fica com o nome do módulo, sem a variante",
+        "o api/ interno da entrada não é confundido com a raiz api/",
+        "o kernel e o que só existe no template ficam com o próprio caminho",
+        "as entradas presentes saem da árvore, em qualquer layout",
+        "cada violação é relatada como rule · file:line · snippet",
+        "uma violação acima do registrado reprova (GA-9)",
+        "um registro que já não corresponde reprova (o baseline só encolhe)",
+        "a violação registrada exatamente passa",
+        "o registro feito no template vale para o mesmo arquivo instalado no filho",
+        "uma violação nova no filho reprova mesmo sem catalog/ na árvore",
+        "o registro de uma entrada instalada exige casamento exato",
+        "o registro de uma entrada que esta árvore não instalou é inerte",
+        "o registro do kernel é cobrado mesmo num filho sem entrada alguma",
+        "o registro de um arquivo só-do-template é inerte no filho e cobrado no template"
+      ],
+      "count": 34
+    },
+    {
+      "file": "apps/api/src/shared/test/int/db.int-spec.ts",
+      "titles": [
+        "conecta no clone do próprio worker",
+        "aponta para o container que o globalSetup publicou"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/api/src/shared/test/int/db.spec.ts",
+      "titles": [
+        "zera todas as tabelas dos schemas pedidos num único TRUNCATE",
+        "um schema desconhecido lança nomeando o que existe e não trunca nada",
+        "um schema sem tabela nenhuma não emite TRUNCATE",
+        "sem schema nenhum não vai ao banco",
+        "repetir o reset do mesmo conjunto reusa o statement, sem reconsultar o catálogo",
+        "truncateKernel é o resetDb do schema do kernel, sem helper por módulo"
+      ],
+      "count": 6
+    },
+    {
+      "file": "apps/api/src/shared/test/int/worker-db.spec.ts",
+      "titles": [
+        "reivindica o slot sugerido pelo pool id quando ele está livre",
+        "dá o mesmo índice em toda chamada do mesmo processo",
+        "desvia do slot que outro worker vivo já tem, mesmo com o pool id repetido",
+        "toma o slot cujo dono morreu sem liberar o lock",
+        "isola runs diferentes: a mesma sugestão volta a valer noutra URI",
+        "lê o teto declarado pelo config do tier",
+        "recusa valor ausente em vez de assumir um default",
+        "recusa valor não inteiro"
+      ],
+      "count": 8
+    },
+    {
       "file": "apps/api/src/shared/test/parity/contract-snapshot.spec.ts",
       "titles": [
         "passa quando o child reproduz a operação do snapshot",
@@ -1098,6 +1272,56 @@
         "passa quando o child acrescenta campo opcional por trás de um $ref e uma operação nova"
       ],
       "count": 8
+    },
+    {
+      "file": "apps/api/src/shared/test/unit/clock.spec.ts",
+      "titles": [
+        "sem argumento devolve FIXED_NOW",
+        "devolve o instante pedido, igual a cada chamada",
+        "devolve uma Date nova a cada chamada, para que mutar uma não mova o relógio",
+        "uma data inválida falha na construção, não na primeira leitura"
+      ],
+      "count": 4
+    },
+    {
+      "file": "apps/api/src/shared/test/unit/constants.spec.ts",
+      "titles": [
+        "FIXED_NOW é um instante ISO válido",
+        "TEST_PASSWORD é forte o bastante para as políticas de senha das entradas",
+        "nenhum outro helper do harness carrega um literal de data — todos vêm de constants.ts"
+      ],
+      "count": 3
+    },
+    {
+      "file": "apps/api/src/shared/test/unit/logger.spec.ts",
+      "titles": [
+        "captura a linha emitida com nível, mensagem e bindings",
+        "não escreve em stdout — a linha só existe no array",
+        "dentro de um escopo a linha carrega a correlação do contexto",
+        "a fábrica nomeia o escopo pedido"
+      ],
+      "count": 4
+    },
+    {
+      "file": "apps/api/src/shared/test/unit/mock-of.spec.ts",
+      "titles": [
+        "devolve o dublê fornecido para o método declarado",
+        "um método não estubado rejeita nomeando a si mesmo",
+        "sem nada fornecido todo método rejeita nomeando a si mesmo",
+        "o mesmo método devolve sempre a mesma vi.fn, para poder ser asserido",
+        "um estubo pode ser reatribuído depois de criado"
+      ],
+      "count": 5
+    },
+    {
+      "file": "apps/api/src/shared/test/unit/request-context.spec.ts",
+      "titles": [
+        "traz os defaults do kernel",
+        "o parcial sobrescreve só o campo dado",
+        "cada chamada traz o próprio mapa de extensions",
+        "o store roda dentro do RequestContext do kernel"
+      ],
+      "count": 4
     },
     {
       "file": "apps/api/test/bootstrap-product.e2e-spec.ts",
@@ -1145,14 +1369,6 @@
         "com TRUST_PROXY_HOPS não definido, req.ip é o endereço do socket e ignora X-Forwarded-For"
       ],
       "count": 3
-    },
-    {
-      "file": "apps/api/test/setup/test-db.int-spec.ts",
-      "titles": [
-        "conecta no clone do próprio worker",
-        "aponta para o container que o globalSetup publicou"
-      ],
-      "count": 2
     },
     {
       "file": "apps/web-next/src/_app/config/api-client.test.ts",
@@ -1323,6 +1539,37 @@
       "count": 3
     },
     {
+      "file": "apps/web-next/src/shared/test/create-query-wrapper.test.tsx",
+      "titles": [
+        "resolve uma query através do QueryClient isolado padrão",
+        "usa o QueryClient informado em vez de criar um novo"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/web-next/src/shared/test/mock-router.test.tsx",
+      "titles": [
+        "expõe o pathname configurado",
+        "captura a chamada de push feita pelo componente"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/web-next/src/shared/test/reset-auth-state.test.ts",
+      "titles": [
+        "limpa o localStorage e zera o redirectIntent do store"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/web-next/src/shared/test/use-msw-server.test.ts",
+      "titles": [
+        "sobrescreve o handler base dentro de um teste com server.use",
+        "reseta para o handler base no teste seguinte, sem herdar o override"
+      ],
+      "count": 2
+    },
+    {
       "file": "apps/web-vite/src/app/config/api-client.test.ts",
       "titles": [
         "configura a baseURL no client",
@@ -1331,9 +1578,19 @@
       "count": 2
     },
     {
+      "file": "apps/web-vite/src/app/config/csrf-cookie-name.test.ts",
+      "titles": [
+        "usa app_csrf quando a opção não é passada",
+        "lê o cookie que o produto nomeou em csrfCookieName",
+        "omite o header quando o cookie nomeado não existe",
+        "volta ao default quando um boot seguinte não passa a opção"
+      ],
+      "count": 4
+    },
+    {
       "file": "apps/web-vite/src/app/config/transport.test.ts",
       "titles": [
-        "reflete o cookie rit_csrf em X-CSRF-Token nas mutações com corpo",
+        "reflete o cookie app_csrf em X-CSRF-Token nas mutações com corpo",
         "envia X-CSRF-Token mesmo em mutação sem corpo (ADR 0023)",
         "dispara onUnauthorized no 401 com a url da request",
         "propaga o corpo problem+json (RFC 7807) no erro do axios"
@@ -1543,6 +1800,37 @@
         "subscribeCrossTabLogout dispara callback em storage event válido"
       ],
       "count": 3
+    },
+    {
+      "file": "apps/web-vite/src/shared/test/create-query-wrapper.test.tsx",
+      "titles": [
+        "resolve uma query através do QueryClient isolado padrão",
+        "usa o QueryClient informado em vez de criar um novo"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/web-vite/src/shared/test/mock-router.test.tsx",
+      "titles": [
+        "expõe o pathname e o outlet configurados",
+        "captura a chamada de navigate feita pelo componente"
+      ],
+      "count": 2
+    },
+    {
+      "file": "apps/web-vite/src/shared/test/reset-auth-state.test.ts",
+      "titles": [
+        "limpa o localStorage e zera o redirectIntent do store"
+      ],
+      "count": 1
+    },
+    {
+      "file": "apps/web-vite/src/shared/test/use-msw-server.test.ts",
+      "titles": [
+        "sobrescreve o handler base dentro de um teste com server.use",
+        "reseta para o handler base no teste seguinte, sem herdar o override"
+      ],
+      "count": 2
     },
     {
       "file": "catalog/attachment/api/__e2e__/access-link-avatar-ownership.e2e-spec.ts",
@@ -1994,6 +2282,13 @@
       "count": 7
     },
     {
+      "file": "catalog/audit/api/infrastructure/repositories/drizzle-activity-stats.reader.spec.ts",
+      "titles": [
+        "agrupa pelo fuso de APP_TIMEZONE, como literal e não como bind (TZ-01)"
+      ],
+      "count": 1
+    },
+    {
       "file": "catalog/audit/api/infrastructure/repositories/drizzle-audit.repository.int-spec.ts",
       "titles": [
         "filtra por tables (lista de tabelas do agregado)",
@@ -2092,7 +2387,7 @@
     {
       "file": "catalog/identity/single-tenant/api/__e2e__/auth-csrf-none.e2e-spec.ts",
       "titles": [
-        "login emite o cookie rit_csrf legível",
+        "login emite o cookie de CSRF legível",
         "mutação SEM X-CSRF-Token → 403",
         "mutação COM X-CSRF-Token válido → 204",
         "mutação com X-CSRF-Token forjado → 403",
@@ -2184,13 +2479,9 @@
         "GET /v1/auth/access-link com token válido retorna dados do usuário criado",
         "POST /v1/auth/set-password ativa conta, retorna usuário atualizado e cookie de auto-login",
         "cookie de ativação autentica a sessão de Ana sem login manual",
-        "reuso do token já consumido retorna 400",
-        "master cria Profissional com áreas/serviços; listagem não vaza a system perm",
-        "cria profissional com permissão de outro módulo",
-        "master cria usuário com áreas de agendamento; listagem devolve as áreas"
+        "reuso do token já consumido retorna 400"
       ],
-      "count": 10,
-      "note": "GA-7 documented removal: the seed-master pseudo-test (expect(masterId).toBeTruthy()) asserted a fixture, not behaviour, and disappeared when the ordered chain was split in T6 (d86a87a). It is the single removal this feature allows; every other title survives verbatim."
+      "count": 7
     },
     {
       "file": "catalog/identity/single-tenant/api/__e2e__/devices.e2e-spec.ts",
@@ -2303,11 +2594,9 @@
         "token aceita 128 caracteres e recusa 129",
         "name aceita 200 caracteres e recusa 201",
         "permissions duplicadas são recusadas",
-        "areaIds, serviceIds e schedulingAreaIds duplicados são recusados",
-        "listas sem repetição continuam válidas",
         "idParamSchema exige id de 1 a 64 caracteres"
       ],
-      "count": 13
+      "count": 11
     },
     {
       "file": "catalog/identity/single-tenant/api/api/controllers/auth/confirm-email-change.controller.spec.ts",
@@ -2334,20 +2623,15 @@
       "count": 1
     },
     {
-      "file": "catalog/identity/single-tenant/api/api/facades/professional-directory.facade.spec.ts",
-      "titles": [
-        "publica o agrupamento de áreas sem alterar a ordem"
-      ],
-      "count": 1
-    },
-    {
       "file": "catalog/identity/single-tenant/api/api/guards/cookie.spec.ts",
       "titles": [
         "emite com httpOnly, secure, sameSite, path / e sem domain",
         "limpa com os MESMOS atributos (sem domain, maxAge 0)",
-        "COOKIE_OPTIONS não inclui domain"
+        "COOKIE_OPTIONS não inclui domain",
+        "emite com o nome que veio da config, legível por JS e sem domain",
+        "segue o rename do produto em vez de um literal da plataforma"
       ],
-      "count": 3
+      "count": 5
     },
     {
       "file": "catalog/identity/single-tenant/api/api/guards/csrf.guard.spec.ts",
@@ -2403,17 +2687,10 @@
         "rejeita chave sem o requires presente, listando as faltantes",
         "master é isento (set vazio passa)",
         "admin exige ≥1 chave do módulo admin",
-        "professional é isento (o piso vem do slot de produto, não do catálogo)",
         "perfil com permissionFloor false aceita set vazio",
         "perfil com permissionFloor true exige chave do módulo homônimo",
-        "sem área de agendamento resolve lista vazia sem tocar o port",
-        "áreas de agendamento informadas são validadas no port e preservadas",
-        "falha do port (área inexistente/inativa) vira InvalidSchedulingAreasError",
-        "quem atende guarda áreas e serviços de atuação, em qualquer perfil",
-        "quem atende sem área de atuação → InvalidProfessionalScopeError",
-        "perfil Profissional sem a marcação zera áreas e serviços de atuação",
-        "atuação e agendamento coexistem sem uma zerar a outra",
-        "sem atendimento zera áreas e serviços de atuação",
+        "resolve só o conjunto de permissões — a fatia profissional saiu da entrada",
+        "propaga a recusa do piso do perfil sem resolver nada",
         "master concede qualquer chave",
         "conjunto contido no do ator passa",
         "chave nova fora do conjunto do ator lança",
@@ -2426,7 +2703,7 @@
         "o 403 carrega o type permission-grant-not-allowed",
         "a mensagem não enumera as chaves negadas"
       ],
-      "count": 27
+      "count": 20
     },
     {
       "file": "catalog/identity/single-tenant/api/application/assert-permission.spec.ts",
@@ -2567,12 +2844,9 @@
         "happy: cria pending, gera token, publica SendAccessLink e audita access_link_sent",
         "rejeita set sem closure (422)",
         "rejeita set sem o piso do perfil (422)",
-        "quem atende sem área → InvalidProfessionalScopeError, não cria nada",
-        "quem atende persiste permissões de outros módulos + áreas",
-        "quem não atende persiste só as áreas de agendamento",
-        "quem atende sem permissão de módulo é válido (piso = ≥1 área de atuação)"
+        "persiste permissões de outros módulos em qualquer perfil"
       ],
-      "count": 9
+      "count": 6
     },
     {
       "file": "catalog/identity/single-tenant/api/application/use-cases/delete-permission-template/delete-permission-template.use-case.spec.ts",
@@ -2655,11 +2929,10 @@
         "lista vazia: retorna data=[] e page sem erro",
         "accessLinkExpiresAt serializado em ISO quando não-nulo",
         "deletedAt serializado em ISO para usuário soft-deleted",
-        "schedulingAreaIds da row são repassadas para a view",
         "permissions da row são repassadas para a view sem modificação",
         "repositório lança erro: propaga sem consumir outros métodos"
       ],
-      "count": 13
+      "count": 12
     },
     {
       "file": "catalog/identity/single-tenant/api/application/use-cases/login/login.use-case.spec.ts",
@@ -2868,21 +3141,16 @@
       "file": "catalog/identity/single-tenant/api/application/use-cases/update-my-profile/update-my-profile.use-case.spec.ts",
       "titles": [
         "caminho feliz: atualiza nome e chama users.update com a nova entidade",
-        "caminho feliz: atualiza nome e birthDate válida",
-        "sem birthDate no input: mantém o birthDate existente",
         "ctx sem userId lança ForbiddenError e NÃO chama users.findById nem users.update",
         "ctx sem sessionId lança ForbiddenError e NÃO chama users.findById nem users.update",
         "usuário não encontrado no repositório lança ForbiddenError e NÃO chama users.update",
-        "birthDate futura lança InvalidBirthDateError e NÃO chama users.update",
-        "birthDate com idade > 120 anos lança InvalidBirthDateError e NÃO chama users.update",
         "findById é chamado com o userId do contexto autenticado",
         "nome é trimado antes de persistir",
         "clock.now() é chamado exatamente uma vez por execução",
         "ctx.get() lança → erro propaga antes de findById ou update serem chamados",
-        "usuário soft-deleted encontrado por findById: atualiza normalmente (sem guard de deletedAt no use-case)",
-        "birthDate undefined explícito no input: mantém birthDate existente (branch birthDate !== undefined falso)"
+        "usuário soft-deleted encontrado por findById: atualiza normalmente (sem guard de deletedAt no use-case)"
       ],
-      "count": 14
+      "count": 9
     },
     {
       "file": "catalog/identity/single-tenant/api/application/use-cases/update-permission-template/update-permission-template.use-case.spec.ts",
@@ -2906,26 +3174,12 @@
         "alvo inexistente → UserNotFoundError",
         "alvo na lixeira → UserNotFoundError",
         "alvo master → ForbiddenError",
-        "auto-edição de perfil → ForbiddenError",
         "auto-edição de permissões → ForbiddenError",
         "auto-edição só de nome → permitida",
-        "áreas de agendamento informadas substituem as do alvo",
-        "sem áreas de agendamento no input as do alvo são limpas",
-        "com compromisso futuro recusa e não grava nada",
-        "a recusa carrega a lista do que precisa ser remarcado",
-        "sem compromisso futuro grava e zera o escopo de atuação",
-        "quem já não atendia não consulta a agenda",
-        "continuar atendendo não consulta a agenda",
         "set sem closure → InvalidPermissionSetError",
-        "set sem piso → InvalidPermissionSetError",
-        "marcar-se como atendente → 403 e nada é gravado",
-        "mudar as próprias áreas de atuação → 403",
-        "mudar os próprios serviços de atuação → 403",
-        "carregar área de agendamento na auto-edição → 403",
-        "reenviar o mesmo escopo (no-op) passa",
-        "a regra é só da auto-edição: master muda o escopo de outro usuário"
+        "set sem piso → InvalidPermissionSetError"
       ],
-      "count": 24
+      "count": 10
     },
     {
       "file": "catalog/identity/single-tenant/api/application/use-cases/upload-access-link-avatar/upload-access-link-avatar.use-case.spec.ts",
@@ -3042,7 +3296,6 @@
       "titles": [
         "gera id ULID, emailVerified=false, attempts=0, lockedUntil=null, timestamps",
         "normaliza email para lowercase",
-        "nasce fora do atendimento a cliente, e entra quando pedido",
         "registra quem criou a conta",
         "false quando lockedUntil é null",
         "true quando lockedUntil > now",
@@ -3061,20 +3314,14 @@
         "props é congelado: escrita direta lança",
         "create() cria usuário pending, sem senha, não-verificado, não-master",
         "create() segue ativo com senha",
-        "activate() ativa, verifica, seta senha/nome/nascimento (nova instância)",
+        "activate() ativa, verifica e seta senha/nome (nova instância)",
         "activate() seta o avatar resolvido",
         "activate() em usuário não-pending lança InvalidAccountStateError",
-        "activate() com data futura lança InvalidBirthDateError",
-        "activate() com idade > 120 lança InvalidBirthDateError",
-        "activate() com data impossível (31/02) lança InvalidBirthDateError",
         "limpa deletedAt e mantém status/senha",
         "lança InvalidAccountStateError se a conta não está excluída",
         "atualiza nome e perfil retornando nova instância",
-        "liga o atendimento a cliente sem mexer no perfil",
-        "desliga o atendimento a cliente preservando a instância anterior",
         "true só quando accessProfile=master",
-        "atualiza nome (trim) e nascimento sem tocar em accessProfile/email",
-        "rejeita data de nascimento inválida",
+        "atualiza nome (trim) sem tocar em accessProfile/email",
         "troca avatarAttachmentId em nova instância",
         "requestEmailChange desativa a conta e guarda pendingEmail sem destruir o email atual",
         "recordEmailChangeAttempt só carimba o cooldown, sem mexer na conta",
@@ -3090,15 +3337,9 @@
         "delete() marca deletedAt e updatedAt na nova instância",
         "isDeleted() retorna true após delete()",
         "isDeleted() retorna false para usuário ativo",
-        "abaixo do threshold preserva lockedUntil pré-existente (não zera)",
-        "data válida no passado próximo é aceita sem lançar",
-        "data com dia inválido para o mês (29/02 em ano não-bissexto) lança InvalidBirthDateError",
-        "data com dia zero (2000-01-00) lança InvalidBirthDateError",
-        "sem birthDate mantém o valor anterior intacto sem validar",
-        "birthDate undefined com birthDate atual null mantém null",
-        "idade exatamente acima de 120 anos lança InvalidBirthDateError"
+        "abaixo do threshold preserva lockedUntil pré-existente (não zera)"
       ],
-      "count": 57
+      "count": 44
     },
     {
       "file": "catalog/identity/single-tenant/api/domain/entities/verification-token.entity.spec.ts",
@@ -3214,12 +3455,20 @@
         "rejeita BREACH_CHECK_ENABLED com valor fora do literal",
         "aplica os defaults dos limites de login e de hashing",
         "coage os três limites novos de string para número",
+        "aplica os nomes de cookie neutros por default (BRAND-01)",
+        "deixa o produto renomear cada um dos três cookies",
+        "rejeita CSRF_COOKIE_NAME vazio (o SPA não teria o que ler)",
+        "aceita COOKIE_SAMESITE=none com a API no mesmo host do front (SEAM-06)",
+        "rejeita COOKIE_SAMESITE=none com a API em outro host (SEAM-06)",
+        "rejeita COOKIE_SAMESITE=none sem API_ORIGIN declarado (fail-closed)",
+        "a mensagem do refuse diz o que fazer, não só o que está errado",
+        "não exige API_ORIGIN fora de COOKIE_SAMESITE=none",
         "rejeita limite de login zero ou negativo (desligaria o teto em silêncio)",
         "lê de process.env e memoiza (mesma instância singleton)",
         "memoização é imune a mutação posterior de process.env",
         "fail-fast: parseIdentityConfig (base do load) lança em env inválido"
       ],
-      "count": 20
+      "count": 28
     },
     {
       "file": "catalog/identity/single-tenant/api/identity.module.spec.ts",
@@ -3343,26 +3592,6 @@
       "count": 5
     },
     {
-      "file": "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-professional-assignment.repository.int-spec.ts",
-      "titles": [
-        "agrupa vínculos por serviço com isDefault, na ordem do vínculo",
-        "retorna Map vazio para lista vazia",
-        "retorna os serviços vinculados do usuário",
-        "retorna só quem NÃO tem a área",
-        "retorna vazio para set vazio",
-        "atribui a área uma vez para profissionais distintos dos serviços informados",
-        "não escreve para uma lista de serviços vazia",
-        "filtra professional+active+vivo (paridade com o diretório)",
-        "insere vínculos novos com isDefault e auto-atribui a área ausente",
-        "remove quem saiu do set e atualiza isDefault de quem ficou",
-        "set vazio limpa os vínculos do serviço sem tocar em áreas",
-        "não toca vínculos de OUTROS serviços do mesmo usuário",
-        "apaga os vínculos dos serviços informados",
-        "lista vazia é no-op"
-      ],
-      "count": 14
-    },
-    {
       "file": "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-session.repository.int-spec.ts",
       "titles": [
         "touch abaixo do intervalo não grava; a partir dele grava",
@@ -3395,11 +3624,16 @@
       "count": 13
     },
     {
+      "file": "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-usage-stats.reader.spec.ts",
+      "titles": [
+        "agrupa pelo fuso de APP_TIMEZONE, como literal e não como bind (TZ-01)"
+      ],
+      "count": 1
+    },
+    {
       "file": "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-user.repository.int-spec.ts",
       "titles": [
         "insert e findByEmail fazem round-trip",
-        "atendimento a cliente: insert grava a marcação e update a desliga",
-        "gate da configuração de horários segue a marcação, não o perfil",
         "findByEmail retorna null para e-mail inexistente",
         "update persiste lockout (failedLoginAttempts + lockedUntil)",
         "lastResetRequestedAt: novo usuário é null e update persiste (cooldown)",
@@ -3439,27 +3673,7 @@
         "enxerga linha soft-deleted (sem filtro de visibilidade)",
         "desligamento commitado após o snapshot aparece na releitura da tx"
       ],
-      "count": 41
-    },
-    {
-      "file": "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-user.repository.profile-extension.int-spec.ts",
-      "titles": [
-        "insert e findById fazem round-trip do perfil registrado pelo produto",
-        "a coluna access_profile guarda o valor acrescentado ao enum"
-      ],
-      "count": 2
-    },
-    {
-      "file": "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-user.repository.scope.int-spec.ts",
-      "titles": [
-        "preserva is_default dos serviços mantidos e zera nos novos",
-        "lista vazia limpa a tabela do usuário",
-        "substitui o conjunto inteiro de áreas de agendamento",
-        "lista vazia limpa a tabela do usuário",
-        "não toca as áreas de atuação do Profissional (relações independentes)",
-        "devolve as áreas de agendamento na linha da listagem"
-      ],
-      "count": 6
+      "count": 39
     },
     {
       "file": "catalog/identity/single-tenant/api/infrastructure/repositories/drizzle-verification-token.repository.int-spec.ts",
@@ -3472,41 +3686,6 @@
         "findLatestForUser retorna o token mais recente por createdAt"
       ],
       "count": 6
-    },
-    {
-      "file": "catalog/identity/single-tenant/api/infrastructure/repositories/professional-directory.facade.int-spec.ts",
-      "titles": [
-        "perfil não-profissional marcado é profissional atribuível",
-        "perfil Profissional sem a marcação fica fora",
-        "retorna true para professional ativo e vivo",
-        "retorna false para admin ativo",
-        "retorna false para professional com status pending",
-        "retorna false para professional soft-deleted",
-        "retorna false para id inexistente",
-        "lista só professionals ativos, paginado",
-        "exclui professionals soft-deleted",
-        "retorna email e avatarAttachmentId nos itens",
-        "q filtra por nome",
-        "q filtra por email",
-        "mapeia ids → {id, name, email, avatarAttachmentId} filtrando só professionals ativos",
-        "exclui professionals inativos e deletados (órfãos)",
-        "ids inexistentes não aparecem no mapa",
-        "lista vazia → mapa vazio sem query",
-        "lista só profissional ativo e visível, ordenado por nome",
-        "retorna email e avatarAttachmentId nos refs",
-        "lista só profissionais ativos vinculados à área, ordenados por nome",
-        "exclui inativos, deletados e quem não tem a área",
-        "agrupa áreas por profissional em ordem de usuário e área",
-        "retorna só o profissional ativo habilitado pro serviço",
-        "agrupa por serviceId quando vários serviços são consultados",
-        "exclui professional soft-deleted",
-        "lista vazia → mapa vazio sem query",
-        "devolve a flag de padrão junto do id",
-        "exclui profissional inativo, pendente ou deletado",
-        "agrupa por serviceId quando vários serviços são consultados",
-        "lista vazia devolve Map vazio sem query"
-      ],
-      "count": 29
     },
     {
       "file": "catalog/identity/single-tenant/api/testing/seeds/master-user.seed.spec.ts",
@@ -3589,7 +3768,7 @@
         "libera qualquer chave para o perfil master, mesmo sem permissões explícitas",
         "libera a chave concedida explicitamente a um perfil não-master",
         "nega a chave ausente da lista de um perfil não-master",
-        "nega qualquer chave para o perfil professional sem permissões"
+        "nega qualquer chave para perfil não-master sem permissões"
       ],
       "count": 4
     },
@@ -3913,6 +4092,40 @@
         "templateDir ausente no base-set — usa a pasta de templates do próprio módulo",
         "recipient ausente cai para data.email",
         "view ausente cai para identidade — o payload inteiro vai pro renderer"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/professional/api/api/facades/professional-directory.facade.spec.ts",
+      "titles": [
+        "publica o agrupamento de áreas sem alterar a ordem",
+        "repassa o input de listagem e devolve o envelope paginado",
+        "resolve por ids devolvendo o mapa do leitor",
+        "responde se a pessoa é profissional ativa a partir do leitor",
+        "devolve os vínculos ativos agrupados por serviço, com isDefault"
+      ],
+      "count": 5
+    },
+    {
+      "file": "catalog/professional/api/domain/entities/professional-profile.entity.spec.ts",
+      "titles": [
+        "nasce sem atender cliente e sem data de nascimento",
+        "nasce atendendo cliente quando a criação pede",
+        "troca o atendimento a cliente numa instância nova, sem tocar a original",
+        "grava uma data de nascimento real e passada",
+        "recusa uma data que não existe no calendário e mantém o perfil",
+        "recusa nascimento no futuro e acima do teto de 120 anos"
+      ],
+      "count": 6
+    },
+    {
+      "file": "catalog/professional/api/infrastructure/repositories/drizzle-professional-assignment.repository.int-spec.ts",
+      "titles": [
+        "searchAssignable filtra por serves_clients do perfil, ativo e vivo",
+        "findAssignableByIds aplica o mesmo filtro e ignora id inexistente",
+        "listByServiceIds agrupa vínculos por serviço com isDefault, na ordem do vínculo",
+        "replaceForService troca o set do serviço e auto-atribui a área ausente",
+        "ensureAreaForServiceProfessionals atribui a área uma vez por profissional distinto"
       ],
       "count": 5
     },

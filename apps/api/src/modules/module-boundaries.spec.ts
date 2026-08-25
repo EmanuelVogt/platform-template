@@ -587,9 +587,9 @@ const KERNEL_SURFACE: readonly string[] = [
 // Um nome de módulo sobrevive em dois lugares deliberados. (1) A fixture de
 // teste: existe para simular a entrada que não está instalada. (2) O harness
 // de truncamento (test-db.ts): precisa do schema de cada entry instalada para
-// truncar suas tabelas entre testes; `identity.professional_default_hours`
-// sai daqui só quando a fatia profissional deixa o entry (T72, IDENT-01,
-// v3.0.0), não antes.
+// truncar suas tabelas entre testes. A dispensa é ganha linha a linha — some o
+// último token de módulo de test-db.ts e a entrada aqui vira allow-list morta
+// (é o que o caso "a allowlist de test-db.ts é ganha" cobra).
 const TOKEN_ALLOWLIST =
   /(?:^|\/)shared\/test\/.*\.fixture\.ts$|(?:^|\/)apps\/api\/test\/setup\/test-db\.ts$/
 
@@ -691,10 +691,13 @@ describe("module-boundaries — RULE C: o vocabulário do kernel não conhece m�
     ).toBe(true)
   })
 
-  it("test-db.ts mantém identity.professional_default_hours (T72 apaga em v3.0.0), mas sai da varredura de token", () => {
+  it("a allowlist de test-db.ts é ganha: ele ainda ofende e por isso sai da varredura", () => {
     const testDbPath = resolve(SRC_DIR, "..", "test", "setup", "test-db.ts")
-    expect(readFileSync(testDbPath, "utf8")).toMatch(
-      /identity\.professional_default_hours/
+    const rel = toPosix(testDbPath).slice(
+      toPosix(resolve(SRC_DIR, "..", "..", "..")).length + 1
+    )
+    expect(tokenOffensesIn(rel, readFileSync(testDbPath, "utf8"))).not.toEqual(
+      []
     )
     expect(kernelSurfaceFiles().map(toPosix)).not.toContain(toPosix(testDbPath))
   })

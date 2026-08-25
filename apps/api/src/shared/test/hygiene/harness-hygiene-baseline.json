@@ -376,7 +376,7 @@
     "no-from-props": 1
   },
   "module:identity/domain/entities/user.entity.spec.ts": {
-    "no-from-props": 10
+    "no-from-props": 8
   },
   "module:identity/domain/entities/verification-token.entity.spec.ts": {
     "no-from-props": 4
@@ -405,28 +405,16 @@
   "module:identity/infrastructure/repositories/drizzle-device.repository.int-spec.ts": {
     "no-local-helper": 1
   },
-  "module:identity/infrastructure/repositories/drizzle-professional-assignment.repository.int-spec.ts": {
-    "no-local-helper": 1
-  },
   "module:identity/infrastructure/repositories/drizzle-session.repository.int-spec.ts": {
     "no-local-helper": 1,
     "no-from-props": 5
   },
   "module:identity/infrastructure/repositories/drizzle-user.repository.int-spec.ts": {
-    "no-from-props": 13,
-    "no-local-helper": 1
-  },
-  "module:identity/infrastructure/repositories/drizzle-user.repository.profile-extension.int-spec.ts": {
-    "no-from-props": 1
-  },
-  "module:identity/infrastructure/repositories/drizzle-user.repository.scope.int-spec.ts": {
+    "no-from-props": 10,
     "no-local-helper": 1
   },
   "module:identity/infrastructure/repositories/drizzle-verification-token.repository.int-spec.ts": {
     "no-from-props": 6
-  },
-  "module:identity/infrastructure/repositories/professional-directory.facade.int-spec.ts": {
-    "no-local-helper": 1
   },
   "module:identity/testing/seeds/master-user.seed.spec.ts": {
     "no-unsafe-cast": 1

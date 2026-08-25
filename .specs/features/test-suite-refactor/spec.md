@@ -282,7 +282,7 @@ The test *setup* is strong (unit / int / e2e tiers on testcontainers, per-worker
 
 | Requirement ID | Story | Proof | Phase | Status |
 | --- | --- | --- | --- | --- |
-| HRN-01 | P1 harness — single bootstrap factory (AC1) | test | Tasks | In Tasks |
+| HRN-01 | P1 harness — single bootstrap factory (AC1) | test | Tasks | **FORWARD-ONLY 2026-08-25** — the factory shipped (T2/T4) and every new bootstrap must use it; the *absolute* "exactly one `Test.createTestingModule` in the tree" is not met (4 live files) and cannot be without the bulk migration the 2026-08-24 cut removed. Enforced against the GA-9 baseline, same mechanism that cut STR-01/STR-03/WEB-02 |
 | HRN-02 | P1 harness — `resetDb` by schema, no module vocabulary (AC2) | test | Tasks | In Tasks |
 | HRN-03 | P1 harness — `drainOutbox`/`waitFor` replace poll loops and sleeps (AC3) | test | Tasks | In Tasks |
 | HRN-04 | P1 harness — `expectProblem`, `cookieValue`, `cookieHeader` (AC4) | test | Tasks | In Tasks |
@@ -291,12 +291,12 @@ The test *setup* is strong (unit / int / e2e tiers on testcontainers, per-worker
 | ENT-01 | P1 entries — identity `testing/` exports (AC1) | test | Tasks | In Tasks |
 | ENT-02 | P1 entries — notification/attachment/tag/audit barrels (AC2) | test | Tasks | In Tasks |
 | ENT-03 | P1 entries — cross-entry import backed by `dependsOn`, acyclic (AC3) | test | Tasks | In Tasks |
-| ENT-04 | P1 entries — `module.json.files` ships `testing/**` (AC4) | gate | Tasks | In Tasks |
-| ENT-05 | P1 entries — `test/setup` reduced to runner plumbing (AC5) | test | Tasks | In Tasks |
-| UNT-01 | P1 doubles — `mockOf`/`fixedClock`/`fakeRequestContext`, typed deps (AC1) | test | Tasks | In Tasks |
-| UNT-02 | P1 doubles — `withTestDb`, global Redis (AC2) | test | Tasks | In Tasks |
-| UNT-03 | P1 doubles — entry builders, no `fromProps` in specs (AC3) | test | Tasks | In Tasks |
-| UNT-04 | P1 doubles — unstubbed method rejects; state asserted on writes (AC4–5) | test | Tasks | In Tasks |
+| ENT-04 | P1 entries — `module.json.files` ships `testing/**` (AC4) | gate | Tasks | **MECHANISM CORRECTED 2026-08-25** — `module.json.files` **does not exist**: no such field is allowed by `catalog/schema/module.schema.json` or `scripts/platform/lib/manifest.mjs`, and adding one is kernel work outside every task that cites it. What certifies a barrel reaching a rendered child is a green `pnpm catalog:check` plus the REL-04 version bump. Judge the row against that gate |
+| ENT-05 | P1 entries — `test/setup` reduced to runner plumbing (AC5) | test | Tasks | **FORWARD-ONLY 2026-08-25** — the runner allow-list ships and the guard spec enforces it; residual `test/setup` content sits in the GA-9 baseline, per the 2026-08-24 cut |
+| UNT-01 | P1 doubles — `mockOf`/`fixedClock`/`fakeRequestContext`, typed deps (AC1) | test | Tasks | **FORWARD-ONLY 2026-08-25** — the doubles ship and are the only sanctioned form; existing untyped doubles are baselined by GA-9, not migrated (2026-08-24 cut) |
+| UNT-02 | P1 doubles — `withTestDb`, global Redis (AC2) | test | Tasks | **FORWARD-ONLY 2026-08-25** — same basis as UNT-01 |
+| UNT-03 | P1 doubles — entry builders, no `fromProps` in specs (AC3) | test | Tasks | **FORWARD-ONLY 2026-08-25** — the `fromProps` ban is a live guard-spec rule; existing call sites are baselined by GA-9 (2026-08-24 cut) |
+| UNT-04 | P1 doubles — unstubbed method rejects; state asserted on writes (AC4–5) | test | Tasks | In Tasks — **AC5 is unverifiable as written (2026-08-25)**: "the four interaction-heaviest identity specs" names no files and no tie-break, so no reader can tell which four. AC4 (`mockOf` rejects an unstubbed method) is proven. Name the four or drop the count |
 | LNT-01 | P1 proof — vitest/testing-library/jest-dom rules active as errors (AC1) | test | Tasks | In Tasks |
 | LNT-02 | P1 proof — local `no-existence-only-assert` rule (AC2) | test | Tasks | In Tasks |
 | STR-01 | P1 proof — weak asserts strengthened (AC3) | test | Tasks | **CUT 2026-08-24** — baselined by GA-9 |
@@ -317,6 +317,18 @@ The test *setup* is strong (unit / int / e2e tiers on testcontainers, per-worker
 
 **Coverage:** 32 total (COV-01..10 counted as one row) — **22 mapped to tasks, 10 cut with a reason, 0 unmapped** (`tasks.md` § *Requirement mapping*).
 **Probe budget:** 2 of 3 used (STR-04, DOC-01) — every other live requirement is proven by a committed test or a named gate.
+
+> **Reconciled to the scope cut — 2026-08-25, after the Verifier's first pass.** The Verifier
+> reported five ACs asserting an absolute the tree does not meet (HRN-01, ENT-05, UNT-01, UNT-02,
+> UNT-03) and judged them met only forward-only against the GA-9 baseline. That is the same basis on
+> which the 2026-08-24 cut already retired STR-01, STR-03 and WEB-02 — the cut removed the bulk
+> migration of the ~250 existing files and said so in `tasks.md` § *Scope cut* ("the existing files
+> are baselined (GA-9) and migrate when someone next touches them"). The rows above now say it
+> instead of implying it; **no rule was weakened and no baseline was widened** — the mechanism ships
+> at full strength in every case and the baseline can only shrink. **This is bookkeeping applied by
+> the orchestrator, not a new owner decision: it is the cut's own consequence, written down. The
+> owner may flip any of the five back to an absolute, which reopens the bulk migration, not the
+> spec.** ENT-04 is a different correction — the field it names never existed.
 
 > **Corrected 2026-08-24 — the cut is 10 rows, not 11, and STR-04 was never cut.** `tasks.md`
 > § *Requirement mapping* lumped **STR-04** into the `STR-01, STR-02, STR-03, STR-04 — cut` row, and

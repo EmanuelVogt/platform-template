@@ -22,7 +22,7 @@ import { runLint } from "../catalog-lint.mjs"
 const ROOT = path.dirname(
   path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))))
 )
-const CONTRACT_PATH = path.join(ROOT, "docs/catalog/README-contract.md")
+const CONTRACT_PATH = path.join(ROOT, "docs/platform/README-contract.md")
 const CHANGELOG_PATH = path.join(ROOT, "docs/dev/template-changelog.md")
 const FIXTURES_ROOT = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -63,7 +63,7 @@ function advisoryMd(overrides = {}) {
   return `---\n${frontmatter}\n---\nContexto, impacto e passos em pt-BR.\n`
 }
 
-test("extractContractHeadings lê os 8 H2 do contrato real, na ordem definida em docs/catalog/README-contract.md", () => {
+test("extractContractHeadings lê os 8 H2 do contrato real, na ordem definida em docs/platform/README-contract.md", () => {
   const headings = extractContractHeadings(readFileSync(CONTRACT_PATH, "utf8"))
   assert.deepEqual(headings, EXPECTED_CONTRACT_HEADINGS)
 })

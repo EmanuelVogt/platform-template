@@ -3,7 +3,7 @@
 Lista de entradas do catálogo disponíveis para `pnpm platform module add <name> [--variant]`.
 Cada entrada mora em `catalog/<name>[/<variant>]/` e segue o modelo descrito em
 [`docs/catalog/catalog.md`](../docs/catalog/catalog.md); o README de cada entrada segue o
-contrato fixo de seções em [`docs/catalog/README-contract.md`](../docs/catalog/README-contract.md).
+contrato fixo de seções em [`docs/platform/README-contract.md`](../docs/platform/README-contract.md).
 
 ## Entradas
 

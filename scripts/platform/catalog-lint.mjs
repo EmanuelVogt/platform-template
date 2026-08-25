@@ -143,7 +143,7 @@ function readKernelVersion(changelogPath, errors) {
 
 export function runLint({
   catalogRoot = "catalog",
-  contractPath = "docs/catalog/README-contract.md",
+  contractPath = "docs/platform/README-contract.md",
   advisoriesDir = "docs/advisories",
   changelogPath = "docs/dev/template-changelog.md",
   // Sem `repoRoot`, lintEntryBump não roda: precisa de um repositório git de

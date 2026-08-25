@@ -1,31 +1,18 @@
-import { type INestApplication, VersioningType } from "@nestjs/common"
-import { Test } from "@nestjs/testing"
-import request from "supertest"
 import { ulid } from "ulid"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
-import {
-  createTestPool,
-  truncateIdentity,
-  truncateKernel,
-} from "../../../../test/setup/test-db"
-import { AppModule } from "../../../app.module"
-import { applySecurity } from "../../../main"
-import { RequestContext } from "../../../shared/kernel/context/request-context"
-import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
-import { OutboxDispatcher } from "../../../shared/kernel/outbox/outbox.dispatcher"
-import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
-import { seedUser } from "../testing/seed-user"
+import { createE2eApp, withE2ePool } from "../../../shared/test/e2e/app"
+import { E2E_ORIGIN } from "../../../shared/test/e2e/constants"
+import { drainOutbox } from "../../../shared/test/e2e/outbox"
+import { expectProblem } from "../../../shared/test/e2e/problem"
+import { resetDb } from "../../../shared/test/int/db"
+import { loginAs, seedUser, TEST_PASSWORD } from "../testing"
 
+import type { E2eApp } from "../../../shared/test/e2e/app"
 import type { Pool } from "pg"
 
-const ORIGIN = "http://localhost:5173"
-const PASSWORD = "Senha-Feed-Muito-Forte-2026!"
-
-const allowAll = {
-  consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
-  reset: () => Promise.resolve(),
-}
+const EMAIL_A = "feed-a@example.com"
+const EMAIL_B = "feed-b@example.com"
 
 type Lifecycle = {
   seenAt?: string | null
@@ -55,96 +42,62 @@ async function seedNotification(
 }
 
 describe("feed de notificações (e2e)", () => {
-  let app: INestApplication
-  let pool: Pool
-  let cookie: string[]
+  const db = withE2ePool()
+  let e2e: E2eApp
+  let cookies: string[]
   let userA: string
   let userB: string
 
   beforeAll(async () => {
-    pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await pool.query(
-      "truncate table notification.notifications, notification.notification_deliveries"
-    )
+    await resetDb(db.pool, ["identity", "_kernel", "notification"])
+    e2e = await createE2eApp()
 
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(RATE_LIMITER)
-      .useValue(allowAll)
-      .compile()
-    app = moduleRef.createNestApplication()
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-    applySecurity(app)
-    app.use(createRequestContextMiddleware(app.get(RequestContext)))
-    await app.init()
-
-    userA = await seedUser(app, pool, {
-      email: "feed-a@example.com",
+    userA = await seedUser(e2e.app, db.pool, {
+      email: EMAIL_A,
       name: "Ana",
-      password: PASSWORD,
+      password: TEST_PASSWORD,
     })
-    userB = await seedUser(app, pool, {
-      email: "feed-b@example.com",
+    userB = await seedUser(e2e.app, db.pool, {
+      email: EMAIL_B,
       name: "Bia",
-      password: PASSWORD,
+      password: TEST_PASSWORD,
     })
 
-    const loginRes = await request(app.getHttpServer())
-      .post("/v1/auth/login")
-      .set("Origin", ORIGIN)
-      .send({ email: "feed-a@example.com", password: PASSWORD })
-      .expect(200)
-    const setCookie = loginRes.get("Set-Cookie")
-    if (!setCookie) {
-      throw new Error("login não retornou Set-Cookie")
-    }
-    cookie = setCookie
+    cookies = await loginAs(e2e.http, EMAIL_A)
 
     // O login publica device_new_login (produtor in-app). Drena o outbox ATÉ a
     // linha existir — senão o dispatcher de background a insere DEPOIS do
     // truncate do beforeEach e contamina a contagem dos testes.
-    const start = Date.now()
-    for (;;) {
-      await app.get(OutboxDispatcher).poll()
-      const r = await pool.query<{ n: number }>(
-        "select count(*)::int as n from notification.notifications where recipient_id = $1 and type = 'device_new_login'",
-        [userA]
-      )
-      if ((r.rows[0]?.n ?? 0) >= 1) {
-        break
-      }
-      if (Date.now() - start > 8000) {
-        throw new Error("timeout drenando device_new_login do login de setup")
-      }
-      await new Promise((resolve) => setTimeout(resolve, 50))
-    }
+    await drainOutbox(e2e.app, {
+      timeoutMs: 8_000,
+      intervalMs: 50,
+      until: async () => {
+        const r = await db.pool.query<{ n: number }>(
+          "select count(*)::int as n from notification.notifications where recipient_id = $1 and type = 'device_new_login'",
+          [userA]
+        )
+        return (r.rows[0]?.n ?? 0) >= 1 ? r.rows[0] : undefined
+      },
+    })
   })
 
   afterAll(async () => {
-    await app.close()
-    await pool.end()
+    await e2e.close()
   })
 
   beforeEach(async () => {
-    await pool.query("truncate table notification.notifications")
+    await db.pool.query("truncate table notification.notifications")
   })
 
   const get = (path: string) =>
-    request(app.getHttpServer())
-      .get(path)
-      .set("Origin", ORIGIN)
-      .set("Cookie", cookie)
+    e2e.http.get(path).set("Origin", E2E_ORIGIN).set("Cookie", cookies)
   const post = (path: string) =>
-    request(app.getHttpServer())
-      .post(path)
-      .set("Origin", ORIGIN)
-      .set("Cookie", cookie)
+    e2e.http.post(path).set("Origin", E2E_ORIGIN).set("Cookie", cookies)
 
   it("GET /v1/notifications lista só as do user logado, inbox por default", async () => {
-    await seedNotification(pool, userA)
-    await seedNotification(pool, userA)
-    await seedNotification(pool, userB)
+    await seedNotification(db.pool, userA)
+    await seedNotification(db.pool, userA)
+    await seedNotification(db.pool, userB)
 
     const res = await get("/v1/notifications").expect(200)
     expect(res.body.data).toHaveLength(2)
@@ -152,12 +105,12 @@ describe("feed de notificações (e2e)", () => {
   })
 
   it("GET /v1/notifications?filter aplica a semântica da spec", async () => {
-    await seedNotification(pool, userA)
-    await seedNotification(pool, userA, {
+    await seedNotification(db.pool, userA)
+    await seedNotification(db.pool, userA, {
       readAt: "2026-06-10T01:00:00.000Z",
       seenAt: "2026-06-10T01:00:00.000Z",
     })
-    await seedNotification(pool, userA, {
+    await seedNotification(db.pool, userA, {
       archivedAt: "2026-06-10T02:00:00.000Z",
     })
 
@@ -178,8 +131,8 @@ describe("feed de notificações (e2e)", () => {
   })
 
   it("GET /v1/notifications/unseen-count reflete o badge; POST /seen zera", async () => {
-    await seedNotification(pool, userA)
-    await seedNotification(pool, userA)
+    await seedNotification(db.pool, userA)
+    await seedNotification(db.pool, userA)
 
     expect(
       (await get("/v1/notifications/unseen-count").expect(200)).body.count
@@ -191,9 +144,9 @@ describe("feed de notificações (e2e)", () => {
   })
 
   it("POST /read-all marca todas lidas (e vistas) só do user logado", async () => {
-    await seedNotification(pool, userA)
-    await seedNotification(pool, userA)
-    const idB = await seedNotification(pool, userB)
+    await seedNotification(db.pool, userA)
+    await seedNotification(db.pool, userA)
+    const idB = await seedNotification(db.pool, userB)
 
     await post("/v1/notifications/read-all").expect(204)
     expect(
@@ -206,7 +159,7 @@ describe("feed de notificações (e2e)", () => {
       (await get("/v1/notifications/unseen-count").expect(200)).body.count
     ).toBe(0)
 
-    const b = await pool.query<{ read_at: Date | null }>(
+    const b = await db.pool.query<{ read_at: Date | null }>(
       "select read_at from notification.notifications where id = $1",
       [idB]
     )
@@ -214,11 +167,14 @@ describe("feed de notificações (e2e)", () => {
   })
 
   it("POST /:id/read marca lida (e vista); id de OUTRO user → 204 no-op", async () => {
-    const idA = await seedNotification(pool, userA)
-    const idB = await seedNotification(pool, userB)
+    const idA = await seedNotification(db.pool, userA)
+    const idB = await seedNotification(db.pool, userB)
 
     await post(`/v1/notifications/${idA}/read`).expect(204)
-    const a = await pool.query<{ read_at: Date | null; seen_at: Date | null }>(
+    const a = await db.pool.query<{
+      read_at: Date | null
+      seen_at: Date | null
+    }>(
       "select read_at, seen_at from notification.notifications where id = $1",
       [idA]
     )
@@ -226,7 +182,7 @@ describe("feed de notificações (e2e)", () => {
     expect(a.rows[0]?.seen_at).not.toBeNull()
 
     await post(`/v1/notifications/${idB}/read`).expect(204)
-    const b = await pool.query<{ read_at: Date | null }>(
+    const b = await db.pool.query<{ read_at: Date | null }>(
       "select read_at from notification.notifications where id = $1",
       [idB]
     )
@@ -234,7 +190,7 @@ describe("feed de notificações (e2e)", () => {
   })
 
   it("POST /:id/archive tira do inbox; aparece em ?filter=archived", async () => {
-    const id = await seedNotification(pool, userA)
+    const id = await seedNotification(db.pool, userA)
 
     await post(`/v1/notifications/${id}/archive`).expect(204)
     expect((await get("/v1/notifications").expect(200)).body.page.total).toBe(0)
@@ -245,10 +201,10 @@ describe("feed de notificações (e2e)", () => {
   })
 
   it("sem sessão → 401 problem+json", async () => {
-    const res = await request(app.getHttpServer())
+    const res = await e2e.http
       .get("/v1/notifications")
-      .set("Origin", ORIGIN)
+      .set("Origin", E2E_ORIGIN)
       .expect(401)
-    expect(res.headers["content-type"]).toContain("application/problem+json")
+    expectProblem(res, { status: 401 })
   })
 })

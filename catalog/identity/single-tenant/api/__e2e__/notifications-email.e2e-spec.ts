@@ -1,144 +1,95 @@
-import { type INestApplication, VersioningType } from "@nestjs/common"
-import { Test } from "@nestjs/testing"
-import request from "supertest"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import {
-  createTestPool,
-  truncateIdentity,
-  truncateKernel,
-} from "../../../../test/setup/test-db"
-import { AppModule } from "../../../app.module"
-import { applySecurity } from "../../../main"
-import { RequestContext } from "../../../shared/kernel/context/request-context"
-import { createRequestContextMiddleware } from "../../../shared/kernel/context/request-context.middleware"
 import { OutboxDispatcher } from "../../../shared/kernel/outbox/outbox.dispatcher"
-import { RATE_LIMITER } from "../../../shared/kernel/rate-limit/rate-limiter.port"
+import { createE2eApp, withE2ePool } from "../../../shared/test/e2e/app"
+import { E2E_ORIGIN } from "../../../shared/test/e2e/constants"
+import { drainOutbox } from "../../../shared/test/e2e/outbox"
+import { resetDb } from "../../../shared/test/int/db"
 import { MAILER } from "../../notification/domain/ports/mailer"
 import { DeliveryDispatcher } from "../../notification/infrastructure/delivery/delivery.dispatcher"
-import { fakeMailer } from "../testing/fake-mailer"
-import { seedUser } from "../testing/seed-user"
+import { fakeMailer, loginAs, seedUser, TEST_PASSWORD } from "../testing"
 
-const ORIGIN = "http://localhost:5173"
+import type { E2eApp } from "../../../shared/test/e2e/app"
 
-const allowAll = {
-  consume: () => Promise.resolve({ allowed: true, retryAfterSeconds: 0 }),
-  reset: () => Promise.resolve(),
+const MASTER = "master-cutover@example.com"
+const BIA = "bia-cutover@example.com"
+
+type AccessLinkDelivery = {
+  id: string
+  status: string
+  payload: { link: string; email: string }
 }
 
 describe("Cutover de e-mail: identity → notification (e2e)", () => {
-  let app: INestApplication
+  const db = withE2ePool()
+  let e2e: E2eApp
   let mailer: ReturnType<typeof fakeMailer>
 
   beforeAll(async () => {
-    const pool = createTestPool()
-    await truncateIdentity(pool)
-    await truncateKernel(pool)
-    await pool.query(
-      "truncate table notification.notifications, notification.notification_deliveries"
-    )
-    await pool.end()
-
+    await resetDb(db.pool, ["identity", "_kernel", "notification"])
     mailer = fakeMailer()
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(RATE_LIMITER)
-      .useValue(allowAll)
-      .overrideProvider(MAILER)
-      .useValue(mailer)
-      .compile()
-    app = moduleRef.createNestApplication()
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })
-    applySecurity(app)
-    app.use(createRequestContextMiddleware(app.get(RequestContext)))
-    await app.init()
+    e2e = await createE2eApp({ overrides: [[MAILER, mailer]] })
   })
 
   afterAll(async () => {
-    await app.close()
+    await e2e.close()
   })
 
   it("create-user → notification.requested → delivery sent com link redigido, sem in-app", async () => {
-    const pool = createTestPool()
-
-    // Master: seed como usuário comum, depois promove via SQL.
-    const masterId = await seedUser(app, pool, {
-      email: "master-cutover@example.com",
+    await seedUser(e2e.app, db.pool, {
+      email: MASTER,
       name: "Master",
-      password: "Senha-Master-Muito-Forte-2026!",
+      password: TEST_PASSWORD,
+      accessProfile: "master",
     })
-    await pool.query(
-      "UPDATE identity.users SET access_profile = 'master' WHERE id = $1",
-      [masterId]
-    )
 
-    const loginRes = await request(app.getHttpServer())
-      .post("/v1/auth/login")
-      .set("Origin", ORIGIN)
-      .send({
-        email: "master-cutover@example.com",
-        password: "Senha-Master-Muito-Forte-2026!",
-      })
-      .expect(200)
-    const cookie = loginRes.headers["set-cookie"]
+    const cookies = await loginAs(e2e.http, MASTER)
 
-    await request(app.getHttpServer())
+    await e2e.http
       .post("/v1/admin/users")
-      .set("Origin", ORIGIN)
-      .set("Cookie", cookie!)
+      .set("Origin", E2E_ORIGIN)
+      .set("Cookie", cookies)
       .set("Idempotency-Key", "cutover-create-bia")
       .send({
         name: "Bia",
-        email: "bia-cutover@example.com",
+        email: BIA,
         accessProfile: "admin",
         permissions: ["admin.users.read"],
       })
       .expect(201)
 
-    // 2-hop assíncrono: o poll manual pode virar no-op se o de background já
-    // roda; força + espera a delivery virar sent (fake mailer resolve na hora).
-    const findSent = async (): Promise<
-      { id: string; payload: { link: string; email: string } } | undefined
-    > => {
-      await app.get(OutboxDispatcher).poll()
-      await app.get(DeliveryDispatcher).poll()
-      const r = await pool.query<{
-        id: string
-        status: string
-        payload: { link: string; email: string }
-      }>(
-        "select id, status, payload from notification.notification_deliveries where type = 'access_link_sent'"
-      )
-      return r.rows[0]?.status === "sent" ? r.rows[0] : undefined
-    }
-    let delivery = await findSent()
-    const start = Date.now()
-    while (!delivery) {
-      if (Date.now() - start > 8000) {
-        throw new Error(
-          "timeout esperando a delivery de access_link_sent virar sent"
+    // 2-hop assíncrono: gira outbox + delivery até a linha virar `sent` (o fake
+    // mailer resolve na hora); sem dormir esperando o poll de background.
+    const delivery = await drainOutbox<AccessLinkDelivery>(e2e.app, {
+      dispatchers: [
+        e2e.app.get(OutboxDispatcher),
+        e2e.app.get(DeliveryDispatcher),
+      ],
+      timeoutMs: 8_000,
+      intervalMs: 50,
+      until: async () => {
+        const r = await db.pool.query<AccessLinkDelivery>(
+          "select id, status, payload from notification.notification_deliveries where type = 'access_link_sent'"
         )
-      }
-      await new Promise((resolve) => setTimeout(resolve, 50))
-      delivery = await findSent()
-    }
+        return r.rows[0]?.status === "sent" ? r.rows[0] : undefined
+      },
+    })
+    expect(delivery).toBeDefined()
+
     // Token redigido no payload em repouso (estado terminal).
-    expect(delivery.payload.link).toBe("[REDACTED]")
-    expect(delivery.payload.email).toBe("bia-cutover@example.com")
+    expect(delivery!.payload.link).toBe("[REDACTED]")
+    expect(delivery!.payload.email).toBe(BIA)
 
     // Tipo base mantém o assunto v0.1 pelo caminho genérico; idempotencyKey = delivery.id.
-    const sentMessage = mailer.sent.find(
-      (m) => m.to === "bia-cutover@example.com"
-    )
+    const sentMessage = mailer.sent.find((m) => m.to === BIA)
     expect(sentMessage?.subject).toBe("Configure seu acesso à plataforma")
-    expect(sentMessage?.idempotencyKey).toBe(delivery.id)
+    expect(sentMessage?.idempotencyKey).toBe(delivery!.id)
 
     // access_link_sent é email-only: nenhuma linha in-app DESSE tipo (o login
     // do master gera device_new_login in-app legítimo — filtra por type).
-    const inapp = await pool.query<{ n: number }>(
+    const inapp = await db.pool.query<{ n: number }>(
       "select count(*)::int as n from notification.notifications where type = 'access_link_sent'"
     )
     expect(inapp.rows[0]?.n).toBe(0)
-
-    await pool.end()
   })
 })

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process"
-import { readFileSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { parse as parseYaml } from "yaml"
@@ -239,6 +239,32 @@ const isChildCreated = (token) =>
     return token === bare || token.startsWith(`${bare}/`)
   })
 
+// `pnpm platform module add` é o segundo canal de entrega ao filho: uma entrada sai de
+// `catalog/<dir>/api/**` e chega em `apps/api/src/modules/<entrada>/**`. O conjunto do copier
+// não enxerga esse destino, então um doc que cita corretamente o caminho pós-instalação virava
+// achado falso. Resolvido CONTRA o catálogo, não isentado: entrada inexistente ou arquivo que a
+// entrada não tem continua sendo achado.
+const INSTALLED_MODULE = /^apps\/api\/src\/modules\/([^/]+)\/(.+)$/
+
+export const catalogEntryDirs = ({ tracked = trackedFiles() } = {}) => {
+  const dirs = new Map()
+  for (const file of tracked) {
+    const match = /^catalog\/(.+)\/module\.json$/.exec(file)
+    if (match === null) continue
+    const { name } = JSON.parse(readFileSync(path.join(ROOT, file), "utf8"))
+    if (typeof name === "string") dirs.set(name, match[1])
+  }
+  return dirs
+}
+
+export const isInstalledModulePath = (token, entryDirs) => {
+  const match = INSTALLED_MODULE.exec(token)
+  if (match === null) return false
+  const dir = entryDirs.get(match[1])
+  if (dir === undefined) return false
+  return existsSync(path.join(ROOT, "catalog", dir, "api", match[2]))
+}
+
 // Gramática fixada com o dono antes da onda 1: `<!-- audience-contract: <token> — <razão> -->`
 // no FIM de uma linha que carrega prosa, um token por comentário, razão obrigatória.
 // Um comentário em linha própria não isenta nada — em CommonMark um bloco HTML interrompe o
@@ -351,6 +377,7 @@ export const auditShippedDocs = ({
   exempt = EXEMPT_DOCS,
   exemptPrefixes = EXEMPT_DOC_PREFIXES,
   readDoc = (source) => readFileSync(path.join(ROOT, source), "utf8"),
+  entryDirs = catalogEntryDirs(),
 } = {}) => {
   const index = presenceIndex(shipped)
   const findings = []
@@ -367,6 +394,7 @@ export const auditShippedDocs = ({
       if (index.files.has(hit.resolved) || index.directories.has(hit.resolved))
         continue
       if (isChildCreated(hit.resolved)) continue
+      if (isInstalledModulePath(hit.resolved, entryDirs)) continue
       if (METAVARIABLE.test(hit.resolved)) continue
       findings.push({
         file: doc.destination,

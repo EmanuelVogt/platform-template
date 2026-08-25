@@ -4,6 +4,7 @@ import { test } from "node:test"
 
 import {
   auditShippedDocs,
+  catalogEntryDirs,
   CHILD_CREATED_PREFIXES,
   EXEMPT_DOC_PREFIXES,
   EXEMPT_DOCS,
@@ -204,4 +205,50 @@ test("buraco conhecido: token em bloco cercado não é varrido, inline é", () =
 
 test("as quatro situações que não são defeito passam juntas", () => {
   assert.deepEqual(auditFixture("four-situations"), [])
+})
+
+// O instalador é o segundo canal de entrega: `catalog/<dir>/api/**` vira
+// `apps/api/src/modules/<entrada>/**` no filho. O guard resolve contra o catálogo — o raio
+// destes três casos é o que separa "ensinou o canal" de "cegou a regra".
+test("um caminho pós-`module add` que existe no catálogo não é achado", () => {
+  assert.deepEqual(
+    auditText(
+      "Edite `apps/api/src/modules/audit/infrastructure/repositories/drizzle-activity-stats.reader.spec.ts`."
+    ),
+    []
+  )
+})
+
+test("um arquivo que a entrada NÃO tem continua sendo achado", () => {
+  const findings = auditText(
+    "Edite `apps/api/src/modules/audit/nao/existe/em/lugar/nenhum.ts`."
+  )
+  assert.equal(findings.length, 1)
+  assert.equal(
+    findings[0].token,
+    "apps/api/src/modules/audit/nao/existe/em/lugar/nenhum.ts"
+  )
+})
+
+test("um caminho sob entrada inexistente continua sendo achado", () => {
+  const findings = auditText(
+    "Edite `apps/api/src/modules/entrada-fantasma/identity.config.spec.ts`."
+  )
+  assert.equal(findings.length, 1)
+  assert.equal(
+    findings[0].token,
+    "apps/api/src/modules/entrada-fantasma/identity.config.spec.ts"
+  )
+})
+
+test("o mapa de entradas vem do catálogo de verdade, não de uma lista embutida", () => {
+  const dirs = catalogEntryDirs()
+  assert.equal(dirs.get("identity"), "identity/single-tenant")
+  assert.deepEqual([...dirs.keys()].sort(), [
+    "attachment",
+    "audit",
+    "identity",
+    "notification",
+    "tag",
+  ])
 })

@@ -289,6 +289,15 @@ that the spec's `docs/**` scope ruling does not cover the question — it settle
 the contract governs, not which *channels* deliver to a child. Both AUD-03 and AUD-05 are written
 against the copier shipped set alone.
 
+**Corroborating instance, measured the same night.** That session's T35 rewrote the § *Tests* section
+of all five entry READMEs, and two of them now describe the kernel harness at
+`apps/api/src/shared/test/**` — a path the child receives by copier, never by `module add`, which
+vendors an entry into `apps/api/src/modules/<entry>/`. Cite
+`catalog/identity/single-tenant/README.md` § *Tests*. So the exact failure this feature exists to
+catch — a shipped doc sending a child reader to a path it does not have — was written that night,
+into files the guard structurally cannot reach. Two independent features demonstrated the same hole
+within hours of each other, which is the argument for closing it rather than living with it.
+
 **Not fixed here** — closing it means teaching `shippedSet()` about `.platform-modules.lock` and the
 installer's copy semantics, which is a feature, not a task. Recorded so the next session does not
 read the guard's green as covering catalog entries.

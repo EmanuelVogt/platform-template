@@ -1,12 +1,12 @@
 import { render, screen } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { AppProviders } from "@/_app/providers/app-providers"
 
 import { AccessGuard } from "./access-slot"
 import { LastLocationTracker } from "./last-location-tracker"
 import { ProductShell } from "./product-shell"
-import RootLayout, { metadata } from "./root-layout"
+import RootLayout, { metadata, resolveLocale } from "./root-layout"
 
 import type { ReactElement } from "react"
 
@@ -15,6 +15,10 @@ vi.mock("next/navigation", () => ({
 }))
 
 describe("RootLayout", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it("compõe AppProviders, ProductShell e AccessGuard até renderizar os children", () => {
     render(
       <RootLayout>
@@ -52,11 +56,36 @@ describe("RootLayout", () => {
     expect(accessGuard.props.children[0].type).toBe(LastLocationTracker)
   })
 
-  it("exporta metadata com título", () => {
-    expect(metadata.title).toBe("Platform")
-  })
-
   it("exporta metadata.icons apontando para o favicon servido por public/", () => {
     expect(metadata.icons).toEqual({ icon: "/favicon.ico" })
+  })
+
+  describe("NEXT_PUBLIC_APP_NAME / NEXT_PUBLIC_LOCALE", () => {
+    it("sem as variáveis definidas, preserva o comportamento atual", () => {
+      expect(metadata.title).toEqual({
+        default: "Platform",
+        template: "%s · Platform",
+      })
+      expect(resolveLocale()).toBe("pt-BR")
+    })
+
+    it("NEXT_PUBLIC_APP_NAME definido compõe o título default e o template", async () => {
+      vi.stubEnv("NEXT_PUBLIC_APP_NAME", "Acme")
+      vi.resetModules()
+      const fresh = await import("./root-layout")
+      expect(fresh.metadata.title).toEqual({
+        default: "Acme",
+        template: "%s · Acme",
+      })
+    })
+
+    it("NEXT_PUBLIC_LOCALE definido sobrescreve resolveLocale e o html[lang]", () => {
+      vi.stubEnv("NEXT_PUBLIC_LOCALE", "en")
+      expect(resolveLocale()).toBe("en")
+      const html = RootLayout({
+        children: <div>conteúdo</div>,
+      }) as ReactElement<{ lang: string }>
+      expect(html.props.lang).toBe("en")
+    })
   })
 })

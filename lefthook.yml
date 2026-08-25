@@ -3,11 +3,20 @@ pre-push:
   commands:
     # Primeiro da fila: é o mais barato e o único que pega migration nascida no
     # passado da base — falha que não aparece em teste, só no boot do ambiente.
+    # `priority` é explícito porque, sem ele, o lefthook 2.x ordena os comandos do
+    # pre-push alfabeticamente (prova ao vivo: `lefthook run pre-push --verbose`
+    # rodava catalog-typecheck → migrations → test-coverage → typecheck), o que
+    # colocava o passo ligado a Docker antes do typecheck.
     migrations:
+      priority: 1
       run: pnpm --filter api db:check:journal
     typecheck:
+      priority: 2
       run: pnpm turbo typecheck
     # roda os quatro projetos (api, api-int, api-e2e, web) num processo Vitest só; o
     # threshold por glob de vitest.coverage.mts barra push que erode a cobertura.
+    # priority 4 (não 3): deixa o espaço para catalog-typecheck, que só existe no
+    # template (lefthook-local.yml) e roda depois do typecheck e antes deste.
     test-coverage:
+      priority: 4
       run: pnpm test:coverage

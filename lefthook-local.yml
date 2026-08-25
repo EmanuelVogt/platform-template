@@ -6,7 +6,11 @@
 pre-push:
   piped: true
   commands:
+    # priority 3: entre typecheck (2) e test-coverage (4) de lefthook.yml — sem
+    # priority explícita o lefthook 2.x ordena os comandos do pre-push
+    # alfabeticamente, o que rodava este passo antes de migrations/typecheck.
     catalog-typecheck:
+      priority: 3
       run: node scripts/platform/catalog-stage.mjs
 
 pre-commit:

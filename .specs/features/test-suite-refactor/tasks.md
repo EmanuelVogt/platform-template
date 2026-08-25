@@ -13,7 +13,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/test-suite-refactor/design.md` — **Approved 2026-08-24**, reconciled to § *Scope cut* below
-**Status**: Execute — wave 1 DONE (Build gate `full-unit` green: `pnpm check` 0, `pnpm test` 0 — 104 files / 672 tests); wave 2 dispatched 2026-08-25
+**Status**: Execute — waves 1 and 2 DONE, both Build gates `full-unit` green. Next: wave 3 (C4 ∥ C5 ∥ C6).
 
 ### Execution log
 
@@ -26,10 +26,31 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 | 1 | C1 | T5 | DONE | `8456bec` |
 | 1 | C1 | T6 | DONE | `856adc0` (barrel) + `6320676`, `2d3ac37`, `b36f016`, `4b3e2b8`, `a32fa08`, `b1342bd`, `d86a87a` (the entry e2e migration the Wave Plan amendment adds to T6) |
 | 1 | C2 (sonnet) | T7 | DONE | `8d150c2`, `681a26c` |
-| 2 | C3 (sonnet) | T17 → T18 → T23 | dispatched 2026-08-25 | — |
+| 2 | C3 (sonnet) | T17 | DONE | `7bcd56d` |
+| 2 | C3 | T18 | DONE | `0b1a601` |
+| 2 | C3 | T23 | DONE | `fb38c5e` |
+
+**Build gates.** Wave 1: `pnpm check` 0, `pnpm test` 0 — 104 files / 672 tests. Wave 2:
+the same two at 0, plus `it-count.mjs --check` at 0 (335 files / 2146 tests, no drop). The unit
+totals do not move between the waves because an entry's specs only run inside a rendered child;
+wave 2 is certified by `pnpm catalog:check` per entry, run green by the worker on all five.
 
 The C1 worker died mid-T6 on 2026-08-24 and was re-dispatched from `git log` on 2026-08-25; its
 transcript did not survive, so the continuation kept the C1 label per the orchestrator card.
+
+**`module.json.files` does not exist — the Done-when it appears in is unsatisfiable (wave 2).**
+T6, T17, T18 and T23 each require `module.json.files` to list `testing/**`. No such field exists:
+neither `catalog/schema/module.schema.json` nor `scripts/platform/lib/manifest.mjs` allows it, and
+adding one is kernel work outside every one of those tasks. All four followed T6's own precedent
+(`856adc0`) instead — bump `module.json.version` and the entry `CHANGELOG.md` (2.0.2 → 2.1.0),
+which is what the `catalog-lint` pre-commit hook actually enforces (REL-04). `pnpm catalog:check`
+is green for all five entries, so the barrels do reach a rendered child; the mechanism is simply
+not the one the 2026-08-19 authoring assumed. **The Verifier must judge ENT-01/ENT-04 against the
+green `catalog:check`, not against the missing field.**
+
+**Open, unowned in the cut scope**: `catalog/identity/single-tenant/README.md` still points at
+`api/testing/fake-mailer.ts`, which T17 deleted. It sits outside `api/**`, so it was outside C3's
+ownership. Fold it into wave 3's C6 (docs).
 
 **GA-7 removal accounted for.** `create-user-flow.e2e-spec.ts` lost `"seed master e promoção via
 SQL"` — the pseudo-test that asserted `toBeTruthy()` on a seed — when `d86a87a` split the ordered

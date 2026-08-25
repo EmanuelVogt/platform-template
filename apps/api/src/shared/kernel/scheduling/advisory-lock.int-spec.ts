@@ -8,7 +8,7 @@ import {
   it,
 } from "vitest"
 
-import { createTestDb, createTestPool } from "../../../../test/setup/test-db"
+import { createTestDb, createTestPool } from "../../test/int/db"
 
 import {
   advisorySessionUnlock,

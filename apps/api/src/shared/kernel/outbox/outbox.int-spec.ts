@@ -10,15 +10,15 @@ import {
   it,
 } from "vitest"
 
+import { parseEnv } from "../../config/env"
+import { DedicatedClientFactory } from "../../infra/database/dedicated-client.factory"
 import {
   createTestDb,
   createTestPool,
   testDatabaseUrl,
   truncateKernel,
-} from "../../../../test/setup/test-db"
-import { makeTestLogger } from "../../../../test/setup/test-logger"
-import { parseEnv } from "../../config/env"
-import { DedicatedClientFactory } from "../../infra/database/dedicated-client.factory"
+} from "../../test/int/db"
+import { makeTestLogger } from "../../test/int/logger"
 import { DomainEvent } from "../events/domain-event.base"
 import { TransactionManager } from "../transactional/transaction-manager"
 

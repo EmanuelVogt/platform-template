@@ -1,46 +1,24 @@
 import { and, eq } from "drizzle-orm"
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, it } from "vitest"
 
-import {
-  createTestDb,
-  createTestPool,
-  truncateKernel,
-} from "../../../../test/setup/test-db"
-import { makeTestLogger } from "../../../../test/setup/test-logger"
-import { TransactionManager } from "../transactional/transaction-manager"
+import { withTestDb } from "../../test/int/with-test-db"
 
 import { IdempotencyRepository } from "./idempotency.repository"
 import { idempotencyKeys } from "./idempotency.table"
-
-import type { DrizzleDb } from "../../infra/database/drizzle.provider"
-import type { Pool } from "pg"
 
 const inOneHour = (): Date => new Date(Date.now() + 3_600_000)
 const oneSecondAgo = (): Date => new Date(Date.now() - 1_000)
 
 describe("IdempotencyRepository (integração)", () => {
-  let pool: Pool
-  let db: DrizzleDb
-  let txm: TransactionManager
+  const suite = withTestDb({ schemas: ["_kernel"] })
   let repo: IdempotencyRepository
 
   beforeAll(() => {
-    pool = createTestPool()
-    db = createTestDb(pool)
-    txm = new TransactionManager(db, makeTestLogger().loggerFactory)
-    repo = new IdempotencyRepository(txm)
-  })
-
-  afterAll(async () => {
-    await pool.end()
-  })
-
-  beforeEach(async () => {
-    await truncateKernel(pool)
+    repo = new IdempotencyRepository(suite.txm)
   })
 
   it("tryReserve fresco retorna null e cria row in_progress", async () => {
-    const res = await txm.run(() =>
+    const res = await suite.txm.run(() =>
       repo.tryReserve({
         scope: "s",
         key: "k1",
@@ -50,7 +28,7 @@ describe("IdempotencyRepository (integração)", () => {
       })
     )
     expect(res).toBeNull()
-    const rows = await db.select().from(idempotencyKeys)
+    const rows = await suite.db.select().from(idempotencyKeys)
     expect(rows[0]?.status).toBe("in_progress")
   })
 
@@ -62,14 +40,14 @@ describe("IdempotencyRepository (integração)", () => {
       requestHash: "h1",
       expiresAt: inOneHour(),
     }
-    await txm.run(() => repo.tryReserve(input))
-    const res = await txm.run(() => repo.tryReserve(input))
+    await suite.txm.run(() => repo.tryReserve(input))
+    const res = await suite.txm.run(() => repo.tryReserve(input))
     expect(res).not.toBeNull()
     expect(res?.status).toBe("in_progress")
   })
 
   it("complete grava status e response", async () => {
-    await txm.run(() =>
+    await suite.txm.run(() =>
       repo.tryReserve({
         scope: "s",
         key: "k3",
@@ -78,9 +56,11 @@ describe("IdempotencyRepository (integração)", () => {
         expiresAt: inOneHour(),
       })
     )
-    await txm.run(() => repo.complete("s", "k3", "completed", 201, { id: 1 }))
+    await suite.txm.run(() =>
+      repo.complete("s", "k3", "completed", 201, { id: 1 })
+    )
 
-    const rows = await db
+    const rows = await suite.db
       .select()
       .from(idempotencyKeys)
       .where(and(eq(idempotencyKeys.scope, "s"), eq(idempotencyKeys.key, "k3")))
@@ -89,7 +69,7 @@ describe("IdempotencyRepository (integração)", () => {
   })
 
   it("chave expirada é reclamada (retorna null, hash atualizado)", async () => {
-    await txm.run(() =>
+    await suite.txm.run(() =>
       repo.tryReserve({
         scope: "s",
         key: "k4",
@@ -98,7 +78,7 @@ describe("IdempotencyRepository (integração)", () => {
         expiresAt: oneSecondAgo(),
       })
     )
-    const res = await txm.run(() =>
+    const res = await suite.txm.run(() =>
       repo.tryReserve({
         scope: "s",
         key: "k4",
@@ -109,7 +89,7 @@ describe("IdempotencyRepository (integração)", () => {
     )
     expect(res).toBeNull()
 
-    const rows = await db
+    const rows = await suite.db
       .select()
       .from(idempotencyKeys)
       .where(eq(idempotencyKeys.key, "k4"))
@@ -118,7 +98,7 @@ describe("IdempotencyRepository (integração)", () => {
   })
 
   it("reopen é CAS: 1ª chamada em 'failed' true, 2ª (já in_progress) false", async () => {
-    await txm.run(() =>
+    await suite.txm.run(() =>
       repo.tryReserve({
         scope: "s",
         key: "k5",
@@ -127,24 +107,24 @@ describe("IdempotencyRepository (integração)", () => {
         expiresAt: inOneHour(),
       })
     )
-    await txm.run(() => repo.complete("s", "k5", "failed", 500, null))
+    await suite.txm.run(() => repo.complete("s", "k5", "failed", 500, null))
 
-    const first = await txm.run(() => repo.reopen("s", "k5"))
+    const first = await suite.txm.run(() => repo.reopen("s", "k5"))
     expect(first).toBe(true)
 
-    const rows = await db
+    const rows = await suite.db
       .select()
       .from(idempotencyKeys)
       .where(eq(idempotencyKeys.key, "k5"))
     expect(rows[0]?.status).toBe("in_progress")
 
     // Row já não está 'failed' → CAS não casa.
-    const second = await txm.run(() => repo.reopen("s", "k5"))
+    const second = await suite.txm.run(() => repo.reopen("s", "k5"))
     expect(second).toBe(false)
   })
 
   it("deleteExpired remove só rows expiradas e retorna a contagem", async () => {
-    await txm.run(() =>
+    await suite.txm.run(() =>
       repo.tryReserve({
         scope: "s",
         key: "alive",
@@ -153,7 +133,7 @@ describe("IdempotencyRepository (integração)", () => {
         expiresAt: inOneHour(),
       })
     )
-    await txm.run(() =>
+    await suite.txm.run(() =>
       repo.tryReserve({
         scope: "s",
         key: "dead",
@@ -166,12 +146,12 @@ describe("IdempotencyRepository (integração)", () => {
     const removed = await repo.deleteExpired()
     expect(removed).toBe(1)
 
-    const rows = await db.select().from(idempotencyKeys)
+    const rows = await suite.db.select().from(idempotencyKeys)
     expect(rows.map((r) => r.key)).toEqual(["alive"])
   })
 
   it("reopen sob concorrência: exatamente um vencedor (sem double-exec)", async () => {
-    await txm.run(() =>
+    await suite.txm.run(() =>
       repo.tryReserve({
         scope: "s",
         key: "k6",
@@ -180,11 +160,11 @@ describe("IdempotencyRepository (integração)", () => {
         expiresAt: inOneHour(),
       })
     )
-    await txm.run(() => repo.complete("s", "k6", "failed", 500, null))
+    await suite.txm.run(() => repo.complete("s", "k6", "failed", 500, null))
 
     const results = await Promise.all([
-      txm.run(() => repo.reopen("s", "k6")),
-      txm.run(() => repo.reopen("s", "k6")),
+      suite.txm.run(() => repo.reopen("s", "k6")),
+      suite.txm.run(() => repo.reopen("s", "k6")),
     ])
     expect(results.filter(Boolean)).toHaveLength(1)
   })

@@ -10,14 +10,14 @@ import {
   vi,
 } from "vitest"
 
+import { parseEnv } from "../../config/env"
+import { DedicatedClientFactory } from "../../infra/database/dedicated-client.factory"
 import {
   createTestDb,
   createTestPool,
   testDatabaseUrl,
-} from "../../../../test/setup/test-db"
-import { makeTestLogger } from "../../../../test/setup/test-logger"
-import { parseEnv } from "../../config/env"
-import { DedicatedClientFactory } from "../../infra/database/dedicated-client.factory"
+} from "../../test/int/db"
+import { makeTestLogger } from "../../test/int/logger"
 import { TransactionManager } from "../transactional/transaction-manager"
 
 import {

@@ -1,12 +1,9 @@
 import { eq, sql } from "drizzle-orm"
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest"
 
-import {
-  createTestDb,
-  createTestPool,
-  truncateKernel,
-} from "../../../../test/setup/test-db"
-import { makeTestLogger } from "../../../../test/setup/test-logger"
+import { makeTestLogger } from "../../test/int/logger"
+import { withTestDb } from "../../test/int/with-test-db"
+import { fakeRequestContext } from "../../test/unit/request-context"
 import { RequestContext } from "../context/request-context"
 import { NestedAcquisitionError } from "../errors/nested-acquisition.error"
 import { processedEvents } from "../outbox/processed-events.table"
@@ -16,64 +13,23 @@ import {
   TransactionManager,
 } from "./transaction-manager"
 
-import type { DrizzleDb } from "../../infra/database/drizzle.provider"
-import type { RequestContextStore } from "../context/request-context"
-import type { Pool } from "pg"
-
-function testStore(
-  over: Partial<RequestContextStore> = {}
-): RequestContextStore {
-  return {
-    requestId: "req-1",
-    correlationId: "corr-1",
-    causationId: null,
-    traceId: null,
-    spanId: null,
-    tenantId: null,
-    origin: "http",
-    actor: null,
-    extensions: new Map(),
-    locale: "pt-BR",
-    ip: null,
-    userAgent: null,
-    startedAt: Date.now(),
-    ...over,
-  }
-}
-
 describe("TransactionManager (integração)", () => {
-  let pool: Pool
-  let db: DrizzleDb
-  let txm: TransactionManager
-
-  beforeAll(() => {
-    pool = createTestPool()
-    db = createTestDb(pool)
-    txm = new TransactionManager(db, makeTestLogger().loggerFactory)
-  })
-
-  afterAll(async () => {
-    await pool.end()
-  })
-
-  beforeEach(async () => {
-    await truncateKernel(pool)
-  })
+  const suite = withTestDb({ schemas: ["_kernel"] })
 
   function insert(eventId: string): Promise<unknown> {
-    return txm
+    return suite.txm
       .getExecutor()
       .insert(processedEvents)
       .values({ eventId, consumer: "c" })
   }
 
   async function ids(): Promise<string[]> {
-    const rows = await db.select().from(processedEvents)
+    const rows = await suite.db.select().from(processedEvents)
     return rows.map((r) => r.eventId).sort()
   }
 
   it("commita as escritas do run", async () => {
-    await txm.run(async () => {
+    await suite.txm.run(async () => {
       await insert("e1")
     })
     expect(await ids()).toEqual(["e1"])
@@ -81,7 +37,7 @@ describe("TransactionManager (integração)", () => {
 
   it("faz rollback quando o run lança", async () => {
     await expect(
-      txm.run(async () => {
+      suite.txm.run(async () => {
         await insert("e2")
         throw new Error("boom")
       })
@@ -91,9 +47,9 @@ describe("TransactionManager (integração)", () => {
 
   it("join: run aninhado compartilha a tx (rollback derruba os dois)", async () => {
     await expect(
-      txm.run(async () => {
+      suite.txm.run(async () => {
         await insert("a")
-        await txm.run(async () => {
+        await suite.txm.run(async () => {
           await insert("b")
         })
         throw new Error("rollback")
@@ -104,11 +60,11 @@ describe("TransactionManager (integração)", () => {
 
   it("requires_new: savepoint enxerga escrita não-commitada do pai", async () => {
     let innerSawParent = false
-    await txm.run(async () => {
+    await suite.txm.run(async () => {
       await insert("parent")
-      await txm.run(
+      await suite.txm.run(
         async () => {
-          const rows = await txm
+          const rows = await suite.txm
             .getExecutor()
             .select()
             .from(processedEvents)
@@ -122,10 +78,10 @@ describe("TransactionManager (integração)", () => {
   })
 
   it("requires_new: rollback do savepoint não derruba o pai", async () => {
-    await txm.run(async () => {
+    await suite.txm.run(async () => {
       await insert("outer")
       await expect(
-        txm.run(
+        suite.txm.run(
           async () => {
             await insert("inner")
             throw new Error("inner falha")
@@ -139,8 +95,8 @@ describe("TransactionManager (integração)", () => {
 
   it("onCommit roda após o COMMIT", async () => {
     let ran = false
-    await txm.run(async () => {
-      txm.onCommit(() => {
+    await suite.txm.run(async () => {
+      suite.txm.onCommit(() => {
         ran = true
       })
       expect(ran).toBe(false)
@@ -150,9 +106,9 @@ describe("TransactionManager (integração)", () => {
 
   it("falha em onCommit não desfaz o commit", async () => {
     await expect(
-      txm.run(async () => {
+      suite.txm.run(async () => {
         await insert("e9")
-        txm.onCommit(() => {
+        suite.txm.onCommit(() => {
           throw new Error("hook falhou")
         })
       })
@@ -170,11 +126,11 @@ describe("TransactionManager (integração)", () => {
     const markRan = (): void => {
       ran = true
     }
-    await txm.run(async () => {
-      await txm.run(
+    await suite.txm.run(async () => {
+      await suite.txm.run(
         async () => {
           await insert("inner")
-          txm.onCommit(markRan)
+          suite.txm.onCommit(markRan)
         },
         { propagation: "requires_new" }
       )
@@ -185,7 +141,7 @@ describe("TransactionManager (integração)", () => {
   })
 
   it("outsideTransaction fora de tx grava na raiz", async () => {
-    await txm
+    await suite.txm
       .outsideTransaction()
       .insert(processedEvents)
       .values({ eventId: "fora", consumer: "c" })
@@ -194,9 +150,9 @@ describe("TransactionManager (integração)", () => {
 
   it("outsideTransaction dentro do run lança e derruba a transação", async () => {
     await expect(
-      txm.run(async () => {
+      suite.txm.run(async () => {
         await insert("nao-persiste")
-        txm.outsideTransaction()
+        suite.txm.outsideTransaction()
       })
     ).rejects.toThrow(NestedAcquisitionError)
     expect(await ids()).toEqual([])
@@ -204,10 +160,10 @@ describe("TransactionManager (integração)", () => {
 
   it("outsideTransaction lança também dentro de requires_new", async () => {
     await expect(
-      txm.run(async () => {
-        await txm.run(
+      suite.txm.run(async () => {
+        await suite.txm.run(
           () => {
-            txm.outsideTransaction()
+            suite.txm.outsideTransaction()
             return Promise.resolve()
           },
           { propagation: "requires_new" }
@@ -222,11 +178,11 @@ describe("TransactionManager (integração)", () => {
       ran = true
     }
     await expect(
-      txm.run(async () => {
-        await txm.run(
+      suite.txm.run(async () => {
+        await suite.txm.run(
           async () => {
             await insert("inner")
-            txm.onCommit(markRan)
+            suite.txm.onCommit(markRan)
           },
           { propagation: "requires_new" }
         )
@@ -237,35 +193,35 @@ describe("TransactionManager (integração)", () => {
   })
 
   it("onModuleInit registra o manager ativo para o @Transactional alcançar", () => {
-    txm.onModuleInit()
+    suite.txm.onModuleInit()
 
-    expect(getActiveTransactionManager()).toBe(txm)
+    expect(getActiveTransactionManager()).toBe(suite.txm)
   })
 
   it("onCommit fora de uma transação lança", () => {
     expect(() => {
-      txm.onCommit(() => undefined)
+      suite.txm.onCommit(() => undefined)
     }).toThrow("onCommit exige uma transação aberta")
   })
 
   it("isInTransaction reflete a tx ativa dentro e fora do run", async () => {
-    expect(txm.isInTransaction()).toBe(false)
+    expect(suite.txm.isInTransaction()).toBe(false)
     let insideRun = false
-    await txm.run(async () => {
-      insideRun = txm.isInTransaction()
+    await suite.txm.run(async () => {
+      insideRun = suite.txm.isInTransaction()
     })
     expect(insideRun).toBe(true)
-    expect(txm.isInTransaction()).toBe(false)
+    expect(suite.txm.isInTransaction()).toBe(false)
   })
 
   it("carimba app.audit_ctx com o ator do RequestContext dentro da tx", async () => {
     const requestContext = new RequestContext()
     const txmComContexto = new TransactionManager(
-      db,
+      suite.db,
       makeTestLogger().loggerFactory,
       requestContext
     )
-    const store = testStore({
+    const store = fakeRequestContext({
       correlationId: "corr-audit",
       origin: "job",
       actor: { id: "user-42", kind: "user" },

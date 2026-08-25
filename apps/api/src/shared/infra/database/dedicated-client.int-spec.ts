@@ -9,9 +9,9 @@ import {
   vi,
 } from "vitest"
 
-import { createTestPool, testDatabaseUrl } from "../../../../test/setup/test-db"
-import { makeTestLogger } from "../../../../test/setup/test-logger"
 import { parseEnv } from "../../config/env"
+import { createTestPool, testDatabaseUrl } from "../../test/int/db"
+import { makeTestLogger } from "../../test/int/logger"
 
 import { DedicatedClientFactory } from "./dedicated-client.factory"
 import { ManagedDedicatedClient } from "./managed-dedicated-client"

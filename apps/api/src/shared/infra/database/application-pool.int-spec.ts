@@ -11,17 +11,17 @@ import {
   vi,
 } from "vitest"
 
-import {
-  createTestDb,
-  testDatabaseUrl,
-  truncateKernel,
-} from "../../../../test/setup/test-db"
-import { makeTestLogger } from "../../../../test/setup/test-logger"
 import { parseEnv } from "../../config/env"
 import { NestedAcquisitionError } from "../../kernel/errors/nested-acquisition.error"
 import { PoolSaturatedError } from "../../kernel/errors/pool-saturated.error"
 import { processedEvents } from "../../kernel/outbox/processed-events.table"
 import { TransactionManager } from "../../kernel/transactional/transaction-manager"
+import {
+  createTestDb,
+  testDatabaseUrl,
+  truncateKernel,
+} from "../../test/int/db"
+import { makeTestLogger } from "../../test/int/logger"
 
 import { ApplicationPool } from "./application-pool"
 import { poolConfig } from "./connection-config"

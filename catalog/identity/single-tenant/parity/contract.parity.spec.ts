@@ -39,8 +39,6 @@ describe("paridade de contrato do identity", () => {
   })
 
   it("o openapi do child mantém toda operação do snapshot com os mesmos campos obrigatórios", () => {
-    expect(() => {
-      expectContractSubset(OPENAPI_PATH, snapshot)
-    }).not.toThrow()
+    expectContractSubset(OPENAPI_PATH, snapshot)
   })
 })

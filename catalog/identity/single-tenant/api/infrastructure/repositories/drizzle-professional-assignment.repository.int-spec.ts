@@ -288,7 +288,14 @@ describe("DrizzleProfessionalAssignmentRepository (int)", () => {
     })
 
     it("lista vazia é no-op", async () => {
-      await expect(repo.removeByServiceIds([])).resolves.toBeUndefined()
+      const u1 = await seedUser()
+      await seedServiceLink(u1, "svc-1")
+
+      await repo.removeByServiceIds([])
+
+      expect((await repo.listByServiceIds(["svc-1"])).get("svc-1")).toEqual([
+        { userId: u1, isDefault: false },
+      ])
     })
   })
 })

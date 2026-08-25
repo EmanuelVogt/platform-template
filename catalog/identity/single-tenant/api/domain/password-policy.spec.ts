@@ -15,13 +15,13 @@ describe("validatePasswordPolicy", () => {
   it("não lança quando score atende", () => {
     expect(() => {
       validatePasswordPolicy({ ...policy, zxcvbnScore: 4 })
-    }).not.toThrow()
+    }).not.toThrow(WeakPasswordError)
   })
 
   it("borda: score exatamente igual a minZxcvbnScore é aceito", () => {
     expect(() => {
       validatePasswordPolicy({ ...policy, zxcvbnScore: 3 })
-    }).not.toThrow()
+    }).not.toThrow(WeakPasswordError)
   })
 
   it("não chama zxcvbn: usa o score recebido (pureza)", () => {

@@ -103,6 +103,9 @@ describe("ADMIN_CATALOG — feature usage (painel de uso, issue #36)", () => {
   })
 
   it("a feature não tem chave de trilha (não é dona de tabela auditada)", () => {
+    expect(featureUsage?.permissions.map((p) => p.key)).toEqual([
+      "admin.usage.read",
+    ])
     expect(findPermission("admin.usage.audit.read")).toBeUndefined()
   })
 })

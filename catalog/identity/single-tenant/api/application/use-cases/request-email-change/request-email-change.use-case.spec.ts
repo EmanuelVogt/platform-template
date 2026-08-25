@@ -320,6 +320,9 @@ describe("RequestEmailChangeUseCase", () => {
           newEmail: "novo@example.com",
         })
       ).resolves.toBeUndefined()
+
+      expect(t.users.update).toHaveBeenCalledTimes(1)
+      expect(t.verificationTokens.create).toHaveBeenCalledTimes(1)
     })
 
     it("permite solicitação após cooldown expirado", async () => {
@@ -346,6 +349,9 @@ describe("RequestEmailChangeUseCase", () => {
           newEmail: "novo@example.com",
         })
       ).resolves.toBeUndefined()
+
+      expect(t.users.update).toHaveBeenCalledTimes(1)
+      expect(t.verificationTokens.create).toHaveBeenCalledTimes(1)
     })
 
     it("não lança RateLimitedError quando elapsed é exatamente igual ao windowMs (boundary)", async () => {
@@ -374,6 +380,9 @@ describe("RequestEmailChangeUseCase", () => {
           newEmail: "novo@example.com",
         })
       ).resolves.toBeUndefined()
+
+      expect(t.users.update).toHaveBeenCalledTimes(1)
+      expect(t.verificationTokens.create).toHaveBeenCalledTimes(1)
     })
 
     it("lança RateLimitedError com retryAfterSeconds calculado via Math.ceil (fração de segundo)", async () => {

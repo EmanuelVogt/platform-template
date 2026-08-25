@@ -59,6 +59,14 @@ describe("/auth/devices (e2e)", () => {
     const res = await loginOnDevice()
     expect(cookieValue(res, DEVICE_COOKIE)).toBeDefined()
     expect(cookieValue(res, SESSION_COOKIE)).toBeDefined()
+
+    const list = await listDevices(cookieHeader(res)).expect(200)
+    expect(
+      (list.body.devices as DeviceItem[]).map((d) => ({
+        current: d.current,
+        activeSessionCount: d.activeSessionCount,
+      }))
+    ).toEqual([{ current: true, activeSessionCount: 1 }])
   })
 
   it("relogin com o MESMO cookie de device → 1 device, 1 sessão; a anterior morre", async () => {
@@ -127,11 +135,12 @@ describe("/auth/devices (e2e)", () => {
     // só sem `if` dentro do teste.
     expect(current).toBeDefined()
 
-    await e2e.http
+    const res = await e2e.http
       .delete(`/v1/auth/devices/${current!.id}`)
       .set("Origin", E2E_ORIGIN)
       .set("Cookie", jar)
       .expect(409)
+    expect(res.body.type).toMatch(/cannot-revoke-current-device$/)
   })
 
   it("DELETE /auth/devices (outros) mantém o atual e derruba os demais", async () => {

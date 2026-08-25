@@ -37,6 +37,7 @@ describe("Rate-limit — 429 RFC 7807 (e2e)", () => {
     }
 
     expectProblem(last, { status: 429, type: "/too-many-requests" })
-    expect(last.headers["retry-after"]).toBeDefined()
+    expect(last.headers["retry-after"]).toMatch(/^\d+$/)
+    expect(Number(last.headers["retry-after"])).toBeLessThanOrEqual(60)
   })
 })

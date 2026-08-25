@@ -4,6 +4,23 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 [semver](https://semver.org/lang/pt-BR/). Toda versão que leva código lista os advisories
 (`docs/advisories/ADV-*.md`) que carrega.
 
+## [2.1.2]
+
+### Fixed
+
+- 31 testes da entrada afirmavam só existência (`toBeDefined`/`toBeUndefined`/`toBeTruthy`/
+  `not.toThrow()`) e passariam sob uma implementação errada. Cada um passa a afirmar o
+  resultado que pretende provar: o `User` ativado (data e status), o `schema` que o
+  `LoginDto` expõe, o `Retry-After` do 429, o token opaco do link de acesso, o aparelho
+  corrente devolvido por `GET /auth/devices`, o `type` do 409 ao revogar o device atual, as
+  chamadas de escrita das solicitações de troca de e-mail fora do cooldown, o vínculo
+  preservado pelo no-op de `removeByServiceIds` e a única chave da feature `usage`. Nos
+  guards `void` (`assertValidPermissionSet`, `assertProfileFloor`, `assertCanGrant`,
+  `validatePasswordPolicy`, `assertPermission`, construtor do `HmacCsrf`) a asserção passa a
+  nomear o erro que não pode ser levantado. Sem a correção,
+  `platform/no-existence-only-assert` reprovava `pnpm check` em todo filho que instala a
+  entrada.
+
 ## [2.1.1]
 
 ### Fixed

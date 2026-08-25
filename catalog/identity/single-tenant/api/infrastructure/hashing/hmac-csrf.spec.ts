@@ -32,11 +32,13 @@ describe("HmacCsrf", () => {
   })
 
   it("construtor aceita secret de 32 chars", () => {
-    expect(() => new HmacCsrf("z".repeat(32))).not.toThrow()
+    const built = new HmacCsrf("z".repeat(32))
+    expect(built.verify("sess-1", built.sign("sess-1"))).toBe(true)
   })
 
   it("construtor aceita secret maior que 32 chars", () => {
-    expect(() => new HmacCsrf("z".repeat(64))).not.toThrow()
+    const built = new HmacCsrf("z".repeat(64))
+    expect(built.verify("sess-1", built.sign("sess-1"))).toBe(true)
   })
 
   it("construtor lança para secret com exatamente 31 chars (boundary)", () => {

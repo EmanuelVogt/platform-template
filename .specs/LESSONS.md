@@ -312,6 +312,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: LNT-02 AC2; catalog/identity/single-tenant/api/application/access-policy.spec.ts:25 (testing)
 - last seen: 2026-08-25T08:26:06Z
 
+### L-051 — A clean textual auto-merge is not a safe merge: when the same rule shipped independently on both branches, git merged both copies of its test in with no conflict marker, and the older copy called a helper whose signature the other side had widened — TS2554 at runtime. The conflict list is not the risk surface; gate the merged tree before committing it.
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `apps/api/src/shared/test` · harmful: 0
+- features: test-suite-refactor
+- evidence: ced8745 — scan.ts auto-merged, harness-hygiene.spec.ts got two identical HRN-03 blocks, 3-arg compareToBaseline (apps/api/src/shared/test)
+- last seen: 2026-08-25T15:30:00Z
+
+### L-052 — A git worktree created for isolated verification does not inherit installed git hooks, so commit-msg gates (advisory-required) silently do not run there — commits made in the worktree can land without the trailer the same commit would have been refused for on the main checkout.
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `scripts/platform` · harmful: 0
+- features: test-suite-refactor
+- evidence: 52e9c8a has no Advisory: trailer while 0113b0e/3315c50/6bd83d6 do; all four touch catalog/<entry>/api/** (scripts/platform)
+- last seen: 2026-08-25T15:30:00Z
+
 ## Quarantined (failed when applied — ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

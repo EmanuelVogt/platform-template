@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 51,
+  "next_id": 53,
   "lessons": [
     {
       "id": "L-001",
@@ -909,6 +909,42 @@
       ],
       "created": "2026-08-25T08:26:06Z",
       "last_seen": "2026-08-25T08:26:06Z"
+    },
+    {
+      "id": "L-051",
+      "key": "gate_fail::a clean textual auto merge is not a safe merge when the same rule shipped independently on both branches git merged both copies of its test in with no conflict marker and the older copy called a helper whose signature the other side had widened ts2554 at runtime the conflict list is not the risk surface gate the merged tree before committing it",
+      "text": "A clean textual auto-merge is not a safe merge: when the same rule shipped independently on both branches, git merged both copies of its test in with no conflict marker, and the older copy called a helper whose signature the other side had widened — TS2554 at runtime. The conflict list is not the risk surface; gate the merged tree before committing it.",
+      "signal": "gate_fail",
+      "scope": "apps/api/src/shared/test",
+      "status": "candidate",
+      "features": [
+        "test-suite-refactor"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "ced8745 — scan.ts auto-merged, harness-hygiene.spec.ts got two identical HRN-03 blocks, 3-arg compareToBaseline (apps/api/src/shared/test)"
+      ],
+      "created": "2026-08-25T15:30:00Z",
+      "last_seen": "2026-08-25T15:30:00Z"
+    },
+    {
+      "id": "L-052",
+      "key": "gate_fail::a git worktree created for isolated verification does not inherit installed git hooks so commit msg gates advisory required silently do not run there commits made in the worktree can land without the trailer the same commit would have been refused for on the main checkout",
+      "text": "A git worktree created for isolated verification does not inherit installed git hooks, so commit-msg gates (advisory-required) silently do not run there — commits made in the worktree can land without the trailer the same commit would have been refused for on the main checkout.",
+      "signal": "gate_fail",
+      "scope": "scripts/platform",
+      "status": "candidate",
+      "features": [
+        "test-suite-refactor"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "52e9c8a has no Advisory: trailer while 0113b0e/3315c50/6bd83d6 do; all four touch catalog/<entry>/api/** (scripts/platform)"
+      ],
+      "created": "2026-08-25T15:30:00Z",
+      "last_seen": "2026-08-25T15:30:00Z"
     }
   ]
 }

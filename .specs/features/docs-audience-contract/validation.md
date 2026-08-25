@@ -76,6 +76,77 @@ Regression repair `68f01d1` and out-of-feature `a2716e7` are recorded in Executi
 
 ---
 
+## Isolated Worktree Measurement (follow-up, requested by orchestrator)
+
+The un-isolated Final gate above is on the shared `main` checkout and stays FAIL — that verdict is
+unchanged. This section adds a measurement taken in a **disposable, isolated worktree**
+(`git worktree add -b verify/docs-audience-contract .worktrees/verify-docs-audience-contract HEAD`,
+HEAD = `03e74f2`, deps installed with `pnpm install`), created solely to get a real
+`template:smoke` reading and never merged into `main`. The worktree and its branch were deleted
+after this measurement.
+
+**Foreign breakage encountered and how each was handled (isolated worktree only):**
+
+1. `apps/api/src/shared/infra/storage/null-storage.adapter.spec.ts` (5× TS2554, from `d5cfcaf`) —
+   **already fixed upstream on `main`** by the time this worktree was created (commit `03e74f2 fix(api):
+   declare port parameters on NullStorageAdapter methods`, landed by its owning session between this
+   report's first write and this follow-up). Zero files touched for this one.
+2. `apps/api/src/shared/test/hygiene/harness-hygiene-baseline.json` — a pre-existing, unrelated
+   drift (2 unrecorded `no-unsafe-cast` violations in `catalog/audit/.../drizzle-activity-stats.reader.spec.ts:22`
+   and `catalog/identity/single-tenant/.../drizzle-usage-stats.reader.spec.ts:22`, both introduced by
+   commit `ab81666`, unrelated to `docs-audience-contract` and to `d5cfcaf`) was blocking `pnpm test`.
+   **Neutralised** by adding the 2 grandfather entries (`"no-unsafe-cast": 1` each) to the baseline JSON
+   — the file's own designed mechanism for exactly this. **Only file edited in the worktree**; restored
+   nowhere because the whole worktree was discarded afterward, never touched `main`.
+3. `apps/api/src/modules/module-boundaries.spec.ts` (RULE D, inside the *rendered child's* own test
+   suite) — surfaced only after (1) and (2) were cleared, blocking `template:smoke`'s gate 1/4. The
+   child's `pnpm test` reports "Failed Tests 10"; the smoke script's own stderr preview
+   (`STDERR_PREVIEW_LINES = 10`, `scripts/template-smoke.mjs:26`) shows only the first: RULE D expects
+   the rendered catalog to be read with `['attachment', 'audit', …(3)]` entries but gets `[]` in a
+   kernel-only child. **Not neutralised** — the other 9 failures are unknown in scope, this is a third,
+   independent class of foreign breakage (unrelated to `d5cfcaf`/`apps/api`, and to `docs/**`), and
+   guessing a fix without seeing all 10 failures risks masking something real. Left red.
+
+**Isolated Final gate result** (after neutralising items 1–2 only):
+
+| Command | Result |
+| --- | --- |
+| `pnpm format:check` | ✅ |
+| `pnpm check` | ✅ (0 errors, confirms item 1 needed no worktree-local fix) |
+| `pnpm test` | ✅ 735 passed / 735 (0 failed) — confirms item 2's baseline fix was sufficient for the root repo's own suite |
+| `pnpm test:scripts` | ✅ 681 passed / 0 failed — same count as the un-isolated run, this feature's own proof is stable |
+| `pnpm template:smoke` | ❌ exit 7 — blocked by item 3 (rendered child's `module-boundaries.spec.ts` RULE D), at gate 1/4 ("pnpm check && pnpm test" inside the child). Never reached gate 2/4, 3/4 or 4/4. |
+
+**What `template:smoke` itself proves about AUD-01/AUD-03/AUD-09: nothing directly** — its own output
+(re-verified by grepping the full log) never prints or asserts anything about `docs/platform`,
+`docs/agents`, or the shipped-doc tree; it only prints step-progress lines and, on failure, a truncated
+stderr preview. A green `template:smoke` would not by itself have proven the `docs/` claim either.
+
+**So the actual proof was taken by inspecting the rendered child directly** (`pnpm template:smoke --keep`,
+child preserved at a scratch dir since the render step — before any gate — always completes regardless
+of item 3):
+
+- `docs/platform/` — **absent** (`ls`: "No such file or directory"). Confirms AUD-01/AUD-03's exclusion
+  half from the actual artifact, not the static shipped-set model.
+- `docs/catalog/README-contract.md` — **absent** (moved into the unshipped `docs/platform/`, per T1/AUD-01/02).
+- `docs/` in the rendered child — **33 files**, exactly matching
+  `git ls-files docs/ | grep -v '^docs/platform/' | grep -v '^docs/platform_template/'` on `main` (33).
+  Confirms AUD-03's "every other tracked `docs/` file present" half from the actual artifact, file-for-file.
+- `docs/agents/workflow.md` in the rendered child — grepped for the four AUD-09 literals
+  (`release.yml`, `shared between agents`, `pull request`, `origin/main`, case-insensitive): **zero matches**
+  (`exit=1`). Confirms AUD-09 from the actual rendered file, not the live-tree unit test alone.
+- `docs/agents/README.md`'s table (`workflow.md`, `harness.md`, `communication.md`, `infra.md`,
+  `issue-tracker.md`) — all 5 present in the rendered `docs/agents/` (6 files incl. `README.md` itself).
+  Confirms AUD-11 from the actual artifact.
+
+**Verdict on this follow-up**: AUD-01, AUD-03, AUD-09 and AUD-11 are now each confirmed twice — once by
+the live-tree unit test (original report, above) and once by direct inspection of an actually-rendered
+child. `template:smoke` as a whole (all 4 gates) remains unproven — it is blocked by a third, unrelated,
+unneutralised foreign defect (`module-boundaries.spec.ts` RULE D) that has nothing to do with
+`docs-audience-contract`'s `_exclude`/shipped-set mechanism.
+
+---
+
 ## Summary
 
 Spec-anchored coverage is complete and evidenced: 11/11 ACs have `file:line` assertions checking the actual asserted value, including the three flagged scrutiny points (T8's matcher/floor, the two exemptions' blast radius, and the AUD-09/10 four-literal set) — all mutation-confirmed to bite. The discrimination sensor is 3/3 killed. The Final gate is blocked by a pre-existing, unrelated `apps/api` typecheck defect (traced to commit `d5cfcaf`, outside this feature's diff surface) that also breaks `template:smoke`'s rendered child. This is a real blocker for merge/release but not a defect introduced by `docs-audience-contract`; recommend re-running the Final gate once the `apps/api` storage-adapter typecheck is fixed (a different feature's responsibility) rather than opening a fix task against this feature.

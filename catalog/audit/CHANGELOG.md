@@ -16,6 +16,14 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   `APP_TIMEZONE` (IANA, default `UTC`). Um child que dependia do fuso fixo muda de
   recorte; ver `ADV-20260824-04`.
 
+### Fixed
+
+- `drizzle-activity-stats.reader.spec.ts`: o import de `TransactionManager` vinha depois do
+  import irmão do leitor e o `captured.bucket as SQL` removia `undefined` por asserção de tipo.
+  Sem a correção, `import-x/order` e `@typescript-eslint/non-nullable-type-assertion-style`
+  reprovavam o `pnpm check` de todo filho que instala a entrada — `catalog/` está fora de toda
+  invocação de ESLint do template, então o desvio só aparece no filho. Ver `ADV-20260825-01`.
+
 ## [2.1.2]
 
 ### Fixed

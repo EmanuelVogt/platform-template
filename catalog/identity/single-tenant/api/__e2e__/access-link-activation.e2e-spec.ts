@@ -70,7 +70,7 @@ describe("Ativação via access-link (e2e)", () => {
     return tokenFromMail(mailer, email)
   }
 
-  it("ativa a conta (200 + cookie + sessão + birth_date) e mata o token", async () => {
+  it("ativa a conta (200 + cookie + sessão) e mata o token", async () => {
     const masterCookies = await setupMaster("master-act1@example.com")
     const token = await inviteUser(
       masterCookies,
@@ -90,7 +90,7 @@ describe("Ativação via access-link (e2e)", () => {
       avatarAttachmentId: null,
     })
 
-    // Ativação: define nome completo, data de nascimento e senha.
+    // Ativação: define nome completo e senha.
     const setRes = await e2e.http
       .post("/v1/auth/set-password")
       .set("Origin", E2E_ORIGIN)
@@ -110,21 +110,18 @@ describe("Ativação via access-link (e2e)", () => {
     // Cookie de ativação autentica direto na sessão.
     await e2e.http.get("/v1/auth/session").set("Cookie", anaCookies).expect(200)
 
-    // Verifica no banco: status active, birth_date e exatamente 1 sessão.
-    const { rows } = await db.pool.query<{
-      status: string
-      birth_date: string | Date | null
-    }>("SELECT status, birth_date FROM identity.users WHERE email = $1", [
-      "ana-act@example.com",
-    ])
+    // Verifica no banco: status active e exatamente 1 sessão.
+    // SPEC_DEVIATION: a asserção de birth_date saiu daqui.
+    // Reason: AD-035 (97467fe, C19/wave 11) tirou birthDate de identity.users e do
+    // próprio SetPasswordInput/setPasswordSchema — a ativação não aceita mais o campo
+    // como input e não grava mais nada em lugar nenhum, então não há coluna nova para
+    // reafirmar (professional.professional_profile é escrito por outro fluxo, não por
+    // esta ativação).
+    const { rows } = await db.pool.query<{ status: string }>(
+      "SELECT status FROM identity.users WHERE email = $1",
+      ["ana-act@example.com"]
+    )
     expect(rows[0]?.status).toBe("active")
-    // birth_date pode vir como Date (driver pg) ou string; normaliza pra string ISO.
-    const bd = rows[0]?.birth_date
-    const bdStr =
-      bd instanceof Date
-        ? bd.toISOString().slice(0, 10)
-        : String(bd).slice(0, 10)
-    expect(bdStr).toBe("1990-05-20")
 
     const { rows: sessions } = await db.pool.query<{ count: string }>(
       "SELECT COUNT(*) AS count FROM identity.sessions s JOIN identity.users u ON u.id = s.user_id WHERE u.email = $1",

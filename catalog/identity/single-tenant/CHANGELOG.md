@@ -58,6 +58,11 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
   testa.
 - Os quatro reprovavam o `pnpm test:db` de todo filho que instala a entrada — 14 falhas. Ver
   `ADV-20260825-03`.
+- `access-link-activation.e2e-spec.ts`: o teste de ativação — inclusive no próprio título —
+  ainda afirmava `birth_date` em `identity.users`, coluna que a Breaking acima já derrubou.
+  `SetPasswordInput`/`setPasswordSchema` também pararam de aceitar `birthDate` nesta versão, e
+  a ativação não grava mais o campo em lugar nenhum — a asserção não migra, só sai. Reprovava o
+  `pnpm test:db` de todo filho que instala a entrada. Ver `ADV-20260825-05`.
 
 ## [2.1.3]
 

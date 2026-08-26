@@ -4,15 +4,53 @@ Version truth = git tag + this entry (AD-006); `package.json` is not bumped on
 release. Each version lists the contract-breaking changes and the steps for the child
 to apply on `copier update`.
 
-## v2.5.0
+## v3.0.0
 
-A doc's directory now decides whether it reaches a child: `docs/platform/` is addressed to
-whoever works in the template and never ships. A guard derived from `copier.yml` keeps the
-docs that do ship from naming what the child does not have.
+The kernel's first breaking release since `v2.0.0`: cookie names go neutral, storage env drops
+its R2 shape, the audit clock's timezone becomes configuration, and `identity` narrows to
+authentication — the professional profile and schedule slice it used to carry becomes its own
+catalog entry.
 
 ### Changes
 
-1. **Docs are delivered by where they live** (`copier.yml`, `docs/platform/`,
+1. **Cookie names go neutral, CSRF gets a same-host seam**
+   (`catalog/identity/single-tenant/api/identity.config.ts`,
+   `.../api/api/guards/cookie.ts`): `COOKIE_NAME` defaults to `__Host-app_session`,
+   `DEVICE_COOKIE_NAME` to `__Host-app_device`; the CSRF cookie name, previously a literal in
+   the guard, becomes `CSRF_COOKIE_NAME` (default `app_csrf`), read by the SPA's
+   `configureClient({ csrfCookieName })` too. `COOKIE_SAMESITE=none` now requires `API_ORIGIN`
+   on the same host as `WEB_ORIGIN` at boot — the CSRF cookie is host-only, so a cross-host SPA
+   could never read it; that used to fail silently on every mutating request.
+2. **Storage env sheds its R2 shape**
+   (`apps/api/src/shared/infra/storage/storage.config.ts`, `s3-storage.adapter.ts`):
+   `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_ENDPOINT` rename to
+   `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`, `STORAGE_BUCKET`, `STORAGE_ENDPOINT`;
+   the generic S3 adapter now requires an explicit `STORAGE_REGION` — R2 implied `auto` and
+   never exposed it to the caller. `R2_ACCOUNT_ID` has no successor: the adapter models
+   endpoint/bucket/credentials/region, not account.
+3. **The audit clock's timezone becomes configuration**
+   (`apps/api/src/shared/config/env.ts`, `shared/kernel/clock/bucket-sql.ts`): `APP_TIMEZONE`
+   replaces the constant that used to fix day/week bucketing at the owner's timezone, validated
+   against the IANA set the runtime knows, defaulting to `UTC`. A child that does not declare
+   it moves its aggregation boundary; no data is lost — `audit.entries` keeps the instant, only
+   how it is read changes.
+4. **`identity` narrows to authentication**
+   (`catalog/identity/single-tenant/api/domain/access/access-profile.types.ts`,
+   `.../api/domain/entities/user.entity.ts`, `module.json` — `8ba8360`, `97467fe`): the
+   `professional` literal leaves `BASE_ACCESS_PROFILES` (the Postgres enum
+   `identity.access_profile` derives from it, and Postgres has no `DROP VALUE` — dropping it is
+   a type recreation, run in its own transaction, separate from any that writes a new literal,
+   AD-004); `serves_clients`/`birth_date` leave `identity.users`, and the five satellite tables
+   (`user_professional_areas`, `user_professional_services`, `user_scheduling_areas`,
+   `user_professional_schedule_configs`, `professional_default_hours`) leave `schemaExports`.
+   `identity.attach_audit()` keeps redacting the 7 core tables; the 7 professional tables move
+   to `professional.attach_audit()`.
+5. **`professional` is born as its own catalog entry, at `1.0.0`**
+   (`catalog/professional/module.json`): the profile/schedule slice `identity` used to carry,
+   now `professional_profile` (PK `user_id`, FK to `identity.users.id` `ON DELETE CASCADE`)
+   plus the five satellites; `dependsOn: identity >=3.0.0 <4.0.0`, never the reverse, so no
+   `identity ↔ professional` cycle forms.
+6. **Docs are delivered by where they live** (`copier.yml`, `docs/platform/`,
    `scripts/platform/__tests__/`): the four template-only docs moved into `docs/platform/`,
    anchored in `_exclude` as `/docs/platform`; the per-file entry that used to exclude
    `docs/catalog/README-contract.md` went with them, so no `docs/` entry names an individual
@@ -26,7 +64,27 @@ docs that do ship from naming what the child does not have.
 
 ### Child migration steps
 
-None — copier update is enough.
+1. `pnpm platform module add professional` — install the new entry before touching `identity`:
+   its `module.json` `schemaExports` is the canonical list of the six tables the satellite data
+   moves into, and step 5 below targets those names.
+2. `pnpm platform template migrate` — offers the cookie escape hatch in `apps/api/.env`:
+   commented `COOKIE_NAME=` / `CSRF_COOKIE_NAME=` lines pointing at
+   `docs/advisories/ADV-20260824-03.md`. Leave them commented to accept the new
+   `__Host-app_session` / `app_csrf` defaults and log out every live session; uncomment and set
+   the `2.x` values (and `DEVICE_COOKIE_NAME` by hand — the script does not offer it) to keep
+   everyone logged in. Under `COOKIE_SAMESITE=none`, also set `API_ORIGIN` to the same host as
+   `WEB_ORIGIN`.
+3. `pnpm platform template migrate` — renames `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
+   `R2_BUCKET`, `R2_ENDPOINT` to their `STORAGE_*` names in `apps/api/.env`, adding
+   `STORAGE_REGION=auto` (R2's implicit region) whenever any of the four were renamed.
+4. `pnpm platform template migrate` — writes `APP_TIMEZONE=America/Sao_Paulo` into
+   `apps/api/.env` when the key is not already declared, preserving the day/week boundary the
+   kernel used to fix; declare a different value first to adopt another timezone instead.
+5. `pnpm --filter api db:migrate` — apply a product migration, hand-written from the three SQL
+   blocks in `docs/advisories/ADV-20260824-01.md`: copy `serves_clients`/`birth_date` and the
+   five satellites into the tables `professional` (step 1) declares, then — in a transaction of
+   its own, separate from step 1's install (AD-004) — recreate `identity.access_profile`
+   without the `professional` literal, reassigning any row that still used it.
 
 ## v2.4.1
 

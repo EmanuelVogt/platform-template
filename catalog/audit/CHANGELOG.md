@@ -15,13 +15,18 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 - `CLINIC_TZ` some do leitor de estatísticas: os buckets por dia/semana leem
   `APP_TIMEZONE` (IANA, default `UTC`). Um child que dependia do fuso fixo muda de
   recorte; ver `ADV-20260824-04`.
-- O base set da trilha para de registrar as sete tabelas da fatia profissional
-  (`user_professional_areas`, `user_professional_services`, `user_scheduling_areas`,
-  `user_professional_schedule_configs`/`_slots`/`_blocks`, `professional_default_hours`):
-  elas saem do `identity` para a entrada `professional`, que registra as próprias pelo
-  `AuditRegistry`. Um child que instale a entrada nova sem aplicar esta versão lança
-  `DuplicateAuditRegistrationError` no boot — `registerTables` indexa por nome de tabela
-  puro. O alvo de FK `professional_user_id` permanece no base set. Ver `ADV-20260824-02`.
+- O base set da trilha troca o schema das sete tabelas da fatia profissional, de `identity`
+  para `professional` (`user_professional_areas`, `user_professional_services`,
+  `user_scheduling_areas`, `user_professional_schedule_configs`/`_slots`/`_blocks`,
+  `professional_default_hours`), e passa a cobrir também a nova `professional_profile` — oito
+  no total. A declaração continua em `BASE_AUDITED_TABLES`/`AUDITED`, dentro de `audit`: a
+  entrada `professional` não tem `audit` em `dependsOn` para chamar `registerTables` ela mesma,
+  e uma segunda chamada colidiria em `DuplicateAuditRegistrationError` de qualquer forma
+  (`registerTables` indexa por nome de tabela puro). `professional` só anexa o trigger
+  `audit_row` via SQL, no próprio `attach_audit()` — o mesmo precedente da entrada `tag`. Um
+  child que instale a entrada nova sem aplicar esta versão fica com o trigger anexado e sem
+  cobertura declarada: `audit-coverage.int-spec.ts` reprova. O alvo de FK
+  `professional_user_id` permanece no base set. Ver `ADV-20260824-02`.
 
 ### Fixed
 

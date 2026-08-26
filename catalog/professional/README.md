@@ -12,8 +12,8 @@ implementação alternativa do mesmo módulo, e esta é um complemento que se in
 ## Contrato
 
 | Método | Path | operationId | Eventos | Use case / facade |
-| --- | --- | --- | --- | --- |
-| — | — | — | — | — |
+| ------ | ---- | ----------- | ------- | ----------------- |
+| —      | —    | —           | —       | —                 |
 
 A entrada não publica rota HTTP própria: sua superfície é in-process, consumida por outras
 entradas e pelo módulo do produto através das facades exportadas por `ProfessionalModule`
@@ -43,16 +43,16 @@ sobe para `shared/kernel/**`: sem ciclo, não há o que inverter (AD-025).
 Schema lógico `professional` (`api/infrastructure/tables/professional.schema.ts`). Oito tabelas,
 em seis arquivos:
 
-| Tabela | Arquivo | Origem |
-| --- | --- | --- |
-| `professional_profile` | `professional-profile.table.ts` | nova — recebe `serves_clients` e `birth_date` de `identity.users` |
-| `user_professional_areas` | `user-professional-area.table.ts` | movida do `identity`, colunas inalteradas |
-| `user_professional_services` | `user-professional-service.table.ts` | movida do `identity`, colunas inalteradas |
-| `user_scheduling_areas` | `user-scheduling-area.table.ts` | movida do `identity`, colunas inalteradas |
-| `user_professional_schedule_configs` | `user-professional-schedule-config.table.ts` | movida do `identity`, colunas inalteradas |
-| `user_professional_schedule_config_slots` | `user-professional-schedule-config.table.ts` | movida do `identity`, colunas inalteradas |
-| `user_professional_schedule_config_blocks` | `user-professional-schedule-config.table.ts` | movida do `identity`, colunas inalteradas |
-| `professional_default_hours` | `professional-default-hours.table.ts` | movida do `identity`, colunas inalteradas |
+| Tabela                                     | Arquivo                                      | Origem                                                            |
+| ------------------------------------------ | -------------------------------------------- | ----------------------------------------------------------------- |
+| `professional_profile`                     | `professional-profile.table.ts`              | nova — recebe `serves_clients` e `birth_date` de `identity.users` |
+| `user_professional_areas`                  | `user-professional-area.table.ts`            | movida do `identity`, colunas inalteradas                         |
+| `user_professional_services`               | `user-professional-service.table.ts`         | movida do `identity`, colunas inalteradas                         |
+| `user_scheduling_areas`                    | `user-scheduling-area.table.ts`              | movida do `identity`, colunas inalteradas                         |
+| `user_professional_schedule_configs`       | `user-professional-schedule-config.table.ts` | movida do `identity`, colunas inalteradas                         |
+| `user_professional_schedule_config_slots`  | `user-professional-schedule-config.table.ts` | movida do `identity`, colunas inalteradas                         |
+| `user_professional_schedule_config_blocks` | `user-professional-schedule-config.table.ts` | movida do `identity`, colunas inalteradas                         |
+| `professional_default_hours`               | `professional-default-hours.table.ts`        | movida do `identity`, colunas inalteradas                         |
 
 `professional_profile.user_id` é PK e FK para `identity.users.id` com `ON DELETE CASCADE`; as
 sete tabelas movidas mantêm as FKs que já tinham para o usuário, agora cruzando o schema.
@@ -65,6 +65,16 @@ as **oito** tabelas (as sete movidas mais `professional_profile`) e a `PERFORM`a
 `pg_proc`: quem executa o hook é `audit.attach_module_hooks()`, no fim da instalação do audit
 (AD-032). `professional_profile` entra na lista porque recebeu `serves_clients` e `birth_date` de
 `identity.users`, que já era auditada — deixá-la de fora perderia trilha que o filho tinha.
+
+O SQL é só metade: as mesmas oito tabelas precisam estar declaradas do lado TS, em `AUDITED` e
+`BASE_AUDITED_TABLES` da entrada `audit` (`domain/audit-coverage.ts`,
+`domain/base-audit-registrations.ts`), com o schema `professional` em `MODULE_SCHEMAS`. **Tabela
+nova nesta entrada mexe nos dois lugares** — só no SQL, o `audit-coverage.int-spec` do filho
+acusa trigger sem declaração; só no TS, acusa declaração sem trigger. A declaração mora na
+entrada `audit` porque `AuditRegistry.registerTables` indexa por nome puro de tabela e uma
+segunda registração lança `DuplicateAuditRegistrationError`; esta entrada não tem `audit` em
+`dependsOn` e não pode importá-la (RULE C). É a mesma razão pela qual o alvo de FK
+`professional_user_id` continua no base set do `audit`.
 
 ## Decisões
 

@@ -42,5 +42,15 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   produto para `ProfessionalScope`/`ProfessionalCommitments`, com null objects por padrão.
 - `migrations/custom/01_audit_attach_professional.sql`: a entrada declara e `PERFORM`a a própria
   `professional.attach_audit()` sob o guard de `pg_proc` (AD-032), cobrindo as oito tabelas.
+- Cobertura da trilha do lado TS: as oito tabelas entram em `AUDITED` e o schema `professional`
+  em `MODULE_SCHEMAS` (`audit/api/domain/audit-coverage.ts`), com as oito registrações
+  correspondentes em `BASE_AUDITED_TABLES` — dono `admin.users.audit.read`, e as sete satélites
+  do usuário com raiz de agregado `users`, como era antes do corte. A declaração fica na
+  entrada `audit`, e não aqui, porque `registerTables` indexa por nome puro de tabela (uma
+  segunda registração lança `DuplicateAuditRegistrationError`), esta entrada não tem `audit` em
+  `dependsOn` e o `audit-coverage.int-spec` lê a lista da própria entrada — o mesmo motivo pelo
+  qual o alvo de FK `professional_user_id` permanece no base set. Sem isso, `attach_audit()`
+  anexava oito triggers que nenhuma lista declarava e o int-spec de cobertura ficava vermelho
+  em todo filho que instala as duas entradas.
 - README registra o débito herdado do `identity`: o consumidor `ServiceModule`/`service` que não
   é distribuído por nenhuma entrada, e `area_id`/`service_id` como `text` sem FK.

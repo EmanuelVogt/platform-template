@@ -4044,6 +4044,50 @@ wrong only for unreleased entries.** Nine instances, still unresolved, still the
 (why birth-date was dropped, not relocated), plus wave 12's at
 `catalog/professional/parity/professional-slice.parity.spec.ts:11`.
 
+### Wave 13 — the Wave Plan's real one (`C22` = T77 → T78) — 2026-08-26 — **GATED GREEN**
+
+Not to be confused with the gate-fix clusters above, which took the label first. One commit:
+`762080b` (C22/T77, sonnet). T78 is the orchestrator's `.specs/` write — the AD-035 amendment plus
+the Handoff entry — and carries no separate hash beyond the commit that lands this log.
+
+**Build gate, run as a SET of six at `762080b`, all exit 0:** `pnpm check` (7/7 turbo tasks),
+`pnpm test:scripts` **705/705** (+5 from T77, no `.catalog-stage` race), `catalog:lint`,
+`catalog:typecheck` (6 entries), `catalog:eslint` (6 entries), `format:check`. **Deliberately not
+run:** `pnpm test`, `catalog:test`, `test:coverage`, `catalog:check` — the suite-cost rule makes the
+full suite and coverage Final-gate-only, and this wave touched one `.mjs` test, one CI yaml and two
+markdown files. **The exclusion is the orchestrator's and is named so the Verifier can price it**; it
+is not a worker picking a sample, which is what killed round 7.
+
+**ROUND 8 NEVER EVIDENCED IDENT-02 — ITS SUCCESS LINE MISLED.** `catalog-check.mjs:181-194` renders
+**one shared child per invocation** and `catalog-graph.mjs:86` takes every entry as a root when no
+entry is named, so round 8's `catalog:check — OK: notification, identity/single-tenant, tag,
+professional, audit, attachment` means all six installed **into one child together** — the opposite
+of the isolation IDENT-02 asks for. It reads like six per-entry runs because it names the entries.
+**Thirteenth of the "green because blind" family, and the first produced by a success message rather
+than by a run that died early.**
+
+**T77 proves IDENT-02 in-repo, and the limit is on the record.** 5 tests against the **real** catalog:
+`professional`'s closure is exactly `notification -> identity -> professional`, `identity`'s is
+`notification -> identity`, neither drags in `audit`/`attachment`/`tag`, `module add` runs for exactly
+that closure in one child, and `ci.yml`'s `entry:` matrix carries `professional`. **Nothing asserted
+`matrix.entry` before** (`catalog-check.test.mjs:906-937` covers only `web_stack`), so the leg could
+have vanished silently. `run`/`runCli` are stubbed, so the proof is the **install closure**, not the
+child's kernel-only-ness — **the executing proof is the new CI leg and it has not run at this HEAD.**
+That gap goes to the Verifier, unabsorbed.
+
+**Unplanned but inside the Done-when:** `catalog/professional/README.md` still claimed the entry
+shipped no parity specs, though `professional-slice.parity.spec.ts` landed in `f625673` (wave 12).
+Corrected in README and CHANGELOG, with the reason there is no `contract.snapshot.json` — the entry
+publishes no HTTP route, so an empty operations snapshot would pass under any wrong implementation.
+
+**WAVE 14'S OWNER GATE IS OPEN.** `git tag -l` returns through `v2.4.1`; T79's literal gate
+(`v2.4.0` tagged) and its purpose (tasks.md:2634 — appending `v3.0.0` would make `v2.4.0` untaggable)
+are **both** discharged, both tags already cut. `v2.2.1` also exists and the record had run three
+releases behind. Wave 14 is a normal dispatchable wave.
+
+**Advisory ledger: instance #11** (`762080b`, `Advisory: none` — `professional` unreleased, born
+`1.0.0` here). Eleven instances, unresolved, still the Verifier's.
+
 ## Fix Round 1 (`v2.4.0` scope) — authored 2026-08-24 after Verifier pass 1 FAIL
 
 Source: `validation.md` § *Fix Plans*. Two clusters, dispatched in parallel, then one Build gate,

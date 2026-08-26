@@ -104,8 +104,9 @@ Self-installs on `pnpm install` (`prepare` script). Emergency escape: `git push 
 **CI.** `.github/workflows/ci.yml` — a single workflow that runs: `quality` (lint + typecheck +
 builds) / `test-unit` (api + web) / `test-coverage` (api integration + e2e, testcontainers) for
 every push and PR, plus `detect` (checks if `catalog/` exists) <!-- audience-contract: catalog/ — names what the CI `detect` job checks for; absent by design in a generated product -->
-and the three template-only catalog jobs (`catalog:lint`, `catalog:typecheck`, `catalog:check`
-matrix) which are inert in a generated product. The full `build` lives in `quality`.
+and the four template-only catalog jobs (`catalog:lint`, `catalog:typecheck`, `catalog:eslint`,
+`catalog:check` matrix) which are inert in a generated product. The full `build` lives in
+`quality`.
 
 A **local commit triggers neither gate.** Run `pnpm check` before asking for review.
 

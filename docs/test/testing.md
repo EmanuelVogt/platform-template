@@ -41,6 +41,7 @@ pnpm test:db                   # test:int + test:e2e in a single container
 pnpm test:scripts              node --test on scripts/platform/__tests__/*.test.mjs
 pnpm catalog:lint              lint of catalog/** and docs/advisories/** (pre-commit hook)
 pnpm catalog:typecheck         only compiles the entries (staged mirror, runs no spec)
+pnpm catalog:eslint            lints the staged mirror with the rendered child's own ESLint config
 pnpm catalog:check             the only command that installs and runs an entry's tests
 ```
 

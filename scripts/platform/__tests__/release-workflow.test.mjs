@@ -147,6 +147,7 @@ test("verify roda o release-preflight (com a versão do marker) antes de qualque
     /^pnpm test:scripts$/,
     /^pnpm catalog:lint$/,
     /^pnpm catalog:typecheck$/,
+    /^pnpm catalog:eslint$/,
   ]
   for (const pattern of gatePatterns) {
     const gateIndex = runs.findIndex((run) => pattern.test(run.trim()))

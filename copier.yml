@@ -59,6 +59,7 @@ _exclude:
   - scripts/platform/catalog-check.mjs
   - scripts/platform/catalog-lint.mjs
   - scripts/platform/catalog-stage.mjs
+  - scripts/platform/catalog-eslint.mjs
   - scripts/platform/advisory-required.mjs
   - scripts/platform/lib/child.mjs
   - scripts/platform/lib/lint.mjs
@@ -81,7 +82,7 @@ _tasks:
   # update. A lista espelha os scripts que dependem de `catalog/`
   # (`scripts/platform/__tests__/child-manifest.test.mjs` barra divergência).
   - command: >-
-      node -e "const fs=require('fs'),f='package.json',p=JSON.parse(fs.readFileSync(f,'utf8'));p.name='{{ project_slug }}';for(const k of ['catalog:check','catalog:lint','catalog:test','catalog:typecheck','template:smoke','test:scripts'])delete p.scripts[k];fs.writeFileSync(f,JSON.stringify(p,null,2)+'\n')"
+      node -e "const fs=require('fs'),f='package.json',p=JSON.parse(fs.readFileSync(f,'utf8'));p.name='{{ project_slug }}';for(const k of ['catalog:check','catalog:lint','catalog:test','catalog:typecheck','catalog:eslint','template:smoke','test:scripts'])delete p.scripts[k];fs.writeFileSync(f,JSON.stringify(p,null,2)+'\n')"
     when: "{{ not _copier_conf.pretend }}"
   - command: git init -q
     when: "{{ _copier_operation == 'copy' and not _copier_conf.pretend }}"

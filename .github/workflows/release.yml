@@ -73,6 +73,7 @@ jobs:
       - run: pnpm test:scripts
       - run: pnpm catalog:lint
       - run: pnpm catalog:typecheck
+      - run: pnpm catalog:eslint
 
   catalog:
     name: "catalog:check (${{ matrix.entry }} / ${{ matrix.web_stack }})"

@@ -10,6 +10,7 @@ const TEMPLATE_ONLY_SCRIPTS = [
   "catalog:lint",
   "catalog:test",
   "catalog:typecheck",
+  "catalog:eslint",
   "template:smoke",
   "test:scripts",
 ]

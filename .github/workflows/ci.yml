@@ -137,6 +137,7 @@ jobs:
       - run: pnpm test:scripts
       - run: pnpm catalog:lint
       - run: pnpm catalog:typecheck
+      - run: pnpm catalog:eslint
       - name: ADV-04 no catalog fix without advisory (cada commit do PR)
         if: github.event_name == 'pull_request'
         run: >-

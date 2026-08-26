@@ -3969,6 +3969,81 @@ inside the rendered child. (11) `module-boundaries.spec.ts` does not scan `catal
 template (`apps/api/src/modules/` holds only the two kernel specs), which is how 8 violations lived
 through six waves of green scoped gates.
 
+### Wave 13 (gate-fix clusters C24–C27) — 2026-08-25 — **NOT YET GATED**
+
+**Naming warning for the next reader: these clusters took the "wave 13" label, but the Wave Plan's
+wave 13 is `C22` = T77 → T78 and it is STILL UNDISPATCHED.** C24–C27 are gate fixes born from
+`catalog:check` round 6, not plan tasks.
+
+Six commits: `bf10163` (C24, opus), `2d2387e` (C25, sonnet), `2b15385` (C26, sonnet), `c518335` +
+`ae1703d` (C27, sonnet), on top of `2e61409` (C21-fix3).
+
+**ROUND 6 WAS THE DEEPEST RUN OF THE FEATURE AND IT SETTLED THE HIBP QUESTION.** Child `pnpm check`
+5/5, `pnpm test` **247/247 files, 1721/1721 tests**, `pnpm test:db` 459/461. `breach-check`
+**passed**, `Failed to start forks worker` **0 hits**, no `Errors N errors` tally anywhere — the two
+facts measured independently in one run. **Wave 12's HIBP timeout was contention, not a defect.** The
+owner's "measure on the next pass" ruling is discharged; no task is owed.
+
+**The two real failures, both predicted somewhere in the plan:**
+- `audit-coverage.int-spec.ts:104` — 8 `professional` tables carry `audit_row` triggers while
+  undeclared. **C18 predicted exactly this in wave 10**; it never ran because the gate died earlier.
+- `access-link-activation.e2e-spec.ts:114` — `column "birth_date" does not exist`. C19 moved the
+  field in `97467fe` and missed this spec, because **e2e specs never run in-template** — `catalog:test`
+  does not collect them. Twelfth of the "green because blind" family.
+
+**C24 — the orchestrator's steer was wrong and the worker overrode it, correctly.** The payload said
+"the entry that owns the tables should declare them". **The mechanism forbids it**:
+`audit-registry.spec.ts:15` matches `AUDITED` against `BASE_AUDITED_TABLES` term-by-term, and
+`professional` importing `audit` is a cross-entry edge outside `dependsOn` (RULE C) plus a
+`DuplicateAuditRegistrationError`. Precedent followed instead: `tag` — a sibling with its own
+`attach_audit()`, declared in audit's lists. `professional_user_id` left untouched in
+`BASE_REF_TARGETS`.
+
+**C24 also found the cause behind the cause.** `catalog/audit/CHANGELOG.md` §3.0.0 Breaking bullet 4
+and `docs/advisories/ADV-20260824-02.md` **told children the impossible path was the real one** —
+*"a entrada `professional` registra as próprias tabelas pelo `AuditRegistry`"*. That false
+instruction is **why** the 8 triggers went undeclared. Not stale docs: docs that caused the defect.
+`c518335` rewrote both in place (both unreleased in this feature, so a rewrite, not a new version),
+and the false claim recurred in two loci beyond the three cited — corrected too, since half a fix
+would have contradicted itself.
+
+**C27's second defect, also C24's find:** `reattachIdentityTables` called `attach_module_hooks()`
+(attaching professional's 8) while `detachIdentityTables` dropped only identity's 7 — **triggers leak
+into later suites on a shared test DB**. `ae1703d` made the pair symmetric, renamed both to
+`reattachAuditHookTables`/`detachAuditHookTables` (the old names no longer described the scope), and
+**derives the professional list from `AUDITED` rather than a second hardcoded array**, closing the
+drift class rather than the instance. 3 new unit tests (852 → 855). **Proof is unit-tier only** —
+mocked `Pool`, asserting generated SQL; `catalog:test` excludes `*.int-spec.ts`/`*.e2e-spec.ts` and
+this repo never stages `professional` and `audit` in one DB. Stated in the commit body, not claimed
+as more than it is.
+
+**C25:** verified before deleting — `SetPasswordInput`/`setPasswordSchema` no longer accept
+`birthDate` anywhere, so activation never writes it and the leg had no new home. Assertion and title
+fragment dropped; status/cookie/session/session-count/token-burn untouched. Sweep of the other e2e
+specs for both moved fields came back clean.
+
+**C26 — `catalog:eslint` is now a gate command. THE GATE IS NINE COMMANDS, NOT EIGHT.** Owner-approved
+after measurement: **0 errors across 571 files in all 6 entries**, type-aware rules genuinely
+evaluated, harness validated by reproducing a known regression before scoring. Wired into
+`package.json`, `ci.yml` `gates`, `release.yml` `verify`, and the copier `_tasks` prune (a product
+must not inherit a script pointing at a `catalog/` it never receives). Its test **fails on a seeded
+offending file** — not merely exit 0 today. The orchestrator's `Own` list was incomplete and the
+worker exceeded it correctly: the owned guards (`release-gate-parity.test.mjs` GT10,
+`release-workflow.test.mjs`, `child-manifest.test.mjs`) demanded `release.yml` and `copier.yml`.
+It also fixed a real race — parallel `node --test` files sharing the physical
+`apps/api/.catalog-stage` — with a retry scoped to the new test only, not a change to
+`catalog-stage.mjs`.
+
+**Advisory ledger moved, and C25 found the distinction the first six instances lacked.** `identity`
+is **released at 3.0.0**, so a real advisory was due and written: **`ADV-20260825-05`** (kind `bug`,
+severity `medium`). An entry born unreleased inside this feature has nothing to advise — hence
+`Advisory: none` at instances **#7 (C24), #8 and #9 (C27)**. **The rule is not uniformly wrong; it is
+wrong only for unreleased entries.** Nine instances, still unresolved, still the Verifier's.
+
+**Open deviations, not absorbed:** `SPEC_DEVIATION` at `access-link-activation.e2e-spec.ts:110-115`
+(why birth-date was dropped, not relocated), plus wave 12's at
+`catalog/professional/parity/professional-slice.parity.spec.ts:11`.
+
 ## Fix Round 1 (`v2.4.0` scope) — authored 2026-08-24 after Verifier pass 1 FAIL
 
 Source: `validation.md` § *Fix Plans*. Two clusters, dispatched in parallel, then one Build gate,

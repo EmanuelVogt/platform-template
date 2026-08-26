@@ -10,7 +10,10 @@
 //   3. Bash writes into docs/ (heredoc, sed -i, tee, python open(..., 'w')) are
 //      refused so the content always passes through Edit/Write and checks 1–2.
 // Template files keep the `.md.jinja` suffix and count as handbooks too.
-// docs/advisories/ is a ledger with its own format (loader + hook) — exempt.
+// Ledgers are exempt — they are append-only records, not handbooks, and the cap
+// would make the record impossible: docs/advisories/ has its own format (loader +
+// hook), and docs/dev/template-changelog.md gains a section per release, where a
+// major carries child migration steps (AD-006).
 // A longer text is the user's call: PLATFORM_DOCS_LEAN_OFF=1 for that session.
 // Harness tooling — not app code.
 import { existsSync, readFileSync } from "node:fs"
@@ -24,7 +27,7 @@ const HANDBOOK = new RegExp(
   String.raw`(^|/)(docs/(?!adr/|advisories/)[^\n]*${DOC}|(CLAUDE|AGENTS)${DOC})$`
 )
 const ADR = new RegExp(String.raw`(^|/)docs/adr/[^\n]*${DOC}$`)
-const FROZEN = /(^|\/)docs\/advisories\//
+const FROZEN = /(^|\/)(docs\/advisories\/|docs\/dev\/template-changelog\.md$)/
 
 const RATIONALE_HEADING =
   /^\s{0,3}#{1,6}\s*(por\s*qu[eê]|o\s+que\s+foi\s+descartado|alternativas?|alternatives?|motiva[çc][ãa]o|motivation|contexto|context|hist[óo]rico|history|racional|rationale|why\b)/imu

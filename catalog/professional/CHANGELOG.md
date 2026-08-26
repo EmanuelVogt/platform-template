@@ -54,3 +54,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   em todo filho que instala as duas entradas.
 - README registra o débito herdado do `identity`: o consumidor `ServiceModule`/`service` que não
   é distribuído por nenhuma entrada, e `area_id`/`service_id` como `text` sem FK.
+- `parity/professional-slice.parity.spec.ts`: fixa `serves_clients`/`birth_date` em
+  `professional_profile`, a PK/FK de `user_id` e o schema `professional` nas seis tabelas que
+  `module.json` exporta. Sem `contract.snapshot.json` — a entrada não publica rota HTTP.
+- `pnpm catalog:check professional`, sozinha num child kernel-only, instala só o fecho de
+  `dependsOn` dela (`notification` -> `identity` -> `professional`), sem arrastar `audit`,
+  `attachment` ou `tag` (IDENT-02); leg própria na matriz `entry:` do job `catalog` do CI.

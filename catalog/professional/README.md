@@ -112,9 +112,12 @@ Os specs de integração (`api/infrastructure/repositories/*.int-spec.ts`) rodam
 Postgres de teste do harness — nunca contra um mock de banco. O truncate das tabelas do recorte
 mora dentro do próprio spec: as tabelas são da entrada e saem com ela.
 
-Esta entrada ainda não distribui specs de paridade — não há `parity/` nem
-`contract.snapshot.json`. Não havendo rota HTTP própria, não há contrato OpenAPI a fixar; a
-superfície in-process é coberta pelos specs unitários e de integração da própria entrada.
+`parity/professional-slice.parity.spec.ts` fixa as colunas que saíram de `identity.users` no
+corte do agregado (AD-035): `serves_clients`/`birth_date` em `professional_profile`, a PK/FK de
+`user_id`, e o schema `professional` nas seis tabelas que `module.json` exporta. Não há
+`contract.snapshot.json` — não havendo rota HTTP própria, um snapshot de operações vazio
+passaria sob qualquer implementação errada, então a paridade desta entrada é a das colunas, não
+a de um contrato OpenAPI.
 
 ## Dependências
 

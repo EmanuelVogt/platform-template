@@ -39,6 +39,14 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
   e asseveram o dia local de Brasília, mas esta mesma versão fez o default do kernel ser `UTC` e
   o spec nunca declarava `APP_TIMEZONE`. São 7 falhas no `pnpm test:db` de todo filho que instala
   a entrada; o spec agora declara o fuso que testa. Ver `ADV-20260825-04`.
+- `api/testing/reattach-identity-tables.ts` (renomeado para `reattach-audit-hook-tables.ts`):
+  `reattachIdentityTables` reanexava as oito tabelas de `professional` também — via
+  `attach_module_hooks()`, que descobre qualquer schema instalado com `attach_audit()`, não só o
+  do `identity` — mas `detachIdentityTables` só desanexava as sete do `identity`. Num `test:db`
+  compartilhado os triggers de `professional` sobreviviam para as suítes seguintes.
+  `detachAuditHookTables` deriva a lista de `professional` de `AUDITED` (a mesma fonte que
+  `audit-coverage.int-spec.ts` cobra em paridade) e as dropa também, sob um guard de schema —
+  `professional` não é `dependsOn` de `audit`, então pode não estar instalada no banco.
 
 ## [2.1.2]
 

@@ -2,9 +2,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { createTestPool } from "../../../../test/setup/test-db"
 import {
-  detachIdentityTables,
-  reattachIdentityTables,
-} from "../testing/reattach-identity-tables"
+  detachAuditHookTables,
+  reattachAuditHookTables,
+} from "../testing/reattach-audit-hook-tables"
 import {
   detachTagTables,
   reattachTagTables,
@@ -33,7 +33,7 @@ describe("audit coverage enforcement (int)", () => {
     // cobertura. Reason: mesma causa de audit-trigger.int-spec.ts — a
     // migration custom do identity roda antes de `audit.attach` existir num
     // `catalog:check audit`; simula o passo manual que um produto reaplicaria.
-    await reattachIdentityTables(pool)
+    await reattachAuditHookTables(pool)
     // SPEC_DEVIATION: reattaches tag.tags before measuring coverage, when the
     // tag entry is installed alongside audit.
     // Reason: same class as the identity block above — tag's custom migration
@@ -69,7 +69,7 @@ describe("audit coverage enforcement (int)", () => {
   })
 
   afterAll(async () => {
-    await detachIdentityTables(pool)
+    await detachAuditHookTables(pool)
     await detachTagTables(pool)
     await pool.end()
   })

@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { createE2eApp, withE2ePool } from "../../../shared/test/e2e/app"
 import { resetDb } from "../../../shared/test/int/db"
 import { loginAs, seedEmail, seedUser } from "../../identity/testing"
-import { detachIdentityTables, reattachIdentityTables } from "../testing"
+import { detachAuditHookTables, reattachAuditHookTables } from "../testing"
 
 import type { INestApplication } from "@nestjs/common"
 
@@ -39,7 +39,7 @@ describe("Audit log (e2e)", () => {
     // Reason: mesma causa de audit-trigger.int-spec.ts — a migration custom
     // do identity roda antes de `audit.attach` existir num `catalog:check
     // audit`; simula o passo manual que um produto reaplicaria.
-    await reattachIdentityTables(pool)
+    await reattachAuditHookTables(pool)
 
     app = (await createE2eApp()).app
 
@@ -91,7 +91,7 @@ describe("Audit log (e2e)", () => {
 
   afterAll(async () => {
     await app.close()
-    await detachIdentityTables(db.pool)
+    await detachAuditHookTables(db.pool)
   })
 
   it("reflete create + update do ator no GET /v1/audit", async () => {

@@ -14,9 +14,9 @@ import {
 } from "../../../../shared/kernel/context/request-context"
 import { TransactionManager } from "../../../../shared/kernel/transactional/transaction-manager"
 import {
-  detachIdentityTables,
-  reattachIdentityTables,
-} from "../../testing/reattach-identity-tables"
+  detachAuditHookTables,
+  reattachAuditHookTables,
+} from "../../testing/reattach-audit-hook-tables"
 
 import type { Pool } from "pg"
 
@@ -37,7 +37,7 @@ describe("audit trigger (int)", () => {
     // de redação declaradas em `04_audit_attach_hook.sql`, mas o `afterAll` das
     // outras suítes de audit desanexa os triggers e o banco do `test:db` é
     // compartilhado entre arquivos.
-    await reattachIdentityTables(pool)
+    await reattachAuditHookTables(pool)
   })
 
   beforeEach(async () => {
@@ -48,7 +48,7 @@ describe("audit trigger (int)", () => {
   })
 
   afterAll(async () => {
-    await detachIdentityTables(pool)
+    await detachAuditHookTables(pool)
     await pool.end()
   })
 

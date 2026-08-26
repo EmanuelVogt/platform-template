@@ -77,9 +77,11 @@ catalog entry.
 3. `pnpm platform template migrate` — renames `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
    `R2_BUCKET`, `R2_ENDPOINT` to their `STORAGE_*` names in `apps/api/.env`, adding
    `STORAGE_REGION=auto` (R2's implicit region) whenever any of the four were renamed.
-4. `pnpm platform template migrate` — writes `APP_TIMEZONE=America/Sao_Paulo` into
-   `apps/api/.env` when the key is not already declared, preserving the day/week boundary the
-   kernel used to fix; declare a different value first to adopt another timezone instead.
+4. `pnpm platform template migrate` — writes `APP_TIMEZONE` into `apps/api/.env` when the key
+   is not already declared, preserving the day/week boundary the kernel used to fix before
+   `3.0.0` (the literal it restores is `PREVIOUS_TIMEZONE` in
+   `scripts/platform/migrations/v3.0.0.mjs`); declare a different value first to adopt another
+   timezone instead.
 5. `pnpm --filter api db:migrate` — apply a product migration, hand-written from the three SQL
    blocks in `docs/advisories/ADV-20260824-01.md`: copy `serves_clients`/`birth_date` and the
    five satellites into the tables `professional` (step 1) declares, then — in a transaction of

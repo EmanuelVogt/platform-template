@@ -166,6 +166,9 @@
   "module:audit/application/list-audit-entries/list-audit-entries.use-case.spec.ts": {
     "no-unsafe-cast": 7
   },
+  "module:audit/testing/reattach-audit-hook-tables.spec.ts": {
+    "no-unsafe-cast": 1
+  },
   "module:identity/__e2e__/access-link-activation.e2e-spec.ts": {
     "no-harness-literal": 3
   },

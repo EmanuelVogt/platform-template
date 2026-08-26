@@ -1,6 +1,6 @@
-import type { Pool } from "pg"
-
 import { AUDITED } from "../domain/audit-coverage"
+
+import type { Pool } from "pg"
 
 /**
  * Reexecuta o passo de instalação `audit/migrations/custom/02_attach_module_hooks.sql`:

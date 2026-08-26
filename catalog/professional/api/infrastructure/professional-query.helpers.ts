@@ -29,7 +29,7 @@ export async function servesClientsUserIds(
   db: DrizzleExecutor,
   restrictTo?: readonly string[]
 ): Promise<string[]> {
-  if (restrictTo !== undefined && restrictTo.length === 0) return []
+  if (restrictTo?.length === 0) return []
   const rows = await db
     .select({ userId: professionalProfile.userId })
     .from(professionalProfile)

@@ -54,7 +54,7 @@
 // enforced subagent, for its whole life — whatever the directory and ranged or
 // not; the free-dir exemption above is for the navigation COUNT only. Measured
 // 2026-08-20 over the bytes the main window Read after delegating Execute:
-// `.specs` (now `.ca-plans`) 50% (`STATE.md` alone 577 KB over 31 reads), skill references read
+// `.ca-plans` 50% (`STATE.md` alone 577 KB over 31 reads), skill references read
 // whole 23%, chained ranged reads paging through one file 22%; code 3%. A
 // ranged read is priced by the byte length of its lines (files over 2 MB are
 // estimated from the average line length of the first 2 MB); a whole read by

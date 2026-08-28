@@ -206,12 +206,26 @@ test("plans-in-english.mjs is registered; specs-in-english.mjs and wave-plan-che
   assert.equal(existsSync(path.join(HOOKS_DIR, "wave-plan-check.mjs")), false)
 })
 
-test("no hook references a live `.specs/` path (AC-09)", () => {
+test("no hook references a live `.specs` path, slash or bare (AC-09)", () => {
   for (const file of listHookFiles()) {
     assert.doesNotMatch(
       readFileSync(file, "utf8"),
-      /\.specs\//,
-      `${path.relative(REPO_ROOT, file)} still references a .specs/ path`
+      /\.specs\b/,
+      `${path.relative(REPO_ROOT, file)} still references .specs`
+    )
+  }
+})
+
+test("no hook or top-level script references the removed spec-worker/spec-verifier cards (AC-09)", () => {
+  const scriptsDir = path.join(REPO_ROOT, "scripts")
+  const topLevelScripts = readdirSync(scriptsDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".mjs"))
+    .map((entry) => path.join(scriptsDir, entry.name))
+  for (const file of [...listHookFiles(), ...topLevelScripts]) {
+    assert.doesNotMatch(
+      readFileSync(file, "utf8"),
+      /spec-(worker|verifier)\.md/,
+      `${path.relative(REPO_ROOT, file)} still references a removed spec-worker/spec-verifier card`
     )
   }
 })

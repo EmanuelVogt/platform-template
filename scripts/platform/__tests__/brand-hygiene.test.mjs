@@ -67,6 +67,19 @@ const SCAN_ROOTS = ["docs", ".claude", ".github/workflows"]
 // problema pré-existente muito maior, fora do que T55 pede.
 const CODE_SCAN_ROOTS = ["apps/api/src"]
 
+// Fix Round 3 (audit-2026-08-23-remediation): `scripts/platform/migrations/`
+// não está em `_exclude` no copier.yml nem é podado por `_tasks` (que só
+// apaga chaves de `package.json`), então todo `scripts/**` não excluído
+// chega ao child — inclusive código com um literal do dono que nenhum scan
+// cobria. Mesma restrição de CODE_SCAN_ROOTS e pelo mesmo motivo: só brand e
+// timezone rodam aqui. O levantamento manual sobre os 39 arquivos que o
+// copier de fato entrega achou, além do timezone histórico da migração
+// (o alvo desta correção), um vocabulário de domínio pré-existente em
+// scripts/contract-consumers.mjs:11,42 ("createReservation" como exemplo de
+// operationId em comentário) — debt real, fora do Touches deste fix, do
+// mesmo tamanho do problema que já tirou domínio/infra de CODE_SCAN_ROOTS.
+const SCRIPTS_SCAN_ROOTS = ["scripts"]
+
 // SPEC_DEVIATION: docs/dev/template-changelog.md tem uma ocorrência que este
 // teste não pode corrigir editando o arquivo — está fora de `Touches` de T46
 // (CF1 possui apenas scripts/platform/__tests__/** e
@@ -99,10 +112,25 @@ const CODE_SCAN_ROOTS = ["apps/api/src"]
 //     specs copiados e declarar `America/Sao_Paulo` no int-spec, então o passo
 //     a passo carrega os literais que o gate bane. Sem citá-los a advisory não
 //     é acionável.
+// SPEC_DEVIATION: Fix Round 3 amplia CODE_SCAN_ROOTS (env.spec.ts, achado
+// rodando o gate desta task — não é o dono vazando) e SCRIPTS_SCAN_ROOTS
+// (v3.0.0.mjs, o alvo desta correção).
+// Reason:
+//   - apps/api/src/shared/config/env.spec.ts:162-163 — mesmo padrão já aceito
+//     para bucket-sql.spec.ts/maintenance-registry.spec.ts: "America/Sao_Paulo"
+//     como exemplo de fuso IANA válido que o predicado `parseEnv` deve aceitar,
+//     não o default hard-coded que TZ-01 eliminou.
+//   - scripts/platform/migrations/v3.0.0.mjs:28 — `PREVIOUS_TIMEZONE =
+//     "America/Sao_Paulo"` é o fuso que um child `2.x` de fato tinha
+//     hard-coded (commit 4b614eb) e que a migração da v3.0.0 precisa nomear
+//     para conseguir escrever de volta no `.env` de quem está migrando dele —
+//     sem o literal a migração não tem como identificar o valor antigo que
+//     está substituindo.
 const KNOWN_EXCEPTIONS = {
   "docs/dev/template-changelog.md": ["Cloudflare", "Traefik"],
   "apps/api/src/openapi/openapi-config.spec.ts": ["rit_", "rit-", "__Host-rit"],
   "apps/api/src/shared/config/env.ts": ["America/Sao_Paulo"],
+  "apps/api/src/shared/config/env.spec.ts": ["America/Sao_Paulo"],
   "apps/api/src/shared/kernel/clock/bucket-sql.spec.ts": ["America/Sao_Paulo"],
   "apps/api/src/shared/kernel/scheduling/maintenance-registry.spec.ts": [
     "America/Sao_Paulo",
@@ -111,6 +139,7 @@ const KNOWN_EXCEPTIONS = {
   "docs/advisories/ADV-20260824-04.md": ["America/Sao_Paulo"],
   "docs/advisories/ADV-20260825-03.md": ["rit_", "America/Sao_Paulo"],
   "docs/advisories/ADV-20260825-04.md": ["America/Sao_Paulo"],
+  "scripts/platform/migrations/v3.0.0.mjs": ["America/Sao_Paulo"],
 }
 
 function withoutKnownExceptions(hits, rel) {
@@ -344,6 +373,33 @@ test("mutante: __Host-rit, rit_, rit- e America/Sao_Paulo semeados no código do
       assert.ok(
         violations.some((v) => v.includes(token)),
         `esperava que "${token}" derrubasse o gate no código do child; violações: ${violations.join(" | ")}`
+      )
+    }
+  } finally {
+    rmSync(seedAbs, { force: true })
+  }
+})
+
+test("fim a fim (scripts): scripts/** do child renderizado não carrega brand nem fuso hard-coded do dono", () => {
+  const files = scannedFiles(childDir, SCRIPTS_SCAN_ROOTS)
+  assert.ok(
+    files.length > 0,
+    "esperava arquivos varridos sob scripts/** do child renderizado"
+  )
+  assert.deepEqual(codeViolationsIn(childDir, files), [])
+})
+
+test("mutante: __Host-rit, rit_, rit- e America/Sao_Paulo semeados em scripts/** derrubam o gate", () => {
+  const seedRel = path.join("scripts", "_seed-scripts-hygiene.mjs")
+  const seedAbs = path.join(childDir, seedRel)
+  const seeds = ["__Host-rit", "rit_", "rit-", "America/Sao_Paulo"]
+  try {
+    for (const token of seeds) {
+      writeFileSync(seedAbs, `// código de teste que carrega ${token} solto\n`)
+      const violations = codeViolationsIn(childDir, [seedAbs])
+      assert.ok(
+        violations.some((v) => v.includes(token)),
+        `esperava que "${token}" derrubasse o gate em scripts/** do child; violações: ${violations.join(" | ")}`
       )
     }
   } finally {

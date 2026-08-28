@@ -222,22 +222,196 @@ export function resolveBaseline({ repoRoot, exec }) {
   return { tag }
 }
 
+const ENTRY_TAG_PREFIX = "catalog/"
+const ENTRY_TAG_REF_PREFIX = `refs/tags/${ENTRY_TAG_PREFIX}`
+
+// O segmento de variant é obrigatório quando `module.json` declara `variant` e
+// proibido quando não declara (AD-040) — não é estilo: AD-013 define variant
+// como implementação *alternativa do mesmo módulo*, então duas árvores
+// reivindicariam `catalog/<name>@x.y.z`, e uma tag publicada não se renomeia sem
+// quebrar quem já resolveu. O colchete é opcional no padrão, nunca na entrada.
+export function entryTagSlug({ name, variant }) {
+  return variant ? `${name}-${variant}` : name
+}
+
+export function entryTagName({ name, variant, version }) {
+  return `${ENTRY_TAG_PREFIX}${entryTagSlug({ name, variant })}@${version}`
+}
+
+// O `@` é o separador: `catalog/identity@3.0.0` e
+// `catalog/identity-single-tenant@3.0.0` são slugs distintos, e é exatamente
+// essa distinção que a regra do variant existe para preservar.
+export function entryTagsFromLsRemote(output) {
+  const bySlug = new Map()
+  for (const line of output.split("\n")) {
+    const ref = line.split("\t").at(-1)?.trim()
+    if (!ref?.startsWith(ENTRY_TAG_REF_PREFIX)) continue
+    const rest = ref.slice(ENTRY_TAG_REF_PREFIX.length)
+    const at = rest.lastIndexOf("@")
+    if (at === -1) continue
+    const slug = rest.slice(0, at)
+    const version = rest.slice(at + 1)
+    if (!slug || !semver.valid(version)) continue
+    bySlug.set(slug, [...(bySlug.get(slug) ?? []), version])
+  }
+  for (const [slug, versions] of bySlug) bySlug.set(slug, semver.sort(versions))
+  return bySlug
+}
+
+export function readEntryTags({ repoRoot, exec }) {
+  const result = exec(
+    "git",
+    ["ls-remote", "--tags", "--refs", repoRoot, `${ENTRY_TAG_PREFIX}*`],
+    { cwd: repoRoot }
+  )
+  if (result.status !== 0) return undefined
+  return entryTagsFromLsRemote(result.stdout ?? "")
+}
+
+function relPath(repoRoot, entryDir) {
+  return path.relative(repoRoot, entryDir).split(path.sep).join("/")
+}
+
+// Lido do disco, não de uma ref: no hook de pre-commit o que vale é a árvore de
+// trabalho, e é dela que `lintEntry` já tira o mesmo manifest.
+function readEntryManifest(entryDir) {
+  const file = path.join(entryDir, "module.json")
+  if (!existsSync(file)) return undefined
+  try {
+    return validateManifest(JSON.parse(readFileSync(file, "utf8")))
+  } catch (err) {
+    // Manifest ilegível ou inválido já é reportado por `lintEntry`; aqui só não
+    // há slug para resolver, e repetir o erro seria ruído.
+    if (err instanceof ManifestValidationError || err instanceof SyntaxError) {
+      return undefined
+    }
+    throw err
+  }
+}
+
+function manifestAt({ repoRoot, exec, ref, entryDir }) {
+  const result = exec(
+    "git",
+    ["show", `${ref}:${relPath(repoRoot, entryDir)}/module.json`],
+    { cwd: repoRoot }
+  )
+  if (result.status !== 0) return undefined
+  try {
+    return JSON.parse(result.stdout)
+  } catch {
+    return undefined
+  }
+}
+
+// A linha de base do bump deixa de ser a tag do kernel e passa a ser a tag da
+// própria entrada. A diferença não é cosmética: a tag do kernel *anda* a cada
+// release, então uma entrada que mudou sem bump e sobreviveu a um `vX.Y.Z` fica
+// invisível para sempre depois dele. A tag da entrada é imóvel — é a árvore que
+// aquela versão declara ser — e a divergência continua detectável no futuro.
+function entryBaseline({ manifest, entryTags, kernelTag }) {
+  const slug = entryTagSlug(manifest)
+  const versions = entryTags.get(slug) ?? []
+  if (versions.includes(manifest.version)) {
+    return { tag: `${ENTRY_TAG_PREFIX}${slug}@${manifest.version}` }
+  }
+  // Entrada que nunca foi tagueada não tem linha de base imóvel: segue valendo a
+  // do kernel, que é o que já protegia entradas novas antes de existir tag de
+  // entrada nenhuma.
+  if (versions.length === 0) return { tag: kernelTag }
+  const latest = versions.at(-1)
+  // Versão à frente da última tag = o bump já aconteceu; a tag correspondente é
+  // cortada à mão depois da release (AD-040), e cobrá-la aqui barraria o
+  // desenvolvimento normal. Quem cobra a tag da versão *lançada* é
+  // `lintEntryTagCoverage`.
+  if (semver.gt(manifest.version, latest)) return { skip: true }
+  return {
+    error: `versão ${manifest.version} não corresponde a nenhuma tag da entrada e não é posterior à última (${ENTRY_TAG_PREFIX}${slug}@${latest})`,
+  }
+}
+
 export function lintEntryBump({ repoRoot, exec, entries }) {
   const baseline = resolveBaseline({ repoRoot, exec })
   if (baseline.unavailable) return [`lintEntryBump: ${baseline.unavailable}`]
+  const entryTags = readEntryTags({ repoRoot, exec })
+  if (entryTags === undefined) {
+    return [
+      `lintEntryBump: "git ls-remote" falhou ao listar as tags "${ENTRY_TAG_PREFIX}*" em ${repoRoot}`,
+    ]
+  }
   const errors = []
   for (const entryDir of entries) {
+    const relDir = relPath(repoRoot, entryDir)
+    const manifest = readEntryManifest(entryDir)
+    const resolved = manifest
+      ? entryBaseline({ manifest, entryTags, kernelTag: baseline.tag })
+      : { tag: baseline.tag }
+    if (resolved.error) {
+      errors.push(`${relDir}: ${resolved.error}`)
+      continue
+    }
+    if (resolved.skip) continue
     if (
       entryChangedWithoutBump({
         repoRoot,
         exec,
-        previousTag: baseline.tag,
+        previousTag: resolved.tag,
         entryDir,
       })
     ) {
-      const relDir = path.relative(repoRoot, entryDir)
       errors.push(
-        `${relDir}: mudou desde ${baseline.tag} sem bump de versão em module.json`
+        `${relDir}: mudou desde ${resolved.tag} sem bump de versão em module.json`
+      )
+    }
+  }
+  return errors
+}
+
+// CAT-05 fechou com as tags existindo; o que faltava era alguém exigi-las. O
+// corte segue manual de propósito (AD-040) — o que não pode ser manual é
+// *perceber que a tag falta*.
+//
+// A régua é a árvore da última tag estável do kernel, não HEAD: é ela que diz
+// quais versões de entrada já estão lançadas. Um bump ainda não lançado não deve
+// tag nenhuma, então medir HEAD barraria todo commit entre o bump e o corte.
+// Entradas ausentes naquela tag (novas) ficam de fora pelo mesmo motivo.
+export function lintEntryTagCoverage({ repoRoot, exec, entries }) {
+  const baseline = resolveBaseline({ repoRoot, exec })
+  // O silêncio aqui é deliberado e não recria o buraco do CAT-02: `lintEntryBump`
+  // roda antes, com a mesma linha de base, e já nomeia a falta em voz alta.
+  if (baseline.unavailable) return []
+  const entryTags = readEntryTags({ repoRoot, exec })
+  if (entryTags === undefined) return []
+  const errors = []
+  for (const entryDir of entries) {
+    const relDir = relPath(repoRoot, entryDir)
+    const released = manifestAt({
+      repoRoot,
+      exec,
+      ref: baseline.tag,
+      entryDir,
+    })
+    if (!released?.name || !semver.valid(released.version)) continue
+    const slug = entryTagSlug(released)
+    const expected = `${ENTRY_TAG_PREFIX}${slug}@${released.version}`
+    if (!(entryTags.get(slug) ?? []).includes(released.version)) {
+      errors.push(
+        `${relDir}: a versão ${released.version} está no catálogo de ${baseline.tag} e a tag "${expected}" não existe — corte-a no commit do kernel que lançou essa versão`
+      )
+      continue
+    }
+    // AD-040: a tag ancora no commit do kernel que lançou a versão, não no
+    // último commit de conteúdo. É o que faz a pergunta "qual release levou esta
+    // versão da entrada" ter resposta — e é por isso que a checagem é
+    // alcançabilidade e não igualdade: a última tag do kernel ainda *entrega* a
+    // versão, mas quem a lançou pode ser uma tag bem anterior.
+    const reachable = exec(
+      "git",
+      ["merge-base", "--is-ancestor", expected, baseline.tag],
+      { cwd: repoRoot }
+    )
+    if (reachable.status !== 0) {
+      errors.push(
+        `${relDir}: "${expected}" não é alcançável a partir de ${baseline.tag} — a tag de entrada ancora no commit do kernel que lançou a versão`
       )
     }
   }

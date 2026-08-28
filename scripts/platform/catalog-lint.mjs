@@ -17,6 +17,7 @@ import {
   lintAdvisoryPathScope,
   lintChangelogVersion,
   lintEntryBump,
+  lintEntryTagCoverage,
   lintKernelRange,
   lintManifest,
   lintProductionTestingImports,
@@ -301,6 +302,7 @@ export function runLint({
   errors.push(...lintAdvisories(advisoriesDir, entryNames))
   if (repoRoot) {
     errors.push(...lintEntryBump({ repoRoot, exec, entries: entryDirs }))
+    errors.push(...lintEntryTagCoverage({ repoRoot, exec, entries: entryDirs }))
   }
   errors.push(
     ...lintOpenChangelogSectionsRule({ changelogPath, repoRoot, exec })

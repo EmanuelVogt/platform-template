@@ -29,6 +29,27 @@ it first; this file covers the rest, for whoever works inside this repository.
   tag carries — issue #9); presence and order of the README sections per `README-contract.md`;
   the import allow-list in `web/**`; the existence of a version title in `CHANGELOG.md`
   matching `module.json.version`; and the advisories' frontmatter.
+- **entry-tag rules** (`lintEntryBump` and `lintEntryTagCoverage`, `scripts/platform/lib/lint.mjs`),
+  run by `catalog:lint` — the only readers of a `catalog/*` tag in the repo, and the reason
+  cutting one can stay a manual act (AD-040) without the tag drifting from
+  `module.json.version`:
+  - `lintEntryBump` resolves an entry against **its own tag** —
+    `catalog/<name>[-<variant>]@x.y.z`, e.g. `catalog/identity-single-tenant@3.0.0` — and only
+    falls back to the latest kernel tag for an entry that was never tagged. The kernel tag moves
+    at every release, so an entry that changed without a bump and survived a `vX.Y.Z` used to
+    become invisible after it; the entry's own tag is immovable. A version ahead of the entry's
+    last tag is the normal in-flight bump and is accepted; a version below it with no tag of its
+    own fails.
+  - `lintEntryTagCoverage` requires a tag for every entry version **the latest kernel tag
+    ships**, and that the tag be reachable from it. Measuring the release rather than `HEAD` is
+    what lets the cut stay manual: the gate never blocks the commits between the bump and the
+    cut, but the tag becomes mandatory the moment the version is released. Reachability, not
+    equality, because the six entries anchor at `v3.0.0` while the kernel is already further
+    ahead — the anchor is the release that shipped the version.
+  - The `-<variant>` segment is present **iff `module.json` declares `variant`**, and both rules
+    treat `catalog/identity@3.0.0` and `catalog/identity-single-tenant@3.0.0` as different
+    entries: a bare-name tag neither serves as a baseline for nor satisfies the coverage of an
+    entry that declares a variant.
 - **advisory-required rule** (`scripts/platform/advisory-required.mjs`): if any path is under
   `catalog/<entry>/(api|web|migrations|parity)/**`, a
   `docs/advisories/ADV-*.md` with `module: <entry>` must exist in the same commit, or that

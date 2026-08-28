@@ -4573,3 +4573,298 @@ holding the tag.** GT10 closes the asymmetry structurally; the guard is what kee
 
 **Consequence for the tag:** `v2.4.0` is published with a defect on the non-default shell. It needs
 `v2.4.1`, and that is the owner's act.
+
+---
+
+## Fix Round 4 — after Verifier pass 2 (2026-08-28)
+
+**NAMING, READ THIS FIRST — TWO LABELS ARE DOUBLE-BOOKED AND THIS SECTION IS WHERE THEY ARE
+DISAMBIGUATED.** The `STATE.md` handoff of 2026-08-28 and the three workers' briefs both call this
+round **"Fix Round 3"** and its clusters **C24, C25, C26**. Both labels were already spent:
+
+- `### Fix Round 3 — what shipped broken in v2.4.0, and the gate that let it` (2026-08-25, above) is
+  the GT9/GT10 round. Closed.
+- `### Wave 13 (gate-fix clusters C24–C27)` (2026-08-25, above) used the ids `C24`–`C27` for
+  entirely different work — audit coverage, the `birth_date` e2e, `catalog:eslint`, the audit doc lie.
+
+This is the **third** instance of the label-reuse trap in this feature (after "wave 13" itself).
+**The clusters below are identified by their file sets, not by their ids.** Where this file says
+`C24-fr4`, `C25-fr4`, `C26-fr4`, the handoff and the worker briefs say `C24`, `C25`, `C26`.
+
+### Origin
+
+Verifier **pass 2** ran at HEAD `84510a0` over the whole feature and returned **`FAIL` — 9 gaps, 3
+surviving mutants**. It confirmed three long-open questions as **closed**: IDENT-02 has its executing
+proof (`catalog:check` per-entry, three live runs, all exit 0); the advisory ledger is **not**
+defective (`advisory-required.mjs:14` already demands `Advisory: none — <reason>`, and all 48 catalog
+escapes state one — instance #11 closed, one CHANGELOG line owed, not an advisory); and HIBP stays
+closed. **Do not re-open any of the three.**
+
+### The test-count record, corrected
+
+Every earlier handoff entry recording `pnpm test` at **248 files / 1724 tests** was reporting the
+**child's** count from inside `catalog:check` as if it were the template's. The `930 / 123`
+pre-feature baseline is a **sum of two commands** — `pnpm test` 585/89 **+** `test:scripts` 345/34
+(§ *Wave 1*, this file, lines 2982-2986) — not `pnpm test` alone.
+
+| Command | pre-feature (`92b4120`) | at `84510a0` | delta |
+| --- | --- | --- | --- |
+| `pnpm test` | 585 tests / 89 files | **764 / 109** | **+179 tests** |
+| `catalog:test` | did not exist as a runner | **855 / 122** | new tier |
+| `test:scripts` | 345 / 34 | **705 / 705** | +360 |
+
+There was never a `930 → 764` drop. `apps/api/vitest.config.mts:22` (`include: ["src/**/*.spec.ts"]`)
+is byte-identical at `92b4120` and at HEAD, and has always excluded `.catalog-stage/**` at `:26`.
+**`catalog:test` is new territory, not a relocation**: the ~130 `catalog/**/*.spec.ts` existed on
+disk at `92b4120` and were run by **no command in the template** until `5ab042e`. That reframes every
+pre-`5ab042e` green.
+
+### The three clusters — dispatched in one message, 2026-08-28, sonnet each
+
+Touches audited before dispatch; disjoint at file level except one collision, named below.
+
+#### C24-fr4 — kernel test hardening (sonnet)
+
+**Owns**: `apps/api/src/shared/config/env.spec.ts` ·
+`apps/api/src/shared/infra/storage/storage.config.spec.ts` · `apps/api/test/setup/e2e-env.ts` ·
+`apps/api/test/runner-env.e2e-spec.ts` · `scripts/platform/lib/child.mjs` ·
+`scripts/platform/__tests__/catalog-check.test.mjs`
+
+- [x] **`APP_TIMEZONE` had no test at all.** The refine at `env.ts:73-82` survived a `() => true`
+      mutant because nothing covered it. Cases go inside `describe("parseEnv")` (`env.spec.ts:13-150`)
+- [x] **`STORAGE_REGION` was never asserted missing.** The existing *"rejeita chave faltando"* at
+      `storage.config.spec.ts:24-27` drops only `STORAGE_BUCKET` (`storage.config.ts:8`). The "24/24"
+      in earlier reports is the whole `storage/` dir, not this file
+- [x] **The `R2_*` → `STORAGE_*` rename was wider than pass 2 reported**: stale at `e2e-env.ts:21-25`,
+      `runner-env.e2e-spec.ts:29-33`, `child.mjs:20-24` (`CHILD_ENV_DEFAULTS` still seeded `R2_*` for
+      child boot) and `catalog-check.test.mjs:300-304,337-342` (asserted that seeding)
+- [x] Gate: `pnpm test` + `node --test scripts/platform/__tests__/catalog-check.test.mjs`
+
+**INTENTIONAL, DO NOT TOUCH**: `scripts/platform/migrations/v3.0.0.mjs:11,14-17` and
+`scripts/platform/__tests__/migration-v3.test.mjs:23,25,35,42`. That script *performs* the rename;
+the old names are its fixture input.
+
+#### C25-fr4 — make the parity proof executable, stop the stage leak (sonnet)
+
+**Owns**: `scripts/platform/catalog-stage.mjs` · `apps/api/vitest.catalog.config.mts` ·
+`vitest.catalog.mts` · `vitest.coverage.mts` · `scripts/platform/__tests__/catalog-stage.test.mjs` ·
+`scripts/platform/__tests__/catalog-test-gate.test.mjs`
+
+- [ ] **The parity gap is structural, three layers deep** — all three move together or the fix is
+      cosmetic: `catalog-stage.mjs:19-22` stages **only** each entry's `api/` dir (`parity/` is never
+      referenced in that file); `apps/api/vitest.catalog.config.mts:13` includes only
+      `.catalog-stage/src/modules/**/*.spec.ts`; `vitest.coverage.mts:20-25` omits the catalog project
+      entirely and `:32` `coverage.include` names no catalog path
+- [ ] **The leak**: `catalog-test-gate.test.mjs:56` (body calls `stage()` at `:58`) dies
+      `ENOTEMPTY … rmdir '.../apps/api/.catalog-stage'` from inside `catalog-stage.mjs:30`'s own
+      `rmSync` — a leftover tree's symlinked `test/` entry trips it. `--keep` is honored at
+      `catalog-stage.mjs:78-79` and `catalog:test` passes it, so leftovers are the steady state
+- [ ] Gate: `pnpm test:scripts` (705/705) + `pnpm catalog:test` (855/122 — **must rise**, or the fix
+      did nothing)
+
+**Note the two filenames**: `pnpm catalog:test` invokes the **root** `vitest.catalog.mts`; the include
+that matters is in `apps/api/vitest.catalog.config.mts`.
+
+#### C26-fr4 — brand-hygiene gains `scripts/**` (sonnet)
+
+**Owns**: `scripts/platform/__tests__/brand-hygiene.test.mjs` (the scan logic is **inline in the test
+file**, not a lib; its only import is `renderChild` from `../lib/child.mjs` at `:16`, for fixtures)
+
+- [ ] **The hole is confirmed independently**: `scripts/platform/migrations/` is in **neither**
+      `copier.yml` `_exclude` **nor** pruned by `_tasks` (which only deletes `package.json` script
+      keys), so `v3.0.0.mjs:28` `PREVIOUS_TIMEZONE = "America/Sao_Paulo"` reaches **every** generated
+      child — and `brand-hygiene` does not scan `scripts/**`. The repo's own rule rejects that literal
+      in a doc the child receives and accepts it in source the child receives
+- [ ] **Owner's ruling**: widen the scan **and** give the historical constant an explicit, commented
+      exemption — not an exclusion from the child, not a silent pass
+- [ ] Roots to extend: `SCAN_ROOTS` `:63` `["docs", ".claude", ".github/workflows"]` and
+      `CODE_SCAN_ROOTS` `:68` `["apps/api/src"]`. **`walk()` (`:154-162`) has no exclude list at all**
+      — a new root scans everything beneath it
+- [ ] Use the existing mechanism: `KNOWN_EXCEPTIONS` `:102-114` → `withoutKnownExceptions()`
+      `:116-119`, shape `"relative/path": ["LiteralToken"]`, each justified by a
+      `SPEC_DEVIATION`/`Reason:` block in the style of `:81-100`
+- [ ] Gate: `node --test scripts/platform/__tests__/brand-hygiene.test.mjs`, **plus a seeded offending
+      literal proved red then removed** — a guard green because it matched nothing is the failure this
+      feature has hit fifteen times
+
+**TRAP: do not key anything on "test 71".** The owner-timezone self-test is at
+`brand-hygiene.test.mjs:317-320`; its TAP sequence under the full `test:scripts` glob is currently
+**73**, and sequence numbers shift with suite composition.
+
+#### The one collision
+
+`scripts/platform/lib/child.mjs` is **C24-fr4's** (the `R2_*` rename). C26-fr4's widened scan may
+newly flag content there. C26-fr4 was briefed to **not edit it** — re-read after C24-fr4's rename,
+and if still flagged, report rather than add an exception.
+
+### The orchestrator's own items (`.specs/` has one writer)
+
+1. **IDENT-03's `Proof` cell — decided: it stays `test`, and the test is owed.** Ruling below.
+2. **This section.** Written 2026-08-28.
+3. **The count correction.** Above.
+
+#### Ruling: IDENT-03 keeps `Proof = test`
+
+`spec.md:402` declares `Proof = test` for IDENT-03 and **no such test exists** — searched
+`scripts/platform/__tests__/*advisor*`, `lint.test.mjs`, and every `IDENT-03`/`AD-035` reference in
+`*.mjs`/`*.ts`. The choice was between writing the test and correcting the cell to `gate`.
+
+**`gate` would be a lie, and a sixteenth "green because blind".** The legend at `spec.md:407-410`
+defines `gate` as *"the exit code of a named gate is the evidence"*. No gate's exit code is evidence
+for this AC:
+
+- `pnpm catalog:lint` validates advisory files that are **present** — `lintAdvisoryFrontmatter`
+  (`lint.mjs:157`), `lintAdvisoryModule` (`:167`), `lintAdvisoryPathScope` (`:188`). It exits 0 over a
+  tree with **zero** advisories. Nothing ties a breaking change to a required advisory.
+- `advisory-required.mjs` is a **commit-msg hook**, not a named gate, it checks staged diffs rather
+  than the AC, it never requires `kind: "breaking"`, and its `Advisory: none — <reason>` escape hatch
+  (`:14`) was used **11 times in this very feature**.
+
+The AC (`spec.md:319-320`) — *"a new AD SHALL record it and a `breaking` advisory SHALL ship per
+affected entry"* — **is** assertable in a spec file, and the artifacts to assert against exist:
+**AD-035** (`STATE.md:44`), **`ADV-20260824-01`** (`kind: breaking`, `module: identity/single-tenant`,
+`severity: critical`) and **`ADV-20260824-02`** (`kind: breaking`, `module: audit`, `severity: high`).
+Such a test is a real discriminator, not fixture-pinning: deleting either advisory, or shipping the
+extraction without advising `audit`, turns it red. `test` is also the table's declared default
+(42 `test` / 8 `gate` / 1 `probe` across 51 rows).
+
+- [ ] **Owed**: a guard under `scripts/platform/__tests__/` asserting the AD record exists and that
+      every entry affected by the extraction carries a `kind: "breaking"` advisory. Deferred until the
+      three clusters land — a new file under `__tests__/` joins the `test:scripts` glob and would
+      redden a sibling's concurrent gate. **No worker owns it yet.**
+
+### Verifier pass 3 — the plan's shape has changed and the reason is recorded here
+
+The handoff's instruction was to **resume the same Verifier** via `SendMessage`, on the grounds that
+it holds its evidence file, so that it re-checks only the gap rows and re-runs only the **3 surviving
+mutants**, skipping the Final gate. **That is no longer possible.** The pass-2 Verifier ran before
+this session's context was cleared; `ListAgents` shows no live subagent, and its evidence file was
+in-context, never on disk — `validation.md` still ends at round 3 (`v2.4.0` scope, PASS).
+
+What survives and what does not:
+
+- **The 9 gaps survive**, recorded in full with `file:line` in the three clusters above.
+- **The 3 surviving mutants do not.** They are named nowhere in `STATE.md`, `validation.md` or this
+  file — only counted. A fresh Verifier cannot re-run "the 3 survivors".
+
+**Consequence, and it is the owner's call**: pass 3 must either inject a **new** sensor set aimed at
+the lines this round fixed, or run no sensor at all. Given fifteen "green because blind" instances, a
+round with no sensor certifies little. **The Final gate remains unrepeated either way** — that part of
+the instruction still holds.
+
+**LESSON, and it is cheap to fix**: a Verifier's evidence file must be **written to disk under
+`.specs/features/<feature>/`** at the end of every pass, not merely held in context. Two rounds of
+sensor work were lost to a `/clear`.
+
+### Out of scope by the owner's ruling — named, not absorbed
+
+- The two blind guards: `kernel-version.mjs:82-83` (`if (isMajor) return { ok: true }` exempts majors
+  from `lintChildMigrationSteps`) and `docs-stay-lean.mjs:113-119` (growth measured per **Edit call**,
+  not per file). **No task owns either.**
+- The three debts: 16 `rit_*` sites in `catalog/identity/single-tenant` (BRAND-01/T55);
+  `it-count.mjs:8` `REQUIRED_ENTRIES` lacks `professional`; identity's `CHANGELOG.md` omits the
+  additive `UserDirectoryFacade` methods from `3ba4595`.
+- Candidate for their own spec after the cut.
+
+**Open deviations, unchanged**: `access-link-activation.e2e-spec.ts:110-115` and
+`catalog/professional/parity/professional-slice.parity.spec.ts:11`.
+
+**AD-034 stands: the `v3.0.0` cut is the owner's act. No agent tags and no agent pushes.**
+
+#### Fix Round 4 — landed
+
+**C24-fr4 — DONE, three commits.**
+
+- `a029d1e` `test(config)`: 4 `it`s at `env.spec.ts:151-170` — absent → `undefined` (**there is no
+  default**), accepts `UTC` and `America/Sao_Paulo`, rejects `Not/AZone`.
+- `37575d6` `test(storage)`: the missing-`STORAGE_REGION` case at `storage.config.spec.ts:29-32`.
+- `1bc4ae7` `fix(env)`: rename finished at `e2e-env.ts:19-24`, `runner-env.e2e-spec.ts:27-41`,
+  `child.mjs:20-24`, `catalog-check.test.mjs:292,300-304,337-343`. **`R2_ACCOUNT_ID` was dropped, not
+  renamed** — it has no `STORAGE_*` counterpart, confirmed against `s3-storage.adapter.ts` and the
+  `v3.0.0.mjs:11-17` comment.
+
+Gate: `pnpm test` exit 0, **769 tests / 109 files** (764 → 769, +5 = 4 `APP_TIMEZONE` + 1
+`STORAGE_REGION`); `node --test catalog-check.test.mjs` exit 0, 30/30. `v3.0.0.mjs` and
+`migration-v3.test.mjs` verified untouched. No deviations, nothing absorbed.
+
+**FINDING — concurrent workers on one checkout contend on the git index, not on files.** C24-fr4
+hit a stale index on two files mid-work (index reverted to pre-format content while HEAD and the
+working tree carried the lefthook-formatted version), resolved with a plain `git add` re-sync, no
+content change. **File-level disjointness does not make parallel workers safe on a shared checkout
+when each commits** — the collision is in `.git/index` and in the formatting hook that rewrites
+staged content. Worth an `isolation: worktree` per worker next time, or serialised commits.
+
+**C26-fr4 — DONE, `348c987`.** `SCRIPTS_SCAN_ROOTS = ["scripts"]` via `codeViolationsIn`, exemption
+for `v3.0.0.mjs`'s `PREVIOUS_TIMEZONE`. **Proved red before green**: a seeded `rit_` under `scripts/`
+took the gate to 14/1, removing it restored 15/0. `child.mjs` never reached the scan — it is already
+in `copier.yml` `_exclude`, so the one predicted collision could not occur.
+
+**C25-fr4 — DONE, `13d7769` + `0f9a2df`.** `catalog-stage.mjs:19-36` stages `<entry>/parity` into
+`src/modules/<name>/__parity__`, the exact destination `child-layout.mjs`'s `parityDir()` already uses,
+which is why the specs' relative imports resolve identically staged and installed. **Layer 2 needed no
+change** — that destination already matches the existing include glob, which is a better fix than
+widening it. `removeStageTree()` unlinks the `KERNEL_STAGE_PATHS` symlinks before the recursive
+`rmSync` (Gap 2). **`catalog:test` 855/122 → 947/137, then 941/132 green** after the contract-parity
+exclusion.
+
+**ORCHESTRATOR FIXES ON TOP OF THE THREE CLUSTERS.**
+
+- `902c72d` — **the `R2_*` rename had never reached CI at all.** Four env blocks: `ci.yml:78-82`
+  (the `contract:check` step, the only one under test) and `:185-189`, `release.yml:64-68` and
+  `:116-120`. **The Touches audit missed the workflows entirely.** `release.yml` is the gate that holds
+  the tag, and it would have seeded variables the app no longer reads while omitting the now-required
+  `STORAGE_REGION`.
+- `e03214c` — the neutral-IANA-zone fix and the removal of the exception C26-fr4 had opened for it.
+- `0f9a2df` — the contract-parity exclusion and the `vitest.coverage.mts` revert.
+
+#### Build gate at `0f9a2df`
+
+`pnpm test` **769/109** · `pnpm catalog:test` **941/132** · `pnpm catalog:lint` · `pnpm format:check`
+· `pnpm check` **7/7** — all exit 0. `pnpm test:scripts` **709/709 on a clean stage**, and see the
+open item below. `pnpm catalog:check` deliberately not run (~20 min, Docker) — Verifier work.
+
+### THE ONE OPEN RED — `.catalog-stage` IS NOT RE-ENTRANT, AND IT IS A RELEASE BLOCKER
+
+`pnpm test:scripts` is **green on a clean stage and red on a dirty one**, and *which* assertion trips
+is not stable:
+
+- run 1, after `rm -rf apps/api/.catalog-stage`: **709/709**.
+- run 2, immediately after, stage left in place: **708/709** — `catalog-test-gate.test.mjs:63`,
+  `EEXIST: file already exists, symlink '.../apps/api/src/db' -> '.../.catalog-stage/src/db'`, thrown
+  from `catalog-stage.mjs:64`.
+- the Build gate's own earlier run: **708/709** — a *different* test, `catalog-eslint.test.mjs:69`,
+  `ENOTEMPTY: directory not empty, rmdir '.../.catalog-stage/src/modules/tag'`.
+
+**Root cause: `node --test` runs test files concurrently and several of them call `stage()` on the one
+shared `.catalog-stage` path.** C25-fr4's `removeStageTree` narrowed the window; staging `parity/`
+widened it again by adding files. This is the same race wave 13 noted in passing ("no `.catalog-stage`
+race this run") — it was never fixed, only survived.
+
+**The fix is a stage root per caller**: `stagePlan()` derives `stageRoot` from `repoRoot`, so an
+optional `stageRoot` parameter plus a unique directory per test file removes the sharing entirely.
+Small, and it is **not** optional before a tag: a gate that fails half the time certifies nothing, and
+`test:scripts` runs in both `ci.yml` and `release.yml`. **No task owns it yet.**
+
+### NEW FINDINGS THIS ROUND, NONE OWNED
+
+1. **`release.yml:86`'s `catalog:check` matrix has no `professional`** — `entry: [identity,
+   attachment, audit, notification, tag]`, while `ci.yml:155` does have it (T77). **The entry born in
+   this feature, the one `v3.0.0` exists to ship, is never exercised by the gate that holds the tag.**
+   GT10 was written to close exactly this asymmetry and its guard could not see it: it derives the
+   *commands* and the *matrix dimensions*, not the dimension *values*, so adding a `web_stack` leg
+   satisfied it while a missing `entry` value stayed invisible. **Sixteenth of the "green because
+   blind" family, and the first sitting directly on the cut.**
+2. **A real pilot-domain leak in a file the child receives**: `scripts/contract-consumers.mjs:11,42`
+   carry `createReservation` / `...Hold` — hotel/booking vocabulary — in an illustrative comment.
+   Found by C26-fr4's widened scan, correctly left unfixed (outside its Touches) and **not** excepted;
+   it scoped `SCRIPTS_SCAN_ROOTS` to brand+timezone only, on the `CODE_SCAN_ROOTS` precedent. The leak
+   is real and now unguarded.
+3. **Catalog coverage, measured for the first time**: statements **73.68** · branches **72.51** ·
+   functions **65.15** · lines **74.51**, with the catalog `tag` module's source at 0%. The full
+   merged run is 1850 tests / 256 files, all passing. Owed to its own spec — either the tests get
+   written or a deliberate per-glob catalog floor is set. **Do not re-add the include without one.**
+4. **Parallel workers on one checkout contend on `.git/index`, not on files.** C24-fr4 hit a stale
+   index mid-work (index reverted to pre-format content while HEAD and the working tree carried the
+   lefthook-formatted version), resolved with a plain `git add`. File-level disjointness is not
+   sufficient when each worker commits through a formatting hook. Next round: `isolation: worktree`
+   per worker, or serialised commits.

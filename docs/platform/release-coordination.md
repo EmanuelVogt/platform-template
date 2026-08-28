@@ -12,8 +12,8 @@ Holder identity: the Claude session id (`CLAUDE_CODE_SESSION_ID`) or `user@host#
 | Stage | Meaning | Cleared by |
 | --- | --- | --- |
 | `draft` | preflight running, no marker yet | success moves on; refusal releases; after the TTL (90 min, `PLATFORM_RELEASE_LEASE_TTL_MIN`) `--abort` may take over |
-| `marker-local` | marker committed, not pushed | push (upgrades it) · `--abort` (resets the marker) |
-| `marker-pushed` | marker on origin, gate running | tag exists on origin (self-clear) · `--abort` |
+| `marker-local` | marker committed, not confirmed on origin; `pushAttemptedAt` records a push the guard saw leaving | `release --push` after git exits 0, or `--status` finding the marker at origin's head, upgrades it · `--abort` (resets the marker) |
+| `marker-pushed` | marker confirmed on origin, gate running | tag exists on origin (self-clear) · `--abort` |
 
 A lease carrying a marker never expires by clock — only tag evidence or an explicit
 `--abort` clears it. The self-clear is nobody's background job: three paths act on the
@@ -26,7 +26,10 @@ against, so it reads as held: `--status` names it and `--abort --force` clears i
 
 - `scripts/platform/release-freeze-guard.mjs` (lefthook pre-push, template-only): while
   a foreign lease sits at `marker-local`/`marker-pushed`, a push to `main` is refused.
-  Decisions come from the lease file — no network on the allow path. Escape hatch:
+  Decisions come from the lease file — no network on the allow path. On the holder's own
+  push it records `pushAttemptedAt` and nothing else: the hook runs before the transfer,
+  so the attempt is the only fact it witnesses — the stage upgrade to `marker-pushed`
+  belongs to whoever can read the result (`release --push`, `--status`). Escape hatch:
   `PLATFORM_RELEASE_FREEZE_BYPASS=1`.
 - `.claude/hooks/release-coordination.mjs` (PreToolUse, Bash): stops an agent's
   `git push` to main — `--no-verify` included — and a second `platform release` while a
@@ -40,7 +43,9 @@ against, so it reads as held: `--status` names it and `--abort --force` clears i
   live release runs (gh), verdict. Always exit 0. It also **clears a lease whose version
   is already tagged on origin**, on its own line after the lease it found. Not an abort:
   nothing is abandoned, the marker is untouched, no holder required — the tag reads the
-  same for everyone.
+  same for everyone. A `marker-local` lease whose marker sits at origin/main's head is
+  **upgraded to `marker-pushed`** on the same principle: evidence, not optimism, and the
+  evidence reads the same for everyone.
 - `pnpm platform release --abort` — allowed for the holder, on a stale lease, or with
   `--force`. `draft`: clears. `marker-local`: resets the local marker (requires
   `HEAD == markerSha`, clean tree, marker absent from origin) and clears.

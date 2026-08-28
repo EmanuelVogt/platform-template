@@ -180,6 +180,30 @@ export function reconcileFinishedLease({
   return { cleared: true, lease: current.lease }
 }
 
+// The stage upgrade the pre-push guard used to claim optimistically:
+// `marker-local` → `marker-pushed` is written only where origin can be read.
+// The evidence is origin/main's head being the lease's own marker; any
+// uncertain probe changes nothing — a lease that under-claims its stage blocks
+// nobody it shouldn't. No holder check, like `reconcileFinishedLease`: the
+// evidence reads the same for everyone.
+export function reconcilePushedMarker({
+  cwd = process.cwd(),
+  exec = defaultExec,
+  now = Date.now,
+} = {}) {
+  const leasePath = leasePathFor({ cwd, exec })
+  const current = readLease({ cwd, exec, leasePath })
+  if (current.corrupt || !current.lease) return { upgraded: false }
+  const lease = current.lease
+  if (lease.stage !== "marker-local" || !lease.markerSha)
+    return { upgraded: false }
+  if (originMainSha({ cwd, exec }) !== lease.markerSha)
+    return { upgraded: false }
+  const next = { ...lease, stage: "marker-pushed", updatedAt: now() }
+  writeLeaseAtomic(leasePath, next)
+  return { upgraded: true, lease: next }
+}
+
 // The asymmetry is load-bearing: for a session the id is the agent's and the
 // `PLATFORM_RELEASE_HOLDER` escape hatch applies; for a process the pid is
 // deliberately ignored, because hooks run as children of the holder's `git
@@ -301,9 +325,13 @@ export function decideFreeze({
   if (!pushesMain) return { action: "allow", reason: "not-main-push" }
   if (lease.stage === "draft") return { action: "allow", reason: "draft-stage" }
   if (tagExists === true) return { action: "allow", reason: "tag-exists" }
+  // "allow-attempt", não um upgrade de estágio: quem decide aqui roda ANTES da
+  // transferência, então o único fato disponível é a tentativa — o sucesso é de
+  // quem consegue observá-lo (`release --push` após exit 0, ou a evidência de
+  // origin em `reconcilePushedMarker`).
   if (holderMatches({ lease, env: holderEnv })) {
     return lease.stage === "marker-local"
-      ? { action: "allow-upgrade", reason: "holder-marker-local" }
+      ? { action: "allow-attempt", reason: "holder-marker-local" }
       : { action: "allow", reason: "holder" }
   }
   return { action: "block", reason: freezeBlockReason({ lease, now }) }

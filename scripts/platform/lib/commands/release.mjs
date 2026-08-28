@@ -99,6 +99,14 @@ function describeHolder({ leaseApi, lease, holder, env, now }) {
   }], há ${ageMinutes(lease, now)} min`
 }
 
+// Só em marker-local: em marker-pushed o push está confirmado e a tentativa
+// não acrescenta nada.
+function describePushAttempt(lease, now) {
+  if (lease?.stage !== "marker-local" || !lease?.pushAttemptedAt) return ""
+  const min = Math.max(0, Math.round((now() - lease.pushAttemptedAt) / 60000))
+  return `, push tentado há ${min} min (não confirmado na origin)`
+}
+
 // O head de origin/main vem do `ls-remote`, então o sha pode não existir no
 // clone local (fetch antigo). Sem ele, `git log sha..HEAD` não resolve e a
 // guarda ficaria cega: busca uma vez, quieto, e só então desiste.
@@ -554,7 +562,7 @@ export function releaseStatusCommand({
     log("release --status — lease: nenhum")
   } else {
     log(
-      `release --status — lease: v${lease.version}, estágio "${lease.stage}", ${describeHolder({ leaseApi, lease, holder, env, now })}, marcador ${lease.markerSha ? short(lease.markerSha) : "(nenhum)"}`
+      `release --status — lease: v${lease.version}, estágio "${lease.stage}", ${describeHolder({ leaseApi, lease, holder, env, now })}, marcador ${lease.markerSha ? short(lease.markerSha) : "(nenhum)"}${describePushAttempt(lease, now)}`
     )
     // Depois da linha acima de propósito: quem lê precisa ver o lease que havia
     // e o que foi feito com ele. Sem checar titular — é o não-titular congelado
@@ -565,6 +573,17 @@ export function releaseStatusCommand({
         `release --status — lease: v${lease.version} já tem tag em origin — release terminado, lease liberado`
       )
       lease = undefined
+    } else if (lease.stage === "marker-local") {
+      // O upgrade que a guarda de pre-push não pode afirmar (ela roda antes da
+      // transferência): aqui a origin é legível, e o head dela ser o marcador
+      // do lease é evidência, não otimismo.
+      const pushed = leaseApi.reconcilePushedMarker({ cwd, exec })
+      if (pushed.upgraded) {
+        lease = pushed.lease
+        log(
+          `release --status — lease: marcador ${short(lease.markerSha)} confirmado no head da origin — estágio "marker-pushed"`
+        )
+      }
     }
   }
 

@@ -7,8 +7,9 @@ to apply on `copier update`.
 ## v3.1.1
 
 The `v3.1.0` cut failed its own `--push` twice and the harness could not say why: the command
-discarded the stderr of its only network step. Inert in a product — `release` refuses to run
-outside the template — but the file ships, so the fix gets a version (the `v3.0.1` precedent).
+discarded the stderr of its only network step, and the lease meanwhile asserted `marker-pushed`
+with origin/main unmoved. Inert in a product — `release` refuses to run outside the template —
+but the files ship, so the fixes get a version (the `v3.0.1` precedent).
 
 ### Changes
 
@@ -17,6 +18,14 @@ outside the template — but the file ships, so the fix gets a version (the `v3.
    failure path prints it verbatim with the push's own exit status — or names its absence, which
    is a finding too. Until now `spawnSync` captured the text and the command threw it away, so
    the primary failure mode of the release's one network step could not be diagnosed by anyone.
+2. **The lease stops asserting a push nobody confirmed** (`.../lib/release-lease.mjs`,
+   `.../lib/commands/release.mjs`; the pre-push guard itself is template-only): the guard used to
+   upgrade the stage to `marker-pushed` inside the pre-push hook, before git moved a byte — after
+   a failed push the lease claimed a transfer that never happened. It now records
+   `pushAttemptedAt`, the one fact it witnesses, and the upgrade moved to where the result is
+   readable: `release --push` after git exits 0, and `--status` when origin/main's head is the
+   lease's own marker (`reconcilePushedMarker`, no holder required — evidence reads the same for
+   everyone). `--status` also prints the unconfirmed attempt while it lasts.
 
 ### Child migration steps
 

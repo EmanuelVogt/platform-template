@@ -26,6 +26,7 @@ import {
   probeReleaseRuns,
   readLease,
   reconcileFinishedLease,
+  reconcilePushedMarker,
   releaseLease,
   updateLease,
 } from "../lib/release-lease.mjs"
@@ -568,7 +569,7 @@ test("decideFreeze allows a foreign lease once the tag exists", () => {
   )
 })
 
-test("decideFreeze upgrades for the holder at marker-local and plainly allows at marker-pushed", () => {
+test("decideFreeze marks an attempt for the holder at marker-local and plainly allows at marker-pushed", () => {
   const env = { CLAUDE_CODE_SESSION_ID: "sess-alpha" }
   assert.equal(
     decideFreeze({
@@ -577,7 +578,7 @@ test("decideFreeze upgrades for the holder at marker-local and plainly allows at
       pushesMain: true,
       tagExists: null,
     }).action,
-    "allow-upgrade"
+    "allow-attempt"
   )
   assert.equal(
     decideFreeze({
@@ -595,7 +596,7 @@ test("decideFreeze upgrades for the holder at marker-local and plainly allows at
       pushesMain: true,
       tagExists: null,
     }).action,
-    "allow-upgrade"
+    "allow-attempt"
   )
 })
 
@@ -610,7 +611,7 @@ test("decideFreeze recognises a process holder whose pid changed (the hook's own
   assert.equal(
     decideFreeze({ lease, holderEnv: {}, pushesMain: true, tagExists: null })
       .action,
-    "allow-upgrade"
+    "allow-attempt"
   )
 })
 
@@ -904,6 +905,79 @@ test("reconcileFinishedLease does not clear a corrupt lease", () => {
 
     assert.equal(result.cleared, false)
     assert.equal(readLease({ cwd: root, exec }).corrupt, true)
+  } finally {
+    cleanup(root)
+  }
+})
+
+// --- reconcilePushedMarker --------------------------------------------------
+// The upgrade the pre-push guard used to claim optimistically (STATE.md
+// 2026-08-28, follow-up 3): `marker-local` → `marker-pushed` is written only
+// on origin evidence — origin/main's head IS the lease's marker.
+
+const MARKER_SHA = "a9e1e3c0000000000000000000000000000000aa"
+
+test("reconcilePushedMarker upgrades marker-local when origin/main's head is the marker", () => {
+  const root = buildFixture()
+  try {
+    seedLease(root, leaseOf({ stage: "marker-local", markerSha: MARKER_SHA }))
+    const exec = fakeExec(root, { mainSha: MARKER_SHA })
+
+    const result = reconcilePushedMarker({ cwd: root, exec, now: () => 777 })
+
+    assert.equal(result.upgraded, true)
+    assert.equal(result.lease.stage, "marker-pushed")
+    const onDisk = readLeaseFile(root)
+    assert.equal(onDisk.stage, "marker-pushed")
+    assert.equal(onDisk.updatedAt, 777)
+  } finally {
+    cleanup(root)
+  }
+})
+
+test("reconcilePushedMarker leaves the stage alone while origin/main's head is another sha", () => {
+  const root = buildFixture()
+  try {
+    seedLease(root, leaseOf({ stage: "marker-local", markerSha: MARKER_SHA }))
+    const exec = fakeExec(root, {
+      mainSha: "b72ea700000000000000000000000000000000bb",
+    })
+
+    const result = reconcilePushedMarker({ cwd: root, exec })
+
+    assert.equal(result.upgraded, false)
+    assert.equal(readLeaseFile(root).stage, "marker-local")
+  } finally {
+    cleanup(root)
+  }
+})
+
+// Fail closed: an unreadable origin is not evidence of anything, and a lease
+// that under-claims its stage blocks nobody it shouldn't.
+test("reconcilePushedMarker changes nothing when the origin probe fails", () => {
+  const root = buildFixture()
+  try {
+    seedLease(root, leaseOf({ stage: "marker-local", markerSha: MARKER_SHA }))
+    const exec = fakeExec(root, { lsRemoteStatus: 128 })
+
+    const result = reconcilePushedMarker({ cwd: root, exec })
+
+    assert.equal(result.upgraded, false)
+    assert.equal(readLeaseFile(root).stage, "marker-local")
+  } finally {
+    cleanup(root)
+  }
+})
+
+test("reconcilePushedMarker ignores other stages and a corrupt lease", () => {
+  const root = buildFixture()
+  try {
+    seedLease(root, leaseOf({ stage: "marker-pushed", markerSha: MARKER_SHA }))
+    const exec = fakeExec(root, { mainSha: MARKER_SHA })
+    assert.equal(reconcilePushedMarker({ cwd: root, exec }).upgraded, false)
+
+    writeFileSync(leaseFile(root), "{ not json")
+    assert.equal(reconcilePushedMarker({ cwd: root, exec }).upgraded, false)
   } finally {
     cleanup(root)
   }

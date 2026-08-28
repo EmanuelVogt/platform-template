@@ -129,6 +129,7 @@ function fakeLease({
   // o disco em `release-lease.test.mjs`. Aqui só interessa se o comando o chama
   // e o que ele faz com a resposta.
   reconcile = { cleared: false },
+  reconcilePushed = { upgraded: false },
 } = {}) {
   const calls = []
   const record = (name, args) => calls.push({ name, args })
@@ -160,6 +161,12 @@ function fakeLease({
     reconcileFinishedLease: (args) => {
       record("reconcileFinishedLease", args)
       return typeof reconcile === "function" ? reconcile(args) : reconcile
+    },
+    reconcilePushedMarker: (args) => {
+      record("reconcilePushedMarker", args)
+      return typeof reconcilePushed === "function"
+        ? reconcilePushed(args)
+        : reconcilePushed
     },
   }
   api.calls = calls
@@ -1629,6 +1636,78 @@ test("--status não libera o lease enquanto a tag não existe em origin", async 
     assert.equal(exitCode, EXIT_CODES.OK)
     assert.doesNotMatch(logs, /lease liberado/)
     assert.match(logs, /veredito: release em voo — não pushe main/)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+// O follow-up 3 do STATE.md de 2026-08-28: a guarda de pre-push só registra a
+// tentativa; a promoção a marker-pushed acontece aqui, onde a origin é legível.
+test("--status promove marker-local a marker-pushed quando o head da origin é o marcador", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const held = {
+      version: "3.1.1",
+      stage: "marker-local",
+      holder: { id: "sess-outra", kind: "session" },
+      markerSha: "a9e1e3c0000000000000000000000000000000aa",
+      pushAttemptedAt: Date.now() - 3 * 60_000,
+    }
+    const lease = fakeLease({
+      lease: held,
+      matches: false,
+      reconcile: { cleared: false },
+      reconcilePushed: {
+        upgraded: true,
+        lease: { ...held, stage: "marker-pushed" },
+      },
+    })
+    const { exitCode, logs } = statusWith({ dir, exec: fakeExec(), lease })
+
+    assert.equal(exitCode, EXIT_CODES.OK)
+    assert.match(logs, /estágio "marker-local"/)
+    assert.match(logs, /push tentado há 3 min \(não confirmado na origin\)/)
+    assert.match(
+      logs,
+      /marcador a9e1e3c confirmado no head da origin — estágio "marker-pushed"/
+    )
+    assert.match(logs, /veredito: release em voo — não pushe main/)
+    assert.equal(lease.named("reconcilePushedMarker").length, 1)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("--status não consulta a promoção fora de marker-local nem depois do lease liberado", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const pushed = fakeLease({
+      lease: {
+        version: "3.1.1",
+        stage: "marker-pushed",
+        holder: { id: "sess-outra", kind: "session" },
+        markerSha: "abc1234",
+      },
+      matches: false,
+      reconcile: { cleared: false },
+    })
+    statusWith({ dir, exec: fakeExec(), lease: pushed })
+    assert.equal(pushed.named("reconcilePushedMarker").length, 0)
+
+    const finished = {
+      version: "3.1.1",
+      stage: "marker-local",
+      holder: { id: "sess-outra", kind: "session" },
+      markerSha: "abc1234",
+    }
+    const cleared = fakeLease({
+      lease: finished,
+      matches: false,
+      stableTags: ["v3.1.1"],
+      reconcile: { cleared: true, lease: finished },
+    })
+    statusWith({ dir, exec: fakeExec(), lease: cleared })
+    assert.equal(cleared.named("reconcilePushedMarker").length, 0)
   } finally {
     cleanup(dir)
   }

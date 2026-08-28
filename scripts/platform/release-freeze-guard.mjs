@@ -79,12 +79,13 @@ export function runFreezeGuard({
 
   if (decision.action === "allow") return { exitCode: 0 }
 
-  if (decision.action === "allow-upgrade") {
-    // Otimista: é o próprio titular subindo o estágio antes de saber se o
-    // `git push` vai dar certo. Se falhar, `pnpm platform release --status`
-    // (evidência de tag) reconcilia o lease depois; um lease marker-pushed
-    // otimista só bloqueia estranhos, então o custo de errar aqui é zero.
-    updateLease({ cwd, patch: { stage: "marker-pushed" } })
+  if (decision.action === "allow-attempt") {
+    // O hook roda antes da transferência, então a tentativa é o único fato que
+    // ele testemunha — afirmar `marker-pushed` daqui produziu um lease que
+    // mentia com origin/main parada (v3.1.0). O estágio sobe onde a evidência
+    // é legível: `release --push` após exit 0 do git, ou `--status` conferindo
+    // o head da origin (`reconcilePushedMarker`). Sem rede, como antes.
+    updateLease({ cwd, patch: { pushAttemptedAt: Date.now() } })
     return { exitCode: 0 }
   }
 

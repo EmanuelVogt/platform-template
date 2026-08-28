@@ -134,7 +134,10 @@ test("the holder identified by CLAUDE_CODE_SESSION_ID pushes through their own l
   }
 })
 
-test("the holder identified by PLATFORM_RELEASE_HOLDER pushes through, upgrading marker-local to marker-pushed", () => {
+// O guard roda antes da transferência, então "marker-pushed" daqui seria
+// otimismo — foi o follow-up 3 do STATE.md de 2026-08-28: um lease afirmando
+// um push que nunca aconteceu. O que ele registra é a tentativa.
+test("the holder identified by PLATFORM_RELEASE_HOLDER pushes through; the guard records the attempt, never marker-pushed", () => {
   const root = buildFixture()
   try {
     const holder = { id: "sess-other", kind: "session" }
@@ -146,7 +149,8 @@ test("the holder identified by PLATFORM_RELEASE_HOLDER pushes through, upgrading
     })
     assert.equal(result.status, 0)
     const updated = JSON.parse(readFileSync(leaseFile(root), "utf8"))
-    assert.equal(updated.stage, "marker-pushed")
+    assert.equal(updated.stage, "marker-local")
+    assert.equal(typeof updated.pushAttemptedAt, "number")
   } finally {
     cleanup(root)
   }

@@ -147,6 +147,27 @@ describe("parseEnv", () => {
     })
     expect(e.OTEL_EXPORTER_OTLP_ENDPOINT).toBe("")
   })
+
+  it("aceita APP_TIMEZONE ausente (sem default neste schema)", () => {
+    const e = parseEnv(BASE)
+    expect(e.APP_TIMEZONE).toBeUndefined()
+  })
+
+  it("aceita UTC em APP_TIMEZONE", () => {
+    const e = parseEnv({ ...BASE, APP_TIMEZONE: "UTC" })
+    expect(e.APP_TIMEZONE).toBe("UTC")
+  })
+
+  it("aceita um fuso IANA conhecido em APP_TIMEZONE", () => {
+    const e = parseEnv({ ...BASE, APP_TIMEZONE: "America/Sao_Paulo" })
+    expect(e.APP_TIMEZONE).toBe("America/Sao_Paulo")
+  })
+
+  it("rejeita APP_TIMEZONE fora do conjunto IANA conhecido pelo runtime", () => {
+    expect(() => parseEnv({ ...BASE, APP_TIMEZONE: "Not/AZone" })).toThrow(
+      /APP_TIMEZONE/
+    )
+  })
 })
 
 describe("nodeEnvSchema", () => {

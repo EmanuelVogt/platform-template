@@ -1,6 +1,6 @@
 import { defineConfig } from "vitest/config"
 
-import { apiDefaults, swcPlugin } from "./vitest.shared.mjs"
+import { API_MAX_WORKERS, apiDefaults, swcPlugin } from "./vitest.shared.mjs"
 
 export default defineConfig({
   plugins: [swcPlugin()],
@@ -13,6 +13,11 @@ export default defineConfig({
     // `apps/api/vitest.config.mts`).
     include: [".catalog-stage/src/modules/**/*.spec.ts"],
     setupFiles: ["./test/setup/unit-env.ts"],
-    maxWorkers: 4,
+    maxWorkers: API_MAX_WORKERS,
+    // Mesmo `maxWorkers` do tier unitário (API_MAX_WORKERS): precisa do
+    // mesmo `groupOrder` para não colidir com o `web` (grupo 0, default) —
+    // só ocorre quando este projeto entra num run mesclado como o de
+    // `pnpm test:coverage`; `pnpm catalog:test` roda sozinho e não vê isto.
+    sequence: { groupOrder: 1 },
   },
 })

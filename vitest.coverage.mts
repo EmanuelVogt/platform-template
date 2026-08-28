@@ -1,6 +1,11 @@
 import { existsSync } from "node:fs"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
 
 import { defineConfig } from "vitest/config"
+
+import { stage } from "./scripts/platform/catalog-stage.mjs"
+import { listEntries } from "./scripts/platform/lib/catalog-graph.mjs"
 
 // Mesmo resolvedor de `vitest.config.mts`: `apps/web` no filho renderizado,
 // `apps/web-vite` neste repositório do template.
@@ -9,10 +14,23 @@ const WEB_DIR =
     existsSync(`${dir}/vitest.config.ts`)
   ) ?? "apps/web"
 
+const REPO_ROOT = path.dirname(fileURLToPath(import.meta.url))
+const CATALOG_ROOT = path.join(REPO_ROOT, "catalog")
+// Sem `catalog/` (produto renderizado, fora do copier) não há projeto de
+// catálogo pra medir. Com ele, o stage é regerado aqui — a mesma árvore que
+// `catalog:test` usa — porque um stage ausente ou velho faria este projeto
+// coletar 0 arquivos e passar calado sob o piso de cobertura, repetindo o
+// defeito que o tier de catalog/ existe para corrigir (vitest.catalog.mts).
+const hasCatalog = existsSync(CATALOG_ROOT)
+if (hasCatalog) {
+  stage({ repoRoot: REPO_ROOT, entries: listEntries(CATALOG_ROOT) })
+}
+
 /**
- * `pnpm test:coverage`: os quatro projetos num processo só, cobertura v8
- * mesclada e piso por glob. É o gate honesto — o único run em que a linha de
- * um arquivo coberto apenas pelo e2e conta junto com a do unitário.
+ * `pnpm test:coverage`: os quatro projetos (cinco com `catalog/` presente)
+ * num processo só, cobertura v8 mesclada e piso por glob. É o gate honesto —
+ * o único run em que a linha de um arquivo coberto apenas pelo e2e conta
+ * junto com a do unitário.
  */
 export default defineConfig({
   test: {
@@ -21,6 +39,7 @@ export default defineConfig({
       "apps/api/vitest.config.mts",
       "apps/api/vitest.int.config.mts",
       "apps/api/vitest.e2e.config.mts",
+      ...(hasCatalog ? ["apps/api/vitest.catalog.config.mts"] : []),
     ],
     globalSetup: ["apps/api/test/setup/global-setup.ts"],
     coverage: {
@@ -32,7 +51,13 @@ export default defineConfig({
       reportOnFailure: true,
       // `include` explícito é o que faz arquivo sem teste entrar na conta: o
       // `coverage.all` do Vitest 3 não existe mais.
-      include: ["apps/api/src/**/*.ts", `${WEB_DIR}/src/**/*.{ts,tsx}`],
+      include: [
+        "apps/api/src/**/*.ts",
+        `${WEB_DIR}/src/**/*.{ts,tsx}`,
+        // Código de catalog/ só existe no disco staged (.catalog-stage/); é
+        // esse caminho, não `catalog/**`, que o v8 credita como executado.
+        ...(hasCatalog ? ["apps/api/.catalog-stage/src/modules/**/*.ts"] : []),
+      ],
       exclude: [
         "**/*.spec.ts",
         "**/*.int-spec.ts",

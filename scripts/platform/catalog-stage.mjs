@@ -17,17 +17,47 @@ export function stagePlan({ repoRoot, entries }) {
       to: path.join(stageRoot, rel),
     })),
     copies: entries
-      .map((entry) => ({
-        from: path.join(entry.dir, "api"),
-        to: path.join(stageRoot, "src/modules", entry.name),
-      }))
+      .flatMap((entry) => [
+        {
+          from: path.join(entry.dir, "api"),
+          to: path.join(stageRoot, "src/modules", entry.name),
+        },
+        // Mesmo destino que o instalador real usa para `catalog/<entrada>/parity`
+        // (child-layout.mjs `parityDir`, consumido por lib/plan.mjs): `__parity__`
+        // como irmão de application/domain/infrastructure. É o que faz os imports
+        // relativos de `*.parity.spec.ts` (`../infrastructure/...`,
+        // `../../../shared/test/parity/...`) resolverem igual no stage e no
+        // produto instalado — sem isso a suíte de paridade nunca é coletada.
+        {
+          from: path.join(entry.dir, "parity"),
+          to: path.join(stageRoot, "src/modules", entry.name, "__parity__"),
+        },
+      ])
       .filter((copy) => existsSync(copy.from)),
   }
 }
 
+// rmSync recursivo pode ver ENOTEMPTY ao remover STAGE_DIR quando a árvore
+// ainda carrega os symlinks de KERNEL_STAGE_PATHS (test/, src/shared, ...)
+// de uma execução anterior — o walk recursivo não é garantia de tratar um
+// symlink para diretório como folha nessa combinação. Desfaz os links
+// conhecidos primeiro (unlink direto, sem descer no alvo) e só então remove o
+// resto da árvore; `maxRetries`/`retryDelay` cobrem a corrida real quando
+// outro worker estagia a mesma árvore compartilhada ao mesmo tempo.
+function removeStageTree(plan) {
+  for (const link of plan.links)
+    rmSync(link.to, { recursive: true, force: true })
+  rmSync(plan.stageRoot, {
+    recursive: true,
+    force: true,
+    maxRetries: 3,
+    retryDelay: 100,
+  })
+}
+
 export function stage({ repoRoot, entries }) {
   const plan = stagePlan({ repoRoot, entries })
-  rmSync(plan.stageRoot, { recursive: true, force: true })
+  removeStageTree(plan)
   mkdirSync(path.join(plan.stageRoot, "src/modules"), { recursive: true })
   for (const link of plan.links) {
     mkdirSync(path.dirname(link.to), { recursive: true })
@@ -75,7 +105,6 @@ if (isMain(import.meta.url, process.argv[1])) {
       stdio: "inherit",
     }
   )
-  if (!process.argv.includes("--keep"))
-    rmSync(plan.stageRoot, { recursive: true, force: true })
+  if (!process.argv.includes("--keep")) removeStageTree(plan)
   process.exit(result.status ?? 1)
 }

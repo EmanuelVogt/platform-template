@@ -61,8 +61,8 @@ decisions and handoff, lessons, and the feature slug itself — and so is every 
 worker, scout, runner or Verifier. Agents are the only readers, and each artifact is re-read on
 every turn for the life of the spec; pt-BR is for the chat reply, never for disk. A decision
 discussed in pt-BR is recorded in English; only a product string (UI label, error message) or a
-domain term with no English equivalent is quoted as is. The `specs-in-english` hook blocks a
-`.specs/` write that reads as pt-BR prose.
+domain term with no English equivalent is quoted as is. The `plans-in-english` hook blocks a
+`.ca-plans/` write that reads as pt-BR prose.
 
 **A handoff says what is left, not what was done.** Every agent that picks up the spec
 re-reads the handoff whole, every session, for the life of the spec — context that

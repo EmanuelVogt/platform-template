@@ -107,31 +107,34 @@ The 1M window is why: nothing ever forced a break.
   **In Claude Code this is enforced, not advised:** `delegate-to-subagent.mjs` lets the
   main agent make two navigation calls per user turn (`ls`, `grep -n` on a known file) and
   blocks the third onward with the exact `Agent(subagent_type: "repo-scout", model: …)`
-  call to make instead. Inside a subagent (`agent_id` in the hook input) it counts no
-  navigation and no run — the scout navigates freely, and `spec-worker`/`spec-verifier`
-  (`ENFORCED_AGENTS`) keep only a Read **byte** budget for their lifetime, since 2026-08-21
-  they run their own gates. Subagents can spawn subagents here (verified 2026-08-17: a worker called
+  call to make instead. Inside a subagent (`agent_id` in the hook input) it exits with no
+  enforcement at all unless the subagent's type is in `ENFORCED_AGENTS` — empty today,
+  since the prior framework's `spec-worker`/`spec-verifier`, the only agents it ever named, are
+  gone and no `ca-full-cycle` agent type has been wired into their place: every subagent,
+  the scout included, currently navigates and runs commands with zero enforcement from this
+  hook. Subagents can spawn subagents here (verified 2026-08-17: a worker called
   `repo-scout` and got its answer), which is what makes that nesting real.
 - **Spec execution is delegated from 4 tasks up, in parallel.** In the `ca-full-cycle` skill a
   plan of ≤3 tasks runs **inline in the planning window** (a worker's warm-up costs more than the
   three files it would write), with its gates through the runner and the Verifier still fresh and
-  independent. From 4 tasks up the orchestrator dispatches one `spec-worker`
+  independent. From 4 tasks up the orchestrator dispatches one `worker`
   per cluster — all clusters of a wave at once — each worker **runs its own scoped gate**
   (`cmd > log 2>&1; echo exit=$?`, then `grep -n` on the log) and nests `repo-scout` for a
   question it cannot scope, one Build gate runs per wave through the runner (scoped to the wave's
-  touched areas; the full unit suite runs once, at the Verifier's Final gate, or per wave
-  only when the Wave Plan marks shared code), and a fresh `spec-verifier` closes the
-  feature; a fix→re-verify round resumes that same Verifier via `SendMessage` while it is
-  under its turn budget. **The tier is judgement per dispatch, never
-  hard-coded**: every `Agent` call to one of the four repo agents (`repo-scout`,
-  `shell-runner`, `spec-worker`, `spec-verifier`) carries an explicit `model`, chosen by
-  what that dispatch touches (mechanics → haiku, CRUD/UI → sonnet, domain/contract/
-  migration/ADR-governed → opus; Verifier → opus for auth, payments, data integrity, or a
-  rule the product's own domain doc marks critical; scout → haiku for a pointed question,
-  sonnet for a module map; runner → haiku). `subagent-model-required.mjs` blocks the call
-  without it and prints that agent's tier guide; the `model:` in the agent's frontmatter
-  is only the fallback for
-  when the hook is off. Waves and clusters are authored in the Tasks phase from `Depends on` /
+  touched areas; the full unit suite runs once, at the Reviewer's Final gate, or per wave
+  only when the Wave Plan marks shared code), a fresh wave verifier closes each wave and a
+  fresh `Reviewer` closes the feature; a fix→re-verify round resumes that same verifier via
+  `SendMessage` while it is under its turn budget. **The tier is judgement per dispatch,
+  never hard-coded**: every `Agent` call — to a worker, wave verifier or Reviewer, or to
+  `repo-scout`/`shell-runner` — carries an explicit `model`, chosen by what that dispatch
+  touches (mechanics → haiku, CRUD/UI → sonnet, domain/contract/migration/ADR-governed →
+  opus; Reviewer → opus for auth, payments, data integrity, or a rule the
+  product's own domain doc marks critical; scout → haiku for a pointed question, sonnet
+  for a module map; runner → haiku). `subagent-model-required.mjs` hook-blocks only the
+  `repo-scout`/`shell-runner` call without it, printing that agent's tier guide; a
+  worker/verifier/Reviewer's `model` is the `ca-full-cycle` card's own rule, unenforced by
+  this hook. The `model:` in the agent's frontmatter is only the fallback for when the hook
+  is off. Waves and clusters are authored in the Tasks phase from `Depends on` /
   `Touches` / `Exclusive`. Parallel workers share the checkout, so they commit
   pathspec-limited (`git commit -m … -- <files>`) and never `stash`/`add -A`. Model and
   mechanics: `.agents/skills/ca-full-cycle/references/implement.md` § *Sub-Agent
@@ -140,8 +143,9 @@ The 1M window is why: nothing ever forced a break.
   payload — there is no per-role agent definition file.
   **Fragility to know:** nested `Agent` calls inside subagents are not documented by
   Anthropic; if a Claude Code update removes them, an enforced worker can neither
-  navigate nor delegate — the fix is to drop `spec-worker`/`spec-verifier` from
-  `ENFORCED_AGENTS` in the hook until nesting is back.
+  navigate nor delegate — the fix, if a `ca-full-cycle` agent type is ever wired into
+  `ENFORCED_AGENTS`, is to drop it from that set until nesting is back; moot today since
+  the set is empty.
 - **The main window's gates go to `shell-runner`.** Test, typecheck, lint and build are
   blocked in the main thread by the same hook and delegated to `.claude/agents/shell-runner.md`
   (haiku on almost every dispatch, `Bash` + `Read`). It saves the whole log to a file and returns exit code
@@ -150,7 +154,7 @@ The 1M window is why: nothing ever forced a break.
   <1% of shell output (rtk already compresses vitest), so the saving here is small; the
   reason it is delegated is that one unfiltered run can still be tens of thousands of
   tokens. **Two callers only** — the orchestrator's Build gate per wave and the Verifier's
-  Final gate: a `spec-worker` and the Verifier's sensor run their own scoped gates directly,
+  Final gate: a worker and the Verifier's sensor run their own scoped gates directly,
   because the hop cost more than it saved (2026-08-21: 73 of 196 worker→runner dispatches
   had to be escalated to sonnet just to slice a red log). Output redirected to a file (`> log`) is never blocked, and
   `PLATFORM_DELEGATE_OFF=1` disables the hook while debugging the harness itself.
@@ -167,11 +171,11 @@ The 1M window is why: nothing ever forced a break.
   references read whole 23 %, chained ranged reads paging through one file 22 %, code
   3 % — so `delegate-to-subagent.mjs` now caps the main thread at 48 KB of `Read` per user
   turn, any directory, ranged or not; past it the read is blocked and the cheap path named.
-- **Everything under `.specs/` is English, enforced.** Those are the most re-read files in
+- **Everything under `.ca-plans/` is English, enforced.** Those are the most re-read files in
   the repo and agents are their only readers; pt-BR tokenizes ~30% heavier, so a decision
   recorded in pt-BR is a surcharge on every Design and every resume for the life of the
-  project. `specs-in-english.mjs` (PreToolUse on `Edit|Write|MultiEdit`) blocks a write to
-  `.specs/**` whose new text reads as pt-BR prose — pt-BR function words ≥10% of the
+  project. `plans-in-english.mjs` (PreToolUse on `Edit|Write|MultiEdit`) blocks a write to
+  `.ca-plans/**` whose new text reads as pt-BR prose — pt-BR function words ≥10% of the
   words, or ≥5% with diacritics ≥10%; fenced/inline code and URLs are ignored, `.json` is
   exempt, and fewer than 12 words never trip it. Quoted product strings inside English
   sentences stay under the bar by construction. The rule is Critical Rule 6 of
@@ -224,7 +228,7 @@ never recreate `.cursor/skills` — Cursor reads `.agents` directly.
 - `.claude/hooks/edit-reminders.mjs` — design-system and comment-policy reminders on
   edit, rate-limited per session to once every ~2 MB of transcript instead of every edit.
 - `.claude/hooks/plans-in-english.mjs` — `PreToolUse(Edit|Write|MultiEdit)`: blocks a
-  write under `.specs/` whose new text reads as pt-BR prose (thresholds and exemptions in
+  write under `.ca-plans/` whose new text reads as pt-BR prose (thresholds and exemptions in
   [Token economy](#token-economy); constants at the top of the file). Fires in the main
   thread and inside subagents alike; `PLATFORM_SPECS_LANG_OFF=1` disables it. Rule in
   [`workflow.md`](workflow.md) and `ca-full-cycle` Critical Rule 6.
@@ -250,19 +254,21 @@ never recreate `.cursor/skills` — Cursor reads `.agents` directly.
 head` isn't navigation — a filter after a pipe reduces what enters the context); the
   redirect-to-file check still runs on the whole statement. A Bash statement whose path
   arguments are **all** under `.claude/`, `.agents/`, `docs/agents/`, `scripts/` or
-  `.specs/` (`HARNESS_DIRS`) doesn't count as navigation — the quota exists to push
+  `.ca-plans/` (`HARNESS_DIRS`) doesn't count as navigation — the quota exists to push
   exploration of _product_ code to `repo-scout`, while editing the harness itself is work
   the main thread does directly; a statement with no path argument, or with one path
   outside the list, counts as before. A `Read` counts as one navigation against the same
   quota when it's a whole-file or large read of source (`limit` absent or >
-  `READ_FREE_LINES` = 200 lines); ranged reads and anything under `.specs/`, `.claude/`,
+  `READ_FREE_LINES` = 200 lines); ranged reads and anything under `.ca-plans/`, `.claude/`,
   `.agents/`, `docs/` or outside the project stay free — `no-huge-reads.mjs` remains the
   separate hard size cap. Silent inside subagents
   (`agent_id`), for output redirected to a file, and with `PLATFORM_DELEGATE_OFF=1`.
-  Inside `spec-worker` and `spec-verifier` (`ENFORCED_AGENTS`) neither navigation nor heavy
-  runs are counted — they run their own scoped gates since 2026-08-21 — and what stays is
-  the Read **byte** budget for the agent's lifetime (`READ_BYTES_FREE_PER_AGENT` = 120 000),
-  the guard against reading a 30 kB reference whole before the first edit. Every `Read`
+  `ENFORCED_AGENTS` is empty today — the prior framework's `spec-worker`/`spec-verifier`, the
+  only agents it ever named, are gone, and no `ca-full-cycle` agent type is wired in their
+  place — so the Read **byte** budget for an agent's lifetime (`READ_BYTES_FREE_PER_AGENT`
+  = 120 000), the guard against reading a 30 kB reference whole before the first edit,
+  currently applies to none: a worker's own turn-budget discipline (the `ca-full-cycle`
+  card) is what limits it instead. Every `Read`
   counts **bytes** against a budget (`READ_BYTES_FREE_PER_TURN` = 48 000 per user turn on
   the main thread), in any directory, ranged or
   not — a ranged read by the byte length of its lines, a whole read by the file size; over
@@ -271,17 +277,17 @@ head` isn't navigation — a filter after a pipe reduces what enters the context
   main thread's quota and byte budget each user turn. Quotas, budget and the enforced list
   are the constants at the top of the file. Rule in [Token economy](#token-economy).
 - `.claude/hooks/subagent-model-required.mjs` — `PreToolUse(Agent)`: blocks a dispatch of
-  `repo-scout`, `shell-runner`, `spec-worker` or `spec-verifier` whose `model` is missing
-  or outside `haiku|sonnet|opus`, and prints that agent's tier guide (the `GUIDE` map at
-  the top of the file). Fires in the main thread and inside nesting subagents alike; other
-  agent types pass. Also holds the nesting shape: inside a `spec-worker`/`spec-verifier`
-  only `repo-scout` and `shell-runner` may be dispatched (a `fork` or a "noop" placeholder
-  to wait for a notification is blocked — measured 2026-08-20, 24 of 24 forks spawned by
-  workers were such placeholders, each re-serving the worker's whole context), and inside
-  a `repo-scout`/`shell-runner` any `Agent` call is blocked. The `shell-runner` guide names
-  its two callers — the orchestrator's Build gate and the Verifier's Final gate — since a
-  worker runs its own scoped gate. The `model:` in each agent's
-  frontmatter is only the fallback for when the hook is off (`PLATFORM_DELEGATE_OFF=1`).
+  `repo-scout` or `shell-runner` whose `model` is missing or outside
+  `haiku|sonnet|opus|fable`, and prints that agent's tier guide (the `GUIDE` map at the top
+  of the file); every other dispatch, worker/wave-verifier/Reviewer included, is only
+  tagged with its `model` (or `inherit`) and passed through. Fires in the main thread and
+  inside nesting subagents alike. Also holds the nesting shape: `NESTING_AGENTS` is empty
+  today — the prior framework's `spec-worker`/`spec-verifier`, the only agents it ever
+  restricted, are gone, so no agent type is blocked from nesting through this hook —
+  while `repo-scout`/`shell-runner` (`LEAF_AGENTS`) still never dispatch further. The
+  `shell-runner` guide names its two callers — the orchestrator's Build gate and the
+  Verifier's Final gate — since a worker runs its own scoped gate. The `model:` in each
+  agent's frontmatter is only the fallback for when the hook is off (`PLATFORM_DELEGATE_OFF=1`).
   Rule in [Token economy](#token-economy).
 - `.claude/hooks/dispatch-log.mjs` — `PreToolUse(Agent)` (`dispatch`), `SubagentStart`
   (`start`), `SubagentStop` (`stop`): appends one JSON line per event to
@@ -299,7 +305,7 @@ head` isn't navigation — a filter after a pipe reduces what enters the context
   a transcript that never materialises, every ~30 s while an agent runs — and those are
   dropped, not logged. Hooks registered in `settings.json` took effect without a restart. Read with
   `pnpm dispatch:report` (`scripts/dispatch-report.mjs`). The `dispatch` mode also enforces
-  **a wave is one message** on the main thread: a `spec-worker` payload naming `wave <w>`
+  **a wave is one message** on the main thread: a `worker` payload naming `wave <w>`
   and `Cluster C<k>` is blocked (exit 2 + a `wave-split` row) when another cluster of that
   wave went out more than 2 min earlier — unless that label was already dispatched (a
   continuation keeps its label), 4 clusters already went out together (FIFO tail), the

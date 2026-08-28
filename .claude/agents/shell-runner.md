@@ -1,6 +1,6 @@
 ---
 name: shell-runner
-description: Runs a terminal command in this repo (test, typecheck, lint, build, script) without dumping the output into the main context — full log to a file, returns exit code + the literal failures. For the main window's gates: the orchestrator's Build gate per wave and the Verifier's Final gate; a spec-worker runs its own scoped gate directly. Not for editing, diagnosing or deciding. Pass `model` (the hook requires it) — haiku for a single command; sonnet for a sequence of steps or a log with dozens of failures.
+description: Runs a terminal command in this repo (test, typecheck, lint, build, script) without dumping the output into the main context — full log to a file, returns exit code + the literal failures. For the main window's gates: the orchestrator's Build gate per wave and the Verifier's Final gate; a worker runs its own scoped gate directly. Not for editing, diagnosing or deciding. Pass `model` (the hook requires it) — haiku for a single command; sonnet for a sequence of steps or a log with dozens of failures.
 tools: Bash, Read
 model: haiku
 ---

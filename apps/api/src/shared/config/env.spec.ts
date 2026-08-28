@@ -149,8 +149,10 @@ describe("parseEnv", () => {
   })
 
   it("aceita APP_TIMEZONE ausente (sem default neste schema)", () => {
+    expect.assertions(2)
     const e = parseEnv(BASE)
     expect(e.APP_TIMEZONE).toBeUndefined()
+    expect(e.NODE_ENV).toBe("test")
   })
 
   it("aceita UTC em APP_TIMEZONE", () => {
@@ -158,9 +160,13 @@ describe("parseEnv", () => {
     expect(e.APP_TIMEZONE).toBe("UTC")
   })
 
+  // Fuso deliberadamente neutro: qualquer string IANA prova o refine, e o
+  // fuso do dono não pode entrar em código que o filho recebe (TZ-01) —
+  // usar aqui só obrigaria `brand-hygiene` a abrir uma exceção para um teste
+  // que esta mesma rodada acabou de escrever.
   it("aceita um fuso IANA conhecido em APP_TIMEZONE", () => {
-    const e = parseEnv({ ...BASE, APP_TIMEZONE: "America/Sao_Paulo" })
-    expect(e.APP_TIMEZONE).toBe("America/Sao_Paulo")
+    const e = parseEnv({ ...BASE, APP_TIMEZONE: "Asia/Tokyo" })
+    expect(e.APP_TIMEZONE).toBe("Asia/Tokyo")
   })
 
   it("rejeita APP_TIMEZONE fora do conjunto IANA conhecido pelo runtime", () => {

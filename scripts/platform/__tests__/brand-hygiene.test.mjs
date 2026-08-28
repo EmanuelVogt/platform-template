@@ -112,14 +112,9 @@ const SCRIPTS_SCAN_ROOTS = ["scripts"]
 //     specs copiados e declarar `America/Sao_Paulo` no int-spec, então o passo
 //     a passo carrega os literais que o gate bane. Sem citá-los a advisory não
 //     é acionável.
-// SPEC_DEVIATION: Fix Round 3 amplia CODE_SCAN_ROOTS (env.spec.ts, achado
-// rodando o gate desta task — não é o dono vazando) e SCRIPTS_SCAN_ROOTS
-// (v3.0.0.mjs, o alvo desta correção).
+// SPEC_DEVIATION: Fix Round 4 amplia SCRIPTS_SCAN_ROOTS (v3.0.0.mjs, o alvo
+// desta correção).
 // Reason:
-//   - apps/api/src/shared/config/env.spec.ts:162-163 — mesmo padrão já aceito
-//     para bucket-sql.spec.ts/maintenance-registry.spec.ts: "America/Sao_Paulo"
-//     como exemplo de fuso IANA válido que o predicado `parseEnv` deve aceitar,
-//     não o default hard-coded que TZ-01 eliminou.
 //   - scripts/platform/migrations/v3.0.0.mjs:28 — `PREVIOUS_TIMEZONE =
 //     "America/Sao_Paulo"` é o fuso que um child `2.x` de fato tinha
 //     hard-coded (commit 4b614eb) e que a migração da v3.0.0 precisa nomear

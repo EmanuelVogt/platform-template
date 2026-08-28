@@ -49,8 +49,8 @@ try {
   const exits = [
     "Two exits — you decide which fits, then tell the user in their language, in one line:",
     "• `/compact` — the work continues in the same direction and the recent turns are still the working set (a follow-up of a few turns; a wave mid-feature whose plan is in tasks.md). A summary keeps the thread at a fraction of the cost. Say what must survive the summary (feature, step, constraint).",
-    "• `/clear` — what remains is a new stretch of work (dozens of turns) or the direction changed: the conversation is dead weight and disk holds the memory. First write the Handoff (.specs/STATE.md § Handoff, section-scoped), then hand the user a ready-to-paste prompt for the next session, fenced, in their language:",
-    '```\nContinue <feature/task>. Load: .specs/STATE.md § Handoff entry "<name>"; <spec/tasks/design paths>. Checkout: <worktree path>, branch <branch>. Next: <the exact next step>. Keep: <1–3 constraints or decisions that must not be lost>.\n```',
+    "• `/clear` — what remains is a new stretch of work (dozens of turns) or the direction changed: the conversation is dead weight and disk holds the memory. First write the Handoff (.ca-plans/<run>/plan*.md § Handoff, section-scoped), then hand the user a ready-to-paste prompt for the next session, fenced, in their language:",
+    '```\nContinue <feature/task>. Load: .ca-plans/<run>/plan*.md § Handoff entry "<name>"; <spec/tasks/design paths>. Checkout: <worktree path>, branch <branch>. Next: <the exact next step>. Keep: <1–3 constraints or decisions that must not be lost>.\n```',
   ].join("\n")
   const context =
     contextTokens >= HARD_ALERT

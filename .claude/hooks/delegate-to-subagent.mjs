@@ -6,33 +6,34 @@
 // Measured in docs/agents/harness.md: 87% of all shell output is navigation
 // (968 direct calls against 52 delegations), and every character that lands in
 // the main context is repaid on every turn until the end of the session. It
-// applies to the main agent and to the subagents that also delegate
-// (ENFORCED_AGENTS: spec-worker and spec-verifier from tlc-spec-driven, which
-// nest repo-scout and shell-runner); inside the other subagents (agent_id
-// present, type outside the list) it exits silently, otherwise it would block
-// repo-scout itself.
+// applies to the main agent only — ENFORCED_AGENTS is empty (tlc-spec-driven's
+// spec-worker and spec-verifier, the only agents it ever named, are gone);
+// every subagent (agent_id present) now exits silently at the top of the
+// file, otherwise it would block repo-scout itself.
 //
 // Free quota per user turn: NAV_FREE_PER_TURN quick navigations (one `ls`, one
 // `grep -n` in a known file) pass; from there on, delegate. A heavy command
 // (test, typecheck, lint, build) has no quota on the main thread: it goes to
 // shell-runner, which returns the exit code and literal failures with the log
 // in a file.
-// Inside an enforced subagent (spec-worker, spec-verifier) neither navigation
-// nor heavy runs are counted, decided 2026-08-21: the worker and the Verifier
-// run their own scoped gates directly (`cmd > log 2>&1; echo exit=$?`, then
-// grep on the log), because 73 of 196 worker→runner dispatches had to be
-// escalated to sonnet just to slice a red log — the hop, not the tier, was the
-// cost. shell-runner keeps exactly two callers: the orchestrator's Build gate
-// and the Verifier's Final gate. What stays enforced inside those agents is the
+// Inside an ENFORCED_AGENTS subagent neither navigation nor heavy runs are
+// counted, decided 2026-08-21: the worker and the Verifier run their own
+// scoped gates directly (`cmd > log 2>&1; echo exit=$?`, then grep on the
+// log), because 73 of 196 worker→runner dispatches had to be escalated to
+// sonnet just to slice a red log — the hop, not the tier, was the cost.
+// shell-runner keeps exactly two callers: the orchestrator's Build gate and
+// the Verifier's Final gate. What stays enforced inside those agents is the
 // Read BYTE budget for the agent's lifetime (READ_BYTES_FREE_PER_AGENT), the
 // guard against reading a 30 kB reference whole before the first edit —
 // measured the same day, a worker spent a median 21 turns and 94k of context
-// warming up.
+// warming up. ENFORCED_AGENTS is empty today: tlc-spec-driven's spec-worker
+// and spec-verifier are gone, and no ca-full-cycle agent type is wired in
+// their place.
 // A piped command is classified by its first command only (a filter after a
 // pipe like `| tail` or `| head` reduces what enters the context, it isn't
 // navigation); the redirect-to-file check still runs on the whole statement.
 // A Bash statement whose path arguments are ALL under HARNESS_DIRS (.claude/,
-// .agents/, docs/agents/, scripts/, .specs/) does not count as navigation: the
+// .agents/, docs/agents/, scripts/, .ca-plans/) does not count as navigation: the
 // quota exists to push exploration of PRODUCT code to repo-scout, while editing
 // the harness itself (hooks, skills, agents, agent docs, scripts, specs) is work
 // the main thread does directly. Until 2026-08-21 the way through was the
@@ -44,7 +45,7 @@
 // navigation COUNT only — the per-turn Read byte budget below is untouched.
 // On the main thread a Read counts as one navigation against the same quota
 // when it is a whole-file or large read of source (limit absent or >
-// READ_FREE_LINES = 200 lines); ranged reads and anything under .specs/,
+// READ_FREE_LINES = 200 lines); ranged reads and anything under .ca-plans/,
 // .claude/, .agents/, docs/ or outside the project stay free — no-huge-reads.mjs is the separate hard
 // size cap, this is only the delegate-or-not budget.
 // Output redirected to a file (`> log`) does not enter the context and passes.
@@ -53,7 +54,7 @@
 // enforced subagent, for its whole life — whatever the directory and ranged or
 // not; the free-dir exemption above is for the navigation COUNT only. Measured
 // 2026-08-20 over the bytes the main window Read after delegating Execute:
-// `.specs` 50% (`STATE.md` alone 577 KB over 31 reads), skill references read
+// `.specs` (now `.ca-plans`) 50% (`STATE.md` alone 577 KB over 31 reads), skill references read
 // whole 23%, chained ranged reads paging through one file 22%; code 3%. A
 // ranged read is priced by the byte length of its lines (files over 2 MB are
 // estimated from the average line length of the first 2 MB); a whole read by
@@ -78,9 +79,15 @@ const READ_FREE_LINES = 200
 const READ_BYTES_FREE_PER_TURN = 48_000
 const READ_BYTES_FREE_PER_AGENT = 120_000
 const READ_SCAN_CAP = 2 * 1024 * 1024
-const READ_FREE_DIRS = [".specs", ".claude", ".agents", "docs"]
-const HARNESS_DIRS = [".claude", ".agents", "docs/agents", "scripts", ".specs"]
-const ENFORCED_AGENTS = new Set(["spec-worker", "spec-verifier"])
+const READ_FREE_DIRS = [".ca-plans", ".claude", ".agents", "docs"]
+const HARNESS_DIRS = [
+  ".claude",
+  ".agents",
+  "docs/agents",
+  "scripts",
+  ".ca-plans",
+]
+const ENFORCED_AGENTS = new Set([])
 
 const NAV_CMDS = new Set([
   "grep",
@@ -343,7 +350,7 @@ if (tool === "Grep" || tool === "Glob") {
   if (used + bytes > budget) {
     block(
       `Read budget ${data.agent_id ? `for this ${data.agent_type}` : "for this turn"} exhausted (${kb(used)} KB of ${kb(budget)} KB; this read adds ${kb(bytes)} KB — \`${filePath}\`).
-Paging through a file by ranges is a whole-file read in instalments: ask \`repo-scout\` (sonnet) for the section or the answer and read only the range it names; for \`.specs/STATE.md\` read one section (\`grep -n '^## '\` first); the skill's references have cards (\`references/cards/*.md\`) — read the card, not the reference.
+Paging through a file by ranges is a whole-file read in instalments: ask \`repo-scout\` (sonnet) for the section or the answer and read only the range it names; for \`.ca-plans/<run>/plan*.md\` read one section (\`grep -n '^## '\` first); the skill's references have cards (\`references/cards/*.md\`) — read the card, not the reference.
 `
     )
   }
@@ -380,7 +387,7 @@ if (kind === "nav") {
     block(
       `Direct navigation blocked (#${state.nav} in this turn; ${NAV_FREE_PER_TURN} free) — \`Read ${summarize(target)}\`.
 Whole-file source read: delegate — Agent(subagent_type: "repo-scout", model: "haiku", prompt: "<where is X / what does Y contain>") returns file:line, then Read the range.
-Free: Read with limit <= ${READ_FREE_LINES}; anything under .specs/, .claude/, .agents/, docs/.
+Free: Read with limit <= ${READ_FREE_LINES}; anything under .ca-plans/, .claude/, .agents/, docs/.
 `
     )
   }

@@ -31,7 +31,7 @@
 // `dispatch` also enforces, on the main thread only, that a wave is ONE
 // message: the Tasks phase authors clusters so that a wave's workers run
 // concurrently, and 16 of 17 declared multi-cluster waves were instead
-// dispatched one worker at a time, 26–60 min apart (2026-08-20). A spec-worker
+// dispatched one worker at a time, 26–60 min apart (2026-08-20). Any Agent
 // dispatch whose payload names a wave and a cluster is blocked (exit 2, with a
 // `wave-split` row in the log) when another cluster of that wave went out more
 // than WAVE_SAME_MESSAGE_S ago — unless the label was already dispatched (a
@@ -155,7 +155,6 @@ const writeWaveState = (session, state) => {
 const waveVerdict = (input, row) => {
   if (
     input.agent_id ||
-    row.type !== "spec-worker" ||
     row.wave === null ||
     row.cluster === null ||
     !row.session

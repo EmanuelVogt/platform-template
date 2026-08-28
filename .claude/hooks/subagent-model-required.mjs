@@ -2,12 +2,13 @@
 // PreToolUse(Agent): the model tier of a subagent in this repo is chosen by
 // whoever dispatches, on every dispatch — never the frontmatter. The `model:`
 // in the agent file is only the fallback for when this hook is off; here, a
-// call to repo-scout, shell-runner, spec-worker or spec-verifier without an
-// explicit `model` is blocked with that agent's tier guide, and the call comes
-// back with the chosen tier. It applies on the main thread and inside subagents
-// that nest (spec-worker → repo-scout). Rationale in docs/agents/harness.md.
-// It also holds the nesting shape: a spec-worker or spec-verifier dispatches
-// only repo-scout and shell-runner; repo-scout and shell-runner never dispatch.
+// call to repo-scout or shell-runner without an explicit `model` is blocked
+// with that agent's tier guide, and the call comes back with the chosen
+// tier. It applies on the main thread. Rationale in docs/agents/harness.md.
+// It also holds the nesting shape: NESTING_AGENTS is empty now that
+// tlc-spec-driven's spec-worker and spec-verifier are gone, so no agent type
+// may nest through this hook; repo-scout and shell-runner (LEAF_AGENTS) still
+// never dispatch further.
 // Measured 2026-08-20: 24 of 24 `fork` agents spawned by spec-workers were
 // `Agent(subagent_type: "fork", prompt: "noop")` placeholders "to wait for a
 // background notification" — each one re-served the worker's whole context
@@ -18,7 +19,7 @@
 import { readFileSync } from "node:fs"
 
 const MODELS = new Set(["haiku", "sonnet", "opus", "fable"])
-const NESTING_AGENTS = new Set(["spec-worker", "spec-verifier"])
+const NESTING_AGENTS = new Set([])
 const LEAF_AGENTS = new Set(["repo-scout", "shell-runner"])
 
 const GUIDE = {
@@ -30,16 +31,7 @@ const GUIDE = {
   "shell-runner": [
     "haiku  — the main window's gates: the orchestrator's Build gate per wave, the Verifier's Final gate. Output returned literally, not interpreted.",
     "sonnet — one of those gates whose log carries dozens of failures to slice without losing any, or a multi-step run in a worktree/env to set up carefully.",
-    "not for a worker's scoped gate: a spec-worker and the Verifier's sensor run their own commands (`cmd > log 2>&1; echo exit=$?`, then grep the log).",
-  ],
-  "spec-worker": [
-    "sonnet — default for every cluster: CRUD, screen, form, query, tests, root config, tooling, CI, docs.",
-    "haiku  — mechanical cluster only: rename, move a file, fix an import, fixture, snapshot — payload must forbid reformatting.",
-    "opus   — narrow: domain entities/transitions, transaction/outbox/ALS, migration, Zod/OpenAPI contract regen, rule governed by an ADR.",
-  ],
-  "spec-verifier": [
-    "sonnet — default for every feature, including tooling/CI/docs/build-path features.",
-    "opus   — only when the spec touches auth, payment, data integrity, or a rule the product's own domain doc marks critical (P0).",
+    "not for a worker's scoped gate: workers and the wave verifier run their own commands (`cmd > log 2>&1; echo exit=$?`, then grep the log).",
   ],
 }
 

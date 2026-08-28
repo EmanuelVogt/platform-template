@@ -34,6 +34,15 @@ in the template repository when a version is cut (AD-016). The `CHANGELOG.md` fo
 keep-a-changelog; every version title that carries code also lists the ids of the advisories
 it carries.
 
+The `-<variant>` segment is **present if and only if `module.json` declares `variant`** — not
+optional prose, but what keeps two implementations of one module from claiming a single ref
+(AD-040). An entry without `variant` takes the bare name; an entry that declares one joins name
+and variant with a hyphen. A published tag cannot be renamed without breaking whoever already
+resolved it, so the bracket is optional in the *pattern* and never in a given entry. Tags are
+annotated and are cut at the commit the kernel released that version at, so an entry tag is
+always reachable from the kernel tag that shipped it. Nothing cuts them for you — the release
+command and its workflow produce `vX.Y.Z` and nothing else — so an entry tag is a manual act.
+
 Entry authoring (code layout, the README/CHANGELOG contract, the lint and pre-tag checks) is
 documented for the template's own contributors, not for a child app.
 

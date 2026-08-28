@@ -24,6 +24,14 @@ product — one never holds a release lease — but the files ship, so it gets a
    (`.../lib/commands/release.mjs`, `.claude/hooks/release-coordination.mjs`): it said the
    lease "limpa sozinho quando a tag existir", which nothing did. It now names the actor, and
    the PreToolUse block message says `--status` is what unfreezes the push it just refused.
+3. **The six `catalog/*` entry tags exist for the first time** (AD-040, `docs/catalog/catalog.md`):
+   AD-016 has called `catalog/<name>[-<variant>]@x.y.z` an entry's version truth since v1 while
+   no such tag had ever been cut. All six are now tagged at `v3.0.0` (`322f327`), the release
+   that shipped those entry versions — `attachment@3.0.0`, `audit@3.0.0`,
+   `identity-single-tenant@3.0.0`, `notification@3.0.0`, `professional@1.0.0`, `tag@3.0.0`.
+   The variant segment is mandatory where `module.json` declares one, so two implementations of
+   a module can never claim one ref. **Template-side only** — no shipped path changes, and a
+   child consumes entry versions through `module.json`, not through these tags.
 
 ### Child migration steps
 

@@ -19,7 +19,8 @@ installs is a version the template actually published, not a string the lockfile
    `.platform-modules.lock` as `entryTag`, which `pnpm platform module list` prints. Three states,
    and they mean different things: the tag; `null` (asked, no such tag); the key absent (could not
    ask, or a lock written before this release). Until now the lock's only provenance was the entry
-   version plus the *kernel's* catalog ref — and that ref can be a branch, which moves.
+   version plus the *kernel's* catalog ref — and that ref can be a branch, which moves. Lock entries
+   written before this release are left alone; the field appears as modules are added or re-added.
 2. **Missing tag fails the install when the catalog came from a released kernel tag**
    (new exit code `ENTRY_TAG_MISSING`, `--allow-untagged` to install anyway): the mirror image of
    the rule the template already applies to itself — every entry version a release ships has a
@@ -35,8 +36,7 @@ installs is a version the template actually published, not a string the lockfile
 
 ### Child migration steps
 
-None — copier update is enough. Lock entries written before this release have no `entryTag` key
-and are left alone; the field appears as modules are added or re-added.
+None — copier update is enough.
 
 ## v3.0.1
 

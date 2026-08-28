@@ -83,7 +83,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        entry: [identity, attachment, audit, notification, tag]
+        entry: [identity, attachment, audit, notification, tag, professional]
         web_stack: [vite, next]
         exclude:
           # `notification` não declara `web` nem `dependsOn`: as duas pernas

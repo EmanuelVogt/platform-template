@@ -43,6 +43,15 @@ annotated and are cut at the commit the kernel released that version at, so an e
 always reachable from the kernel tag that shipped it. Nothing cuts them for you — the release
 command and its workflow produce `vX.Y.Z` and nothing else — so an entry tag is a manual act.
 
+`module add` resolves that tag against the template repository the catalog came from — its origin,
+never the local clone, which is shallow and sees only the tags pointing at the single commit it
+fetched — and records it in `.platform-modules.lock` beside the version, where
+`pnpm platform module list` prints it. When the catalog came from a released kernel tag the tag is
+**required**: every entry version a release ships has one, so a missing tag means the tree being
+copied is not what that release published, and the install fails (`--allow-untagged` installs
+anyway). When the catalog came from a moving ref — a branch, a local checkout — no tag is expected
+yet, so the install proceeds and the lock records the absence instead of a version nothing backs.
+
 Entry authoring (code layout, the README/CHANGELOG contract, the lint and pre-tag checks) is
 documented for the template's own contributors, not for a child app.
 

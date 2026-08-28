@@ -40,8 +40,15 @@ export async function listCommand({ options, cwd = process.cwd() }) {
       headVersion = "desconhecida"
     }
     const label = entry.variant ? `${name}/${entry.variant}` : name
+    // Sem chave = lock anterior à checagem de proveniência; `null` = instalado de
+    // um catálogo que nenhuma tag respalda. Um campo que ninguém lê é o defeito
+    // que a AD-040 nomeia, então ele aparece aqui.
+    const tag =
+      entry.entryTag === undefined
+        ? ""
+        : ` tag=${entry.entryTag ?? "(nenhuma)"}`
     process.stdout.write(
-      `${label}: lock=${entry.version} catalog=${headVersion}\n`
+      `${label}: lock=${entry.version} catalog=${headVersion}${tag}\n`
     )
   }
 

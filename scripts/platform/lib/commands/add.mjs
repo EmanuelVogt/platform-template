@@ -19,6 +19,13 @@ import {
 } from "../catalog-graph.mjs"
 import { resolveCatalog } from "../catalog-source.mjs"
 import { childLayout, webRootFor } from "../child-layout.mjs"
+import {
+  entryTagName,
+  entryTagRemote,
+  entryTagRequired,
+  entryTagSlug,
+  readEntryTags,
+} from "../entry-tags.mjs"
 import { EXIT_CODES } from "../exit-codes.mjs"
 import { readLock } from "../lock.mjs"
 import { readManifest } from "../manifest.mjs"
@@ -50,6 +57,46 @@ export function readTemplateVersion(cwd) {
   const answers = parseYaml(readFileSync(answersPath, "utf8")) ?? {}
   const parsed = parseInstalledVersion(answers._commit)
   return parsed ? parsed.version.replace(/^v/, "") : undefined
+}
+
+// A proveniência que o lock guardava era `version` mais o ref do KERNEL — e esse
+// ref pode ser um branch, que anda. `catalog/<slug>@<version>` é o nome imóvel da
+// árvore copiada. Três estados, e a diferença importa: a tag, `null` (perguntamos
+// e não existe) e a chave ausente (não foi possível perguntar, ou o lock é
+// anterior a esta checagem).
+function resolveEntryTag(entryTags, manifest) {
+  if (entryTags === undefined) return undefined
+  return (entryTags.get(entryTagSlug(manifest)) ?? []).includes(
+    manifest.version
+  )
+    ? entryTagName(manifest)
+    : null
+}
+
+function reportEntryTags({ plans, catalog, remote, entryTags, options }) {
+  if (entryTags === undefined) {
+    process.stderr.write(
+      `não foi possível listar as tags de entrada em ${remote} — instalando sem verificar a proveniência\n`
+    )
+    return EXIT_CODES.OK
+  }
+  const untagged = plans.filter((plan) => plan.entryBase.entryTag === null)
+  if (untagged.length === 0) return EXIT_CODES.OK
+
+  const missing = untagged.map((plan) => entryTagName(plan.manifest)).join(", ")
+  if (entryTagRequired(catalog) && !options["allow-untagged"]) {
+    process.stderr.write(
+      `tag de entrada ausente em ${remote}: ${missing} — o catálogo veio de uma release, ` +
+        "e toda versão de entrada que uma release entrega tem tag (AD-040); " +
+        "instalar assim gravaria no lock uma versão que não corresponde a nenhuma árvore publicada. " +
+        "Use --allow-untagged para instalar mesmo assim\n"
+    )
+    return EXIT_CODES.ENTRY_TAG_MISSING
+  }
+  process.stderr.write(
+    `sem tag de entrada para ${missing} em ${remote} — o catálogo não veio de uma release; o lock registra a ausência\n`
+  )
+  return EXIT_CODES.OK
 }
 
 function registryEntry(manifest) {
@@ -262,6 +309,10 @@ export async function addCommand({
 
   const noWebReact = Boolean(options["no-web-react"])
   const known = new Map([[name, manifest]])
+  // Uma consulta só, com `catalog/*`, reaproveitada por todo o plano: `--with-deps`
+  // instala N entradas e não deve custar N idas à rede.
+  const tagRemote = entryTagRemote(catalog)
+  const entryTags = readEntryTags({ remote: tagRemote, cwd, exec: run })
   const plans = []
   for (const moduleName of order) {
     const isTarget = moduleName === name
@@ -286,6 +337,7 @@ export async function addCommand({
       )
     }
 
+    const entryTag = resolveEntryTag(entryTags, moduleManifest)
     plans.push({
       moduleName,
       manifest: moduleManifest,
@@ -297,10 +349,20 @@ export async function addCommand({
         variant: moduleManifest.variant,
         installedAt: new Date().toISOString(),
         catalogRef: catalog.ref,
+        ...(entryTag === undefined ? {} : { entryTag }),
         files: files.map((file) => file.to),
       },
     })
   }
+
+  const entryTagCode = reportEntryTags({
+    plans,
+    catalog,
+    remote: tagRemote,
+    entryTags,
+    options,
+  })
+  if (entryTagCode !== EXIT_CODES.OK) return entryTagCode
 
   const allConflicts = plans.flatMap((plan) => plan.conflicts)
   if (allConflicts.length > 0 && !options.force) {
@@ -313,6 +375,11 @@ export async function addCommand({
   if (options["dry-run"]) {
     for (const plan of plans) {
       process.stdout.write(`módulo ${plan.moduleName}\n`)
+      if (plan.entryBase.entryTag !== undefined) {
+        process.stdout.write(
+          `  tag de entrada: ${plan.entryBase.entryTag ?? "(nenhuma)"}\n`
+        )
+      }
       for (const file of plan.files)
         process.stdout.write(`  copiar ${file.from} -> ${file.to}\n`)
       for (const migration of plan.manifest.customMigrations ?? []) {

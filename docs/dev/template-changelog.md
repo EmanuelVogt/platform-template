@@ -4,6 +4,40 @@ Version truth = git tag + this entry (AD-006); `package.json` is not bumped on
 release. Each version lists the contract-breaking changes and the steps for the child
 to apply on `copier update`.
 
+## v3.1.0
+
+`v3.0.1` cut the six `catalog/*` entry tags and said of them: *"a child consumes entry versions
+through `module.json`, not through these tags"*. That is what this release reverses. A tag nothing
+reads has nobody to contradict it — `module add` now reads one, so an entry version a child
+installs is a version the template actually published, not a string the lockfile takes on faith.
+
+### Changes
+
+1. **`module add` resolves an entry against its own tag** (`scripts/platform/lib/entry-tags.mjs`
+   — new, `.../lib/commands/add.mjs`, `.../lib/commands/list.mjs`): for every entry in the install
+   plan it resolves `catalog/<name>[-<variant>]@<version>` and records the result in
+   `.platform-modules.lock` as `entryTag`, which `pnpm platform module list` prints. Three states,
+   and they mean different things: the tag; `null` (asked, no such tag); the key absent (could not
+   ask, or a lock written before this release). Until now the lock's only provenance was the entry
+   version plus the *kernel's* catalog ref — and that ref can be a branch, which moves.
+2. **Missing tag fails the install when the catalog came from a released kernel tag**
+   (new exit code `ENTRY_TAG_MISSING`, `--allow-untagged` to install anyway): the mirror image of
+   the rule the template already applies to itself — every entry version a release ships has a
+   tag. A moving ref (branch, no ref, local checkout) expects no tag yet, so it warns and installs
+   with the absence recorded. The lookup goes to the template's **origin**, never to the local
+   catalog clone: that clone is shallow and only carries tags pointing at the one commit it
+   fetched, so it answers correctly only when the entry tag happens to anchor at the release being
+   installed — unreliable is worse than empty.
+3. **`--dry-run` now makes one read-only call** (`git ls-remote`) where it previously made none.
+   Its guarantee — no files written, no `pnpm contract`, no drizzle, no vitest — is unchanged;
+   without the lookup a dry run would stay silent about an `add` that fails on provenance. It also
+   prints the entry tag it resolved.
+
+### Child migration steps
+
+None — copier update is enough. Lock entries written before this release have no `entryTag` key
+and are left alone; the field appears as modules are added or re-added.
+
 ## v3.0.1
 
 `v3.0.0` was the release-coordination system's own first end-to-end run, and it left its lease

@@ -50,6 +50,35 @@ it first; this file covers the rest, for whoever works inside this repository.
     treat `catalog/identity@3.0.0` and `catalog/identity-single-tenant@3.0.0` as different
     entries: a bare-name tag neither serves as a baseline for nor satisfies the coverage of an
     entry that declares a variant.
+  - The vocabulary those rules share with the child (`entryTagSlug`, `entryTagName`,
+    `entryTagsFromLsRemote`, `readEntryTags`) lives in `scripts/platform/lib/entry-tags.mjs`,
+    **not** in `lint.mjs`: `lint.mjs` is in `_exclude` and `commands/add.mjs` is not, so a helper
+    kept there could only ever have one consumer (`excluded-imports.test.mjs`). `lint.mjs`
+    re-exports it, the way it already re-exports `discoverEntries`.
+- **the child-side reader** (`scripts/platform/lib/commands/add.mjs`): `module add` resolves
+  `catalog/<name>[-<variant>]@<version>` for every entry in the install plan and writes the
+  result into `.platform-modules.lock` as `entryTag`, which `pnpm platform module list` prints.
+  The three states are distinct on purpose — the tag, `null` (asked, no such tag), and the key
+  absent (could not ask, or a lock written before this check existed).
+  - **Against the origin, never the clone.** `resolveCatalog` leaves a `--depth 1 --branch <ref>`
+    clone in `$TMPDIR`, and that clone carries the tags pointing at the one commit it fetched —
+    so it answers correctly when the entry tag happens to anchor at the release being installed
+    and wrongly when it anchors at an earlier one, which is the ordinary case (the six real entry
+    tags anchor at `v3.0.0` while the kernel is past it). Unreliable is worse than empty: the
+    lookup goes to the git URL (`expandGitShorthand`) or, for a local catalog, to
+    `dirname(catalog.root)`. One `git ls-remote` with `catalog/*` per `add`, reused by the whole
+    plan, with `GIT_TERMINAL_PROMPT=0` so a private template fails instead of hanging on a
+    password prompt.
+  - **Required iff the catalog came from a released kernel tag** (`vX.Y.Z` as the ref in the
+    catalog ref) — the mirror image of `lintEntryTagCoverage`, which makes the tag mandatory the
+    moment a version ships and free before that. A branch, no ref, or a local checkout installs
+    with a warning and an explicit `null` in the lock; `--allow-untagged` downgrades the failure
+    to that same warning. Keeping local lenient is what leaves `catalog:check` able to render a
+    child and install the entries from the working tree.
+  - It does **not** compare the copied tree against the tag's tree. Drift between an entry's
+    content and its tag is `lintEntryBump`'s job, upstream, where the whole history is available;
+    the child's check is about provenance — that the version its lock is about to claim is one the
+    template actually published.
 - **advisory-required rule** (`scripts/platform/advisory-required.mjs`): if any path is under
   `catalog/<entry>/(api|web|migrations|parity)/**`, a
   `docs/advisories/ADV-*.md` with `module: <entry>` must exist in the same commit, or that

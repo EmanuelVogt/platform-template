@@ -401,8 +401,17 @@ test("module add --dry-run não escreve nada em disco", async () => {
   assert.equal(exitCode, EXIT_CODES.OK)
   assert.equal(existsSync(alphaDestFile(child)), false)
   assert.equal(existsSync(path.join(child, ".platform-modules.lock")), false)
-  assert.equal(calls.length, 0)
+  // A asserção era `calls.length === 0`. O que ela protege é "nenhum efeito
+  // colateral" — nada de `pnpm contract`, drizzle ou vitest —, e nunca foi
+  // "nenhum subprocesso": `resolveCatalog` já clonava por fora do runner. A
+  // resolução da tag de entrada é leitura pura e precisa rodar aqui, senão o
+  // dry-run mente sobre um `add` que falharia por proveniência.
+  assert.deepEqual(
+    calls.map(({ command, args }) => [command, args[0]]),
+    [["git", "ls-remote"]]
+  )
   assert.match(output, /alpha\.module\.ts/)
+  assert.match(output, /tag de entrada: \(nenhuma\)/)
 })
 
 test("module add --rollback remove arquivos, lock e não afeta outros módulos", async () => {

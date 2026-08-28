@@ -13,4 +13,5 @@ export const EXIT_CODES = Object.freeze({
   ADVISORY_DETECT_FAILED: 11,
   PUSH_FAILED: 12,
   RELEASE_LOCKED: 13,
+  ENTRY_TAG_MISSING: 14,
 })

@@ -1,6 +1,13 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs"
 import path from "node:path"
 import semver from "semver"
+import {
+  ENTRY_TAG_PREFIX,
+  entryTagName,
+  entryTagSlug,
+  entryTagsFromLsRemote,
+  readEntryTags,
+} from "./entry-tags.mjs"
 import { AdvisoryParseError, parseAdvisory } from "./frontmatter.mjs"
 import { ManifestValidationError, validateManifest } from "./manifest.mjs"
 import { stableTagsFromLsRemote } from "./template-version.mjs"
@@ -10,6 +17,13 @@ import { stableTagsFromLsRemote } from "./template-version.mjs"
 import { entryChangedWithoutBump } from "../release-preflight.mjs"
 
 export { discoverEntries } from "./entries.mjs"
+export {
+  ENTRY_TAG_PREFIX,
+  entryTagName,
+  entryTagSlug,
+  entryTagsFromLsRemote,
+  readEntryTags,
+}
 
 const WEB_CORE_ALLOWED = ["zod", "@platform/api-client"]
 const WEB_REACT_ALLOWED = [...WEB_CORE_ALLOWED, "@tanstack/react-query"]
@@ -222,52 +236,6 @@ export function resolveBaseline({ repoRoot, exec }) {
   return { tag }
 }
 
-const ENTRY_TAG_PREFIX = "catalog/"
-const ENTRY_TAG_REF_PREFIX = `refs/tags/${ENTRY_TAG_PREFIX}`
-
-// O segmento de variant é obrigatório quando `module.json` declara `variant` e
-// proibido quando não declara (AD-040) — não é estilo: AD-013 define variant
-// como implementação *alternativa do mesmo módulo*, então duas árvores
-// reivindicariam `catalog/<name>@x.y.z`, e uma tag publicada não se renomeia sem
-// quebrar quem já resolveu. O colchete é opcional no padrão, nunca na entrada.
-export function entryTagSlug({ name, variant }) {
-  return variant ? `${name}-${variant}` : name
-}
-
-export function entryTagName({ name, variant, version }) {
-  return `${ENTRY_TAG_PREFIX}${entryTagSlug({ name, variant })}@${version}`
-}
-
-// O `@` é o separador: `catalog/identity@3.0.0` e
-// `catalog/identity-single-tenant@3.0.0` são slugs distintos, e é exatamente
-// essa distinção que a regra do variant existe para preservar.
-export function entryTagsFromLsRemote(output) {
-  const bySlug = new Map()
-  for (const line of output.split("\n")) {
-    const ref = line.split("\t").at(-1)?.trim()
-    if (!ref?.startsWith(ENTRY_TAG_REF_PREFIX)) continue
-    const rest = ref.slice(ENTRY_TAG_REF_PREFIX.length)
-    const at = rest.lastIndexOf("@")
-    if (at === -1) continue
-    const slug = rest.slice(0, at)
-    const version = rest.slice(at + 1)
-    if (!slug || !semver.valid(version)) continue
-    bySlug.set(slug, [...(bySlug.get(slug) ?? []), version])
-  }
-  for (const [slug, versions] of bySlug) bySlug.set(slug, semver.sort(versions))
-  return bySlug
-}
-
-export function readEntryTags({ repoRoot, exec }) {
-  const result = exec(
-    "git",
-    ["ls-remote", "--tags", "--refs", repoRoot, `${ENTRY_TAG_PREFIX}*`],
-    { cwd: repoRoot }
-  )
-  if (result.status !== 0) return undefined
-  return entryTagsFromLsRemote(result.stdout ?? "")
-}
-
 function relPath(repoRoot, entryDir) {
   return path.relative(repoRoot, entryDir).split(path.sep).join("/")
 }
@@ -332,7 +300,7 @@ function entryBaseline({ manifest, entryTags, kernelTag }) {
 export function lintEntryBump({ repoRoot, exec, entries }) {
   const baseline = resolveBaseline({ repoRoot, exec })
   if (baseline.unavailable) return [`lintEntryBump: ${baseline.unavailable}`]
-  const entryTags = readEntryTags({ repoRoot, exec })
+  const entryTags = readEntryTags({ remote: repoRoot, cwd: repoRoot, exec })
   if (entryTags === undefined) {
     return [
       `lintEntryBump: "git ls-remote" falhou ao listar as tags "${ENTRY_TAG_PREFIX}*" em ${repoRoot}`,
@@ -379,7 +347,7 @@ export function lintEntryTagCoverage({ repoRoot, exec, entries }) {
   // O silêncio aqui é deliberado e não recria o buraco do CAT-02: `lintEntryBump`
   // roda antes, com a mesma linha de base, e já nomeia a falta em voz alta.
   if (baseline.unavailable) return []
-  const entryTags = readEntryTags({ repoRoot, exec })
+  const entryTags = readEntryTags({ remote: repoRoot, cwd: repoRoot, exec })
   if (entryTags === undefined) return []
   const errors = []
   for (const entryDir of entries) {

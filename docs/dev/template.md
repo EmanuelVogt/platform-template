@@ -77,7 +77,7 @@ day to day.
 
 | Command                                                                             | What it does                                                                                                                             |
 | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `module add <entry> [--variant v] [--with-deps] [--dry-run] [--force] [--rollback]` | copies the entry into the product, generates the migrations, runs `pnpm contract` and the entry's tests; writes `.platform-modules.lock` |
+| `module add <entry> [--variant v] [--with-deps] [--dry-run] [--force] [--rollback] [--allow-untagged]` | copies the entry into the product, generates the migrations, runs `pnpm contract` and the entry's tests; writes `.platform-modules.lock` |
 | `module adopt <entry> [--variant v] [--version x.y.z]`                              | records in the lock an entry the product already had before the catalog existed (migration from v0.2) — without copying any file         |
 | `module list`                                                                       | compares the lock version with the catalog HEAD                                                                                          |
 | `module update <entry>`                                                             | copies nothing — prints the instructions of the `port-module-update` skill (porting is an agent's job, not a script's)                   |

@@ -26,6 +26,11 @@ describe("storage.config", () => {
     expect(() => parseStorageConfig(rest)).toThrow()
   })
 
+  it("rejeita STORAGE_REGION faltando", () => {
+    const { STORAGE_REGION: _STORAGE_REGION, ...rest } = valid
+    expect(() => parseStorageConfig(rest)).toThrow()
+  })
+
   it("aplica os defaults de timeout/sockets quando ausentes", () => {
     const cfg = parseStorageConfig(valid)
     expect(cfg.STORAGE_REQUEST_TIMEOUT_MS).toBe(30_000)

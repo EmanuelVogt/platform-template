@@ -1,9 +1,10 @@
 import assert from "node:assert/strict"
-import { existsSync, readFileSync, readdirSync } from "node:fs"
+import { existsSync, mkdtempSync, readFileSync, readdirSync } from "node:fs"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { test } from "node:test"
 import { fileURLToPath } from "node:url"
-import { stage } from "../catalog-stage.mjs"
+import { STAGE_DIR, stage } from "../catalog-stage.mjs"
 import { listEntries } from "../lib/catalog-graph.mjs"
 
 const TESTS_DIR = path.dirname(fileURLToPath(import.meta.url))
@@ -60,13 +61,23 @@ test("o tier de catalog/ existe: vitest.catalog.mts e apps/api/vitest.catalog.co
   assert.equal(existsSync(API_CATALOG_CONFIG_PATH), true)
 })
 
+// `stageRoot` isolado por teste: node --test roda arquivos de teste em
+// paralelo, e catalog-eslint.mjs também estagia para o `apps/api/.catalog-stage`
+// real — sem isolamento os dois processos disputam o mesmo diretório físico
+// (EEXIST/ENOTEMPTY intermitentes). O basename de STAGE_DIR é preservado
+// dentro do tmpdir para que `resolveGlobstarSuffix` continue resolvendo o
+// padrão ".catalog-stage/..." do config real, sem reescrever a asserção.
 test("o include de vitest.catalog.config.mts resolve, contra o stage real, a >= 1 arquivo", () => {
   const entries = listEntries(CATALOG_ROOT)
-  stage({ repoRoot: ROOT_DIR, entries })
-  const apiRoot = path.join(ROOT_DIR, "apps/api")
+  const stageParent = mkdtempSync(path.join(tmpdir(), "catalog-test-gate-"))
+  stage({
+    repoRoot: ROOT_DIR,
+    entries,
+    stageRoot: path.join(stageParent, path.basename(STAGE_DIR)),
+  })
   const patterns = readIncludePatterns(API_CATALOG_CONFIG_PATH)
   const matches = patterns.flatMap((pattern) =>
-    resolveGlobstarSuffix(apiRoot, pattern)
+    resolveGlobstarSuffix(stageParent, pattern)
   )
   assert.ok(
     matches.length > 0,
@@ -83,11 +94,9 @@ test("o include de vitest.catalog.config.mts resolve, contra o stage real, a >= 
 // engoliu specs que não são de contrato.
 test("o exclude de contract.parity.spec.ts em vitest.catalog.config.mts casa >= 1 arquivo staged, sem apagar os demais", () => {
   const entries = listEntries(CATALOG_ROOT)
-  stage({ repoRoot: ROOT_DIR, entries })
-  const stagedModulesDir = path.join(
-    ROOT_DIR,
-    "apps/api/.catalog-stage/src/modules"
-  )
+  const stageRoot = mkdtempSync(path.join(tmpdir(), "catalog-test-gate-"))
+  const plan = stage({ repoRoot: ROOT_DIR, entries, stageRoot })
+  const stagedModulesDir = path.join(plan.stageRoot, "src/modules")
   const patterns = readExcludePatterns(API_CATALOG_CONFIG_PATH)
   assert.deepEqual(
     patterns,

@@ -8,8 +8,15 @@ import { isMain } from "./lib/is-main.mjs"
 
 export const STAGE_DIR = "apps/api/.catalog-stage"
 
-export function stagePlan({ repoRoot, entries }) {
-  const stageRoot = path.join(repoRoot, STAGE_DIR)
+// `stageRoot` é opcional: omitido, o destino é o de sempre — byte-compatível
+// com o CLI (`catalog:typecheck`/`catalog:test`). Existe para testes rodados
+// em paralelo por `node --test`, que senão disputariam o mesmo
+// `apps/api/.catalog-stage` físico (EEXIST/ENOTEMPTY intermitentes).
+export function stagePlan({
+  repoRoot,
+  entries,
+  stageRoot = path.join(repoRoot, STAGE_DIR),
+}) {
   return {
     stageRoot,
     links: KERNEL_STAGE_PATHS.map((rel) => ({
@@ -55,8 +62,8 @@ function removeStageTree(plan) {
   })
 }
 
-export function stage({ repoRoot, entries }) {
-  const plan = stagePlan({ repoRoot, entries })
+export function stage({ repoRoot, entries, stageRoot }) {
+  const plan = stagePlan({ repoRoot, entries, stageRoot })
   removeStageTree(plan)
   mkdirSync(path.join(plan.stageRoot, "src/modules"), { recursive: true })
   for (const link of plan.links) {

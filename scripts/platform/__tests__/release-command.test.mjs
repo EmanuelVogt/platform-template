@@ -26,6 +26,10 @@ const CHANGELOG = [
   "",
 ].join("\n")
 
+const HEAD_SHA = "aaaaaaa000000000000000000000000000000000"
+const ORIGIN_SHA = "bbbbbbb000000000000000000000000000000000"
+const HOLDER = Object.freeze({ id: "sess-local", kind: "session" })
+
 // `catalog/` é o que distingue o template de um produto gerado: sem ele o
 // comando se recusa a rodar, então a fixture do caminho feliz precisa tê-lo.
 function buildFixtureDir({ template = true } = {}) {
@@ -41,7 +45,8 @@ function cleanup(dir) {
 }
 
 // Roteia por sub-comando git; cada teste passa só os campos que usa — os
-// demais viram respostas neutras (branch main, árvore limpa, sem tag prévia).
+// demais viram respostas neutras (branch main, árvore limpa, sem tag prévia,
+// origin presente e já no clone local, nada de marcador entre origin e HEAD).
 function fakeExec({
   branch = "main",
   statusOutput = "",
@@ -50,16 +55,39 @@ function fakeExec({
   diffStatus = () => 0,
   showAt = () => undefined,
   pushStatus = 0,
+  head = HEAD_SHA,
+  originUrl = "git@github.com:acme/platform-template.git",
+  catFileStatus = 0,
+  fetchStatus = 0,
+  aheadSubjects = [],
+  originSubject = "chore(deps): rotina",
+  logStatus = 0,
 } = {}) {
   const calls = []
-  const exec = (command, args) => {
-    calls.push({ command, args })
+  const exec = (command, args, options = {}) => {
+    calls.push({ command, args, options })
     assert.equal(command, "git")
     const [sub] = args
-    if (sub === "rev-parse") return { status: 0, stdout: `${branch}\n` }
+    if (sub === "rev-parse") {
+      if (args[1] === "HEAD") return { status: 0, stdout: `${head}\n` }
+      return { status: 0, stdout: `${branch}\n` }
+    }
     if (sub === "status") return { status: 0, stdout: statusOutput }
     if (sub === "tag") return { status: 0, stdout: tagList }
     if (sub === "ls-remote") return { status: 0, stdout: lsRemote }
+    if (sub === "remote") {
+      return originUrl
+        ? { status: 0, stdout: `${originUrl}\n` }
+        : { status: 1, stdout: "" }
+    }
+    if (sub === "cat-file") return { status: catFileStatus, stdout: "" }
+    if (sub === "fetch") return { status: fetchStatus, stdout: "" }
+    if (sub === "log") {
+      if (args[1] === "-1")
+        return { status: logStatus, stdout: `${originSubject}\n` }
+      return { status: logStatus, stdout: `${aheadSubjects.join("\n")}\n` }
+    }
+    if (sub === "reset") return { status: 0, stdout: "" }
     if (sub === "diff") {
       const dir = args.at(-1)
       return { status: diffStatus(dir), stdout: "" }
@@ -79,6 +107,54 @@ function fakeExec({
   return exec
 }
 
+// Dublê do módulo de lease: registra cada chamada e devolve o que o cenário
+// pedir. O módulo real toca `.git/` e a rede, e nenhum teste aqui quer isso.
+function fakeLease({
+  holder = HOLDER,
+  acquire = { ok: true, lease: { version: "3.0.0", stage: "draft" } },
+  lease = undefined,
+  corruptRead = false,
+  tagExists = false,
+  originSha = ORIGIN_SHA,
+  ancestor = true,
+  runs = { available: true, runs: [] },
+  stableTags = ["v2.0.0"],
+  matches = true,
+  classify = "active",
+} = {}) {
+  const calls = []
+  const record = (name, args) => calls.push({ name, args })
+  const api = {
+    currentHolderId: () => holder,
+    acquireLease: (args) => {
+      record("acquireLease", args)
+      return typeof acquire === "function" ? acquire(args) : acquire
+    },
+    readLease: () => (corruptRead ? { corrupt: true } : { lease }),
+    updateLease: (args) => {
+      record("updateLease", args)
+      return { ok: true, lease: { ...lease, ...args.patch } }
+    },
+    releaseLease: (args) => {
+      record("releaseLease", args)
+      return { ok: true, released: true }
+    },
+    holderMatches: () => matches,
+    classifyLease: () => classify,
+    originTagExists: ({ version }) => {
+      record("originTagExists", { version })
+      return typeof tagExists === "function" ? tagExists(version) : tagExists
+    },
+    originMainSha: () => originSha,
+    isAncestorOfHead: () => ancestor,
+    originStableTags: () => stableTags,
+    probeReleaseRuns: () => runs,
+  }
+  api.calls = calls
+  api.named = (name) => calls.filter((call) => call.name === name)
+  return api
+}
+
 function stubPreflight(returnCode, { log: preflightLog } = {}) {
   const calls = []
   const fn = async ({ version, log }) => {
@@ -90,6 +166,10 @@ function stubPreflight(returnCode, { log: preflightLog } = {}) {
   return fn
 }
 
+function hasCommit(exec) {
+  return exec.calls.some((call) => call.args[0] === "commit")
+}
+
 test("MARK-10: sem argumento, a versão vem da última seção do changelog", async () => {
   const dir = buildFixtureDir()
   try {
@@ -99,6 +179,7 @@ test("MARK-10: sem argumento, a versão vem da última seção do changelog", as
       cwd: dir,
       exec,
       runPreflight: preflight,
+      lease: fakeLease(),
       log: () => {},
     })
     assert.equal(exitCode, EXIT_CODES.OK)
@@ -120,6 +201,7 @@ test("MARK-10: um argumento explícito sobrescreve a versão do changelog", asyn
       cwd: dir,
       exec,
       runPreflight: preflight,
+      lease: fakeLease(),
       log: () => {},
     })
     assert.equal(exitCode, EXIT_CODES.OK)
@@ -136,20 +218,20 @@ test("MARK-13: recusa quando HEAD não está em main, e nenhum commit é criado"
   try {
     const exec = fakeExec({ branch: "feature/x" })
     const preflight = stubPreflight(EXIT_CODES.OK)
+    const lease = fakeLease()
     const logs = []
     const exitCode = await planRelease({
       cwd: dir,
       exec,
       runPreflight: preflight,
+      lease,
       log: (line) => logs.push(line),
     })
     assert.equal(exitCode, EXIT_CODES.USAGE_ERROR)
     assert.match(logs.join("\n"), /não está em "main"/)
     assert.equal(preflight.calls.length, 0)
-    assert.equal(
-      exec.calls.some((c) => c.args[0] === "commit"),
-      false
-    )
+    assert.equal(hasCommit(exec), false)
+    assert.equal(lease.calls.length, 0)
   } finally {
     cleanup(dir)
   }
@@ -160,20 +242,20 @@ test("MARK-13: recusa quando a árvore tem alterações não commitadas, e nenhu
   try {
     const exec = fakeExec({ statusOutput: " M some-file.txt\n" })
     const preflight = stubPreflight(EXIT_CODES.OK)
+    const lease = fakeLease()
     const logs = []
     const exitCode = await planRelease({
       cwd: dir,
       exec,
       runPreflight: preflight,
+      lease,
       log: (line) => logs.push(line),
     })
     assert.equal(exitCode, EXIT_CODES.USAGE_ERROR)
     assert.match(logs.join("\n"), /alterações não commitadas/)
     assert.equal(preflight.calls.length, 0)
-    assert.equal(
-      exec.calls.some((c) => c.args[0] === "commit"),
-      false
-    )
+    assert.equal(hasCommit(exec), false)
+    assert.equal(lease.calls.length, 0)
   } finally {
     cleanup(dir)
   }
@@ -183,6 +265,7 @@ test("MARK-11: repassa o exit code exato do preflight e a mensagem original sem 
   const dir = buildFixtureDir()
   try {
     const exec = fakeExec()
+    const lease = fakeLease()
     const logs = []
     const preflight = stubPreflight(EXIT_CODES.MIGRATION_FAILURE, {
       log: (log) =>
@@ -192,16 +275,16 @@ test("MARK-11: repassa o exit code exato do preflight e a mensagem original sem 
       cwd: dir,
       exec,
       runPreflight: preflight,
+      lease,
       log: (line) => logs.push(line),
     })
     assert.equal(exitCode, EXIT_CODES.MIGRATION_FAILURE)
     assert.deepEqual(logs, [
       "release-preflight — passo 1 não é executável por máquina",
     ])
-    assert.equal(
-      exec.calls.some((c) => c.args[0] === "commit"),
-      false
-    )
+    assert.equal(hasCommit(exec), false)
+    // O lease volta: um release que não aconteceu não deixa freeze de pé.
+    assert.equal(lease.named("releaseLease").length, 1)
   } finally {
     cleanup(dir)
   }
@@ -212,12 +295,14 @@ test("MARK-12: no sucesso, sem --push, cria exatamente um commit vazio, sem tag 
   try {
     const exec = fakeExec()
     const preflight = stubPreflight(EXIT_CODES.OK)
+    const lease = fakeLease()
     const logs = []
     const exitCode = await planRelease({
       version: "3.0.0",
       cwd: dir,
       exec,
       runPreflight: preflight,
+      lease,
       log: (line) => logs.push(line),
     })
     assert.equal(exitCode, EXIT_CODES.OK)
@@ -234,10 +319,12 @@ test("MARK-12: no sucesso, sem --push, cria exatamente um commit vazio, sem tag 
       false
     )
     assert.equal(
-      exec.calls.some((c) => c.args.join(" ").includes("push")),
+      exec.calls.some((c) => c.args[0] === "push"),
       false
     )
-    assert.deepEqual(logs, ["git push origin main"])
+    assert.equal(logs[0], "git push origin main")
+    assert.match(logs.join("\n"), /marker-local/)
+    assert.match(logs.join("\n"), /--abort/)
   } finally {
     cleanup(dir)
   }
@@ -248,6 +335,7 @@ test("child-safety: num produto gerado (sem catalog/) recusa antes de tudo, mesm
   try {
     const exec = fakeExec()
     const preflight = stubPreflight(EXIT_CODES.OK)
+    const lease = fakeLease()
     const logs = []
     const exitCode = await planRelease({
       version: "3.0.0",
@@ -255,11 +343,13 @@ test("child-safety: num produto gerado (sem catalog/) recusa antes de tudo, mesm
       cwd: dir,
       exec,
       runPreflight: preflight,
+      lease,
       log: (line) => logs.push(line),
     })
     assert.equal(exitCode, EXIT_CODES.USAGE_ERROR)
     assert.match(logs.join("\n"), /exclusivo do template/)
     assert.equal(preflight.calls.length, 0)
+    assert.equal(lease.calls.length, 0)
     for (const sub of ["commit", "push", "tag"]) {
       assert.equal(
         exec.calls.some((c) => c.args[0] === sub),
@@ -282,6 +372,7 @@ test("MARK-12b: com --push, empurra origin main uma vez, depois do commit, e nun
       cwd: dir,
       exec,
       runPreflight: preflight,
+      lease: fakeLease(),
       log: () => {},
     })
     assert.equal(exitCode, EXIT_CODES.OK)
@@ -312,6 +403,7 @@ test("MARK-12b: push que falha devolve PUSH_FAILED e não se anuncia como sucess
       cwd: dir,
       exec,
       runPreflight: preflight,
+      lease: fakeLease(),
       log: (line) => logs.push(line),
     })
     assert.equal(exitCode, EXIT_CODES.PUSH_FAILED)
@@ -332,6 +424,7 @@ test("MARK-13: --push não contorna as recusas — árvore suja não empurra nad
       cwd: dir,
       exec,
       runPreflight: preflight,
+      lease: fakeLease(),
       log: () => {},
     })
     assert.equal(exitCode, EXIT_CODES.USAGE_ERROR)
@@ -350,12 +443,14 @@ test("Independent Test: changelog desatualizado (versão já tagueada) — exit 
     // Preflight real (não substituído): a última versão do changelog (3.0.0) já
     // tem tag, então nada há para liberar.
     const exec = fakeExec({ tagList: "v3.0.0\n" })
-    const exitCode = await planRelease({ cwd: dir, exec, log: () => {} })
+    const exitCode = await planRelease({
+      cwd: dir,
+      exec,
+      lease: fakeLease(),
+      log: () => {},
+    })
     assert.notEqual(exitCode, EXIT_CODES.OK)
-    assert.equal(
-      exec.calls.some((c) => c.args[0] === "commit"),
-      false
-    )
+    assert.equal(hasCommit(exec), false)
   } finally {
     cleanup(dir)
   }
@@ -365,7 +460,12 @@ test("caminho feliz com o preflight real: changelog limpo, sem tag prévia, cria
   const dir = buildFixtureDir()
   try {
     const exec = fakeExec()
-    const exitCode = await planRelease({ cwd: dir, exec, log: () => {} })
+    const exitCode = await planRelease({
+      cwd: dir,
+      exec,
+      lease: fakeLease(),
+      log: () => {},
+    })
     assert.equal(exitCode, EXIT_CODES.OK)
     assert.equal(exec.calls.filter((c) => c.args[0] === "commit").length, 1)
   } finally {
@@ -377,28 +477,26 @@ test("garantia de ordenação: em todo caminho de recusa, nenhuma chamada de git
   const dir = buildFixtureDir()
   try {
     const scenarios = [
+      { exec: fakeExec({ branch: "other" }), lease: fakeLease() },
+      { exec: fakeExec({ statusOutput: "M x\n" }), lease: fakeLease() },
       {
-        exec: fakeExec({ branch: "other" }),
-        preflight: stubPreflight(EXIT_CODES.OK),
+        exec: fakeExec(),
+        lease: fakeLease({ acquire: { ok: false, corrupt: true } }),
       },
-      {
-        exec: fakeExec({ statusOutput: "M x\n" }),
-        preflight: stubPreflight(EXIT_CODES.OK),
-      },
-      { exec: fakeExec(), preflight: stubPreflight(EXIT_CODES.USAGE_ERROR) },
+      { exec: fakeExec(), lease: fakeLease({ tagExists: null }) },
+      { exec: fakeExec(), lease: fakeLease({ originSha: null }) },
+      { exec: fakeExec(), lease: fakeLease({ ancestor: false }) },
     ]
-    for (const { exec, preflight } of scenarios) {
+    for (const { exec, lease } of scenarios) {
       const exitCode = await planRelease({
         cwd: dir,
         exec,
-        runPreflight: preflight,
+        runPreflight: stubPreflight(EXIT_CODES.OK),
+        lease,
         log: () => {},
       })
       assert.notEqual(exitCode, EXIT_CODES.OK)
-      assert.equal(
-        exec.calls.some((c) => c.args[0] === "commit"),
-        false
-      )
+      assert.equal(hasCommit(exec), false)
     }
   } finally {
     cleanup(dir)
@@ -416,12 +514,450 @@ test("releaseCommand delega para planRelease, repassando version/exec/runPreflig
       cwd: dir,
       exec,
       runPreflight: preflight,
+      lease: fakeLease(),
       log: (line) => logs.push(line),
     })
     assert.equal(exitCode, EXIT_CODES.OK)
     assert.equal(preflight.calls[0].version, "9.0.0")
     const commitCall = exec.calls.find((c) => c.args[0] === "commit")
     assert.match(commitCall.args.join(" "), /chore\(release\): v9\.0\.0/)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+async function planWith({ dir, exec, lease, ...rest }) {
+  const logs = []
+  const exitCode = await planRelease({
+    version: "3.0.0",
+    cwd: dir,
+    exec,
+    runPreflight: stubPreflight(EXIT_CODES.OK),
+    lease,
+    log: (line) => logs.push(line),
+    ...rest,
+  })
+  return { exitCode, logs: logs.join("\n") }
+}
+
+test("lease de outra sessão: recusa em RELEASE_LOCKED, sem commit, e não devolve o lease alheio", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec()
+    const lease = fakeLease({
+      matches: false,
+      acquire: {
+        ok: false,
+        lease: {
+          version: "3.0.0",
+          stage: "marker-local",
+          holder: { id: "sess-outra", kind: "session" },
+          updatedAt: Date.now(),
+          markerSha: "cccccc0",
+        },
+      },
+    })
+    const { exitCode, logs } = await planWith({ dir, exec, lease })
+    assert.equal(exitCode, EXIT_CODES.RELEASE_LOCKED)
+    assert.equal(hasCommit(exec), false)
+    assert.equal(lease.named("releaseLease").length, 0)
+    assert.match(logs, /sess-outra/)
+    assert.match(logs, /outra sessão/)
+    assert.match(logs, /marker-local/)
+    assert.match(logs, /--status/)
+    assert.match(logs, /--abort/)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("lease corrompido: recusa em RELEASE_LOCKED e manda inspecionar antes de descartar", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec()
+    const lease = fakeLease({ acquire: { ok: false, corrupt: true } })
+    const { exitCode, logs } = await planWith({ dir, exec, lease })
+    assert.equal(exitCode, EXIT_CODES.RELEASE_LOCKED)
+    assert.equal(hasCommit(exec), false)
+    assert.match(logs, /ilegível/)
+    assert.match(logs, /--abort --force/)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("guarda a: a tag já existe na origin — ALREADY_INSTALLED e o lease é devolvido", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec()
+    const lease = fakeLease({ tagExists: true })
+    const { exitCode, logs } = await planWith({ dir, exec, lease })
+    assert.equal(exitCode, EXIT_CODES.ALREADY_INSTALLED)
+    assert.equal(hasCommit(exec), false)
+    assert.equal(lease.named("releaseLease").length, 1)
+    assert.match(logs, /tag v3\.0\.0 já existe na origin/)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("guarda a: sonda de tags cega (null) falha fechado em RELEASE_LOCKED", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec()
+    const lease = fakeLease({ tagExists: null })
+    const { exitCode, logs } = await planWith({ dir, exec, lease })
+    assert.equal(exitCode, EXIT_CODES.RELEASE_LOCKED)
+    assert.equal(hasCommit(exec), false)
+    assert.equal(lease.named("releaseLease").length, 1)
+    assert.match(logs, /ls-remote --tags/)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("guarda b: head de origin/main indisponível (null) falha fechado e devolve o lease", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec()
+    const lease = fakeLease({ originSha: null })
+    const { exitCode, logs } = await planWith({ dir, exec, lease })
+    assert.equal(exitCode, EXIT_CODES.RELEASE_LOCKED)
+    assert.equal(hasCommit(exec), false)
+    assert.equal(lease.named("releaseLease").length, 1)
+    assert.match(logs, /head de origin\/main/)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("guarda b: sha da origin fora do clone local e fetch que falha manda rodar git fetch", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec({ catFileStatus: 1, fetchStatus: 1 })
+    const lease = fakeLease()
+    const { exitCode, logs } = await planWith({ dir, exec, lease })
+    assert.equal(exitCode, EXIT_CODES.RELEASE_LOCKED)
+    assert.equal(hasCommit(exec), false)
+    assert.match(logs, /git fetch origin main/)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("guarda b: marcador órfão entre origin/main e HEAD recusa e manda abortar", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec({
+      aheadSubjects: ["docs: nota", "chore(release): v3.0.0"],
+    })
+    const lease = fakeLease()
+    const { exitCode, logs } = await planWith({ dir, exec, lease })
+    assert.equal(exitCode, EXIT_CODES.RELEASE_LOCKED)
+    assert.equal(hasCommit(exec), false)
+    assert.equal(lease.named("releaseLease").length, 1)
+    assert.match(logs, /marcador local órfão/)
+    assert.match(logs, /--abort/)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("guarda c: head da origin é um marcador ainda sem tag — release em voo, recusa", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec({ originSubject: "chore(release): v2.9.0" })
+    const lease = fakeLease({ tagExists: (version) => version === "9.9.9" })
+    const { exitCode, logs } = await planWith({ dir, exec, lease })
+    assert.equal(exitCode, EXIT_CODES.RELEASE_LOCKED)
+    assert.equal(hasCommit(exec), false)
+    assert.equal(lease.named("releaseLease").length, 1)
+    assert.match(logs, /chore\(release\): v2\.9\.0/)
+    assert.match(logs, /--status/)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("guarda c: head da origin é um marcador já tagueado — segue e corta o release", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec({ originSubject: "chore(release): v2.9.0" })
+    const lease = fakeLease({ tagExists: (version) => version === "2.9.0" })
+    const { exitCode } = await planWith({ dir, exec, lease })
+    assert.equal(exitCode, EXIT_CODES.OK)
+    assert.equal(hasCommit(exec), true)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("guarda d: origin/main não é ancestral de HEAD — manda dar git pull", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec()
+    const lease = fakeLease({ ancestor: false })
+    const { exitCode, logs } = await planWith({ dir, exec, lease })
+    assert.equal(exitCode, EXIT_CODES.RELEASE_LOCKED)
+    assert.equal(hasCommit(exec), false)
+    assert.equal(lease.named("releaseLease").length, 1)
+    assert.match(logs, /git pull/)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("guarda d: sonda de ancestralidade cega (null) falha fechado", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec()
+    const lease = fakeLease({ ancestor: null })
+    const { exitCode } = await planWith({ dir, exec, lease })
+    assert.equal(exitCode, EXIT_CODES.RELEASE_LOCKED)
+    assert.equal(hasCommit(exec), false)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("guarda e: run de release em andamento recusa citando a url", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec()
+    const lease = fakeLease({
+      runs: {
+        available: true,
+        runs: [{ databaseId: 7, url: "https://gh/run/7" }],
+      },
+    })
+    const { exitCode, logs } = await planWith({ dir, exec, lease })
+    assert.equal(exitCode, EXIT_CODES.RELEASE_LOCKED)
+    assert.equal(hasCommit(exec), false)
+    assert.equal(lease.named("releaseLease").length, 1)
+    assert.match(logs, /https:\/\/gh\/run\/7/)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("guarda e: gh indisponível avisa uma vez e segue o release", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec()
+    const lease = fakeLease({ runs: { available: false } })
+    const { exitCode, logs } = await planWith({ dir, exec, lease })
+    assert.equal(exitCode, EXIT_CODES.OK)
+    assert.equal(hasCommit(exec), true)
+    assert.equal(
+      logs.split("\n").filter((line) => line.includes("sonda cross-machine"))
+        .length,
+      1
+    )
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("sem --push o lease fica em marker-local, com o sha do marcador", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec()
+    const lease = fakeLease()
+    const { exitCode } = await planWith({ dir, exec, lease })
+    assert.equal(exitCode, EXIT_CODES.OK)
+    const updates = lease.named("updateLease")
+    assert.equal(updates.length, 1)
+    assert.deepEqual(updates[0].args.patch, {
+      stage: "marker-local",
+      markerSha: HEAD_SHA,
+    })
+    assert.equal(lease.named("releaseLease").length, 0)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("--push: a tag apareceu entre o preflight e o push — desfaz o marcador, devolve o lease e sai em ALREADY_INSTALLED", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec()
+    let seen = 0
+    // Falsa na guarda inicial, verdadeira na reconferência antes do push.
+    const lease = fakeLease({
+      tagExists: () => {
+        seen += 1
+        return seen > 1
+      },
+    })
+    const { exitCode, logs } = await planWith({
+      dir,
+      exec,
+      lease,
+      push: true,
+    })
+    assert.equal(exitCode, EXIT_CODES.ALREADY_INSTALLED)
+    const resets = exec.calls.filter((c) => c.args[0] === "reset")
+    assert.equal(resets.length, 1)
+    assert.deepEqual(resets[0].args, ["reset", "--hard", "HEAD~1"])
+    assert.equal(
+      exec.calls.some((c) => c.args[0] === "push"),
+      false
+    )
+    assert.equal(lease.named("releaseLease").length, 1)
+    assert.match(logs, /apareceu na origin/)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("--push com sucesso: lease vai a marker-pushed e o push carrega PLATFORM_RELEASE_HOLDER", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec()
+    const lease = fakeLease()
+    const { exitCode, logs } = await planWith({
+      dir,
+      exec,
+      lease,
+      push: true,
+      env: { PATH: "/usr/bin" },
+    })
+    assert.equal(exitCode, EXIT_CODES.OK)
+    const pushCall = exec.calls.find((c) => c.args[0] === "push")
+    assert.equal(pushCall.options.env.PLATFORM_RELEASE_HOLDER, HOLDER.id)
+    assert.equal(pushCall.options.env.PATH, "/usr/bin")
+    const stages = lease.named("updateLease").map((c) => c.args.patch.stage)
+    assert.deepEqual(stages, ["marker-local", "marker-pushed"])
+    assert.equal(lease.named("releaseLease").length, 0)
+    assert.match(logs, /limpa sozinho quando a tag existir/)
+    assert.match(logs, /--status/)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("--push que falha: o lease fica em marker-local e a receita prescreve --abort antes do git pull", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec({ pushStatus: 1 })
+    const lease = fakeLease()
+    const { exitCode, logs } = await planWith({
+      dir,
+      exec,
+      lease,
+      push: true,
+    })
+    assert.equal(exitCode, EXIT_CODES.PUSH_FAILED)
+    const stages = lease.named("updateLease").map((c) => c.args.patch.stage)
+    assert.deepEqual(stages, ["marker-local"])
+    assert.equal(lease.named("releaseLease").length, 0)
+    assert.match(logs, /pnpm platform release --abort/)
+    assert.match(logs, /git pull`, e refaça o release/)
+    assert.match(logs, /NUNCA rode `git pull --rebase`/)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("retomada: lease próprio em marker-local com HEAD no marcador não cria um segundo marcador", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec()
+    const lease = fakeLease({
+      acquire: {
+        ok: false,
+        lease: {
+          version: "3.0.0",
+          stage: "marker-local",
+          holder: HOLDER,
+          markerSha: HEAD_SHA,
+          updatedAt: Date.now(),
+        },
+      },
+    })
+    const { exitCode, logs } = await planWith({
+      dir,
+      exec,
+      lease,
+      push: true,
+    })
+    assert.equal(exitCode, EXIT_CODES.OK)
+    assert.equal(hasCommit(exec), false)
+    assert.equal(exec.calls.filter((c) => c.args[0] === "push").length, 1)
+    assert.deepEqual(
+      lease.named("updateLease").map((c) => c.args.patch.stage),
+      ["marker-pushed"]
+    )
+    assert.match(logs, /retomando o lease v3\.0\.0/)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("retomada impossível: HEAD passou do marcador — recusa e manda abortar", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec({ head: "ddddddd000000000000000000000000000000000" })
+    const lease = fakeLease({
+      acquire: {
+        ok: false,
+        lease: {
+          version: "3.0.0",
+          stage: "marker-local",
+          holder: HOLDER,
+          markerSha: HEAD_SHA,
+          updatedAt: Date.now(),
+        },
+      },
+    })
+    const { exitCode, logs } = await planWith({ dir, exec, lease, push: true })
+    assert.equal(exitCode, EXIT_CODES.RELEASE_LOCKED)
+    assert.equal(hasCommit(exec), false)
+    assert.equal(
+      exec.calls.some((c) => c.args[0] === "push"),
+      false
+    )
+    assert.match(logs, /não é mais o topo/)
+    assert.match(logs, /--abort/)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("lease próprio em draft não é retomável: recusa apontando esta sessão", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec()
+    const lease = fakeLease({
+      acquire: {
+        ok: false,
+        lease: {
+          version: "3.0.0",
+          stage: "draft",
+          holder: HOLDER,
+          updatedAt: Date.now(),
+        },
+      },
+    })
+    const { exitCode, logs } = await planWith({ dir, exec, lease })
+    assert.equal(exitCode, EXIT_CODES.RELEASE_LOCKED)
+    assert.equal(hasCommit(exec), false)
+    assert.match(logs, /esta sessão/)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("sem remote origin legível: avisa, não toma lease e mantém o fluxo antigo", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec({ originUrl: "" })
+    const lease = fakeLease()
+    const { exitCode, logs } = await planWith({ dir, exec, lease })
+    assert.equal(exitCode, EXIT_CODES.OK)
+    assert.equal(hasCommit(exec), true)
+    assert.equal(lease.calls.length, 0)
+    assert.match(logs, /sem remote `origin` legível/)
   } finally {
     cleanup(dir)
   }
@@ -452,6 +988,7 @@ test("`release --help` imprime o uso e não chega a tocar no git", async () => {
         cwd: dir,
         exec,
         runPreflight: preflight,
+        lease: fakeLease(),
         log: () => {},
       })
     )
@@ -474,6 +1011,7 @@ test("uma flag desconhecida sai em USAGE_ERROR sem criar marcador", async () => 
         cwd: dir,
         exec,
         runPreflight: preflight,
+        lease: fakeLease(),
         log: () => {},
       })
     )
@@ -495,6 +1033,7 @@ test("a guarda não estreita `--push`: a versão colada na flag continua valendo
       cwd: dir,
       exec,
       runPreflight: preflight,
+      lease: fakeLease(),
       log: () => {},
     })
     assert.equal(exitCode, EXIT_CODES.OK)

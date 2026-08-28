@@ -92,7 +92,7 @@ stopgap that makes already-installed `v2.0.0` children detectable (CAT-03), but 
 only fix would make version ambiguity permanent — the exact hole AD-016's tags were meant to close.
 
 **Consequence.** The release is a kernel major (entry bumps ride with cookie and env renames), and
-cutting the entry tags is the user's act through the release workflow — hence CAT-05 is the
+cutting the entry tags is the user's act through the release workflow [stale since 2026-08-25: AD-034 amended by `5c0ad20` — see AD-039] — hence CAT-05 is the
 feature's single probe rather than a gate.
 
 ---

@@ -3202,7 +3202,7 @@ Its Final gate ran whole at exit 0: `check` 5/5 · `test` 614/614 · `test:scrip
   edit to `lefthook-local.yml` should survive it. **Any task of this feature that touches `lefthook-local.yml`
   must keep that test green**; a failure there is a regression to the root-glob defect, not a stale assertion.
 - **T48 is unchanged and still blocked.** The sibling's gate lift never transferred: `v2.3.0` remains untagged
-  and tagging is the owner's act (AD-006/AD-034 — the agent never tags and never pushes). When it happens the
+  and tagging is the owner's act (AD-006/AD-034 — the agent never tags and never pushes). [stale since 2026-08-25: AD-034 amended by `5c0ad20` — see AD-039] When it happens the
   five entries are at `2.0.1` and the sibling's item 7 sits inside the existing `v2.3.0` section, so
   `release-preflight` should accept it.
 
@@ -4769,7 +4769,7 @@ sensor work were lost to a `/clear`.
 **Open deviations, unchanged**: `access-link-activation.e2e-spec.ts:110-115` and
 `catalog/professional/parity/professional-slice.parity.spec.ts:11`.
 
-**AD-034 stands: the `v3.0.0` cut is the owner's act. No agent tags and no agent pushes.**
+**AD-034 stands: the `v3.0.0` cut is the owner's act. No agent tags and no agent pushes.** [stale since 2026-08-25: AD-034 amended by `5c0ad20` — see AD-039]
 
 #### Fix Round 4 — landed
 

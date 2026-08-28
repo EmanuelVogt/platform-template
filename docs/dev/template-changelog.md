@@ -290,7 +290,8 @@ one in its own README and AGENTS.
     `docs/advisories/ADV-20260822-0{1,2,3,5}.md`): each `affects` range tightens to
     `>=1.0.0 <2.0.1`; each `CHANGELOG.md` gains the real reason; all five bump `2.0.1` →
     `2.0.2`.
-13. **The harness's P0 taxonomy is domain-neutral** (`docs/agents/harness.md`): `opus` is reserved for "auth, payment(s), data integrity, or a
+13. **The harness's P0 taxonomy is domain-neutral** (`.agents/skills/tlc-spec-driven/**`,
+    `docs/agents/harness.md`): `opus` is reserved for "auth, payment(s), data integrity, or a
     rule the product's own domain doc marks critical" — a deferred list, not a hardcoded
     enumeration.
 14. **A brand-hygiene gate scans the rendered child**
@@ -628,7 +629,7 @@ needed and there is no new migration.
    transcripts, read by `pnpm dispatch:report`) and `wave-plan-check.mjs` (re-validates
    the wave/cluster rules on every write of `tasks.md`); `delegate-to-subagent.mjs`
    gains a direct-navigation quota per turn. Agents (`spec-worker`, `spec-verifier`,
-   `repo-scout`, `shell-runner`) and the spec-driven skill (orchestrator card,
+   `repo-scout`, `shell-runner`) and the `tlc-spec-driven` skill (orchestrator card,
    vertical clusters) updated; delegation baseline documented in
    [`docs/agents/harness.md`](../agents/harness.md).
 2. **CI workflows.** `.github/workflows/ci.yml` (lint/typecheck/builds, unit and

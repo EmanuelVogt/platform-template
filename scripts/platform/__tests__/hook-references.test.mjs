@@ -1,13 +1,15 @@
 import assert from "node:assert/strict"
-import { existsSync, readdirSync, readFileSync } from "node:fs"
+import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs"
 import path from "node:path"
 import { test } from "node:test"
 import { fileURLToPath } from "node:url"
+import { shippedSet } from "./lib/audience-contract.mjs"
 
 const TESTS_DIR = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(TESTS_DIR, "..", "..", "..")
 const HOOKS_DIR = path.join(REPO_ROOT, ".claude", "hooks")
 const DOCS_DIR = path.join(REPO_ROOT, "docs")
+const SETTINGS_FILE = path.join(REPO_ROOT, ".claude", "settings.json")
 
 // TOOL-07 (spec.md AC7) says "hook or handbook"; `docs/advisories/ADV-*.md`
 // and `template-changelog.md` are historical ledgers (immutable once
@@ -134,8 +136,44 @@ function isKnownHandbookException(relFile, reference) {
   )
 }
 
-test("the harness ships exactly 21 hook files under .claude/hooks", () => {
-  assert.equal(listHookFiles().length, 21)
+test("the harness ships exactly 20 hook files under .claude/hooks", () => {
+  assert.equal(listHookFiles().length, 20)
+})
+
+test("ca-full-cycle ships in the skill set and .claude/skills/ca-full-cycle resolves to it (AC-04)", () => {
+  assert.ok(shippedSet().has(".agents/skills/ca-full-cycle/SKILL.md"))
+  const mirror = path.join(REPO_ROOT, ".claude", "skills", "ca-full-cycle")
+  const vendored = path.join(REPO_ROOT, ".agents", "skills", "ca-full-cycle")
+  assert.ok(existsSync(mirror))
+  assert.equal(realpathSync(mirror), realpathSync(vendored))
+})
+
+test("docs/agents/harness.md names ca-full-cycle as the delegation framework (AC-04)", () => {
+  const content = readFileSync(
+    path.join(DOCS_DIR, "agents", "harness.md"),
+    "utf8"
+  )
+  assert.match(content, /`ca-full-cycle`/)
+})
+
+test("plans-in-english.mjs is registered; specs-in-english.mjs and wave-plan-check.mjs are gone", () => {
+  const settings = readFileSync(SETTINGS_FILE, "utf8")
+  assert.match(settings, /plans-in-english\.mjs/)
+  assert.doesNotMatch(settings, /specs-in-english\.mjs/)
+  assert.doesNotMatch(settings, /wave-plan-check\.mjs/)
+  assert.equal(existsSync(path.join(HOOKS_DIR, "plans-in-english.mjs")), true)
+  assert.equal(existsSync(path.join(HOOKS_DIR, "specs-in-english.mjs")), false)
+  assert.equal(existsSync(path.join(HOOKS_DIR, "wave-plan-check.mjs")), false)
+})
+
+test("no hook references a live `.specs/` path (AC-09)", () => {
+  for (const file of listHookFiles()) {
+    assert.doesNotMatch(
+      readFileSync(file, "utf8"),
+      /\.specs\//,
+      `${path.relative(REPO_ROOT, file)} still references a .specs/ path`
+    )
+  }
 })
 
 test("no hook references a file, helper or spec that does not exist", () => {

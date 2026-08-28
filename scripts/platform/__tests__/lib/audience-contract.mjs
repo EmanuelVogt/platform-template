@@ -182,7 +182,7 @@ export const EXEMPT_DOC_PREFIXES = [".agents/skills/"]
 // entregue está certo. Cada entrada nomeia quem cria — esta lista é o raio de cegueira do
 // guard, então uma entrada errada o cega.
 export const CHILD_CREATED_PREFIXES = [
-  ".specs/", // a skill tlc-spec-driven escreve no filho
+  ".specs/", // o produto mantém specs próprias (docs/dev/template.md) — nenhum skill do template escreve mais aqui
   ".claude/skills/", // `pnpm skills:sync` materializa a partir de `.agents/skills/`
   "generated/", // `pnpm contract` gera do OpenAPI
   ".worktrees/", // `git worktree add` cria

@@ -61,6 +61,9 @@ _exclude:
   - scripts/platform/catalog-stage.mjs
   - scripts/platform/catalog-eslint.mjs
   - scripts/platform/advisory-required.mjs
+  # não é ferramental de catalog/, mas o único consumidor é o comando
+  # `release-freeze` de lefthook-local.yml, acima — mesma razão de exclusão
+  - scripts/platform/release-freeze-guard.mjs
   - scripts/platform/lib/child.mjs
   - scripts/platform/lib/lint.mjs
   - scripts/platform/__tests__

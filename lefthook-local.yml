@@ -20,6 +20,15 @@ pre-push:
     platform-scripts:
       priority: 5
       run: node --test scripts/platform/__tests__/*.test.mjs
+    # guarda do freeze de release — bloqueia push a main de quem não segura o
+    # lease durante a janela do corte. `use_stdin: true`: sem essa flag o
+    # lefthook 2.1.9 NÃO repassa o stdin do protocolo do pre-push do git ao
+    # comando (confirmado empiricamente); sem ela o script sempre cairia no
+    # fallback por branch local, que é só reserva.
+    release-freeze:
+      priority: 1
+      use_stdin: true
+      run: node scripts/platform/release-freeze-guard.mjs
 
 pre-commit:
   commands:

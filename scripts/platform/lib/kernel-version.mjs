@@ -119,6 +119,48 @@ export function lintChildMigrationSteps(section, version) {
   return { ok: true }
 }
 
+// Não lança em arquivo ausente (diferente de readLatestChangelogVersion): a
+// ausência já é reportada por quem chama, então [] aqui evita duplicar o erro.
+export function readChangelogHeadings(changelogPath) {
+  let text
+  try {
+    text = readFileSync(changelogPath, "utf8")
+  } catch {
+    return []
+  }
+  return [...text.matchAll(CHANGELOG_HEADING)].map((match) => match[1])
+}
+
+// O kernel version é o semver-max de todos os headings do changelog
+// (readLatestChangelogVersion): uma segunda seção aberta acima da tag estável
+// torna a mais baixa das duas unreleasable (release-preflight recusa
+// `version !== latest`) e seus "Child migration steps" perdem a tag em que
+// iam pendurar — aconteceu em espírito com v2.3.0 (duas sessões numa seção só).
+export function lintOpenChangelogSections({ headings, stableTags }) {
+  const normalizedTags = (stableTags ?? [])
+    .map((tag) => tag.replace(/^v/, ""))
+    .filter((tag) => semver.valid(tag))
+  if (normalizedTags.length === 0) {
+    return {
+      ok: true,
+      skipped:
+        "nenhuma tag estável local (vX.Y.Z) — clone novo sem tags ainda; a checagem de seção aberta não se aplica",
+    }
+  }
+  const maxTag = normalizedTags.reduce((max, tag) =>
+    semver.gt(tag, max) ? tag : max
+  )
+  const openHeadings = (headings ?? [])
+    .map((heading) => heading.replace(/^v/, ""))
+    .filter((heading) => semver.valid(heading) && semver.gt(heading, maxTag))
+  if (openHeadings.length <= 1) return { ok: true }
+  const offending = openHeadings.map((version) => `v${version}`).join(", ")
+  return {
+    ok: false,
+    reason: `mais de uma seção "## vX.Y.Z" aberta acima da tag estável mais recente (v${maxTag}): ${offending} — dobre o rascunho mais novo na seção aberta existente; uma versão aberta por vez, a próxima só abre depois que a anterior for tagueada`,
+  }
+}
+
 export function writeSimulatedKernelVersion({ answersPath, kernelVersion }) {
   if (!existsSync(answersPath)) return false
   const answers = parseYaml(readFileSync(answersPath, "utf8")) ?? {}

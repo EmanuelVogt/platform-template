@@ -8,6 +8,8 @@ import {
   ChangelogSectionMissingError,
   ChangelogVersionMissingError,
   lintChildMigrationSteps,
+  lintOpenChangelogSections,
+  readChangelogHeadings,
   readChangelogSection,
   readLatestChangelogVersion,
   sectionFirstParagraph,
@@ -255,4 +257,83 @@ test("lintChildMigrationSteps: the sentinel line passes for a non-major version"
   } finally {
     cleanup(dir)
   }
+})
+
+test("readChangelogHeadings lists every '## vX.Y.Z' heading in file order", () => {
+  const dir = withChangelogFixture()
+  try {
+    assert.deepEqual(readChangelogHeadings(path.join(dir, "changelog.md")), [
+      "2.0.0",
+      "1.1.0",
+      "1.0.1",
+    ])
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("readChangelogHeadings returns an empty list for a missing file", () => {
+  assert.deepEqual(readChangelogHeadings("/does/not/exist/changelog.md"), [])
+})
+
+test("lintOpenChangelogSections: no headings above the latest stable tag is ok", () => {
+  assert.deepEqual(
+    lintOpenChangelogSections({
+      headings: ["2.4.1", "2.4.0"],
+      stableTags: ["v2.4.1", "v2.4.0"],
+    }),
+    { ok: true }
+  )
+})
+
+test("lintOpenChangelogSections: exactly one open section is ok", () => {
+  assert.deepEqual(
+    lintOpenChangelogSections({
+      headings: ["3.0.0", "2.4.1"],
+      stableTags: ["v2.4.1"],
+    }),
+    { ok: true }
+  )
+})
+
+test("lintOpenChangelogSections: two open sections fail, naming both versions", () => {
+  const result = lintOpenChangelogSections({
+    headings: ["3.1.0", "3.0.0", "2.4.1"],
+    stableTags: ["v2.4.1"],
+  })
+  assert.equal(result.ok, false)
+  assert.match(result.reason, /v3\.1\.0/)
+  assert.match(result.reason, /v3\.0\.0/)
+})
+
+test("lintOpenChangelogSections: a heading equal to the latest tag is closed, not open", () => {
+  assert.deepEqual(
+    lintOpenChangelogSections({
+      headings: ["2.4.1"],
+      stableTags: ["v2.4.1"],
+    }),
+    { ok: true }
+  )
+})
+
+test("lintOpenChangelogSections: no stable tags at all is a skipped ok, not a failure", () => {
+  const result = lintOpenChangelogSections({
+    headings: ["3.1.0", "3.0.0"],
+    stableTags: [],
+  })
+  assert.equal(result.ok, true)
+  assert.match(result.skipped, /nenhuma tag/)
+})
+
+test("lintOpenChangelogSections: tags with and without the 'v' prefix normalize the same", () => {
+  const withPrefix = lintOpenChangelogSections({
+    headings: ["3.1.0", "3.0.0"],
+    stableTags: ["v2.4.1"],
+  })
+  const withoutPrefix = lintOpenChangelogSections({
+    headings: ["3.1.0", "3.0.0"],
+    stableTags: ["2.4.1"],
+  })
+  assert.deepEqual(withPrefix, withoutPrefix)
+  assert.equal(withPrefix.ok, false)
 })

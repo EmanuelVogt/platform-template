@@ -364,6 +364,66 @@ test("runLint reporta um changelog sem versão em vez de pular a conferência em
   assert.match(errors[0], /template-changelog\.md: nenhuma seção/)
 })
 
+function fakeGitTagExec(tags) {
+  return (command, args) => {
+    assert.equal(command, "git")
+    const [sub] = args
+    if (sub === "tag") {
+      return {
+        status: 0,
+        stdout: tags.length > 0 ? `${tags.join("\n")}\n` : "",
+      }
+    }
+    if (sub === "ls-remote") {
+      const lines = tags.map((tag) => `abc123\trefs/tags/${tag}`).join("\n")
+      return { status: 0, stdout: lines.length > 0 ? `${lines}\n` : "" }
+    }
+    throw new Error(`unexpected git subcommand in test: ${sub}`)
+  }
+}
+
+function writeOpenSectionsRepo({ dirPrefix, changelogBody, tags }) {
+  const root = mkdtempSync(path.join(tmpdir(), dirPrefix))
+  const changelogPath = writeEntryFile(
+    root,
+    "docs/dev/template-changelog.md",
+    changelogBody
+  )
+  return {
+    changelogPath,
+    root,
+    catalogRoot: path.join(root, "catalog"),
+    contractPath: path.join(root, "missing-contract.md"),
+    advisoriesDir: path.join(root, "missing-advisories"),
+    repoRoot: root,
+    exec: fakeGitTagExec(tags),
+  }
+}
+
+test("runLint falha quando o changelog tem duas seções abertas acima da tag estável mais recente", () => {
+  const options = writeOpenSectionsRepo({
+    dirPrefix: "lint-open-sections-fail-",
+    changelogBody:
+      "# Template changelog\n\n## v3.1.0\n\ntexto.\n\n## v3.0.0\n\ntexto.\n\n## v2.4.1\n\ntexto.\n",
+    tags: ["v2.4.1"],
+  })
+  const errors = runLint(options)
+  const openSectionError = errors.find((error) => error.includes("aberta"))
+  assert.ok(openSectionError, "esperava um erro de seção aberta")
+  assert.match(openSectionError, /v3\.1\.0/)
+  assert.match(openSectionError, /v3\.0\.0/)
+})
+
+test("runLint passa com uma única seção aberta acima da tag estável mais recente", () => {
+  const options = writeOpenSectionsRepo({
+    dirPrefix: "lint-open-sections-ok-",
+    changelogBody:
+      "# Template changelog\n\n## v3.0.0\n\ntexto.\n\n## v2.4.1\n\ntexto.\n",
+    tags: ["v2.4.1"],
+  })
+  assert.deepEqual(runLint(options), [])
+})
+
 test("lintAdvisoryFrontmatter passa para um advisory com frontmatter válido", () => {
   assert.deepEqual(
     lintAdvisoryFrontmatter(advisoryMd(), "docs/advisories/ADV-20260901-01.md"),

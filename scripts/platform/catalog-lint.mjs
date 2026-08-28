@@ -5,6 +5,8 @@ import { isAdvisoryFilename, parseAdvisory } from "./lib/advisories.mjs"
 import { isMain } from "./lib/is-main.mjs"
 import {
   ChangelogVersionMissingError,
+  lintOpenChangelogSections,
+  readChangelogHeadings,
   readLatestChangelogVersion,
 } from "./lib/kernel-version.mjs"
 import {
@@ -243,6 +245,23 @@ function lintAdvisories(dir, entryNames) {
   return errors
 }
 
+function readLocalStableTags({ repoRoot, exec }) {
+  const result = exec("git", ["tag", "-l", "v*"], { cwd: repoRoot })
+  if (result.status !== 0) return []
+  return result.stdout
+    .split("\n")
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+}
+
+function lintOpenChangelogSectionsRule({ changelogPath, repoRoot, exec }) {
+  if (!repoRoot) return []
+  const headings = readChangelogHeadings(changelogPath)
+  const stableTags = readLocalStableTags({ repoRoot, exec })
+  const result = lintOpenChangelogSections({ headings, stableTags })
+  return result.ok ? [] : [`${changelogPath}: ${result.reason}`]
+}
+
 function readKernelVersion(changelogPath, errors) {
   try {
     return readLatestChangelogVersion(changelogPath)
@@ -283,6 +302,9 @@ export function runLint({
   if (repoRoot) {
     errors.push(...lintEntryBump({ repoRoot, exec, entries: entryDirs }))
   }
+  errors.push(
+    ...lintOpenChangelogSectionsRule({ changelogPath, repoRoot, exec })
+  )
   return errors
 }
 

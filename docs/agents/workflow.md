@@ -46,7 +46,7 @@ the active ones, and the next agent copies the wrong pattern.
 
 ## Specs live in `.specs/`, on `main`
 
-TLC framework (`tlc-spec-driven` skill): in flight at
+In flight at
 `.specs/features/<feature>/{spec,design,tasks,validation}.md`, finished at
 `.specs/features/done/<feature>/`, project decisions in `.specs/STATE.md`.
 

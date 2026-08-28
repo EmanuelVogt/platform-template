@@ -112,7 +112,7 @@ The 1M window is why: nothing ever forced a break.
   (`ENFORCED_AGENTS`) keep only a Read **byte** budget for their lifetime, since 2026-08-21
   they run their own gates. Subagents can spawn subagents here (verified 2026-08-17: a worker called
   `repo-scout` and got its answer), which is what makes that nesting real.
-- **Spec execution is delegated from 4 tasks up, in parallel.** In the `tlc-spec-driven` skill a
+- **Spec execution is delegated from 4 tasks up, in parallel.** In the `ca-full-cycle` skill a
   plan of ≤3 tasks runs **inline in the planning window** (a worker's warm-up costs more than the
   three files it would write), with its gates through the runner and the Verifier still fresh and
   independent. From 4 tasks up the orchestrator dispatches one `spec-worker`
@@ -134,8 +134,10 @@ The 1M window is why: nothing ever forced a break.
   when the hook is off. Waves and clusters are authored in the Tasks phase from `Depends on` /
   `Touches` / `Exclusive`. Parallel workers share the checkout, so they commit
   pathspec-limited (`git commit -m … -- <files>`) and never `stash`/`add -A`. Model and
-  mechanics: `.agents/skills/tlc-spec-driven/references/sub-agents.md`; the agent
-  definitions are `.claude/agents/spec-worker.md` and `spec-verifier.md`.
+  mechanics: `.agents/skills/ca-full-cycle/references/implement.md` § *Sub-Agent
+  Delegation*; workers, wave verifiers and the Reviewer dispatch as
+  `Agent(subagent_type: "general-purpose", model: <tier>)` with the card path in the
+  payload — there is no per-role agent definition file.
   **Fragility to know:** nested `Agent` calls inside subagents are not documented by
   Anthropic; if a Claude Code update removes them, an enforced worker can neither
   navigate nor delegate — the fix is to drop `spec-worker`/`spec-verifier` from
@@ -155,7 +157,7 @@ The 1M window is why: nothing ever forced a break.
 - **Read specs by section, never whole.** `STATE.md` (37k chars after the 2026-08-17
   prune — its Handoff carries only open work; closed features' entries live in
   `.specs/features/done/<feature>/handoff-archive.md`), a `tasks.md` (40k) and the
-  `tlc-spec-driven` references (`implement.md` 28k, `sub-agents.md` 30k) are the most
+  `ca-full-cycle` references (`research.md` 10k, `implement.md` 9k) are the most
   re-read documents here, and each one lands in context for the rest of the session. Use
   `offset`/`limit` or grep for the section — measured habit is 150 whole-file reads
   against 39 with a range. Workers and the Verifier read only their card
@@ -173,7 +175,7 @@ The 1M window is why: nothing ever forced a break.
   words, or ≥5% with diacritics ≥10%; fenced/inline code and URLs are ignored, `.json` is
   exempt, and fewer than 12 words never trip it. Quoted product strings inside English
   sentences stay under the bar by construction. The rule is Critical Rule 6 of
-  `tlc-spec-driven` and `docs/agents/workflow.md`; `PLATFORM_SPECS_LANG_OFF=1` disables the
+  `ca-full-cycle` and `docs/agents/workflow.md`; `PLATFORM_SPECS_LANG_OFF=1` disables the
   hook while debugging the harness. Legacy: `.specs/STATE.md` still holds ~20 pt-BR
   decisions from before 2026-08-17 — translate an entry when you touch it.
 - **Browser inspection: `take_snapshot` first.** The accessibility-tree snapshot costs a
@@ -221,11 +223,11 @@ never recreate `.cursor/skills` — Cursor reads `.agents` directly.
   initial instructions.
 - `.claude/hooks/edit-reminders.mjs` — design-system and comment-policy reminders on
   edit, rate-limited per session to once every ~2 MB of transcript instead of every edit.
-- `.claude/hooks/specs-in-english.mjs` — `PreToolUse(Edit|Write|MultiEdit)`: blocks a
+- `.claude/hooks/plans-in-english.mjs` — `PreToolUse(Edit|Write|MultiEdit)`: blocks a
   write under `.specs/` whose new text reads as pt-BR prose (thresholds and exemptions in
   [Token economy](#token-economy); constants at the top of the file). Fires in the main
   thread and inside subagents alike; `PLATFORM_SPECS_LANG_OFF=1` disables it. Rule in
-  [`workflow.md`](workflow.md) and `tlc-spec-driven` Critical Rule 6.
+  [`workflow.md`](workflow.md) and `ca-full-cycle` Critical Rule 6.
 - `.claude/hooks/docs-stay-lean.mjs` — `PreToolUse(Edit|Write|MultiEdit|Bash)`: blocks a
   handbook edit (`docs/` outside `adr/` and `advisories/`, `CLAUDE.md`/`AGENTS.md`, the
   `.md.jinja` variants included) that grows the file by more than 30 lines, a new handbook
@@ -305,17 +307,17 @@ head` isn't navigation — a filter after a pipe reduces what enters the context
   is re-issuing the wave in one message). Measured 2026-08-20: 16 of 17 declared
   multi-cluster waves were dispatched one worker at a time, 26–60 min apart. Per-session
   state in the tmpdir (`platform-wave-<session>.json`). Rule in
-  [Token economy](#token-economy) and `tlc-spec-driven` § _Dispatch protocol_ step 2.
-- `.claude/hooks/wave-plan-check.mjs` — `PostToolUse(Edit|Write|MultiEdit)` on
+  [Token economy](#token-economy) and `ca-full-cycle` implement.md § *Dispatch the wave*.
+- `wave-plan-check.mjs` (removed) — `PostToolUse(Edit|Write|MultiEdit)` on
   `.specs/**/tasks.md`: re-runs two rules of the Wave/Cluster Cross-Check after every write
   of a task plan — sibling clusters of one wave share no path (exact, or glob containment:
   `a/b/**`, `a/b/*`, `a/b/` cover a file under `a/b/`) and an `Exclusive: yes` task is alone
   in its wave — from the `### T<n>` `Touches` fields and the `## Wave Plan` table (the
   table's files column is the fallback when a task has no parsed `Touches`). One stderr line
   per violation, exit 2; a missing section exits 0. Measured 2026-08-20: 3 of 4
-  `blocked-by-ownership` stops were unlisted files (the Touches audit in `tlc-spec-driven`
-  tasks.md § 3 is the fix for those), the fourth a planned sibling overlap — what this hook
-  catches. Rule in `tlc-spec-driven` tasks.md § _Wave/Cluster Cross-Check_.
+  `blocked-by-ownership` stops were unlisted files (the Touches audit in `ca-full-cycle`
+  plan.md § *Touches audit* is the fix for those), the fourth a planned sibling overlap — what this hook
+  catches. Rule in `ca-full-cycle` plan.md § *Cross-check*.
 - `.claude/hooks/no-huge-reads.mjs` — blocks reading a file over 100k chars whole, via
   `Read` or via `cat`/`less`/`rtk read`. By **size**, not by a list, so it also catches the
   lockfile, a new drizzle snapshot and an engine fixture. A ranged read (`limit` ≤ 400) or

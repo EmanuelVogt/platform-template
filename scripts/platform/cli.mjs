@@ -7,7 +7,9 @@ import { feedbackCommand } from "./lib/commands/feedback.mjs"
 import { listCommand } from "./lib/commands/list.mjs"
 import {
   RELEASE_USAGE,
+  releaseAbortCommand,
   releaseCommand,
+  releaseStatusCommand,
   unknownReleaseFlags,
 } from "./lib/commands/release.mjs"
 import { statusCommand } from "./lib/commands/status.mjs"
@@ -87,8 +89,15 @@ registerCommand("release", async ({ positionals, options, deps }) => {
   }
   // `parseArgs` consome o token seguinte como valor da flag, então em
   // `release --push 2.3.0` a versão chega em `options.push`, não nos posicionais.
-  const flagVersion =
-    typeof options.push === "string" ? options.push : undefined
+  const flagVersion = ["push", "status", "abort"]
+    .map((flag) => options[flag])
+    .find((value) => typeof value === "string")
+  if ("status" in options) {
+    return releaseStatusCommand({ ...deps })
+  }
+  if ("abort" in options) {
+    return releaseAbortCommand({ force: "force" in options, ...deps })
+  }
   return releaseCommand({
     version: positionals[0] ?? flagVersion,
     push: options.push !== undefined,

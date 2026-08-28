@@ -10,13 +10,21 @@ import { isMarkerSubject, parseMarkerSubject } from "../release-marker.mjs"
 // `parseArgs` aceita qualquer `--x` em silêncio, então sem esta lista uma flag
 // desconhecida cai no caminho default e corta uma release: foi assim que o
 // marcador da v2.3.0 nasceu, de um `release --help`.
-export const RELEASE_FLAGS = Object.freeze(["push", "help"])
+export const RELEASE_FLAGS = Object.freeze([
+  "push",
+  "help",
+  "status",
+  "abort",
+  "force",
+])
 
 export const RELEASE_USAGE = [
-  "uso: pnpm platform release [versão] [--push]",
+  "uso: pnpm platform release [versão] [--push | --status | --abort [--force]]",
   "",
   "  versão   x.y.z; sem argumento, usa a última seção do changelog",
   "  --push   empurra o marcador para main (o push é o gatilho do release.yml)",
+  "  --status inspeciona o lease, a origin e as runs de release em andamento",
+  "  --abort  devolve o lease e desfaz o marcador local (--force ignora o titular)",
   "",
   "Cria um commit vazio `chore(release): vX.Y.Z` e nunca cria tags: a tag é",
   "sempre ato do release.yml.",
@@ -478,6 +486,218 @@ export async function planRelease({
     env,
     now,
   })
+}
+
+function describeOriginHead({ leaseApi, cwd, exec }) {
+  const originSha = leaseApi.originMainSha({ cwd, exec })
+  if (originSha === null) return "head de origin/main: (sonda indisponível)"
+  const subject = subjectOf({ exec, cwd, sha: originSha })
+  if (subject === undefined) {
+    return `head de origin/main ${short(originSha)}: (fora do clone local — rode \`git fetch origin main\`)`
+  }
+  if (!isMarkerSubject(subject)) {
+    return `head de origin/main ${short(originSha)}: não é marcador`
+  }
+  const markerVersion = markerVersionOf(subject)
+  return `head de origin/main ${short(originSha)}: marcador ${
+    markerVersion ? `v${markerVersion}` : `malformado ("${subject}")`
+  }`
+}
+
+function originHeadIsUntaggedMarker({ leaseApi, cwd, exec }) {
+  const originSha = leaseApi.originMainSha({ cwd, exec })
+  if (originSha === null) return false
+  const subject = subjectOf({ exec, cwd, sha: originSha })
+  if (subject === undefined || !isMarkerSubject(subject)) return false
+  const markerVersion = markerVersionOf(subject)
+  if (!markerVersion) return true
+  return (
+    leaseApi.originTagExists({ cwd, exec, version: markerVersion }) !== true
+  )
+}
+
+export function releaseStatusCommand({
+  cwd = process.cwd(),
+  exec = defaultExec,
+  log = defaultLog,
+  lease: leaseApi = defaultLease,
+  env = process.env,
+  now = Date.now,
+} = {}) {
+  const holder = leaseApi.currentHolderId({ env })
+  const read = leaseApi.readLease({ cwd, exec })
+  const lease = read.corrupt ? undefined : read.lease
+
+  if (read.corrupt) {
+    log(
+      "release --status — lease: corrompido (`pnpm platform release --abort --force` limpa)"
+    )
+  } else if (!lease) {
+    log("release --status — lease: nenhum")
+  } else {
+    log(
+      `release --status — lease: v${lease.version}, estágio "${lease.stage}", ${describeHolder({ leaseApi, lease, holder, env, now })}, marcador ${lease.markerSha ? short(lease.markerSha) : "(nenhum)"}`
+    )
+  }
+
+  const tags = leaseApi.originStableTags({ cwd, exec })
+  const latestTag = tags.length > 0 ? tags[tags.length - 1] : undefined
+  log(
+    `release --status — origin: última tag estável ${latestTag ?? "(nenhuma)"}; ${describeOriginHead({ leaseApi, cwd, exec })}`
+  )
+
+  const probe = leaseApi.probeReleaseRuns({ cwd, exec })
+  if (!probe.available) {
+    log("release --status — runs: (gh indisponível)")
+  } else if (probe.runs.length === 0) {
+    log("release --status — runs: nenhuma em andamento")
+  } else {
+    log(
+      `release --status — runs: ${probe.runs
+        .map((run) => run.url ?? `run ${run.databaseId}`)
+        .join(", ")}`
+    )
+  }
+
+  const inFlight =
+    (probe.available && probe.runs.length > 0) ||
+    (lease !== undefined && lease.stage !== "draft") ||
+    originHeadIsUntaggedMarker({ leaseApi, cwd, exec })
+  if (inFlight) {
+    log("release --status — veredito: release em voo — não pushe main")
+  } else if (
+    lease !== undefined &&
+    leaseApi.classifyLease({ lease, now }) === "stale"
+  ) {
+    log(`release --status — veredito: lease stale — takeover com ${ABORT_CMD}`)
+  } else {
+    log("release --status — veredito: livre")
+  }
+
+  return EXIT_CODES.OK
+}
+
+export function releaseAbortCommand({
+  force = false,
+  cwd = process.cwd(),
+  exec = defaultExec,
+  log = defaultLog,
+  lease: leaseApi = defaultLease,
+  env = process.env,
+  now = Date.now,
+} = {}) {
+  const holder = leaseApi.currentHolderId({ env })
+  const read = leaseApi.readLease({ cwd, exec })
+
+  if (read.corrupt) {
+    if (!force) {
+      log(
+        "release --abort — o lease está ilegível e a leitura não diz de quem ele é; só `pnpm platform release --abort --force` descarta"
+      )
+      return EXIT_CODES.RELEASE_LOCKED
+    }
+    leaseApi.releaseLease({ cwd, exec, holder, force: true, env })
+    log("release --abort — lease corrompido descartado")
+    return EXIT_CODES.OK
+  }
+
+  const lease = read.lease
+  if (!lease) {
+    log("release --abort — não há lease para devolver")
+    return EXIT_CODES.OK
+  }
+
+  const own = isOwnLease({ leaseApi, lease, holder, env })
+  const stale = leaseApi.classifyLease({ lease, now }) === "stale"
+  if (!own && !stale && !force) {
+    log(
+      `release --abort — o lease v${lease.version} (estágio "${lease.stage}", ${describeHolder({ leaseApi, lease, holder, env, now })}) está ativo e é de outra sessão; confirme com ${STATUS_CMD} e use \`--force\` se ainda assim quiser tomá-lo`
+    )
+    return EXIT_CODES.RELEASE_LOCKED
+  }
+
+  if (lease.stage === "draft") {
+    leaseApi.releaseLease({ cwd, exec, holder, force, env })
+    log(
+      `release --abort — lease v${lease.version} devolvido (estágio "draft"); nenhum marcador existia`
+    )
+    return EXIT_CODES.OK
+  }
+
+  if (lease.stage === "marker-local") {
+    const head = headSha({ exec, cwd })
+    if (head !== lease.markerSha) {
+      log(
+        `release --abort — HEAD (${short(head)}) não é o marcador do lease (${short(lease.markerSha)}); o abort não desfaz commit que não seja o topo — resolva à mão e repita`
+      )
+      return EXIT_CODES.RELEASE_LOCKED
+    }
+    if (exec("git", ["status", "--porcelain"], { cwd }).stdout.trim()) {
+      log(
+        "release --abort — a árvore de trabalho tem alterações não commitadas e `git reset --hard HEAD~1` as destruiria; limpe a árvore e repita"
+      )
+      return EXIT_CODES.RELEASE_LOCKED
+    }
+    const originSha = leaseApi.originMainSha({ cwd, exec })
+    const originSubject =
+      originSha === null ? undefined : subjectOf({ exec, cwd, sha: originSha })
+    if (originSubject === undefined && !force) {
+      log(
+        "release --abort — não deu para ler o head de origin/main; sem saber se o marcador já foi empurrado o abort para aqui (`--force` assume o risco)"
+      )
+      return EXIT_CODES.RELEASE_LOCKED
+    }
+    if (
+      originSha === head ||
+      originSubject === `chore(release): v${lease.version}`
+    ) {
+      log(
+        `release --abort — o marcador v${lease.version} já está na origin: isto não é mais um abort local. Veja ${STATUS_CMD}`
+      )
+      return EXIT_CODES.RELEASE_LOCKED
+    }
+    exec("git", ["reset", "--hard", "HEAD~1"], { cwd })
+    leaseApi.releaseLease({ cwd, exec, holder, force, env })
+    log(
+      `release --abort — marcador v${lease.version} desfeito (\`git reset --hard HEAD~1\`) e lease devolvido`
+    )
+    return EXIT_CODES.OK
+  }
+
+  if (lease.stage === "marker-pushed") {
+    const probe = leaseApi.probeReleaseRuns({ cwd, exec })
+    if (!probe.available && !force) {
+      log(
+        "release --abort — o marcador já está na origin e `gh` não respondeu; sem saber se há run em andamento o abort para aqui (`--force` assume o risco)"
+      )
+      return EXIT_CODES.RELEASE_LOCKED
+    }
+    if (probe.available && probe.runs.length > 0 && !force) {
+      const urls = probe.runs
+        .map((run) => run.url ?? `run ${run.databaseId}`)
+        .join(", ")
+      log(
+        `release --abort — há release run(s) em andamento: ${urls} — recuperação é re-run, não abort`
+      )
+      return EXIT_CODES.RELEASE_LOCKED
+    }
+    leaseApi.releaseLease({ cwd, exec, holder, force, env })
+    log(
+      `release --abort — lease v${lease.version} devolvido; o marcador empurrado fica onde está`
+    )
+    log(
+      "release --abort — quem aborta abdica da run antiga: nunca re-rode aquela run"
+    )
+    log(
+      `release --abort — um novo release de v${lease.version} só depois de confirmar que a tag não existe (${STATUS_CMD})`
+    )
+    return EXIT_CODES.OK
+  }
+
+  log(
+    `release --abort — estágio "${lease.stage}" desconhecido; use \`pnpm platform release --abort --force\` se tiver certeza`
+  )
+  return EXIT_CODES.RELEASE_LOCKED
 }
 
 export async function releaseCommand({

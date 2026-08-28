@@ -18,6 +18,10 @@ remaining are CAT-05 (owner-gated, not a code gap) and TOOL-12 (spec-adjudicated
 Round 3 additionally confirms LOC-03, LOC-06 and SEAM-04 now hold on the `web_stack=next` shell,
 closing the cross-feature Fix 5.
 
+**CAT-05 was closed on 2026-08-28, after every round of this report — see § *Post-scriptum* at the
+end.** The ⚠️ marks against CAT-05 below are left standing as the verdict each round actually
+reached; the closure is recorded once, at the end, rather than back-fitted into three round reports.
+
 **Qualification on round 2.** Between fix round 1 and GT7 (`a77d17c`), the two guards that closed
 round 2's blockers — `brand-hygiene.test.mjs` and `locale-threading.test.mjs`, 15 tests — could not
 execute in CI: `copier` was provisioned only in the `catalog` and `smoke` jobs. My round-2 Final
@@ -230,7 +234,9 @@ range's own commits or from files that session does not touch.
   Confirmed **no `v2.4.0` AC fails because of it**: LOC-03, LOC-06 and SEAM-04 all pass on the
   default shell. Recorded as an open routing decision, per the coordinator's ruling.
 - **CAT-05 — owner-gated.** `git tag -l 'catalog/*'` still empty; owner hand-off point 2 (the owner
-  tags after wave 7). The agent never tags (AD-006/AD-034). Not a code gap.
+  tags after wave 7). The agent never tags (AD-006/AD-034). Not a code gap. *[stale since
+  2026-08-28: the six entry tags exist and CAT-05 is closed (AD-040); AD-034's no-tag/no-push clause
+  had itself been removed by `5c0ad20`, see AD-039. § Post-scriptum.]*
 - **TOOL-12 — spec-adjudicated.** `tasks.md:718` declares it "half-refuted"; T31 Done-when 2 keeps
   the documented 500-not-503 exclusion deliberately, so one pg literal is matched where the AC says
   both. Latency mitigated by a 2000 ms margin, not eliminated. Recorded so pass 2 does not
@@ -275,7 +281,7 @@ end to end — adjudicated a real gap, fixed in round 2 by FT1).
 | CAT-02 changed entry without a bump fails lint and CI | `lib/lint.mjs:225` wired at `catalog-lint.mjs:169`; 7 tests in `entry-bump-lint.test.mjs`; CI baseline `ci.yml:124-125` `fetch-depth: 0`; mutant 3 killed | ✅ | ✅ |
 | CAT-03 a child at `v2.0.0` is reported affected by ADV-…-01..05 | `compute-pending-catalogref.test.mjs:123-147` — `assert.deepEqual(result.pending.map(a => a.id).sort(), […])`; mutant 2 killed | ✅ | ✅ |
 | CAT-04 advisory paths are child-layout; `catalog/` rejected | `advisory-path-scope.test.mjs:27-34` — `assert.match(errors[0], /^detect referencia "catalog\/widget"/)` | ✅ | ✅ |
-| CAT-05 a `catalog/<name>@x.y.z` tag exists per entry version | probe (budget 1/3, spent): `git tag -l 'catalog/*'` → **empty**. Owner hand-off point 2 | ⚠️ | ⚠️ |
+| CAT-05 a `catalog/<name>@x.y.z` tag exists per entry version | probe (budget 1/3, spent): `git tag -l 'catalog/*'` → **empty**. Owner hand-off point 2. *Closed 2026-08-28, after R2: six entry tags cut at the `v3.0.0` commit `322f327` (AD-040) — R1/R2 stand as measured* | ⚠️ | ⚠️ |
 | LOC-01 `product_locale` asked and threaded through four files | `copier-questions.test.mjs:38-47`, `:52-59`; `locale-threading.test.mjs:71-129` (FT9) | ❌ | ✅ |
 | LOC-02 language convention stated once, referenced elsewhere | `locale-convention-reference-set.test.mjs:19-38` (FT4) | ⚠️ | ✅ |
 | LOC-03 `VITE_APP_NAME`/`VITE_LOCALE` drive title, `<html lang>`, `pageTitle()` | `shell.test.tsx:37` — `expect(pageTitle()).toBe("Acme")`; `:42`; `:96` — `expect(indexHtml).toContain('lang="%VITE_LOCALE%"')`; `:30-31` default preserved | ✅ | ✅ |
@@ -365,3 +371,45 @@ point 2.
 
 **Next steps**: owner hand-off point 2 — dispatch the `v2.4.0` release and cut the
 `catalog/<name>@x.y.z` tags CAT-05 observes. Waves 8–14 (`v3.0.0`) start after that tag exists.
+*[all of it has since happened: `v2.4.0`, `v3.0.0` and `v3.0.1` are tagged, waves 8–14 shipped, and
+the entry tags were cut on 2026-08-28 — § Post-scriptum.]*
+
+---
+
+## Post-scriptum — CAT-05 closed 2026-08-28, after every round of this report
+
+CAT-05 is the one requirement this verification never resolved. Three rounds ran the same probe,
+three times `git tag -l 'catalog/*'` came back empty, and each round recorded ⚠️ rather than a
+failure because nothing in the code was missing — cutting the tags was an act outside the agent's
+authority as it stood. That act has since happened, in a release session that is not this
+verification, and the closure is recorded here by the verifier rather than left to be rediscovered.
+
+**What exists now.** Six entry tags, local and on origin, one per entry version the manifests
+declare: `catalog/attachment@3.0.0`, `catalog/audit@3.0.0`, `catalog/identity-single-tenant@3.0.0`,
+`catalog/notification@3.0.0`, `catalog/professional@1.0.0`, `catalog/tag@3.0.0`. All six anchor at
+`322f327` — the `v3.0.0` commit, not HEAD — and `v3.0.1` was cut on top (`556a416`, Release run
+`33180244872`, success). Verified in this session, not taken on report: each tag's
+`git rev-list -n1` resolves to `322f327`, and origin carries all six.
+
+**The convention CAT-05 left undecided is settled by AD-040.** The variant segment of
+`catalog/<name>[-<variant>]@x.y.z` is **mandatory whenever the entry's `module.json` declares a
+`variant`** — the bracket is optional in the pattern, never in a given entry — because a bare
+`catalog/identity@3.0.0` would be the single ref that two implementations of the same module could
+both claim (AD-013), and a published tag cannot be renamed without breaking whoever resolved it.
+An entry tag anchors to the kernel commit that released that version, so
+`git merge-base --is-ancestor` answers "which release shipped this entry version". AD-040 also
+reverses the same day's earlier "record the debt, cut nothing" ruling; under AD-039 authorization
+attaches to the session that was instructed, so both rulings were legitimate in their turn.
+
+**Why the ⚠️ marks above are not rewritten to ✅.** Each is a measurement, and each was true when
+taken. Converting them would claim this verification saw evidence it never saw, and would erase the
+seven-month gap between AD-016 declaring these tags an entry's version truth and anything creating
+one — which is the finding worth preserving, not the absence itself.
+
+**What is still not closed, and why CAT-05's evidence column is not ✅ even now.** The refs exist;
+**nothing reads them.** No CLI command, CI step or test resolves an entry against its tag —
+`entry-bump-lint` still compares an entry's tree against the *kernel* tag. So an entry's
+`module.json.version` and its tag can drift with no gate noticing, exactly as before. AD-040 accepts
+this deliberately: automating the cut before a consumer exists would industrialise a ref nothing
+validates. **The surviving debt is a consumer, not the tags** — and a verification of that consumer
+is what would finally turn this row ✅.

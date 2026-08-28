@@ -4283,7 +4283,8 @@ blanket.** Follow-up: reword `docs/dev/template-changelog.md:67` and drop the ex
 
 **Open, and deliberately not counted against this pass:** *Fix 5* — confirmed that no `v2.4.0` AC
 fails because of it; LOC-03, LOC-06 and SEAM-04 all pass on the default `vite` shell. It still needs
-an owner ruling before a `web_stack=next` child is shipped. *CAT-05* — owner hand-off point 2.
+an owner ruling before a `web_stack=next` child is shipped. *CAT-05* — owner hand-off point 2
+*(closed 2026-08-28 — AD-040; see § CAT-05 is CLOSED below)*.
 *TOOL-12* — spec-adjudicated, recorded so the `v3.0.0` pass does not re-litigate it.
 
 **Execute is complete for the `v2.4.0` scope. The next act is the owner's**: dispatch the release
@@ -4924,6 +4925,9 @@ caveat Verifier pass 3 named, and it did not bite.
 
 ### CAT-05 stays OPEN — the `catalog/<name>@x.y.z` tags are a contract with no implementation
 
+> **Superseded the same day — the ruling below was reversed and CAT-05 is closed. See the next
+> subsection.** The entry is preserved, uncorrected, as the state of knowledge that produced it.
+
 Asked to "align the catalog with the tags" at wrap-up, the alignment turned out to be
 impossible as a routine act: **the tags have never existed and nothing can create them.**
 Measured after `git fetch origin --tags --prune`, so this is the real state and not a stale
@@ -4956,6 +4960,36 @@ have decided a permanent naming convention the repo deliberately left open, in a
 validates and that is awkward to undo once pushed. Closing CAT-05 for real is its own feature:
 decide the format in an ADR, implement `entry-tag`, add the test that demands a tag per entry
 version, wire the step into `release.yml` — then cut.
+
+### CAT-05 is CLOSED — the ruling above was reversed the same day (2026-08-28)
+
+The owner instructed the release session to cut the tags and take the open decisions itself,
+reversing "cut nothing, record the debt" hours after it was given. Under **AD-039** authorization
+attaches to the session that receives the instruction, so both rulings were legitimate in their
+turn — the entry above is superseded, not wrong.
+
+**Cut and pushed:** six entry tags, one per entry version the manifests declare —
+`catalog/attachment@3.0.0`, `catalog/audit@3.0.0`, `catalog/identity-single-tenant@3.0.0`,
+`catalog/notification@3.0.0`, `catalog/professional@1.0.0`, `catalog/tag@3.0.0`. All six anchor at
+**`322f327`** (the `v3.0.0` commit, not HEAD): `git diff v3.0.0..HEAD -- catalog/` was empty and all
+six entries were last touched at `218c0dd`, so the anchor cost nothing here — but the *rule* is what
+makes the ref mean "which release shipped this entry version". `v3.0.1` was then cut on top
+(`556a416`, Release run `33180244872`, success, including the twelve `catalog:check` legs).
+
+**Two of the four rows in the table above are now answered — by AD-040:**
+
+| Row above | Resolution |
+| --- | --- |
+| *Naming for the variant entry* — undecided in code | The variant segment is **mandatory** when `module.json` declares `variant`, so `catalog/identity-single-tenant@3.0.0`, never `catalog/identity@3.0.0`. AD-013 makes a second variant expected by construction, and that bare ref is the one two trees could both claim — unfixable once published. |
+| *CLI command / CI step* — none | Still none, and **deliberately so**. Automating the cut before anything consumes the ref would industrialise a tag no gate validates. |
+
+**What the closure does not buy — the "green because blind" entry survives, reduced.** Rows 1–3 of
+the table above still hold: nothing creates, validates or **reads** a `catalog/*` tag;
+`entry-bump-lint` still compares an entry's tree against the *kernel* tag. The refs existing closes
+the half where AD-016 named a version truth that did not exist; the surviving half is that an entry's
+tag and its `module.json.version` can still drift with no gate noticing. **The remaining debt is a
+consumer, not the tags** — resolving an entry against its tag in `entry-bump-lint` or `module add`
+is the work that would retire it.
 
 ### Method note — a lint that reads LOCAL tags can be right for the wrong reason
 

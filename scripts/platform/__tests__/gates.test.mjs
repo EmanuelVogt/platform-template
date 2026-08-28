@@ -135,9 +135,10 @@ test("GAT-05: lefthook-local.yml mantém catalog-typecheck no pre-push", () => {
 // comentário sobre `migrations`), não de AD-027 — AD-027 decide o gate de
 // cobertura (`pnpm test:coverage`, com Docker) e os pisos por glob; não decide
 // ordem de execução do pre-push.
-test("T38: pre-push roda mais barato primeiro — migrations → typecheck → catalog-typecheck → test-coverage → platform-scripts", () => {
+test("T38: pre-push roda mais barato primeiro — migrations/freeze-guard → typecheck → catalog-typecheck → test-coverage → platform-scripts", () => {
   const commands = mergedPrePushCommands()
   for (const name of [
+    "freeze-guard",
     "migrations",
     "typecheck",
     "catalog-typecheck",
@@ -150,8 +151,13 @@ test("T38: pre-push roda mais barato primeiro — migrations → typecheck → c
       `${name} precisa de priority explícita — sem ela o lefthook 2.x ordena os comandos do pre-push alfabeticamente`
     )
   }
+  // freeze-guard empata com migrations em priority 1 porque lefthook.yml shipa
+  // e fixa 1/2/4 — não há valor abaixo de 1 (priority 0 = "sem prioridade" no
+  // lefthook, vai pro fim). A ordem DENTRO do empate não é contrato: ambos
+  // custam segundos; o contrato é o guard rodar antes de typecheck/coverage.
   assert.deepEqual(orderByPriority(commands), [
     "migrations",
+    "freeze-guard",
     "typecheck",
     "catalog-typecheck",
     "test-coverage",

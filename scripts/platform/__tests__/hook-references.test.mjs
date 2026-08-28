@@ -156,6 +156,46 @@ test("docs/agents/harness.md names ca-full-cycle as the delegation framework (AC
   assert.match(content, /`ca-full-cycle`/)
 })
 
+test("AGENTS.md.jinja (the router) names ca-full-cycle as the dev framework (AC-04)", () => {
+  const content = readFileSync(path.join(REPO_ROOT, "AGENTS.md.jinja"), "utf8")
+  assert.match(content, /\.agents\/skills\/ca-full-cycle\/SKILL\.md/)
+})
+
+// Historical ledgers are excluded: `template-changelog.md` records what past
+// versions shipped and is not current-state guidance (same reason
+// `HANDBOOK_EXCLUDED` above treats it as immutable).
+const TLC_SWEEP_EXCLUDED = [path.join(DOCS_DIR, "dev", "template-changelog.md")]
+const TLC_SWEEP_EXTENSIONS = [".md", ".jinja", ".mjs", ".json", ".txt"]
+
+function listTextFiles(dir) {
+  const files = []
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name)
+    if (entry.isDirectory()) files.push(...listTextFiles(full))
+    else if (TLC_SWEEP_EXTENSIONS.includes(path.extname(entry.name)))
+      files.push(full)
+  }
+  return files
+}
+
+test("no shipped doc or skill under docs/agents/**, docs/test/**, .agents/skills/** names tlc-spec-driven (AC-04)", () => {
+  const roots = [
+    path.join(DOCS_DIR, "agents"),
+    path.join(DOCS_DIR, "test"),
+    path.join(REPO_ROOT, ".agents", "skills"),
+  ]
+  for (const root of roots) {
+    for (const file of listTextFiles(root)) {
+      if (TLC_SWEEP_EXCLUDED.includes(file)) continue
+      assert.doesNotMatch(
+        readFileSync(file, "utf8"),
+        /tlc-spec-driven/,
+        `${path.relative(REPO_ROOT, file)} still references tlc-spec-driven`
+      )
+    }
+  }
+})
+
 test("plans-in-english.mjs is registered; specs-in-english.mjs and wave-plan-check.mjs are gone", () => {
   const settings = readFileSync(SETTINGS_FILE, "utf8")
   assert.match(settings, /plans-in-english\.mjs/)

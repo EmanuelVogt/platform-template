@@ -41,3 +41,10 @@ here on its own — the clause reserving tag and push to the owner was lifted on
 deploy and stays the user's act. The tag itself is never local: `release.yml`
 cuts it after the full gate, so a tag that exists was green; the same job publishes the
 GitHub Release from the changelog section.
+
+Concurrent sessions serialize through the **release lease** —
+`<git common dir>/platform/release-lease.json`, acquired by `pnpm platform release` and
+self-cleared once the tag exists. From the marker commit until the tag, `main` is frozen
+for everyone but the holder (lefthook pre-push guard + Claude hook).
+`pnpm platform release --status` reports the window; `--abort` recovers a stranded one.
+Mechanics: [`release-coordination.md`](release-coordination.md); contract: AD-039.

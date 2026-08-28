@@ -61,6 +61,14 @@ catalog entry.
    excluded workflow the child never receives. A mention that is correct precisely because
    the thing is absent is annotated in the doc itself, at the end of the line, with
    `<!-- audience-contract: <token> — <reason> -->`.
+7. **Releases serialize through a lease; the CLI learns `--status`/`--abort`**
+   (`scripts/platform/lib/release-lease.mjs`, `scripts/platform/lib/commands/release.mjs`,
+   `scripts/platform/lib/exit-codes.mjs`, `scripts/platform/catalog-lint.mjs`):
+   `pnpm platform release` acquires a per-checkout lease, refuses when origin already
+   carries an untagged marker, and exits `RELEASE_LOCKED` (13) when another session holds
+   the cut; the changelog lint fails when two sections sit above the latest tag. The new
+   module ships with the CLI but is inert in a product — `release` still refuses to run
+   there, and no lease is ever created outside the template.
 
 ### Child migration steps
 

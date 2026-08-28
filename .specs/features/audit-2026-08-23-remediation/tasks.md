@@ -4914,3 +4914,55 @@ Small, and it is **not** optional before a tag: a gate that fails half the time 
    lefthook-formatted version), resolved with a plain `git add`. File-level disjointness is not
    sufficient when each worker commits through a formatting hook. Next round: `isolation: worktree`
    per worker, or serialised commits.
+
+## Post-cut findings — after `v3.0.0` was tagged (2026-08-28)
+
+`v3.0.0` is cut and pushed (`322f327`, tag on origin at `7b69473`); the Release run
+`33173548441` went **17/17 green**, including both legs that had never executed before —
+`catalog:check (professional / vite)` and `(professional / next)`. That was the single live
+caveat Verifier pass 3 named, and it did not bite.
+
+### CAT-05 stays OPEN — the `catalog/<name>@x.y.z` tags are a contract with no implementation
+
+Asked to "align the catalog with the tags" at wrap-up, the alignment turned out to be
+impossible as a routine act: **the tags have never existed and nothing can create them.**
+Measured after `git fetch origin --tags --prune`, so this is the real state and not a stale
+clone — `git tag -l 'catalog/*'` is **0** locally and `git ls-remote --tags origin 'catalog/*'`
+is **0** on origin. The origin carries 14 tags, all kernel `v*`, `v0.1.0` through `v3.0.0`.
+
+Meanwhile the manifests declare versions: `identity`, `audit`, `attachment`, `notification`
+and `tag` at **3.0.0**, `professional` at **1.0.0**.
+
+| Layer | State |
+| --- | --- |
+| CLI command | **none** — `cli.mjs:3-16` has `add`/`adopt`/`list`/`update`/`release`/`status`/`template-migrate`/`advisory`/`feedback`; `release.mjs:153-556` only ever builds `v${version}` |
+| CI step | **none** — `release.yml:201` creates only `git tag -a "v$VERSION"` |
+| Test enforcing existence | **none** — `catalog-gate-tags.test.mjs:19,42-57` only asserts `fetch-depth: 0`; `entry-bump-lint` compares an entry's tree against the **kernel** tag, never against `catalog/*` |
+| Naming for the variant entry | **undecided in code** — `catalog/identity/single-tenant/` declares `module.json.name = "identity"`, and `catalog/<name>[-<variant>]@x.y.z` (`docs/catalog/catalog.md:32`) admits both `catalog/identity@3.0.0` and `catalog/identity-single-tenant@3.0.0` |
+
+Recorded independently in two places that predate this feature:
+`.agents/skills/port-module-update/SKILL.md:33` ("AD-016's tagging step hasn't been exercised")
+and `.specs/features/done/v1-kernel-only-module-catalog/validation.md:179`.
+
+**This is not a new discovery — it is CAT-05 (`spec.md:179`), probed empty and marked ⚠️
+"Owner hand-off point 2" (`validation.md:278`).** It was excluded from the pass-3 PASS
+deliberately, not missed. AD-016 naming these tags as an entry's version truth while nothing
+creates, validates or reads them is the "documented contract, unimplemented" shape this file
+has been cataloguing under "green because blind" — here the guard does not merely fail to see,
+it does not exist.
+
+**Owner's ruling, 2026-08-28: cut nothing, record the debt.** Creating six tags by hand would
+have decided a permanent naming convention the repo deliberately left open, in an act no gate
+validates and that is awkward to undo once pushed. Closing CAT-05 for real is its own feature:
+decide the format in an ADR, implement `entry-tag`, add the test that demands a tag per entry
+version, wire the step into `release.yml` — then cut.
+
+### Method note — a lint that reads LOCAL tags can be right for the wrong reason
+
+Relayed by the release session and worth keeping: `catalog-lint`'s single-open-changelog-section
+rule reads **local** tags. A clone that had never fetched `v3.0.0` saw `v3.0.1` and `v3.0.0` as
+two open sections and refused the commit — correct, given its information. Folding the sections
+would have been the wrong repair for a right complaint; `git fetch origin --tags` was the fix.
+The same trap applies to any conclusion of the form "the tag does not exist": **fetch first, and
+prefer `ls-remote` over the local tag list.** The `catalog/*` finding above was re-verified that
+way before being written down.

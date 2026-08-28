@@ -29,6 +29,11 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/branch-only-in-worktree.mjs\"",
             "statusMessage": "Checking branch × worktree"
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/release-coordination.mjs\"",
+            "statusMessage": "Checking the release lease"
           }
         ]
       },

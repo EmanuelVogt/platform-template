@@ -196,10 +196,6 @@ table(
 const sessions = [...new Set(rows.map((r) => r.session).filter(Boolean))]
 const sessionLines = sessions.map((session) => {
   const own = dispatches.filter((d) => d.session === session)
-  const workers = own.filter((d) => d.type === "spec-worker")
-  const waves = new Set(
-    workers.map((d) => d.wave).filter((w) => w !== null && w !== undefined)
-  )
   const split = new Set(
     splits.filter((s) => s.session === session).map((s) => s.wave)
   )
@@ -207,29 +203,10 @@ const sessionLines = sessions.map((session) => {
   const spent = runs
     .filter((j) => j.stop.session === session)
     .reduce((s, j) => s + cost(j), 0)
-  return [
-    session.slice(0, 8),
-    own.length,
-    workers.length,
-    waves.size,
-    split.size,
-    forks,
-    usd(spent),
-  ]
+  return [session.slice(0, 8), own.length, split.size, forks, usd(spent)]
 })
 console.log("\nPer session")
-table(
-  [
-    "session",
-    "dispatches",
-    "spec-workers",
-    "waves",
-    "waves split",
-    "forks",
-    "$",
-  ],
-  sessionLines
-)
+table(["session", "dispatches", "waves split", "forks", "$"], sessionLines)
 
 const total = runs.reduce((s, j) => s + cost(j), 0)
 const commits = runs.reduce((s, j) => s + (j.stop.commits?.length ?? 0), 0)

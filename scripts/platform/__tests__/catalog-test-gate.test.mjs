@@ -28,6 +28,13 @@ function readIncludePatterns(configPath) {
   return [...includeMatch[1].matchAll(/"([^"]+)"/g)].map((m) => m[1])
 }
 
+function readExcludePatterns(configPath) {
+  const source = readFileSync(configPath, "utf8")
+  const excludeMatch = source.match(/exclude:\s*\[([^\]]*)\]/)
+  assert.ok(excludeMatch, `não achei "exclude" em ${configPath}`)
+  return [...excludeMatch[1].matchAll(/"([^"]+)"/g)].map((m) => m[1])
+}
+
 function walkFiles(dir, matches) {
   if (!existsSync(dir)) return []
   const out = []
@@ -64,6 +71,43 @@ test("o include de vitest.catalog.config.mts resolve, contra o stage real, a >= 
   assert.ok(
     matches.length > 0,
     `include ${JSON.stringify(patterns)} resolveu a 0 arquivos contra o stage`
+  )
+})
+
+// `contract.parity.spec.ts` só pode passar contra um `openapi.json`
+// *renderizado* (child real, pós `module add`); o template é kernel-only
+// por construção e nunca teria essas rotas. `pnpm catalog:check` é quem
+// prova esse teste de verdade (foi lá que a wave 11 pegou uma regressão
+// real, contract.parity.spec.ts:42) — este check só garante que o exclude
+// que tira esses specs da coleta daqui não virou um no-op silencioso nem
+// engoliu specs que não são de contrato.
+test("o exclude de contract.parity.spec.ts em vitest.catalog.config.mts casa >= 1 arquivo staged, sem apagar os demais", () => {
+  const entries = listEntries(CATALOG_ROOT)
+  stage({ repoRoot: ROOT_DIR, entries })
+  const stagedModulesDir = path.join(
+    ROOT_DIR,
+    "apps/api/.catalog-stage/src/modules"
+  )
+  const patterns = readExcludePatterns(API_CATALOG_CONFIG_PATH)
+  assert.deepEqual(
+    patterns,
+    ["**/contract.parity.spec.ts"],
+    "o exclude mudou de forma inesperada — revê o motivo documentado no config"
+  )
+
+  const stagedSpecs = walkFiles(stagedModulesDir, (name) =>
+    name.endsWith(".spec.ts")
+  )
+  const excludedByPattern = stagedSpecs.filter(
+    (file) => path.basename(file) === "contract.parity.spec.ts"
+  )
+  assert.ok(
+    excludedByPattern.length > 0,
+    "exclude de contract.parity.spec.ts não casou nenhum staged — virou no-op silencioso"
+  )
+  assert.ok(
+    excludedByPattern.length < stagedSpecs.length,
+    "exclude de contract.parity.spec.ts apagou tudo — 0 specs sobrariam pra este tier coletar"
   )
 })
 

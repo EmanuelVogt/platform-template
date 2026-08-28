@@ -57,6 +57,7 @@ function fakeExec({
   diffStatus = () => 0,
   showAt = () => undefined,
   pushStatus = 0,
+  pushStderr = "",
   head = HEAD_SHA,
   originUrl = "git@github.com:acme/platform-template.git",
   catFileStatus = 0,
@@ -102,7 +103,8 @@ function fakeExec({
         : { status: 0, stdout: content }
     }
     if (sub === "commit") return { status: 0, stdout: "" }
-    if (sub === "push") return { status: pushStatus, stdout: "" }
+    if (sub === "push")
+      return { status: pushStatus, stdout: "", stderr: pushStderr }
     throw new Error(`unexpected git subcommand in test: ${sub}`)
   }
   exec.calls = calls
@@ -419,6 +421,61 @@ test("MARK-12b: push que falha devolve PUSH_FAILED e não se anuncia como sucess
     assert.equal(exitCode, EXIT_CODES.PUSH_FAILED)
     assert.notEqual(exitCode, EXIT_CODES.OK)
     assert.match(logs.join("\n"), /nenhuma tag foi disparada/)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+// O defeito registrado no STATE.md de 2026-08-28 (2): a v3.1.0 falhou o --push
+// duas vezes em exit 12 e a causa morreu não lida — o exec descartava o stderr
+// do único passo de rede do comando.
+test("push que falha imprime o stderr do git — a causa não morre não lida", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec({
+      pushStatus: 128,
+      pushStderr:
+        "remote: error: cannot lock ref 'refs/heads/main'\nfatal: the remote end hung up unexpectedly\n",
+    })
+    const logs = []
+    const exitCode = await planRelease({
+      version: "3.0.0",
+      push: true,
+      cwd: dir,
+      exec,
+      runPreflight: stubPreflight(EXIT_CODES.OK),
+      lease: fakeLease(),
+      log: (line) => logs.push(line),
+    })
+    assert.equal(exitCode, EXIT_CODES.PUSH_FAILED)
+    const joined = logs.join("\n")
+    assert.match(joined, /stderr do `git push` \(status 128\):/)
+    assert.match(joined, /cannot lock ref 'refs\/heads\/main'/)
+    assert.match(joined, /the remote end hung up unexpectedly/)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("push que falha sem stderr nomeia o status e a ausência", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const exec = fakeExec({ pushStatus: 1 })
+    const logs = []
+    const exitCode = await planRelease({
+      version: "3.0.0",
+      push: true,
+      cwd: dir,
+      exec,
+      runPreflight: stubPreflight(EXIT_CODES.OK),
+      lease: fakeLease(),
+      log: (line) => logs.push(line),
+    })
+    assert.equal(exitCode, EXIT_CODES.PUSH_FAILED)
+    assert.match(
+      logs.join("\n"),
+      /`git push` terminou com status 1 sem escrever em stderr/
+    )
   } finally {
     cleanup(dir)
   }

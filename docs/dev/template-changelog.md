@@ -4,6 +4,24 @@ Version truth = git tag + this entry (AD-006); `package.json` is not bumped on
 release. Each version lists the contract-breaking changes and the steps for the child
 to apply on `copier update`.
 
+## v3.1.1
+
+The `v3.1.0` cut failed its own `--push` twice and the harness could not say why: the command
+discarded the stderr of its only network step. Inert in a product — `release` refuses to run
+outside the template — but the file ships, so the fix gets a version (the `v3.0.1` precedent).
+
+### Changes
+
+1. **A failed `release --push` prints git's stderr** (`scripts/platform/lib/commands/release.mjs`):
+   the exec seam now captures stderr (and the spawn error when the process never ran), and the
+   failure path prints it verbatim with the push's own exit status — or names its absence, which
+   is a finding too. Until now `spawnSync` captured the text and the command threw it away, so
+   the primary failure mode of the release's one network step could not be diagnosed by anyone.
+
+### Child migration steps
+
+None — copier update is enough.
+
 ## v3.1.0
 
 `v3.0.1` cut the six `catalog/*` entry tags and said of them: *"a child consumes entry versions

@@ -36,7 +36,16 @@ export function unknownReleaseFlags(options = {}) {
 
 function defaultExec(command, args, options = {}) {
   const result = spawnSync(command, args, { encoding: "utf8", ...options })
-  return { status: result.status ?? 1, stdout: result.stdout ?? "" }
+  // `stderr` existe por causa do push — o único passo de rede do comando: é lá
+  // que o git explica uma falha, e um exec que o descarta deixa o PUSH_FAILED
+  // indiagnosticável. Quando o spawn nem chega a rodar, `error` é o que há.
+  return {
+    status: result.status ?? 1,
+    stdout: result.stdout ?? "",
+    stderr:
+      result.stderr ??
+      (result.error ? String(result.error.message ?? result.error) : ""),
+  }
 }
 
 function defaultLog(line) {
@@ -192,6 +201,15 @@ function completeRelease({
     log(
       "release — marcador criado, mas `git push origin main` falhou; nenhuma tag foi disparada"
     )
+    const pushStderr = (pushResult.stderr ?? "").trim()
+    if (pushStderr) {
+      log(`release — stderr do \`git push\` (status ${pushResult.status}):`)
+      for (const line of pushStderr.split("\n")) log(`  ${line}`)
+    } else {
+      log(
+        `release — \`git push\` terminou com status ${pushResult.status} sem escrever em stderr`
+      )
+    }
     if (tracked) {
       log(
         `release — o lease continua em "marker-local": rode ${ABORT_CMD} (desfaz o marcador local com segurança), depois \`git pull\`, e refaça o release`

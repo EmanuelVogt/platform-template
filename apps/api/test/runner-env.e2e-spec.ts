@@ -24,19 +24,19 @@ describe("travas de ambiente do tier e2e", () => {
     expect(process.env.MAIL_FROM).toBeUndefined()
   })
 
-  it("preenche o R2 com credenciais descartáveis", () => {
+  it("preenche o storage com credenciais descartáveis", () => {
     expect({
-      accountId: process.env.R2_ACCOUNT_ID,
-      accessKeyId: process.env.R2_ACCESS_KEY_ID,
-      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
-      bucket: process.env.R2_BUCKET,
-      endpoint: process.env.R2_ENDPOINT,
+      accessKeyId: process.env.STORAGE_ACCESS_KEY_ID,
+      secretAccessKey: process.env.STORAGE_SECRET_ACCESS_KEY,
+      bucket: process.env.STORAGE_BUCKET,
+      endpoint: process.env.STORAGE_ENDPOINT,
+      region: process.env.STORAGE_REGION,
     }).toEqual({
-      accountId: "test-account",
       accessKeyId: "test-key",
       secretAccessKey: "test-secret",
       bucket: "test-bucket",
       endpoint: "https://test.r2.cloudflarestorage.com",
+      region: "test-region",
     })
   })
 

@@ -16,13 +16,13 @@ process.env.REDIS_URL = containerRedisUri()
 process.env.DATABASE_POOL_MAX_WAITING = "200"
 process.env.OTEL_EXPORTER_OTLP_ENDPOINT = ""
 process.env.OTEL_SDK_DISABLED = "true"
-// R2 dummy: o StorageModule valida no boot (fail-fast em prod). O storage real
-// nunca é exercitado no e2e — quem testa download faz override do OBJECT_STORAGE.
-process.env.R2_ACCOUNT_ID = "test-account"
-process.env.R2_ACCESS_KEY_ID = "test-key"
-process.env.R2_SECRET_ACCESS_KEY = "test-secret"
-process.env.R2_BUCKET = "test-bucket"
-process.env.R2_ENDPOINT = "https://test.r2.cloudflarestorage.com"
+// Storage dummy: o StorageModule valida no boot (fail-fast em prod). O storage
+// real nunca é exercitado no e2e — quem testa download faz override do OBJECT_STORAGE.
+process.env.STORAGE_ACCESS_KEY_ID = "test-key"
+process.env.STORAGE_SECRET_ACCESS_KEY = "test-secret"
+process.env.STORAGE_BUCKET = "test-bucket"
+process.env.STORAGE_ENDPOINT = "https://test.r2.cloudflarestorage.com"
+process.env.STORAGE_REGION = "test-region"
 // Mailer: força LogMailer no e2e. O .env de dev usa MAIL_TRANSPORT=resend com
 // CHAVE REAL do Resend; sem isto um e2e que dispara e-mail (o DeliveryDispatcher
 // roda em background via @Interval) bateria na API real — envio real. Quem

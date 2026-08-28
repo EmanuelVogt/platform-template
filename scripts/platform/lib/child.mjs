@@ -17,11 +17,11 @@ export const CHILD_ENV_DEFAULTS = {
   TRUST_PROXY_HOPS: "0",
   BREACH_CHECK_ENABLED: "false",
   WEB_ORIGIN: "http://localhost:3000",
-  R2_ACCOUNT_ID: "placeholder",
-  R2_ACCESS_KEY_ID: "placeholder",
-  R2_SECRET_ACCESS_KEY: "placeholder",
-  R2_BUCKET: "placeholder",
-  R2_ENDPOINT: "https://placeholder.r2.example.com",
+  STORAGE_ACCESS_KEY_ID: "placeholder",
+  STORAGE_SECRET_ACCESS_KEY: "placeholder",
+  STORAGE_BUCKET: "placeholder",
+  STORAGE_ENDPOINT: "https://placeholder.r2.example.com",
+  STORAGE_REGION: "placeholder",
 }
 
 // O passo "contract" só monta o grafo Nest e nunca abre conexão, então

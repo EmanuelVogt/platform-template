@@ -289,7 +289,7 @@ test("runCatalogCheck happy path renders, installs, adds every entry in order (w
   }
 })
 
-test("runCatalogCheck gives the child's pnpm contract step placeholder DATABASE_URL/REDIS_URL/WEB_ORIGIN/R2_*, without touching other commands", async () => {
+test("runCatalogCheck gives the child's pnpm contract step placeholder DATABASE_URL/REDIS_URL/WEB_ORIGIN/STORAGE_*, without touching other commands", async () => {
   const catalogRoot = withTmpCatalog(buildRealGraphCatalog)
   const run = stubRun()
   const runCli = stubRunCli()
@@ -297,11 +297,11 @@ test("runCatalogCheck gives the child's pnpm contract step placeholder DATABASE_
     "DATABASE_URL",
     "REDIS_URL",
     "WEB_ORIGIN",
-    "R2_ACCOUNT_ID",
-    "R2_ACCESS_KEY_ID",
-    "R2_SECRET_ACCESS_KEY",
-    "R2_BUCKET",
-    "R2_ENDPOINT",
+    "STORAGE_ACCESS_KEY_ID",
+    "STORAGE_SECRET_ACCESS_KEY",
+    "STORAGE_BUCKET",
+    "STORAGE_ENDPOINT",
+    "STORAGE_REGION",
   ]
   const savedEnv = Object.fromEntries(
     envKeys.map((key) => [key, process.env[key]])
@@ -334,14 +334,17 @@ test("runCatalogCheck gives the child's pnpm contract step placeholder DATABASE_
     )
     assert.equal(contractCall.options.env.REDIS_URL, "redis://localhost:6379")
     assert.equal(contractCall.options.env.WEB_ORIGIN, "http://localhost:3000")
-    assert.equal(contractCall.options.env.R2_ACCOUNT_ID, "placeholder")
-    assert.equal(contractCall.options.env.R2_ACCESS_KEY_ID, "placeholder")
-    assert.equal(contractCall.options.env.R2_SECRET_ACCESS_KEY, "placeholder")
-    assert.equal(contractCall.options.env.R2_BUCKET, "placeholder")
+    assert.equal(contractCall.options.env.STORAGE_ACCESS_KEY_ID, "placeholder")
     assert.equal(
-      contractCall.options.env.R2_ENDPOINT,
+      contractCall.options.env.STORAGE_SECRET_ACCESS_KEY,
+      "placeholder"
+    )
+    assert.equal(contractCall.options.env.STORAGE_BUCKET, "placeholder")
+    assert.equal(
+      contractCall.options.env.STORAGE_ENDPOINT,
       "https://placeholder.r2.example.com"
     )
+    assert.equal(contractCall.options.env.STORAGE_REGION, "placeholder")
 
     wrappedRun("pnpm", ["check"], { cwd: "/scratch/child" })
     const otherCall = run.calls.find(

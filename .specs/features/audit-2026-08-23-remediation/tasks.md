@@ -4728,10 +4728,56 @@ Such a test is a real discriminator, not fixture-pinning: deleting either adviso
 extraction without advising `audit`, turns it red. `test` is also the table's declared default
 (42 `test` / 8 `gate` / 1 `probe` across 51 rows).
 
-- [ ] **Owed**: a guard under `scripts/platform/__tests__/` asserting the AD record exists and that
-      every entry affected by the extraction carries a `kind: "breaking"` advisory. Deferred until the
-      three clusters land — a new file under `__tests__/` joins the `test:scripts` glob and would
-      redden a sibling's concurrent gate. **No worker owns it yet.**
+- [x] **PAID — `d8b5487`, 2026-08-28**: `scripts/platform/__tests__/ident-03-extraction-advisories.test.mjs`,
+      4 tests. Detail below, § *IDENT-03 — the owed guard, and the two blind spots it nearly had*.
+
+#### IDENT-03 — the owed guard, and the two blind spots it nearly had
+
+**Landed `d8b5487`.** Gate: `pnpm test:scripts` **816/816** exit 0, run **twice** with identical counts
+(812 + 4; the stability confirms `630a41a`'s `.catalog-stage` fix holds with the new file in the glob);
+`pnpm format:check` exit 0.
+
+**The affected-entry set is derived, not pinned.** `identity` comes from the `dependsOn` of
+`catalog/professional/module.json` (which is `[{name, range}]` — objects, not strings; resolution
+matches `identity` → `identity/single-tenant` by prefix); `audit` comes from scanning which entries
+still name the slice's tables **in code** (`.md` excluded: a CHANGELOG describes the break rather than
+suffering it). That is the same signal `ADV-20260824-02`'s `detect` already uses.
+
+**BLIND SPOT 1, AND IT WOULD HAVE BEEN THE SEVENTEENTH "GREEN BECAUSE BLIND" — written by the very
+guard that exists to close that family.** The first version required the affected entry to carry
+*some* `kind: "breaking"` advisory. `docs/advisories/` holds **9 breaking advisories, more than one per
+module** (`ADV-20260821-02` and `ADV-20260824-04` are both `module: "audit"`). Sensor: downgrade
+`ADV-20260824-02` to `kind: "bug"` — the test **passed**, satisfied by the jest-to-vitest advisory. The
+fix is to require the extraction's signature: the advisory text names a slice table **AND** mentions the
+destination entry (`catalog/professional/` or "entrada `professional`"). Measured: that signature matches
+exactly `ADV-20260824-01` and `ADV-20260824-02`, and none of the other 7 breaking advisories.
+
+**BLIND SPOT 2: the derivation can shrink silently.** If `audit` stops naming the slice, the derived set
+collapses to `{identity/single-tenant}` and no advisory is required — green because it matched nothing.
+A floor of 2 affected entries, anchored in AD-035's own "identity and audit **at minimum**", trips on
+that case with its own message.
+
+**Sensors, each proved red then restored** (`git status` clean, `git diff` empty at the end):
+
+| Mutation | Result |
+| --- | --- |
+| `ADV-20260824-02` → `kind: "bug"` (extraction shipped without advising `audit`) | tests 2 and 3 red |
+| `ADV-20260824-01` → `kind: "bug"` | tests 2 and 3 red |
+| AD-035 → `superseded` | test 1 red |
+| `audit` stops naming the slice (derivation goes blind) | test 2 red via the floor |
+| `catalog/professional/module.json` removed | tests 2 and 4 red with their own message — it does not degrade to "nothing affected, nothing required" |
+
+**The scan roots at `catalog/`, never at `REPO_ROOT`**, and that is a decision, not an accident:
+`apps/api/.catalog-stage` receives staged copies of the entries during `test:scripts`, and a surviving
+stage tree carrying pre-extraction `identity` would feed the derivation pre-extraction sources. Checked
+at HEAD: no `.catalog-stage`, `node_modules` or `dist` anywhere under `catalog/`.
+
+**METHOD TRAP, AND IT GENERALIZES TO EVERY DIRECTORY-WALKING GUARD IN THIS REPO.** The first sensor
+passed green and nearly closed the case as "weak guard". It was not: `sed -i.bak` had left the `.bak`
+files **inside `catalog/`**, and the scan read them as sources with the original content — the mutation
+was real and the intact copy beside it cancelled it out. **A backup inside the tree contaminates any
+directory walk**, and this repo has several (`brand-hygiene.test.mjs`'s `walk()` `:154-162` still has no
+exclude list at all). From here on, sensors write their backups **outside the repo**.
 
 ### Verifier pass 3 — the plan's shape has changed and the reason is recorded here
 

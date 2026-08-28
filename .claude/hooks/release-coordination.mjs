@@ -7,6 +7,10 @@
 // is still allowed (the freeze only starts once a marker exists) but a second
 // `pnpm platform release` is refused. A human terminal pushing with `--no-verify` is out
 // of reach for a Claude hook — documented limitation, not a gap this file can close.
+// This hook stays network-free: it fires before every Bash call, and the tag evidence
+// that retires a finished lease costs a `git ls-remote`. So it does not self-clear like
+// the pre-push guard does — it points at `release --status`, which does, and that closes
+// the loop for the agent it just blocked.
 // Harness tooling — not app code.
 import { readFileSync } from "node:fs"
 import path from "node:path"
@@ -121,7 +125,7 @@ Um segundo \`platform release\` agora colidiria com o preflight em andamento —
 
 function frozenMessage(lease) {
   return `Release v${lease.version} em andamento (estágio "${lease.stage}", titular ${lease.holder?.id}, há ${ageMinutes(lease)} min).
-Um push para main agora derrubaria o gate do release em curso — rode \`pnpm platform release --status\` para acompanhar, ou espere o titular terminar.`
+Um push para main agora derrubaria o gate do release em curso — rode \`pnpm platform release --status\`: se a tag v${lease.version} já existir em origin ele libera o lease e este push volta a passar; se não, acompanhe por ali ou espere o titular terminar.`
 }
 
 try {

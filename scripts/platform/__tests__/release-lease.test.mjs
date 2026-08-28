@@ -25,6 +25,7 @@ import {
   parseRepoSlug,
   probeReleaseRuns,
   readLease,
+  reconcileFinishedLease,
   releaseLease,
   updateLease,
 } from "../lib/release-lease.mjs"
@@ -824,6 +825,114 @@ test("originStableTags returns the sorted stable tags and an empty list on failu
       }),
       []
     )
+  } finally {
+    cleanup(root)
+  }
+})
+
+// --- reconcileFinishedLease -------------------------------------------------
+// The self-clear that used to exist only inside `acquireLease`: before it, a
+// finished cut left the lease on disk and froze `main` for every non-holder
+// until somebody cut the NEXT release (STATE.md 2026-08-28).
+
+test("reconcileFinishedLease clears a finished lease for a NON-holder — the evidence is the tag, not the identity", () => {
+  const root = buildFixture()
+  try {
+    seedLease(
+      root,
+      leaseOf({
+        stage: "marker-pushed",
+        markerSha: "322f327",
+        holder: FOREIGN_HOLDER,
+      })
+    )
+    const exec = fakeExec(root, { tags: ["v3.0.0"] })
+
+    const result = reconcileFinishedLease({ cwd: root, exec })
+
+    assert.equal(result.cleared, true)
+    assert.equal(result.lease.version, "3.0.0")
+    assert.equal(readLease({ cwd: root, exec }).lease, undefined)
+    assert.equal(readdirSync(leaseDir(root)).length, 0)
+  } finally {
+    cleanup(root)
+  }
+})
+
+test("reconcileFinishedLease leaves a live lease alone while its tag is absent from origin", () => {
+  const root = buildFixture()
+  try {
+    seedLease(root, leaseOf({ stage: "marker-pushed" }))
+    const exec = fakeExec(root, { tags: ["v2.4.1"] })
+
+    const result = reconcileFinishedLease({ cwd: root, exec })
+
+    assert.equal(result.cleared, false)
+    assert.equal(readLease({ cwd: root, exec }).lease.stage, "marker-pushed")
+  } finally {
+    cleanup(root)
+  }
+})
+
+// Fail closed: `originTagExists` answers `null` when it cannot tell, and a
+// network blip must never be read as "the release finished".
+test("reconcileFinishedLease keeps the lease when the origin probe fails", () => {
+  const root = buildFixture()
+  try {
+    seedLease(root, leaseOf({ stage: "marker-pushed" }))
+    const exec = fakeExec(root, { tags: ["v3.0.0"], lsRemoteStatus: 128 })
+
+    const result = reconcileFinishedLease({ cwd: root, exec })
+
+    assert.equal(result.cleared, false)
+    assert.equal(readLease({ cwd: root, exec }).lease.stage, "marker-pushed")
+  } finally {
+    cleanup(root)
+  }
+})
+
+// A corrupt lease names no version to check a tag against — it stays for
+// `--abort --force`, which is the only thing allowed to discard it blind.
+test("reconcileFinishedLease does not clear a corrupt lease", () => {
+  const root = buildFixture()
+  try {
+    mkdirSync(leaseDir(root), { recursive: true })
+    writeFileSync(leaseFile(root), "{ not json")
+    const exec = fakeExec(root, { tags: ["v3.0.0"] })
+
+    const result = reconcileFinishedLease({ cwd: root, exec })
+
+    assert.equal(result.cleared, false)
+    assert.equal(readLease({ cwd: root, exec }).corrupt, true)
+  } finally {
+    cleanup(root)
+  }
+})
+
+test("reconcileFinishedLease is a no-op when there is no lease", () => {
+  const root = buildFixture()
+  try {
+    const exec = fakeExec(root, { tags: ["v3.0.0"] })
+
+    const result = reconcileFinishedLease({ cwd: root, exec })
+
+    assert.equal(result.cleared, false)
+    assert.equal(result.lease, undefined)
+  } finally {
+    cleanup(root)
+  }
+})
+
+// A `draft` lease carries no marker, but the tag existing still means that
+// version is done — the same fact `acquireLease` acts on, so the two paths
+// cannot disagree.
+test("reconcileFinishedLease clears a draft lease whose version is already tagged", () => {
+  const root = buildFixture()
+  try {
+    seedLease(root, leaseOf({ stage: "draft" }))
+    const exec = fakeExec(root, { tags: ["v3.0.0"] })
+
+    assert.equal(reconcileFinishedLease({ cwd: root, exec }).cleared, true)
   } finally {
     cleanup(root)
   }

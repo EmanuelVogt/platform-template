@@ -123,6 +123,10 @@ function fakeLease({
   stableTags = ["v2.0.0"],
   matches = true,
   classify = "active",
+  // Padrão inerte: o self-clear é do módulo de lease e tem teste próprio contra
+  // o disco em `release-lease.test.mjs`. Aqui só interessa se o comando o chama
+  // e o que ele faz com a resposta.
+  reconcile = { cleared: false },
 } = {}) {
   const calls = []
   const record = (name, args) => calls.push({ name, args })
@@ -151,6 +155,10 @@ function fakeLease({
     isAncestorOfHead: () => ancestor,
     originStableTags: () => stableTags,
     probeReleaseRuns: () => runs,
+    reconcileFinishedLease: (args) => {
+      record("reconcileFinishedLease", args)
+      return typeof reconcile === "function" ? reconcile(args) : reconcile
+    },
   }
   api.calls = calls
   api.named = (name) => calls.filter((call) => call.name === name)
@@ -831,8 +839,10 @@ test("--push com sucesso: lease vai a marker-pushed e o push carrega PLATFORM_RE
     const stages = lease.named("updateLease").map((c) => c.args.patch.stage)
     assert.deepEqual(stages, ["marker-local", "marker-pushed"])
     assert.equal(lease.named("releaseLease").length, 0)
-    assert.match(logs, /limpa sozinho quando a tag existir/)
-    assert.match(logs, /--status/)
+    // A linha de fecho tem de nomear QUEM limpa. "limpa sozinho" descrevia um
+    // daemon que nunca existiu, e foi o que deixou a v3.0.0 congelada.
+    assert.match(logs, /se limpa no primeiro `pnpm platform release --status`/)
+    assert.doesNotMatch(logs, /sozinho/)
   } finally {
     cleanup(dir)
   }
@@ -1501,4 +1511,83 @@ test("unknownReleaseFlags reconhece push, help, status, abort e force", () => {
   assert.deepEqual(unknownReleaseFlags({ status: true }), [])
   assert.deepEqual(unknownReleaseFlags({ abort: true, force: true }), [])
   assert.deepEqual(unknownReleaseFlags({ push: true, dry: true }), ["dry"])
+})
+
+// O defeito registrado no STATE.md de 2026-08-28: depois da tag da v3.0.0
+// existir na origin, `--status` continuava dizendo `release em voo` na mesma
+// saída em que imprimia `última tag estável v3.0.0`. Tinha a evidência e não
+// agia sobre ela — e, como a guarda de pre-push não faz rede no caminho de
+// allow, `main` ficava congelada para todo não-titular até alguém cortar a
+// PRÓXIMA release.
+test("--status libera o lease quando a tag da versão já existe em origin", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const held = {
+      version: "3.0.0",
+      stage: "marker-pushed",
+      holder: { id: "sess-outra", kind: "session" },
+      markerSha: "322f32783743dd59c2a0697bbae3054100137fb9",
+    }
+    const lease = fakeLease({
+      lease: held,
+      matches: false,
+      stableTags: ["v3.0.0"],
+      reconcile: { cleared: true, lease: held },
+    })
+    const { exitCode, logs } = statusWith({ dir, exec: fakeExec(), lease })
+
+    assert.equal(exitCode, EXIT_CODES.OK)
+    // A linha do lease que existia vem ANTES da liberação: quem lê o output
+    // precisa ver o que havia e o que foi feito com ele.
+    assert.match(logs, /lease: v3\.0\.0, estágio "marker-pushed"/)
+    assert.match(
+      logs,
+      /já tem tag em origin — release terminado, lease liberado/
+    )
+    assert.match(logs, /veredito: livre/)
+    assert.doesNotMatch(logs, /release em voo/)
+    assert.equal(lease.named("reconcileFinishedLease").length, 1)
+    // Não é `--abort`: nada é abandonado e o marcador não é tocado.
+    assert.equal(lease.named("releaseLease").length, 0)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+test("--status não libera o lease enquanto a tag não existe em origin", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const lease = fakeLease({
+      lease: {
+        version: "3.1.0",
+        stage: "marker-pushed",
+        holder: { id: "sess-outra", kind: "session" },
+        markerSha: "abc1234",
+      },
+      matches: false,
+      reconcile: { cleared: false },
+    })
+    const { exitCode, logs } = statusWith({ dir, exec: fakeExec(), lease })
+
+    assert.equal(exitCode, EXIT_CODES.OK)
+    assert.doesNotMatch(logs, /lease liberado/)
+    assert.match(logs, /veredito: release em voo — não pushe main/)
+  } finally {
+    cleanup(dir)
+  }
+})
+
+// Um lease corrompido não nomeia versão nenhuma para conferir contra a origin:
+// ele continua sendo assunto de `--abort --force`.
+test("--status não tenta liberar um lease corrompido", async () => {
+  const dir = buildFixtureDir()
+  try {
+    const lease = fakeLease({ corruptRead: true })
+    const { logs } = statusWith({ dir, exec: fakeExec(), lease })
+
+    assert.match(logs, /lease: corrompido/)
+    assert.equal(lease.named("reconcileFinishedLease").length, 0)
+  } finally {
+    cleanup(dir)
+  }
 })

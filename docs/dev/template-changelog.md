@@ -4,6 +4,31 @@ Version truth = git tag + this entry (AD-006); `package.json` is not bumped on
 release. Each version lists the contract-breaking changes and the steps for the child
 to apply on `copier update`.
 
+## v3.0.1
+
+`v3.0.0` was the release-coordination system's own first end-to-end run, and it left its lease
+behind: with the tag already on origin, `--status` still reported `release em voo`. Inert in a
+product — one never holds a release lease — but the files ship, so it gets a version.
+
+### Changes
+
+1. **The lease self-clears on tag evidence outside `acquireLease`**
+   (`scripts/platform/lib/release-lease.mjs`, `.../lib/commands/release.mjs`): the tag check
+   that retires a finished lease lived only in `acquireLease`, so a completed cut froze `main`
+   for every non-holder until somebody cut the *next* release. It is now one shared predicate
+   behind `reconcileFinishedLease`, which `--status` runs — reported after the lease it found,
+   and needing no holder, since the tag reads the same for everyone. Fails closed:
+   `originTagExists` answering `null` leaves the lease standing, and a corrupt lease stays for
+   `--abort --force`. Not an abort — nothing is abandoned, the marker is untouched.
+2. **`--push`'s closing line stops promising a daemon**
+   (`.../lib/commands/release.mjs`, `.claude/hooks/release-coordination.mjs`): it said the
+   lease "limpa sozinho quando a tag existir", which nothing did. It now names the actor, and
+   the PreToolUse block message says `--status` is what unfreezes the push it just refused.
+
+### Child migration steps
+
+None — copier update is enough.
+
 ## v3.0.0
 
 The kernel's first breaking release since `v2.0.0`: cookie names go neutral, storage env drops

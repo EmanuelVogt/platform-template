@@ -16,8 +16,11 @@ Holder identity: the Claude session id (`CLAUDE_CODE_SESSION_ID`) or `user@host#
 | `marker-pushed` | marker on origin, gate running | tag exists on origin (self-clear) · `--abort` |
 
 A lease carrying a marker never expires by clock — only tag evidence or an explicit
-`--abort` clears it. Corrupt lease JSON reads as held; `--status` names it and
-`--abort --force` clears it.
+`--abort` clears it. The self-clear is nobody's background job: three paths act on the
+evidence when someone runs them — `--status`, the next `release`, and the pre-push guard
+on the very push it would otherwise refuse. The PreToolUse hook does no network and never
+clears; it points at `--status`. Corrupt lease JSON names no version to check a tag
+against, so it reads as held: `--status` names it and `--abort --force` clears it.
 
 ## Enforcement layers
 
@@ -34,7 +37,10 @@ A lease carrying a marker never expires by clock — only tag evidence or an exp
 ## Commands
 
 - `pnpm platform release --status` — lease, origin (last stable tag, marker at head?),
-  live release runs (gh), verdict. Always exit 0.
+  live release runs (gh), verdict. Always exit 0. It also **clears a lease whose version
+  is already tagged on origin**, on its own line after the lease it found. Not an abort:
+  nothing is abandoned, the marker is untouched, no holder required — the tag reads the
+  same for everyone.
 - `pnpm platform release --abort` — allowed for the holder, on a stale lease, or with
   `--force`. `draft`: clears. `marker-local`: resets the local marker (requires
   `HEAD == markerSha`, clean tree, marker absent from origin) and clears.
@@ -50,6 +56,7 @@ A lease carrying a marker never expires by clock — only tag evidence or an exp
 | Gate red + main moved + tag absent | The old run is burned: `--abort`, then a fresh `release` — the sanctioned re-cut (AD-039). |
 | `RELEASE_LOCKED` (13) | Another session or machine holds the cut: `pnpm platform release --status`, then wait, or `--abort` under the rules above. |
 | Stale `draft` lease | `--abort` takes over. |
+| Tag exists, lease still `marker-pushed`, push refused | `pnpm platform release --status` — it clears the leftover. Not `--abort` (red-run recovery, abandons the run for good), and never delete the file by hand. |
 
 ## Remote guards
 

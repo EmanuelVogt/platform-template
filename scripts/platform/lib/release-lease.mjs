@@ -118,6 +118,20 @@ function createExclusive({ leasePath, version, holder, now }) {
   return { ok: true, lease }
 }
 
+// The single fact that retires a lease without an `--abort`: the version's tag
+// on origin. Whoever asks gets the same answer, so a session that does not hold
+// the lease may act on it too. `originTagExists` answers `null` when it cannot
+// tell — only a literal `true` counts, and a failed probe leaves the lease
+// standing. Module-private: the two exported consumers below are the contract.
+function leaseIsFinished({
+  cwd = process.cwd(),
+  exec = defaultExec,
+  lease,
+} = {}) {
+  if (lease === undefined) return true
+  return originTagExists({ cwd, exec, version: lease.version }) === true
+}
+
 export function acquireLease({
   cwd = process.cwd(),
   exec = defaultExec,
@@ -135,17 +149,35 @@ export function acquireLease({
   if (existing.corrupt) return { ok: false, corrupt: true }
 
   // The previous lease's tag already exists: that release finished and the file
-  // is leftover. The only self-heal — any other case is a live holder.
-  const finished =
-    existing.lease === undefined ||
-    originTagExists({ cwd, exec, version: existing.lease.version }) === true
-  if (!finished) return { ok: false, lease: existing.lease }
+  // is leftover. Any other case is a live holder.
+  if (!leaseIsFinished({ cwd, exec, lease: existing.lease }))
+    return { ok: false, lease: existing.lease }
 
   unlinkIfPresent(leasePath)
   const retried = createExclusive({ leasePath, version, holder, now })
   return (
     retried ?? { ok: false, lease: readLease({ cwd, exec, leasePath }).lease }
   )
+}
+
+// The self-clear AD-039 promises for a lease carrying a marker, reachable
+// WITHOUT acquiring: until this existed the evidence was only read by the next
+// release, so a finished cut froze `main` for every non-holder until somebody
+// cut the following one. Deliberately not `--abort`: nothing is abandoned and
+// the marker is never touched — the tag is proof the run reached its last job.
+export function reconcileFinishedLease({
+  cwd = process.cwd(),
+  exec = defaultExec,
+} = {}) {
+  const leasePath = leasePathFor({ cwd, exec })
+  const current = readLease({ cwd, exec, leasePath })
+  // A corrupt lease names no version to check a tag against, so it is not this
+  // function's to clear: it stays for `--abort --force`.
+  if (current.corrupt || !current.lease) return { cleared: false }
+  if (!leaseIsFinished({ cwd, exec, lease: current.lease }))
+    return { cleared: false }
+  unlinkIfPresent(leasePath)
+  return { cleared: true, lease: current.lease }
 }
 
 // The asymmetry is load-bearing: for a session the id is the agent's and the

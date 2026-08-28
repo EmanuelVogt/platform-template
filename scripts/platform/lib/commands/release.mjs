@@ -216,7 +216,7 @@ function completeRelease({
   log(`release — marcador v${version} empurrado; a tag sai do gate`)
   if (tracked) {
     log(
-      `release — o lease limpa sozinho quando a tag existir — acompanhe com ${STATUS_CMD}`
+      `release — o lease se limpa no primeiro ${STATUS_CMD} depois que a tag existir em origin (a guarda de pre-push também o faz)`
     )
   }
   return EXIT_CODES.OK
@@ -526,7 +526,7 @@ export function releaseStatusCommand({
 } = {}) {
   const holder = leaseApi.currentHolderId({ env })
   const read = leaseApi.readLease({ cwd, exec })
-  const lease = read.corrupt ? undefined : read.lease
+  let lease = read.corrupt ? undefined : read.lease
 
   if (read.corrupt) {
     log(
@@ -538,6 +538,16 @@ export function releaseStatusCommand({
     log(
       `release --status — lease: v${lease.version}, estágio "${lease.stage}", ${describeHolder({ leaseApi, lease, holder, env, now })}, marcador ${lease.markerSha ? short(lease.markerSha) : "(nenhum)"}`
     )
+    // Depois da linha acima de propósito: quem lê precisa ver o lease que havia
+    // e o que foi feito com ele. Sem checar titular — é o não-titular congelado
+    // que roda este comando, e a tag em origin diz o mesmo a qualquer um.
+    const reconciled = leaseApi.reconcileFinishedLease({ cwd, exec })
+    if (reconciled.cleared) {
+      log(
+        `release --status — lease: v${lease.version} já tem tag em origin — release terminado, lease liberado`
+      )
+      lease = undefined
+    }
   }
 
   const tags = leaseApi.originStableTags({ cwd, exec })

@@ -57,8 +57,8 @@
           },
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/specs-in-english.mjs\"",
-            "statusMessage": "Checking spec artifact language"
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/plans-in-english.mjs\"",
+            "statusMessage": "Checking plan artifact language"
           },
           {
             "type": "command",
@@ -185,11 +185,6 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/contract-consumers.mjs\"",
             "statusMessage": "Mapping contract consumers"
-          },
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/wave-plan-check.mjs\"",
-            "statusMessage": "Checking the wave plan"
           }
         ]
       }

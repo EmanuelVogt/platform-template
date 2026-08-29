@@ -134,8 +134,8 @@ function isKnownHandbookException(relFile, reference) {
   )
 }
 
-test("the harness ships exactly 21 hook files under .claude/hooks", () => {
-  assert.equal(listHookFiles().length, 21)
+test("the harness ships exactly 22 hook files under .claude/hooks", () => {
+  assert.equal(listHookFiles().length, 22)
 })
 
 test("no hook references a file, helper or spec that does not exist", () => {

@@ -64,6 +64,11 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/docs-stay-lean.mjs\"",
             "statusMessage": "Checking doc growth and rationale prose"
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/qa-retro-ledger.mjs\"",
+            "statusMessage": "Checking the QA retro ledger"
           }
         ]
       },

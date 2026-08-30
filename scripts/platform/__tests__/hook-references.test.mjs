@@ -3,7 +3,14 @@ import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs"
 import path from "node:path"
 import { test } from "node:test"
 import { fileURLToPath } from "node:url"
-import { shippedDocs, shippedSet } from "./lib/audience-contract.mjs"
+import {
+  isExcluded,
+  readExcludes,
+  renderedDestination,
+  shippedDocs,
+  shippedSet,
+  trackedFiles,
+} from "./lib/audience-contract.mjs"
 
 const TESTS_DIR = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(TESTS_DIR, "..", "..", "..")
@@ -234,6 +241,75 @@ test("no hook, top-level script or agent card references the removed spec-worker
       readFileSync(file, "utf8"),
       /spec-(worker|verifier)\.md/,
       `${path.relative(REPO_ROOT, file)} still references a removed spec-worker/spec-verifier card`
+    )
+  }
+})
+
+// AC-03 sweep hardening: the checks above are scoped to individual harness
+// roots; this extends the same patterns, plus the literal `.specs` itself,
+// across the FULL shipped set (every tracked, non-excluded file a child
+// actually receives — derived the same way shipped-set.test.mjs proves
+// AC-10, never a list hand-picked here). Read from source, not a render: a
+// `.specs`/tlc-spec-driven mention is never inside `{{ }}`/`{% %}`
+// templating, so the source text is a faithful proxy for what ships; the
+// real-render probe (copier copy + grep) is the verifier's job.
+function shippedTextFiles() {
+  const excludes = readExcludes()
+  const files = []
+  for (const source of trackedFiles()) {
+    if (!TLC_SWEEP_EXTENSIONS.includes(path.extname(source))) continue
+    const destination = renderedDestination(source)
+    if (destination === null) continue
+    if (isExcluded(destination, excludes)) continue
+    const full = path.join(REPO_ROOT, source)
+    if (TLC_SWEEP_EXCLUDED.includes(full)) continue
+    files.push(full)
+  }
+  return files
+}
+
+// `.specs/` also names the CHILD's own (still-existing) specs directory,
+// distinct from the removed spec-driven-framework artifact AC-03 targets.
+// T2 kept both on purpose (docs/dev/template.md's ownership row,
+// feedback.mjs's PRODUCT_PREFIXES) — named here, not silently swallowed,
+// same idiom as KNOWN_HANDBOOK_EXCEPTIONS above.
+const DOT_SPECS_LITERAL_EXCEPTIONS = [
+  path.join(DOCS_DIR, "dev", "template.md"),
+  path.join(
+    REPO_ROOT,
+    "scripts",
+    "platform",
+    "lib",
+    "commands",
+    "feedback.mjs"
+  ),
+]
+
+test("AC-03: no file in the full shipped set references .specs, tlc-spec-driven, spec-worker or spec-verifier (static half)", () => {
+  const files = shippedTextFiles()
+  assert.ok(
+    files.length >= 200,
+    `only ${files.length} candidate files found — the sweep's file set likely stopped resolving`
+  )
+  for (const file of files) {
+    const content = readFileSync(file, "utf8")
+    const relFile = path.relative(REPO_ROOT, file)
+    if (!DOT_SPECS_LITERAL_EXCEPTIONS.includes(file)) {
+      assert.doesNotMatch(
+        content,
+        /\.specs\b/,
+        `${relFile} still references .specs`
+      )
+    }
+    assert.doesNotMatch(
+      content,
+      /tlc-spec-driven/,
+      `${relFile} still references tlc-spec-driven`
+    )
+    assert.doesNotMatch(
+      content,
+      /spec-(worker|verifier)\b/,
+      `${relFile} still references spec-worker/spec-verifier`
     )
   }
 })

@@ -23,6 +23,7 @@ _exclude:
   - "*.tsbuildinfo"
   - .worktrees
   - .specs
+  - .ca-plans
   # âncora obrigatória: `catalog/` casaria qualquer diretório com esse nome em
   # qualquer profundidade e levava junto `docs/catalog/`. Sem a barra final porque
   # o copier testa o caminho de destino como Path, que nunca traz a barra — com ela

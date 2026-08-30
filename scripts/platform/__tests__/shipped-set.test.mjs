@@ -182,3 +182,36 @@ test("os stems de workflow excluídos são derivados do copier.yml", () => {
     "a extensão `.yaml` também é reconhecida"
   )
 })
+
+// AC-10: .ca-plans e .specs são diretórios do FILHO (run artifacts, log de
+// decisões próprio) e estão no `_exclude` — isExcluded() casa contra um
+// destino sintético, provando o padrão mesmo sem arquivo rastreado na árvore
+// (hoje o caso de .ca-plans). docs/adr, docs/agents e docs/arch não têm
+// entrada de `_exclude` própria: foram absorvidos por .agents/skills/** e
+// removidos da árvore rastreada — o teste de shippedSet() abaixo é quem tranca
+// essa ausência.
+test("AC-10: .ca-plans e .specs casam contra o `_exclude`", () => {
+  const excludes = readExcludes()
+  for (const destination of [".ca-plans/DECISIONS.md", ".specs/STATE.md"]) {
+    assert.ok(
+      isExcluded(destination, excludes),
+      `${destination} tem que casar contra o \`_exclude\` do copier.yml`
+    )
+  }
+})
+
+test("AC-10: .ca-plans, .specs, docs/adr, docs/agents e docs/arch nunca chegam ao filho", () => {
+  const shipped = shippedSet()
+  for (const prefix of [
+    ".ca-plans/",
+    ".specs/",
+    "docs/adr/",
+    "docs/agents/",
+    "docs/arch/",
+  ]) {
+    assert.ok(
+      ![...shipped].some((member) => member.startsWith(prefix)),
+      `${prefix} não pode aparecer no conjunto entregue de verdade`
+    )
+  }
+})

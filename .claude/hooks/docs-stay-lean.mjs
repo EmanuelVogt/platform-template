@@ -24,7 +24,7 @@ const MAX_NEW_ADR = 60
 
 const DOC = String.raw`\.md(\.jinja)?`
 const HANDBOOK = new RegExp(
-  String.raw`(^|/)(docs/(?!adr/|advisories/)[^\n]*${DOC}|(CLAUDE|AGENTS)${DOC})$`
+  String.raw`(^|/)(docs/(?!adr/|advisories/)[^\n]*${DOC}|\.agents/skills/[^\n]*${DOC}|(CLAUDE|AGENTS)${DOC})$`
 )
 const ADR = new RegExp(String.raw`(^|/)docs/adr/[^\n]*${DOC}$`)
 const FROZEN = /(^|\/)(docs\/advisories\/|docs\/dev\/template-changelog\.md$)/

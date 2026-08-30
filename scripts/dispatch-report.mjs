@@ -9,7 +9,7 @@
 // top on every stop), so pricing every stop row counted the same tokens once
 // per resume — 45 spec-workers produced 295 stop rows and inflated the total
 // ~4.8x (2026-08-21). Only the LAST stop row per agent_id is priced. The why
-// of each rule it measures is in docs/agents/harness.md § Token economy.
+// of each rule it measures is in .agents/skills/agent-harness/SKILL.md § Token economy.
 //
 // Usage: pnpm dispatch:report [path/to/dispatch-log.jsonl]
 import { existsSync, readFileSync } from "node:fs"

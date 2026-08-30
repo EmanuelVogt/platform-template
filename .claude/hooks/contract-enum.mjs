@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // PostToolUse: warns when an edit in apps/web hand-writes a set of values that
 // openapi.json already defines (ADR 0076). Early feedback only — enforcement
-// is human review, per docs/arch/front.md § Contract enums and selects.
+// is human review, per .agents/skills/frontend-architecture/SKILL.md § Contract enums and selects.
 // The match has to be exact: a partial slice of a list does not fire.
 // Harness tooling — not app code.
 import { readFileSync } from "node:fs"
@@ -107,7 +107,7 @@ const sample = hits
   .join("\n")
 
 process.stderr.write(
-  `Contract enum retyped by hand (${hits.length}) — ADR 0076, docs/arch/front.md § Contract enums and selects:
+  `Contract enum retyped by hand (${hits.length}) — ADR 0076, .agents/skills/frontend-architecture/SKILL.md § Contract enums and selects:
 ${sample}
 
 The edit was ALREADY APPLIED to the file — do NOT retry the same Edit (old_string no longer matches).

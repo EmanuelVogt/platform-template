@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // PreToolUse(Bash): blocks creating/switching a branch in the main checkout — the
-// "worktree or main" rule (docs/agents/workflow.md). The main directory is
+// "worktree or main" rule (.agents/skills/dev-workflow/SKILL.md). The main directory is
 // shared between agents: moving HEAD there changes the files underneath
 // whoever is working on main in parallel. A new branch only inside a worktree
 // (git worktree add). Harness tooling — not app code.
@@ -124,7 +124,7 @@ for (const segment of command.split(/&&|\|\||[;|\n]/)) {
 if (violations.length === 0) process.exit(0)
 
 process.stderr.write(
-  `Branch creation blocked in the main checkout (docs/agents/workflow.md):
+  `Branch creation blocked in the main checkout (.agents/skills/dev-workflow/SKILL.md):
   ${violations.join("\n  ")}
 
 The main checkout is shared between agents: creating/switching a branch here

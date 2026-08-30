@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Lê os transcripts que o Claude Code grava fora do repo, em
 // ~/.claude/projects/<slug>/. O baseline para comparar está em
-// docs/agents/harness.md — sem ele os números aqui não decidem nada.
+// .agents/skills/agent-harness/SKILL.md — sem ele os números aqui não decidem nada.
 //
 // Uso: pnpm tokens:report [--sessions N] [--include-worktrees]
 import { readFileSync, readdirSync, statSync } from "node:fs"

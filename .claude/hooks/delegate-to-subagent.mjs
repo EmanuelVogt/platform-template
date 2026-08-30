@@ -3,7 +3,7 @@
 // agent to delegate navigation and heavy commands to a subagent (the tier is
 // chosen by whoever dispatches — subagent-model-required.mjs demands the
 // `model`).
-// Measured in docs/agents/harness.md: 87% of all shell output is navigation
+// Measured in .agents/skills/agent-harness/SKILL.md: 87% of all shell output is navigation
 // (968 direct calls against 52 delegations), and every character that lands in
 // the main context is repaid on every turn until the end of the session. It
 // applies to the main agent only — ENFORCED_AGENTS is empty (tlc-spec-driven's
@@ -33,7 +33,7 @@
 // pipe like `| tail` or `| head` reduces what enters the context, it isn't
 // navigation); the redirect-to-file check still runs on the whole statement.
 // A Bash statement whose path arguments are ALL under HARNESS_DIRS (.claude/,
-// .agents/, docs/agents/, scripts/, .ca-plans/) does not count as navigation: the
+// .agents/, .agents/skills/, scripts/, .ca-plans/) does not count as navigation: the
 // quota exists to push exploration of PRODUCT code to repo-scout, while editing
 // the harness itself (hooks, skills, agents, agent docs, scripts, specs) is work
 // the main thread does directly. Until 2026-08-21 the way through was the
@@ -83,7 +83,7 @@ const READ_FREE_DIRS = [".ca-plans", ".claude", ".agents", "docs"]
 const HARNESS_DIRS = [
   ".claude",
   ".agents",
-  "docs/agents",
+  ".agents/skills",
   "scripts",
   ".ca-plans",
 ]

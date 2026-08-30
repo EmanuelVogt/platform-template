@@ -86,7 +86,7 @@ if (violations.length > 0) {
     .map((v) => `  ${v.line}\n    ↳ ${v.why}`)
     .join("\n")
   process.stderr.write(
-    `Mechanical comment violation (${violations.length}) — docs/code-quality.md:
+    `Mechanical comment violation (${violations.length}) — .agents/skills/code-quality/SKILL.md:
 ${sample}
 
 ${APPLIED}
@@ -103,7 +103,7 @@ const sample = blocks
 
 const context = `Comment added in this edit (${blocks.length} block(s)) — ${APPLIED}
 ${sample}
-Validate against docs/code-quality.md (default ZERO; valid cases: an invariant the type does not capture / an external workaround with a reference / a domain constraint outside the adjacent code / a counterintuitive decision another dev would "fix"; JSDoc only on public API). If any does not fit, remove it with a NEW Edit; while you are there, clean up pre-existing noise comments in the region you touched.`
+Validate against .agents/skills/code-quality/SKILL.md (default ZERO; valid cases: an invariant the type does not capture / an external workaround with a reference / a domain constraint outside the adjacent code / a counterintuitive decision another dev would "fix"; JSDoc only on public API). If any does not fit, remove it with a NEW Edit; while you are there, clean up pre-existing noise comments in the region you touched.`
 
 process.stdout.write(
   JSON.stringify({

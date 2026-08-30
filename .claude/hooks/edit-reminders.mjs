@@ -9,7 +9,7 @@ const REMINDERS = [
   {
     key: "design-system",
     applies: (filePath) => filePath.includes("/apps/web/"),
-    text: "Editing apps/web. Follow docs/arch/front.md: FSD layer boundaries, no aggregating index barrels, Kubb-generated api-client output. If you have not read it in this session, read it before styling.",
+    text: "Editing apps/web. Follow .agents/skills/frontend-architecture/SKILL.md: FSD layer boundaries, no aggregating index barrels, Kubb-generated api-client output. If you have not read it in this session, read it before styling.",
   },
   {
     key: "comment-policy",
@@ -18,7 +18,7 @@ const REMINDERS = [
       !/([.]d[.]ts$|\/generated\/|\/node_modules\/|\/[.]claude\/|\/[.]agents\/)/.test(
         filePath
       ),
-    text: "Editing code (api/web). docs/code-quality.md: comments default to ZERO. Only 4 valid cases — an invariant the type does not capture / an external workaround with a reference / a domain constraint outside the adjacent code / a counterintuitive decision another dev would fix. Boy-scout: in the region you touched, delete pre-existing noise comments (above all AI-generated ones) and re-justify from scratch only what fits one of the 4 cases; scope = the region touched, not the whole file. Forbidden: narrating a step, paraphrasing a symbol, summarizing a block, banners, JSDoc that repeats the signature.",
+    text: "Editing code (api/web). .agents/skills/code-quality/SKILL.md: comments default to ZERO. Only 4 valid cases — an invariant the type does not capture / an external workaround with a reference / a domain constraint outside the adjacent code / a counterintuitive decision another dev would fix. Boy-scout: in the region you touched, delete pre-existing noise comments (above all AI-generated ones) and re-justify from scratch only what fits one of the 4 cases; scope = the region touched, not the whole file. Forbidden: narrating a step, paraphrasing a symbol, summarizing a block, banners, JSDoc that repeats the signature.",
   },
 ]
 

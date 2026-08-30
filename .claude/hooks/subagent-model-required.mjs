@@ -4,7 +4,7 @@
 // in the agent file is only the fallback for when this hook is off; here, a
 // call to repo-scout or shell-runner without an explicit `model` is blocked
 // with that agent's tier guide, and the call comes back with the chosen
-// tier. It applies on the main thread. Rationale in docs/agents/harness.md.
+// tier. It applies on the main thread. Rationale in .agents/skills/agent-harness/SKILL.md.
 // It also holds the nesting shape: NESTING_AGENTS is empty now that
 // tlc-spec-driven's spec-worker and spec-verifier are gone, so no agent type
 // may nest through this hook; repo-scout and shell-runner (LEAF_AGENTS) still

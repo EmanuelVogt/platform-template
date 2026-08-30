@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // PreToolUse(Read|Bash): blocks reading a huge file in full. Measured in
-// docs/agents/harness.md: one read of openapi.json costs ~255k tokens, more
+// .agents/skills/agent-harness/SKILL.md: one read of openapi.json costs ~255k tokens, more
 // than the peak of a whole session, and keeps being repaid on every following
 // turn. The guard is by size, not by list: it also catches a lockfile, a new
 // snapshot and a fixture nobody foresaw. Reading a range (offset/limit) is

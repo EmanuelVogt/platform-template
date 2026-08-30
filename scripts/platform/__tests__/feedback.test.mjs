@@ -241,6 +241,10 @@ test("classifyPath espelha a tabela de ownership", () => {
     true
   )
   assert.equal(classifyPath(".ca-plans/DECISIONS.md", lock).ok, false)
+  assert.equal(
+    classifyPath(".ca-plans/DECISIONS.md", lock).reason,
+    "decisões e specs são do produto"
+  )
   assert.equal(classifyPath("README.md", lock).ok, false)
   assert.equal(
     classifyPath(

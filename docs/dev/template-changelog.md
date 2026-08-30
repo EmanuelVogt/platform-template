@@ -4,6 +4,65 @@ Version truth = git tag + this entry (AD-006); `package.json` is not bumped on
 release. Each version lists the contract-breaking changes and the steps for the child
 to apply on `copier update`.
 
+## v4.0.0
+
+Three segments land together as one breaking release: the dev framework swaps from
+`tlc-spec-driven` to `ca-full-cycle`; every guidance doc under `docs/agents/`, `docs/arch/`,
+`docs/code-quality.md` and `docs/test/testing.md` becomes a skill under `.agents/skills/**`,
+with `AGENTS.md.jinja` rewritten as a thin situation→skill router; and the template's own
+decision log moves from `.specs/STATE.md` + `docs/adr/` to `.ca-plans/DECISIONS.md`, alongside
+an English sweep of the shipped harness and a copier exclusion for `.ca-plans` itself. A
+product generated before this release keeps working — the break is in what `copier update`
+deletes and where the harness now points, not in the kernel's runtime contract.
+
+### Changes
+
+1. **Framework swap: `tlc-spec-driven` → `ca-full-cycle`.** `.agents/skills/tlc-spec-driven/`
+   (SKILL.md, its orchestrator/worker/verifier cards, references and scripts) and
+   `.claude/agents/{spec-worker,spec-verifier}.md` are gone; `.agents/skills/ca-full-cycle/`
+   (SKILL.md, worker/wave-verifier/reviewer cards, research/plan/implement/review references)
+   is vendored in their place and symlinked at `.claude/skills/ca-full-cycle`.
+   `.claude/hooks/wave-plan-check.mjs` is removed, `specs-in-english.mjs` is renamed
+   `plans-in-english.mjs`, and every hook or script that still named the old framework
+   (`dispatch-log.mjs`, `subagent-model-required.mjs`, `delegate-to-subagent.mjs`,
+   `dispatch-report.mjs`) is retargeted.
+2. **Guidance docs → skills + router.** `docs/agents/{workflow,communication,harness}.md`,
+   `docs/agents/README.md`, `docs/arch/{back,front}.md`, `docs/code-quality.md` and
+   `docs/test/testing.md` are gone; their content now lives at
+   `.agents/skills/{dev-workflow,communication,agent-harness,backend-architecture,
+   frontend-architecture,code-quality,testing}/SKILL.md`. `AGENTS.md.jinja` is rewritten as a
+   ≤60-line router — identity, always-on non-negotiables, a situation→skill table — no inlined
+   rule bodies.
+3. **AD reset.** `.specs/STATE.md`'s still-active decision log (25 active + 4 accepted rows)
+   migrates to `.ca-plans/DECISIONS.md`, numbering preserved, superseded rows left behind as
+   history; `docs/adr/` is gone and its cross-refs across shipped skills, hooks, scripts and
+   tests now point at the `.ca-plans/DECISIONS.md` convention.
+4. **English sweep.** The two pt-BR skills (`.agents/skills/creating-issues/SKILL.md.jinja`,
+   `.agents/skills/repo-discovery/SKILL.md`) and `release-coordination.mjs`'s user-facing
+   strings are translated; the English-enforcement hook now also fires on
+   `.agents/skills/**` and `AGENTS.md.jinja` edits, not just `.ca-plans/`.
+5. **`.ca-plans` excluded from shipping.** `copier.yml`'s `_exclude` gains `.ca-plans`, next to
+   the already-excluded `.specs`: a product's own run artifacts, decision log and lessons
+   ledger are never part of what a fresh `copier copy` or `copier update` writes.
+
+### Child migration steps (`copier update` from v3.2.0)
+
+1. Clean `git status`, then `copier update` (or `copier update --vcs-ref v4.0.0`).
+2. `copier update` deletes `docs/agents/*`, `docs/arch/*`, `docs/code-quality.md`,
+   `docs/test/testing.md`, `docs/adr/` and the removed `tlc-spec-driven` cards and hooks
+   (`.agents/skills/tlc-spec-driven/`, `.claude/agents/{spec-worker,spec-verifier}.md`,
+   `.claude/hooks/wave-plan-check.mjs`). If the product edited any of the removed docs or
+   cards by hand, move those edits into the corresponding skill (or a product decision
+   record) before updating — copier flags the conflict.
+3. `.specs/` stays untouched by copier (it always has) but is legacy now that the template's
+   own decision log lives in `.ca-plans/DECISIONS.md` — archive it yourself, on your own
+   schedule; this release never deletes it silently.
+4. `pnpm skills:sync` — relinks `.claude/skills/**` against the new `.agents/skills/**` set,
+   the vendored `ca-full-cycle` included.
+5. The product now owns its own `.ca-plans/`, the same way it already owns `.specs/`: run
+   artifacts, `DECISIONS.md` and `LESSONS.md` are the product's own and are never shipped
+   back to the template.
+
 ## v3.2.0
 
 A bug that escapes Implement and Review today leaves nothing behind: the QA round fixes the

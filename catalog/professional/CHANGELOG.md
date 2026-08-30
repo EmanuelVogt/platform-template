@@ -2,6 +2,12 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [1.1.0]
+
+### Changed
+
+- Open kernelRange for kernel 4.x (`>=4.0.0 <5.0.0`); no functional change.
+
 ## [1.0.0]
 
 ### Added

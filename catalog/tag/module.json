@@ -1,8 +1,8 @@
 {
   "name": "tag",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Central de tags administrativas: CRUD, lixeira/restore/purge e contagem de uso agregada de consumidores registrados.",
-  "kernelRange": ">=3.0.0 <4.0.0",
+  "kernelRange": ">=4.0.0 <5.0.0",
   "dependsOn": [{ "name": "identity", "range": ">=3.0.0 <4.0.0" }],
   "apiModule": { "export": "TagModule", "path": "modules/tag/tag.module" },
   "schemaExports": [

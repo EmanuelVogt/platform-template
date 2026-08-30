@@ -4,6 +4,12 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 [semver](https://semver.org/lang/pt-BR/). Toda versão que leva código lista os advisories
 (`docs/advisories/ADV-*.md`) que carrega.
 
+## [3.1.0]
+
+### Changed
+
+- Open kernelRange for kernel 4.x (`>=4.0.0 <5.0.0`); no functional change.
+
 ## [3.0.0]
 
 ### Breaking

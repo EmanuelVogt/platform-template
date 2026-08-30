@@ -1,3 +1,8 @@
+---
+name: frontend-architecture
+description: Frontend architecture handbook for apps/web — FSD layers, the TanStack Query data layer, routing and access control, forms and the Next shell delta. Use when writing or reviewing apps/web code, deciding where a component, hook or entity belongs, wiring a query, mutation, route or form, or checking a change against the Golden Rules.
+---
+
 # Frontend architecture
 
 Quick-read handbook for `apps/web`: React, TanStack Query, React Hook Form + Zod and the
@@ -10,14 +15,14 @@ The template ships a **headless kernel** — transport, router shell, env, RFC 7
 access vocabulary — with no session, login or UI kit (the product picks one); business
 features arrive as catalog entries. Contract, transport and routing rules always apply; slice,
 form and UI-kit rules apply once the product builds on this stack. Code rules:
-[`../code-quality.md`](../code-quality.md); tests: [`../test/testing.md`](../test/testing.md);
-backend: [`back.md`](back.md); exceptions: ADRs ([`../adr/README.md`](../adr/README.md)). The
+[`code-quality`](../code-quality/SKILL.md); tests: [`testing`](../testing/SKILL.md);
+backend: [`backend-architecture`](../backend-architecture/SKILL.md); exceptions: ADRs ([`docs/adr`](../../../docs/adr/README.md)). The
 `feature-sliced-design` skill is the FSD base; this document states the project overrides.
 
 ## Layers and segments
 
 | Layer       | Purpose                                           | May import from                     |
-| ----------- | ------------------------------------------------- | ----------------------------------- |
+| ----------- | ------------------------------------------------- | ------------------------------------ |
 | `app/`      | Bootstrap, providers, router, global styles       | every layer                         |
 | `pages/`    | Routes; composes widgets, features and entities   | widgets, features, entities, shared |
 | `widgets/`  | Reusable composed blocks                          | features, entities, shared          |
@@ -35,7 +40,7 @@ knows another entity — composition happens in a widget, feature or page.
 
 A catalog entry's web part (`web/core`, `web/react`) follows the raw-web rule so it stays
 portable across web stacks: pure TypeScript in `core`, hooks and query options only in `react`,
-no component, page or router; the allowlist is in [`../catalog/catalog.md`](../catalog/catalog.md).
+no component, page or router; the allowlist is in [`catalog.md`](../../../docs/catalog/catalog.md).
 `pnpm platform module add` copies it to `apps/web/src/entities/<entry>/`, after which it is an
 ordinary entity; route, guard and form integration is the product's job, a recipe in the entry's
 README. The app shell (`app/config`, `app/providers`, `app/router`) imports only the transport
@@ -185,10 +190,10 @@ leaks stack, SQL or paths; the `correlationId` is shown in support and toast sur
 | App-specific composition; controlled form field           | `shared/ui/`; `shared/ui/form/` (`Rhf*`)                                                                                                                   |
 | Entity component; form model/editor reused by 2+ features | `entities/<resource>/ui/`; `entities/<resource>/` (`model/` + `ui/`)                                                                                       |
 | Composed block; user action or form                       | `widgets/<slice>/`; `features/<action>/`                                                                                                                   |
-| Route                                                     | `pages/<slice>/` + `app/router/` + `ROUTES`                                                                                                                |
+| Route                                                     | `pages/<slice>/` + `app/router/` + `ROUTES`                                                                                                                 |
 | Hook over one endpoint (+ invalidation)                   | `entities/<resource>/api/`                                                                                                                                 |
 | Hook combining 2+ endpoints or UI orchestration           | `features/<action>/model/` or `widgets/<slice>/model/`                                                                                                     |
-| Utility; env, paths, access; client store; ids            | `shared/lib/`; `shared/config/`; `shared/store/`; `shared/types/ids.ts`                                                                                    |
+| Utility; env, paths, access; client store; ids             | `shared/lib/`; `shared/config/`; `shared/store/`; `shared/types/ids.ts`                                                                                    |
 | Provider, `QueryClient`, router                           | `app/`                                                                                                                                                     |
 | Naming                                                    | kebab-case files; PascalCase components and types; `use*` hooks; `use<Slice>Store`; `<resource>Keys`; `<action>Schema`; default export only in a lazy page |
 

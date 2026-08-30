@@ -1,6 +1,11 @@
+---
+name: code-quality
+description: Mandatory cross-cutting code-quality rules for apps/api and apps/web — comments, naming, typing, errors, async, lint/format and PR scope. Required reading before writing any code in this repo; also use when reviewing a diff against the code-review checklist.
+---
+
 # Code Quality — Mandatory Rules
 
-Cross-cutting. Applies to `apps/api` and `apps/web`. **Required reading before writing any code.** Every rule here fails the PR if violated. Area architecture: `arch/back.md`, `arch/front.md`.
+Cross-cutting. Applies to `apps/api` and `apps/web`. **Required reading before writing any code.** Every rule here fails the PR if violated. Area architecture: `../backend-architecture/SKILL.md`, `../frontend-architecture/SKILL.md`.
 
 ## Principles
 
@@ -9,7 +14,7 @@ Cross-cutting. Applies to `apps/api` and `apps/web`. **Required reading before w
 3. **Trust the types** — no redundant defensive code where the type/framework guarantees it. A real boundary (external input, IO, parse) still needs handling.
 4. **No compatibility shim** — change it directly. No feature flag for something that does not get reverted.
 5. **No comments by default** — well-named code explains itself.
-6. **Fixed language** — see [`AGENTS.md`](../AGENTS.md) (Tripwires → Language).
+6. **Fixed language** — see [`AGENTS.md`](../../../AGENTS.md) (Tripwires → Language).
 
 ## Comments
 
@@ -44,14 +49,14 @@ Not one of the 4 → badly named/badly structured code, fix the cause.
 
 ## Language
 
-- Identifiers vs. comments/docstrings/user-facing errors: see [`AGENTS.md`](../AGENTS.md) (Tripwires → Language).
+- Identifiers vs. comments/docstrings/user-facing errors: see [`AGENTS.md`](../../../AGENTS.md) (Tripwires → Language).
 - Stack technical terms (`stream`, `cache`, `webhook`, `payload`, `idempotente`, `outbox`): English.
 - Internal logs: pt-BR with English stack terms (`unauthorized`, `forbidden`, `not found`, `timeout`).
 - Never leak stack traces/SQL/internal paths in a user-facing message.
 
 ## Naming
 
-Casing table by kind and file naming: back in `arch/back.md`, front in `arch/front.md` (Postgres DB in `arch/back.md`). Cross-cutting:
+Casing table by kind and file naming: back in `../backend-architecture/SKILL.md`, front in `../frontend-architecture/SKILL.md` (Postgres DB in `../backend-architecture/SKILL.md`). Cross-cutting:
 
 - The name describes **what it is**, not how it works. `invoices` > `invoiceArray`.
 - Booleans never negative (`is/has/can/should`): `isEnabled`, never `isNotDisabled`.
@@ -143,5 +148,5 @@ CI covers lint, format, typecheck, `any`, `console.log`, floating promises, impo
 □ Tests name behavior; no database mock in integration/e2e; domain/ ≥ 80%
 □ Single-scope PR; no mass reformat; no eslint-disable
 □ Language: see AGENTS.md (Tripwires → Language)
-□ Follows the layer handbook (arch/back / arch/front)
+□ Follows the layer handbook (backend-architecture / frontend-architecture)
 ```

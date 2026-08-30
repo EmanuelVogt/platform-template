@@ -1,9 +1,14 @@
+---
+name: testing
+description: Testing handbook — Vitest project layout, the api's unit/integration/e2e harness, coverage floors and where to create a new test. Use when writing or running a test, choosing unit vs integration vs e2e, or working with test fixtures/harness helpers.
+---
+
 # Testing — Handbook
 
 Vitest 4, one project per app: `api` (Node + SWC, Nest decorators) and `web` (jsdom + Testing
 Library). The api's database layers (`api-int`, `api-e2e`) start a real Postgres and Redis via
 testcontainers. Vitest `projects` is the monorepo's only runner — nothing outside it (AD-028).
-Code rules: `docs/code-quality.md`.
+Code rules: [`code-quality`](../code-quality/SKILL.md).
 
 Done = `pnpm check && pnpm test:coverage` passing (with Docker up).
 

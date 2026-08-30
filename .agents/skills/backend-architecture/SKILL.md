@@ -1,8 +1,13 @@
+---
+name: backend-architecture
+description: Backend architecture handbook for apps/api — module anatomy, layer boundaries, HTTP edge, transactions, outbox and the conformance specs that enforce them. Use when writing or reviewing apps/api code, deciding where logic belongs (domain/application/infrastructure/api), wiring a use case, event, transaction or migration, or checking a change against the Golden Rules.
+---
+
 # Backend architecture
 
 Quick-read handbook of `apps/api`, a modular monolith with spec-verified boundaries: each concept, the rules it implies
-and the spec that enforces it. See [`code-quality.md`](../code-quality.md), [`testing.md`](../test/testing.md),
-[`docs/adr`](../adr/README.md), [`catalog.md`](../catalog/catalog.md) and [`front.md`](front.md). The template ships
+and the spec that enforces it. See [`code-quality`](../code-quality/SKILL.md), [`testing`](../testing/SKILL.md),
+[`docs/adr`](../../../docs/adr/README.md), [`catalog.md`](../../../docs/catalog/catalog.md) and [`frontend-architecture`](../frontend-architecture/SKILL.md). The template ships
 **only the kernel**; business modules are catalog entries installed into the product.
 
 ## Source layout, kernel and boot
@@ -155,7 +160,7 @@ below the calibrated one aborts the push (AD-027). e2e snapshots the exported `o
 shape snapshot.
 
 | Spec                                                       | Lives in                    | Enforces                                                                                                                 |
-| ---------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| ---------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `authz-coverage`, `operation-id`, `transactional-coverage` | `src/openapi/`              | one access mode per route; explicit, unique, camelCase `operationId`; declared tx participation (`.run(` does not count) |
 | `module-boundaries`                                        | `src/modules/`              | layer table, cross-module surface, no root-connection import, RULE A and C                                               |
 | `template-kernel-only`                                     | `src/modules/`              | the template boots with no entry; deleted by the first `module add`                                                      |

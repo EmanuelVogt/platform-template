@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs"
 import path from "node:path"
 import { test } from "node:test"
 import { fileURLToPath } from "node:url"
-import { shippedSet } from "./lib/audience-contract.mjs"
+import { shippedDocs, shippedSet } from "./lib/audience-contract.mjs"
 
 const TESTS_DIR = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(TESTS_DIR, "..", "..", "..")
@@ -148,9 +148,9 @@ test("ca-full-cycle ships in the skill set and .claude/skills/ca-full-cycle reso
   assert.equal(realpathSync(mirror), realpathSync(vendored))
 })
 
-test("docs/agents/harness.md names ca-full-cycle as the delegation framework (AC-04)", () => {
+test("agent-harness skill names ca-full-cycle as the delegation framework (AC-04)", () => {
   const content = readFileSync(
-    path.join(DOCS_DIR, "agents", "harness.md"),
+    path.join(REPO_ROOT, ".agents", "skills", "agent-harness", "SKILL.md"),
     "utf8"
   )
   assert.match(content, /`ca-full-cycle`/)
@@ -178,11 +178,13 @@ function listTextFiles(dir) {
   return files
 }
 
-test("no shipped doc or skill under docs/agents/**, docs/test/**, .agents/skills/** names tlc-spec-driven (AC-04)", () => {
+// docs/agents/** and docs/test/** no longer exist (plan-02 T1/T3: converted into
+// .agents/skills/**); .claude/agents/** joins the roots per plan-01 QA carry-over
+// (review.md item 9) — the surviving repo-scout/shell-runner cards get the same sweep.
+test("no shipped doc or skill under .agents/skills/**, .claude/agents/** names tlc-spec-driven (AC-04)", () => {
   const roots = [
-    path.join(DOCS_DIR, "agents"),
-    path.join(DOCS_DIR, "test"),
     path.join(REPO_ROOT, ".agents", "skills"),
+    path.join(REPO_ROOT, ".claude", "agents"),
   ]
   for (const root of roots) {
     for (const file of listTextFiles(root)) {
@@ -216,12 +218,18 @@ test("no hook references a live `.specs` path, slash or bare (AC-09)", () => {
   }
 })
 
-test("no hook or top-level script references the removed spec-worker/spec-verifier cards (AC-09)", () => {
+// .claude/agents/** joins the sweep per plan-01 QA carry-over (review.md item 9), same
+// reasoning as the tlc-spec-driven sweep above.
+test("no hook, top-level script or agent card references the removed spec-worker/spec-verifier cards (AC-09)", () => {
   const scriptsDir = path.join(REPO_ROOT, "scripts")
   const topLevelScripts = readdirSync(scriptsDir, { withFileTypes: true })
     .filter((entry) => entry.isFile() && entry.name.endsWith(".mjs"))
     .map((entry) => path.join(scriptsDir, entry.name))
-  for (const file of [...listHookFiles(), ...topLevelScripts]) {
+  const agentsDir = path.join(REPO_ROOT, ".claude", "agents")
+  const agentCards = readdirSync(agentsDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+    .map((entry) => path.join(agentsDir, entry.name))
+  for (const file of [...listHookFiles(), ...topLevelScripts, ...agentCards]) {
     assert.doesNotMatch(
       readFileSync(file, "utf8"),
       /spec-(worker|verifier)\.md/,
@@ -267,9 +275,15 @@ test("contract-enum.mjs no longer points at the absent select-options helper or 
   assert.doesNotMatch(content, /contract-enums\.test\.ts/)
 })
 
-test("docs/arch/front.md no longer claims a contract-enums spec gates pre-push and CI", () => {
+test("frontend-architecture skill no longer claims a contract-enums spec gates pre-push and CI", () => {
   const content = readFileSync(
-    path.join(REPO_ROOT, "docs", "arch", "front.md"),
+    path.join(
+      REPO_ROOT,
+      ".agents",
+      "skills",
+      "frontend-architecture",
+      "SKILL.md"
+    ),
     "utf8"
   )
   assert.doesNotMatch(content, /contract-enums.*(pre-push|CI)/s)
@@ -284,4 +298,114 @@ test("edit-reminders.mjs no longer mandates @workspace/ui, design tokens or Luci
   assert.doesNotMatch(content, /@workspace\/ui/)
   assert.doesNotMatch(content, /design tokens/)
   assert.doesNotMatch(content, /Lucide/)
+})
+
+// plan-02's skill name map — the 9 guidance docs that became skills (D-04), and the
+// pre-migration paths they replace.
+const MAPPED_SKILLS = [
+  ["backend-architecture", "SKILL.md"],
+  ["frontend-architecture", "SKILL.md"],
+  ["code-quality", "SKILL.md"],
+  ["testing", "SKILL.md"],
+  ["dev-workflow", "SKILL.md"],
+  ["communication", "SKILL.md"],
+  ["agent-harness", "SKILL.md"],
+  ["infra", "SKILL.md.jinja"],
+  ["issue-tracker", "SKILL.md.jinja"],
+]
+const OLD_DOC_PATHS = [
+  "docs/arch/back.md",
+  "docs/arch/front.md",
+  "docs/code-quality.md",
+  "docs/test/testing.md",
+  "docs/agents/workflow.md",
+  "docs/agents/communication.md",
+  "docs/agents/harness.md",
+  "docs/agents/infra.md.jinja",
+  "docs/agents/issue-tracker.md.jinja",
+]
+
+test("AC-01: AGENTS.md.jinja is a <=60-line router whose table resolves to real skills, naming no old doc path", () => {
+  const content = readFileSync(path.join(REPO_ROOT, "AGENTS.md.jinja"), "utf8")
+  const lines = content.split("\n")
+  assert.ok(
+    lines.length <= 60,
+    `AGENTS.md.jinja has ${lines.length} lines (cap 60)`
+  )
+
+  for (const oldPath of OLD_DOC_PATHS) {
+    assert.ok(
+      !content.includes(oldPath),
+      `AGENTS.md.jinja still names the old doc path ${oldPath}`
+    )
+  }
+
+  const headingIndex = lines.indexOf("## Read before you touch")
+  assert.ok(headingIndex >= 0, "AGENTS.md.jinja must carry the situation table")
+  const tableLines = []
+  for (let index = headingIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index]
+    if (!line.startsWith("|")) {
+      if (tableLines.length > 0) break
+      continue
+    }
+    tableLines.push(line)
+  }
+  const rows = tableLines
+    .filter((line) => line.includes("]("))
+    .map((line) => /\[[^\]]*\]\(([^)\s]+)\)/.exec(line)?.[1])
+  assert.ok(
+    rows.length >= 5,
+    `the situation table has to have rows to check — ${rows.length} found`
+  )
+  for (const target of rows) {
+    assert.ok(target, "every table row must carry a link to the file")
+    assert.match(
+      target,
+      /\/SKILL\.md(\.jinja)?$/,
+      `${target} is not a SKILL.md(.jinja) path`
+    )
+    // The router names the rendered (post-copier) path even for a `.jinja`-sourced skill
+    // (same convention the pre-existing docs/agents/infra.md row already used) — resolve
+    // either the literal name or its `.jinja` source, same as resolvesForHandbook() above.
+    const full = path.join(REPO_ROOT, target)
+    assert.ok(
+      existsSync(full) || existsSync(`${full}.jinja`),
+      `AGENTS.md.jinja points at ${target}, which does not exist`
+    )
+  }
+})
+
+test("AC-02: each of the 9 mapped skills exists with a frontmatter description", () => {
+  for (const [name, file] of MAPPED_SKILLS) {
+    const full = path.join(REPO_ROOT, ".agents", "skills", name, file)
+    assert.ok(existsSync(full), `.agents/skills/${name}/${file} is missing`)
+    const content = readFileSync(full, "utf8")
+    const frontmatter = content.match(/^---\n([\s\S]*?)\n---/)
+    assert.ok(
+      frontmatter,
+      `.agents/skills/${name}/${file} has no frontmatter block`
+    )
+    assert.match(
+      frontmatter[1],
+      /^description:\s*\S/m,
+      `.agents/skills/${name}/${file}'s frontmatter has no description`
+    )
+  }
+})
+
+// Sweep hardening: the content check TOOL-07's tests run for hooks/handbooks extended to
+// every shipped doc — template-changelog.md is the one exemption (an immutable ledger,
+// same reason HANDBOOK_EXCLUDED above treats it that way).
+test("AC-02: no shipped doc names an old pre-migration doc path (template-changelog.md excluded)", () => {
+  for (const doc of shippedDocs()) {
+    if (doc.destination === "docs/dev/template-changelog.md") continue
+    const content = readFileSync(path.join(REPO_ROOT, doc.source), "utf8")
+    for (const oldPath of OLD_DOC_PATHS) {
+      assert.ok(
+        !content.includes(oldPath),
+        `${doc.destination} still names the old doc path ${oldPath}`
+      )
+    }
+  }
 })

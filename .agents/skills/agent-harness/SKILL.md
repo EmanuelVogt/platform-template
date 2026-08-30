@@ -227,9 +227,9 @@ never recreate `.cursor/skills` — Cursor reads `.agents` directly.
 - `.claude/hooks/contract-consumers.mjs` — runs `pnpm contract:consumers` when a
   `*.contract.ts` file is edited. **Claude Code only** — in Cursor and Codex, run the
   command by hand. Rule in `.agents/skills/backend-architecture/SKILL.md`.
-- `.claude/hooks/reinject-tripwires.mjs` — re-injects the CLAUDE.md Tripwires section on
-  the next prompt every ~2 MB of transcript growth, so long sessions don't drift from the
-  initial instructions.
+- `.claude/hooks/reinject-tripwires.mjs` — re-injects the CLAUDE.md Two standing rules
+  section on the next prompt every ~2 MB of transcript growth, so long sessions don't
+  drift from the initial instructions.
 - `.claude/hooks/edit-reminders.mjs` — design-system and comment-policy reminders on
   edit, rate-limited per session to once every ~2 MB of transcript instead of every edit.
 - `.claude/hooks/plans-in-english.mjs` — `PreToolUse(Edit|Write|MultiEdit)`: blocks a

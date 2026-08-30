@@ -14,7 +14,7 @@ Cross-cutting. Applies to `apps/api` and `apps/web`. **Required reading before w
 3. **Trust the types** — no redundant defensive code where the type/framework guarantees it. A real boundary (external input, IO, parse) still needs handling.
 4. **No compatibility shim** — change it directly. No feature flag for something that does not get reverted.
 5. **No comments by default** — well-named code explains itself.
-6. **Fixed language** — see [`AGENTS.md`](../../../AGENTS.md) (Tripwires → Language).
+6. **Fixed language** — see [`AGENTS.md`](../../../AGENTS.md) (Two standing rules).
 
 ## Comments
 
@@ -49,7 +49,7 @@ Not one of the 4 → badly named/badly structured code, fix the cause.
 
 ## Language
 
-- Identifiers vs. comments/docstrings/user-facing errors: see [`AGENTS.md`](../../../AGENTS.md) (Tripwires → Language).
+- Identifiers vs. comments/docstrings/user-facing errors: see [`AGENTS.md`](../../../AGENTS.md) (Two standing rules).
 - Stack technical terms (`stream`, `cache`, `webhook`, `payload`, `idempotente`, `outbox`): English.
 - Internal logs: pt-BR with English stack terms (`unauthorized`, `forbidden`, `not found`, `timeout`).
 - Never leak stack traces/SQL/internal paths in a user-facing message.
@@ -147,6 +147,6 @@ CI covers lint, format, typecheck, `any`, `console.log`, floating promises, impo
 □ Promise.all on parallelizable calls (await-in-loop only with a dependency)
 □ Tests name behavior; no database mock in integration/e2e; domain/ ≥ 80%
 □ Single-scope PR; no mass reformat; no eslint-disable
-□ Language: see AGENTS.md (Tripwires → Language)
+□ Language: see AGENTS.md (Two standing rules)
 □ Follows the layer handbook (backend-architecture / frontend-architecture)
 ```

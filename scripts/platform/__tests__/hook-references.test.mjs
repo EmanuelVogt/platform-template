@@ -238,6 +238,35 @@ test("no hook, top-level script or agent card references the removed spec-worker
   }
 })
 
+// D-03: enforcement is never demoted to guidance — reinject-tripwires.mjs must anchor
+// its grep to a heading the T5 router (AGENTS.md.jinja) actually carries, never the
+// removed `## Tripwires` block (plan-02 T9).
+test("reinject-tripwires.mjs anchors its grep to a heading present in AGENTS.md.jinja (D-03)", () => {
+  const hookContent = readFileSync(
+    path.join(HOOKS_DIR, "reinject-tripwires.mjs"),
+    "utf8"
+  )
+  const anchorMatch = hookContent.match(/\/## ([^\\]+)\\n/)
+  assert.ok(
+    anchorMatch,
+    "reinject-tripwires.mjs must grep a `## <Heading>\\n` anchor"
+  )
+  const heading = `## ${anchorMatch[1]}`
+  const routerContent = readFileSync(
+    path.join(REPO_ROOT, "AGENTS.md.jinja"),
+    "utf8"
+  )
+  assert.ok(
+    routerContent.includes(heading),
+    `reinject-tripwires.mjs anchors to ${JSON.stringify(heading)}, which AGENTS.md.jinja does not contain`
+  )
+  assert.doesNotMatch(
+    hookContent,
+    /## Tripwires/,
+    "reinject-tripwires.mjs must not anchor to the removed Tripwires heading"
+  )
+})
+
 test("no hook references a file, helper or spec that does not exist", () => {
   for (const file of listHookFiles()) {
     const content = readFileSync(file, "utf8")

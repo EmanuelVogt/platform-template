@@ -24,14 +24,14 @@ try {
 
   const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd()
   const claudeMd = readFileSync(join(projectDir, "CLAUDE.md"), "utf8")
-  const tripwires = claudeMd
-    .match(/## Tripwires\n([\s\S]*?)(?:\n## |$)/)?.[1]
+  const standingRules = claudeMd
+    .match(/## Two standing rules\n([\s\S]*?)(?:\n## |$)/)?.[1]
     ?.trim()
-  if (!tripwires) process.exit(0)
+  if (!standingRules) process.exit(0)
 
   const context = [
-    "Long session: reinforcing the harness instructions (CLAUDE.md Tripwires, read from disk just now).",
-    tripwires,
+    "Long session: reinforcing the harness instructions (CLAUDE.md Two standing rules, read from disk just now).",
+    standingRules,
     "In doubt about a rule, reopen the area handbook before editing.",
   ].join("\n\n")
 

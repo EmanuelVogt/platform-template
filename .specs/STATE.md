@@ -2,6 +2,10 @@
 
 ## Decisions
 
+**Closed 2026-08-30 (harness-to-skills, plan-03): this log is archived — the living decision log
+is `.ca-plans/DECISIONS.md`, where every still-active/accepted row above migrated with its number
+preserved.**
+
 Active project-level decisions. Every design must conform or supersede explicitly.
 
 | ID | Status | Decision |

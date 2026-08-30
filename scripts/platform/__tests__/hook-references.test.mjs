@@ -136,8 +136,8 @@ function isKnownHandbookException(relFile, reference) {
   )
 }
 
-test("the harness ships exactly 20 hook files under .claude/hooks", () => {
-  assert.equal(listHookFiles().length, 20)
+test("the harness ships exactly 21 hook files under .claude/hooks", () => {
+  assert.equal(listHookFiles().length, 21)
 })
 
 test("ca-full-cycle ships in the skill set and .claude/skills/ca-full-cycle resolves to it (AC-04)", () => {

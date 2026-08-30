@@ -4,6 +4,30 @@ Version truth = git tag + this entry (AD-006); `package.json` is not bumped on
 release. Each version lists the contract-breaking changes and the steps for the child
 to apply on `copier update`.
 
+## v3.2.0
+
+A bug that escapes Implement and Review today leaves nothing behind: the QA round fixes the
+instance and the pattern waits to be rediscovered. The ca-full-cycle skill (1.1.0) now closes
+every escaped bug with a retro — root cause, a guard on the strongest layer the pattern admits
+(type > test > static-guard > tripwire > lesson), and a line in the run tree's `LESSONS.md`
+ledger, where a recurrence increments `hits` and escalates the guard a layer instead of producing
+another document. This release ships the deterministic half of that contract.
+
+### Changes
+
+1. **`qa-retro-ledger.mjs` blocks an unretro'd close** (`.claude/hooks/qa-retro-ledger.mjs` —
+   new, `.claude/settings.json`, `scripts/platform/__tests__/qa-retro-ledger-hook.test.mjs` —
+   new): a write that sets `Status: Done` in a run's plan file is rejected while any QA Log
+   finding line lacks its closing marker (`→ L-nn | brief-error | preference`), names a ledger
+   entry that does not exist, or names one with no `guard:` field. The ledger and plan files are
+   runtime artifacts created by runs, not shipped with the repo. Escape hatch:
+   `PLATFORM_RETRO_OFF=1`.
+2. **The hook-count guard moves to 22** (`scripts/platform/__tests__/hook-references.test.mjs`).
+
+### Child migration steps
+
+None — copier update is enough.
+
 ## v3.1.1
 
 The `v3.1.0` cut failed its own `--push` twice and the harness could not say why: the command

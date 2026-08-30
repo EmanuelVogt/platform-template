@@ -32,6 +32,16 @@ function scannedFiles() {
   return files.sort()
 }
 
+// Domain-only: creating-issues carried pilot vertical-slice examples and area labels
+// (T10/AC-11) but also contains "resend" as the English verb (line 216), which the
+// infra list's /\bResend\b/i would flag as the email vendor — so it joins only the
+// domain sweep, not scannedFiles().
+const DOMAIN_ONLY_FILES = [".agents/skills/creating-issues/SKILL.md.jinja"]
+
+function domainSweepFiles() {
+  return [...scannedFiles(), ...DOMAIN_ONLY_FILES].sort()
+}
+
 const read = (rel) => readFileSync(path.join(REPO_ROOT, rel), "utf8")
 
 // The naive stem "reserva" also matches inside generic Portuguese words that have nothing to
@@ -101,8 +111,24 @@ test("scope: the literal 9 mapped skills plus deploy.md.jinja", () => {
   ])
 })
 
+test("scope: domain sweep additionally covers creating-issues", () => {
+  assert.deepEqual(domainSweepFiles(), [
+    ".agents/skills/agent-harness/SKILL.md",
+    ".agents/skills/backend-architecture/SKILL.md",
+    ".agents/skills/code-quality/SKILL.md",
+    ".agents/skills/communication/SKILL.md",
+    ".agents/skills/creating-issues/SKILL.md.jinja",
+    ".agents/skills/dev-workflow/SKILL.md",
+    ".agents/skills/frontend-architecture/SKILL.md",
+    ".agents/skills/infra/SKILL.md.jinja",
+    ".agents/skills/issue-tracker/SKILL.md.jinja",
+    ".agents/skills/testing/SKILL.md",
+    "docs/dev/deploy.md.jinja",
+  ])
+})
+
 test("no owner-domain (pilot hospitality) noun survives in the scanned skills", () => {
-  for (const rel of scannedFiles()) {
+  for (const rel of domainSweepFiles()) {
     const hits = domainHits(read(rel))
     assert.deepEqual(
       hits,

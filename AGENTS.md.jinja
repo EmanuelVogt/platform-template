@@ -7,84 +7,40 @@ generated Kubb client. Generated from `platform-template` — upstream changes a
 `copier update` (see [`docs/dev/template.md`](docs/dev/template.md)); a newer template tag
 or a fix landing on an installed catalog entry surfaces at session start via the
 template-behind and pending-advisories hooks — the routine is the `template-update` skill.
+Version truth for the template itself is the git tag + [`template-changelog.md`](docs/dev/template-changelog.md),
+never `package.json`.
 
-**This file routes; it does not argue.** Every rule below is one line plus a link to
-where it is decided. Detail belongs in the handbook or the ADR — never here.
-
-## Read before you touch
-
-| Situation | Read |
-| --- | --- |
-| Implementing a feature end-to-end — research, plan, execute, review | [`.agents/skills/ca-full-cycle/SKILL.md`](.agents/skills/ca-full-cycle/SKILL.md) — the dev framework |
-| **Any code, no exceptions** | [`docs/code-quality.md`](docs/code-quality.md) |
-| `apps/web` — slice, entity, form, query, router | [`docs/arch/front.md`](docs/arch/front.md) |
-| `apps/api` — module, use case, port, outbox, transaction, ALS, tracing, cross-module, Kubb | [`docs/arch/back.md`](docs/arch/back.md) |
-| Tests — unit, integration, e2e, testcontainers | [`docs/test/testing.md`](docs/test/testing.md) |
-| Local environment — Docker, env, seed | [`docs/dev/local-environment.md`](docs/dev/local-environment.md) |
-| Deploy — image contract, entrypoint, boot migrations, env matrix | [`docs/dev/deploy.md`](docs/dev/deploy.md) |
-| Structural decision, or an exception to a rule | [`docs/adr/README.md`](docs/adr/README.md) |
-| Branch, worktree, commit scope, spec, gates | [`docs/agents/workflow.md`](docs/agents/workflow.md) |
-| Shell output looks wrong; skills; hooks | [`docs/agents/harness.md`](docs/agents/harness.md) |
-| Writing a reply to the user | [`docs/agents/communication.md`](docs/agents/communication.md) |
-| Operating a deployed environment, or a product's own provider access | [`docs/agents/infra.md`](docs/agents/infra.md) |
-| GitHub issues | [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md) |
-| Template origin, upstream updates (`copier update`, the `template-update` skill), what is platform vs product | [`docs/dev/template.md`](docs/dev/template.md) |
-| Installing/updating a catalog entry, advisories, the pending-advisories hook | [`docs/dev/template.md`](docs/dev/template.md), [`docs/catalog/catalog.md`](docs/catalog/catalog.md) |
-
-Situation outside the table: start at the area handbook; one-off decisions live in the
-ADRs.
-
-## Commands (from the repo root)
-
-```
-pnpm dev                    turbo dev — brings everything up{% if web_stack == 'next' %} (front on :3001){% endif %}
-pnpm check                  lint + typecheck — run before asking for review
-pnpm build | typecheck | lint:fix | format | clean
-pnpm test | test:coverage | test:int | test:e2e | test:db
-pnpm vitest run --project api|web <path>   run one file/dir, skip the full suite
-pnpm contract               Zod → openapi.json → Kubb client
-pnpm contract:consumers     which screens consume an operationId/route
-pnpm contract:diff          readable pt-BR summary of an openapi.json change
-pnpm skills:sync            re-link .claude/skills → .agents/skills
-pnpm platform module add    install a catalog entry into this product
-pnpm platform status        template installed vs latest tag, lock modules, pending advisories
-pnpm platform feedback      prepare an upstream issue for a platform defect (skill platform-feedback)
-```
-
-## Tripwires
-
-Not a summary of the handbooks — the short list of rules that get broken by an agent who
-never opened one. The reasoning is at the link.
-
-- **Language** — identifiers English; comments, docstrings and user-facing errors {{ product_locale }}. Stack terms (`stream`, `cache`, `webhook`, `payload`, `outbox`) stay English. → [`code-quality.md`](docs/code-quality.md)
-- **Comments** — default is zero; only the 4 listed exceptions. → [`code-quality.md`](docs/code-quality.md)
-- **Docs are manuals** — mechanism, commands, the caveat that bites; reasoning and rejected alternatives only in an ADR. An edit grows a handbook ≤ 30 lines; the hook blocks more. → [`code-quality.md`](docs/code-quality.md)
-- **No `console.*`** in `src/` (it's a lint error); back uses `LoggerFactory`. → [`back.md`](docs/arch/back.md)
-- **`any` forbidden** — `unknown` + narrowing. → [`code-quality.md`](docs/code-quality.md)
-- **`throw` is the only error path** — never `Result<T>`/`Either`. → [`code-quality.md`](docs/code-quality.md)
-- **User-facing errors leak nothing** — no stack, SQL or path; back is RFC 7807 with `correlationId`. → [`code-quality.md`](docs/code-quality.md)
-- **Never a second connection inside a tx** — module never injects `DRIZZLE`/`PG_POOL`; root only via `outsideTransaction()`. → [`back.md`](docs/arch/back.md)
-- **Entities are immutable** — a transition returns a new instance; `Props` fields `readonly` + `Object.freeze(props)`. → [`back.md`](docs/arch/back.md) Golden Rule 29
-- **One scope per change** — `feat` / `fix` / `refactor` never mix; surgical edit, not rewrite. → [`code-quality.md`](docs/code-quality.md), [`workflow.md`](docs/agents/workflow.md)
-- **Zod is the contract truth** — changed it → `pnpm contract` and commit `openapi.json`. Never edit `generated/`. → [`back.md`](docs/arch/back.md)
-- **The front always consumes Kubb output** — extend the generated schema, never retype a contract rule by hand. → [`front.md`](docs/arch/front.md)
-- **A contract change is verified on the front, not in the api** — `turbo typecheck` and exercise the flow. {% if web_stack == 'next' %}`next dev`{% else %}Vite dev{% endif %} does not typecheck. → [`back.md`](docs/arch/back.md)
-- **Contract enums have exactly one descriptor**, on the owning entity, sourced from `models/*`. → [`front.md`](docs/arch/front.md) Golden Rule 23
-- **Selects show a label, never an id** — fallback is pt-BR text, never the identifier. → [`front.md`](docs/arch/front.md) Golden Rule 25
-- **Transport headers are never operation parameters** — they belong to the api-client interceptor. → [`front.md`](docs/arch/front.md)
-- **No barrels in the front** — deep import from the file that defines the symbol. This overrides FSD's "public API via `index`". → [`front.md`](docs/arch/front.md)
-- **Kernel never imports a catalog entry** — `shared/` never imports `modules/`; entries never import each other outside `dependsOn`; extension is a kernel port, never an import. → [`docs/arch/back.md`](docs/arch/back.md)
-- **Never suppress lint** — no `eslint-disable` in any form, no file-wide rule disabling. A conflict with a mandatory framework pattern is escalated to the user. → [`code-quality.md`](docs/code-quality.md)
-- **Version truth is the git tag + the changelog** — `package.json` is never bumped on release; breaking changes and child migration steps live in [`template-changelog.md`](docs/dev/template-changelog.md).
+**This file routes; it does not argue.** Every rule lives in a skill; this file is the map
+to it, never the rule itself.
 
 ## Two standing rules
 
 **Think and work in English; answer the user in {{ product_locale }}, explaining from the business
 side.** {{ product_locale }} is for user-facing replies only — thinking, subagent prompts and internal
-notes stay in English. →
-[`docs/agents/communication.md`](docs/agents/communication.md)
+notes stay in English. → [`.agents/skills/communication/SKILL.md`](.agents/skills/communication/SKILL.md)
 
-**Disk is the source of truth for what exists.** The handbooks describe the target
+**Disk is the source of truth for what exists.** The skills describe the target
 architecture, and this file keeps no inventory — static inventories rot. Before
 referencing a module, file or package, check disk (`ls apps/api/src/modules`,
 `ls packages`, the tree in `apps/web/src`).
+
+## Read before you touch
+
+| Situation | Read |
+| --- | --- |
+| Implementing a feature end-to-end — research, plan, execute, review | [`ca-full-cycle`](.agents/skills/ca-full-cycle/SKILL.md) — the dev framework |
+| Any code, no exceptions | [`code-quality`](.agents/skills/code-quality/SKILL.md) |
+| `apps/web` — slice, entity, form, query, router | [`frontend-architecture`](.agents/skills/frontend-architecture/SKILL.md) |
+| `apps/api` — module, use case, port, outbox, transaction, ALS, tracing, cross-module, Kubb | [`backend-architecture`](.agents/skills/backend-architecture/SKILL.md) |
+| Tests — unit, integration, e2e, testcontainers | [`testing`](.agents/skills/testing/SKILL.md) |
+| Branch, worktree, commit scope, spec, gates | [`dev-workflow`](.agents/skills/dev-workflow/SKILL.md) |
+| Shell output looks wrong; skills; hooks | [`agent-harness`](.agents/skills/agent-harness/SKILL.md) |
+| Writing a reply to the user | [`communication`](.agents/skills/communication/SKILL.md) |
+| Operating a deployed environment, or a product's own provider access | [`infra`](.agents/skills/infra/SKILL.md) |
+| GitHub issues | [`issue-tracker`](.agents/skills/issue-tracker/SKILL.md) |
+| Template origin, upstream updates, what is platform vs product | [`template-update`](.agents/skills/template-update/SKILL.md) |
+| Installing/updating a catalog entry, advisories | [`catalog-modules`](.agents/skills/catalog-modules/SKILL.md) |
+
+Situation outside the table: start at the closest doc under `docs/` (local environment,
+deploy); a structural decision or an exception to a rule is an ADR
+([`docs/adr/README.md`](docs/adr/README.md)).

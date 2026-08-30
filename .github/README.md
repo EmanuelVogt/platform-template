@@ -54,7 +54,7 @@ my-product/
 
 Each architectural rule has a spec next to the code it guards. The specs share one shape — filesystem sweep,
 offenders `toEqual([])`, allowlist with a reason per entry — and a violation without an allowlist entry fails CI.
-The rules are documented in [`docs/arch/back.md`](/docs/arch/back.md) and [`docs/arch/front.md`](/docs/arch/front.md).
+The rules are documented in [`backend-architecture`](/.agents/skills/backend-architecture/SKILL.md) and [`frontend-architecture`](/.agents/skills/frontend-architecture/SKILL.md).
 
 | Concern          | Rule and enforcement                                                                                                                                    |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -149,13 +149,13 @@ distinct author and verifier roles; the handbooks in `docs/` are inputs to that 
 
 | Topic                                        | Read                                                                |
 | -------------------------------------------- | ------------------------------------------------------------------- |
-| API architecture                             | [`docs/arch/back.md`](/docs/arch/back.md)                           |
-| Front-end architecture                       | [`docs/arch/front.md`](/docs/arch/front.md)                         |
-| Testing                                      | [`docs/test/testing.md`](/docs/test/testing.md)                     |
-| Code quality                                 | [`docs/code-quality.md`](/docs/code-quality.md)                     |
+| API architecture                             | [`backend-architecture`](/.agents/skills/backend-architecture/SKILL.md) |
+| Front-end architecture                       | [`frontend-architecture`](/.agents/skills/frontend-architecture/SKILL.md) |
+| Testing                                      | [`testing`](/.agents/skills/testing/SKILL.md)                       |
+| Code quality                                 | [`code-quality`](/.agents/skills/code-quality/SKILL.md)             |
 | Platform × product boundary, `copier update` | [`docs/dev/template.md`](/docs/dev/template.md)                     |
 | Catalog, advisories, authoring an entry      | [`docs/catalog/catalog.md`](/docs/catalog/catalog.md)               |
-| Agent workflow, harness, communication       | [`docs/agents/`](/docs/agents)                                      |
+| Agent workflow, harness, communication       | [`dev-workflow`](/.agents/skills/dev-workflow/SKILL.md), [`agent-harness`](/.agents/skills/agent-harness/SKILL.md), [`communication`](/.agents/skills/communication/SKILL.md) |
 | Deploy                                       | [`docs/dev/deploy.md`](/docs/dev/deploy.md)                         |
 | Template changelog                           | [`docs/dev/template-changelog.md`](/docs/dev/template-changelog.md) |
 

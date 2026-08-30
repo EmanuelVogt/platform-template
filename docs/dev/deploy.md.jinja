@@ -110,7 +110,7 @@ one. Same value in both environments unless noted:
 
 `.github/workflows/ci.yml` runs three gates on every PR and on push to `main`: `quality`
 (lint + typecheck + builds), `test-unit` (api + web) and `test-coverage` (api integration +
-e2e, testcontainers) — see [`workflow.md`](../agents/workflow.md) for the full pipeline.
+e2e, testcontainers) — see [`dev-workflow`](../../.agents/skills/dev-workflow/SKILL.md) for the full pipeline.
 Nothing builds or deploys the images before those pass.
 
 How a green push actually becomes a running deployment — which provider, which webhook or
@@ -157,4 +157,4 @@ Product-owned: the template ships no cloud account, VM, deploy orchestrator or p
 those are this product's own choice. Document here how a push actually reaches a running
 environment (the orchestrator or CLI, the webhook or GitHub App wiring, TLS/DNS, and how an
 operator reaches the VM and the database for each environment), following the shape of
-[`../agents/infra.md`](../agents/infra.md).
+[`infra`](../../.agents/skills/infra/SKILL.md).

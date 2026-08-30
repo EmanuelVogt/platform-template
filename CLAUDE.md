@@ -2,8 +2,10 @@
 
 You are in the TEMPLATE repository, not in a product. Read `TEMPLATE.md` and
 `docs/dev/template.md`. The code rules are those of `AGENTS.md.jinja` (identical to the
-product's): `docs/code-quality.md`, `docs/arch/back.md`, `docs/arch/front.md`,
-`docs/test/testing.md`, `docs/agents/*`.
+product's): `.agents/skills/code-quality/SKILL.md`, `.agents/skills/backend-architecture/SKILL.md`,
+`.agents/skills/frontend-architecture/SKILL.md`, `.agents/skills/testing/SKILL.md`,
+`.agents/skills/{dev-workflow,communication,agent-harness}/SKILL.md`,
+`.agents/skills/{infra,issue-tracker}/SKILL.md.jinja`.
 
 The template ships **only the kernel** — modules are versioned entries in `catalog/`
 (outside the copier), installed into the product via `pnpm platform module add`.

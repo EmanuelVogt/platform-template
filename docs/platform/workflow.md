@@ -1,7 +1,7 @@
 # Workflow: template-only mechanics
 
 Mechanics that apply only inside `platform-template` itself, split out of
-[`../agents/workflow.md`](../agents/workflow.md) — a generated product never ships this
+[`dev-workflow`](../../.agents/skills/dev-workflow/SKILL.md) — a generated product never ships this
 file. Read that one first for branch, commit, worktree and spec rules shared by both.
 
 ## No pull requests for our own work
@@ -13,7 +13,7 @@ PRs still exist in two narrow roles, and neither changes the flow above:
 
 - **CI trigger** — `.github/workflows/ci.yml` runs on `pull_request` as well as on push
   to `main`.
-- **External contributors** — see [`../agents/issue-tracker.md`](../agents/issue-tracker.md).
+- **External contributors** — see [`issue-tracker`](../../.agents/skills/issue-tracker/SKILL.md.jinja).
 
 ## Branching in the shared checkout
 

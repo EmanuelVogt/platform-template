@@ -21,7 +21,7 @@ skill runs them in order and stops at the same place every time:
 | Installed catalog entries              | `port-module-update` skill                | one entry        |
 | Retroactive fixes on entries           | `docs/advisories/ADV-*.md` + `APPLIED.md` | one advisory     |
 
-Push, release and deploy are the user's acts (`docs/agents/workflow.md`); this routine
+Push, release and deploy are the user's acts (`.agents/skills/dev-workflow/SKILL.md`); this routine
 ends at a local branch that passes the gates.
 
 ## Preconditions
@@ -74,7 +74,7 @@ ends at a local branch that passes the gates.
 5. **Final gate** — `pnpm check` and `pnpm test` on the whole branch; `pnpm test:coverage`
    is the pre-push gate (needs Docker) — run it once so the user is not surprised at push.
 6. **Report** (pt-BR to the user, see below) and close the worktree per
-   `docs/agents/workflow.md` — local merge into `main`; the push is theirs.
+   `.agents/skills/dev-workflow/SKILL.md` — local merge into `main`; the push is theirs.
 
 ## Conflict rules
 

@@ -1,6 +1,6 @@
 ---
 name: feature-sliced-design
-description: Official Feature-Sliced Design v2.1 reference. Use when deciding where code belongs in apps/web (layer, slice, segment), whether to create or remove an entity, how to resolve a cross-import (@x), or how to fit TanStack Query/auth into FSD. Project overrides live in docs/arch/front.md.
+description: Official Feature-Sliced Design v2.1 reference. Use when deciding where code belongs in apps/web (layer, slice, segment), whether to create or remove an entity, how to resolve a cross-import (@x), or how to fit TanStack Query/auth into FSD. Project overrides live in .agents/skills/frontend-architecture/SKILL.md.
 ---
 
 # Feature-Sliced Design (FSD) v2.1

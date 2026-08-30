@@ -25,7 +25,7 @@ decorado envelhece, e este arquivo não é inventário.
 ## Como buscar barato
 
 - Use `grep`, **nunca `rg`**: o proxy rtk comprime a saída de `grep` e ignora
-  `rg` por completo (`exclude_commands`, ver [`../../../docs/agents/harness.md`](../../../docs/agents/harness.md)).
+  `rg` por completo (`exclude_commands`, ver [`../agent-harness/SKILL.md`](../agent-harness/SKILL.md)).
 - `grep -rl` primeiro para saber *onde*, e só então abra o trecho. `grep -rn`
   largo despeja conteúdo que não vai ser usado e fica no contexto até o fim.
 - Comece por um consumidor quando der: uma linha de import responde "onde isso é

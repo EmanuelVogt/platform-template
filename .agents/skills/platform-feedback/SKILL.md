@@ -18,7 +18,7 @@ This flow prepares that report; **it never sends anything by itself**.
   Docker, `scripts/`, or an installed catalog entry from `.platform-modules.lock`).
 - Finish the user's current task first; the report is a follow-up, never a detour.
 - NOT for the product's own business code — that goes to the product's tracker
-  (`docs/agents/issue-tracker.md`).
+  (`.agents/skills/issue-tracker/SKILL.md.jinja`).
 - NOT for something a pending advisory already covers (`pnpm platform status`) or a
   newer template tag already fixes (the template-behind hook / `status` output).
 

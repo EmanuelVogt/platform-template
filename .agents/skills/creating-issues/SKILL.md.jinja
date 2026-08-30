@@ -9,7 +9,7 @@ description: Use quando o user pedir para criar/registrar uma issue, reportar um
 
 Issue nasce investigada: quem abre a issue paga o custo do contexto, não quem vai resolvê-la depois. O user descreve numa frase; a entrevista é curta e o trabalho pesado (localizar código, hipótese, duplicata, fatiamento) é seu.
 
-Convenções de `gh` (heredoc, pt-BR no título/corpo), labels e mecanismo de dependência: `docs/agents/issue-tracker.md`.
+Convenções de `gh` (heredoc, pt-BR no título/corpo), labels e mecanismo de dependência: `.agents/skills/issue-tracker/SKILL.md.jinja`.
 
 ## Escolha o modo
 
@@ -87,7 +87,7 @@ Por fatia publicada: labels de tipo, área e porte (as mesmas do modo A) e, quan
 - **filha do pai** — sub-issue nativa do GitHub;
 - **bloqueio** — `issue dependencies` nativas: `gh api --method POST repos/{{ github_org }}/{{ github_repo }}/issues/<filha>/dependencies/blocked_by -F issue_id=<database-id-da-bloqueadora>`, onde o `database id` sai de `gh api repos/{{ github_org }}/{{ github_repo }}/issues/<n> --jq .id` (**não** é o `#numero`). Onde não estiver habilitado, caia para a linha `Bloqueada por: #<n>` no topo do corpo.
 
-Comando exato e fallbacks: `docs/agents/issue-tracker.md`.
+Comando exato e fallbacks: `.agents/skills/issue-tracker/SKILL.md.jinja`.
 
 **Não feche nem edite a issue-pai.** Ela continua sendo o guarda-chuva.
 

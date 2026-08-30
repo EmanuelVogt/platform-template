@@ -174,6 +174,26 @@ test("AC-06: no shipped harness text file reads as pt-BR prose", () => {
   let chunksChecked = 0
   for (const file of files) {
     const content = readFileSync(file, "utf8")
+
+    // Whole-file class (restored alongside the paragraph class below): feeds
+    // each file's complete, unsplit content through the hook, the same way
+    // the pre-paragraph sweep did. It closes a corner the paragraph loop
+    // alone leaves open — a file made entirely of sub-floor (<MIN_WORDS)
+    // pt-BR paragraphs has every chunk skipped by the `rawWords <
+    // HOOK_MIN_WORDS` guard below, so no chunk ever reaches the hook; fed
+    // whole, the same pt-BR stopwords accumulate across paragraphs past both
+    // the word floor and the stopword-ratio threshold, so the hook still
+    // flags it. No extra fence/URL stripping is needed here: the file is
+    // passed unsplit, so every ``` fence and inline literal stays intact for
+    // the hook's own stripping regex — the same guarantee splitParagraphs
+    // gives the chunk path, just achieved for free by not splitting at all.
+    const wholeResult = runHook(write(probe, content))
+    assert.equal(
+      wholeResult.status,
+      0,
+      `${path.relative(REPO_ROOT, file)} reads as pt-BR prose fed whole: ${wholeResult.stderr}`
+    )
+
     for (const paragraph of splitParagraphs(content)) {
       // A raw whitespace split (no code/URL stripping) never undercounts
       // the hook's own prose word count for the same text — stripping only

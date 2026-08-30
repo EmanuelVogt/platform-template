@@ -1,9 +1,12 @@
 #!/usr/bin/env node
-// PreToolUse(Edit|Write|MultiEdit): everything under `.ca-plans/` is written in
-// English — research, plan, review, decisions, handoffs. Agents are the only
-// readers, and every artifact is re-read on every turn of every session for
-// the life of the run; pt-BR prose costs ~30-40% more tokens for the same
-// content. Rule in .agents/skills/dev-workflow/SKILL.md and the ca-full-cycle skill
+// PreToolUse(Edit|Write|MultiEdit): everything under `.ca-plans/` (research,
+// plan, review, decisions, handoffs) and the shipped harness itself — the
+// skill set (`.agents/skills/**`) and the router (`AGENTS.md.jinja`) — is
+// written in English. `.ca-plans/` readers are agents, and every artifact is
+// re-read on every turn of every session for the life of the run; pt-BR prose
+// costs ~30-40% more tokens for the same content. The shipped harness is read
+// by every product's agents, in every language the product itself uses.
+// Rule in .agents/skills/dev-workflow/SKILL.md and the ca-full-cycle skill
 // (SKILL.md § Critical Rules). This hook blocks a write whose new text reads
 // as pt-BR prose. Quoted product strings ("Sem horário") inside English prose
 // stay under the threshold by construction; a pt-BR paragraph does not.
@@ -100,7 +103,11 @@ try {
 if (process.env.PLATFORM_SPECS_LANG_OFF === "1") process.exit(0)
 
 const filePath = data.tool_input?.file_path ?? ""
-if (!/(^|\/)[.]ca-plans\//.test(filePath)) process.exit(0)
+const inScope =
+  /(^|\/)[.]ca-plans\//.test(filePath) ||
+  /(^|\/)[.]agents\/skills\//.test(filePath) ||
+  /(^|\/)AGENTS[.]md[.]jinja$/.test(filePath)
+if (!inScope) process.exit(0)
 if (/[.]json$/.test(filePath)) process.exit(0)
 
 const texts = []
@@ -149,7 +156,7 @@ const sample = words
 
 process.stderr.write(
   `Write to \`${filePath}\` blocked — reads as pt-BR prose (${stopwordHits} pt-BR function words in ${words.length}, ${diacriticHits} diacritics; e.g. ${sample || "diacritics only"}).
-Everything under .ca-plans/ is English (ca-full-cycle Critical Rule 6, .agents/skills/dev-workflow/SKILL.md). Rewrite in English and repeat; quote pt-BR only for a product string (UI label, error message, domain term) inside English sentences. Editing an older pt-BR entry: translate the span you touch, or narrow old_string/new_string to the changed words. Debugging: PLATFORM_SPECS_LANG_OFF=1.
+Everything under .ca-plans/, the shipped skill set (.agents/skills/**) and AGENTS.md.jinja is English (ca-full-cycle Critical Rule 6, .agents/skills/dev-workflow/SKILL.md). Rewrite in English and repeat; quote pt-BR only for a product string (UI label, error message, domain term) inside English sentences. Editing an older pt-BR entry: translate the span you touch, or narrow old_string/new_string to the changed words. Debugging: PLATFORM_SPECS_LANG_OFF=1.
 `
 )
 process.exit(2)

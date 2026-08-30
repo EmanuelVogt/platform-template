@@ -156,12 +156,12 @@ const TEMPLATE_ONLY_MECHANICS = [
   "origin/main",
 ]
 
-test("AUD-09: o doc de workflow entregue não carrega nenhuma mecânica só do template", () => {
-  const shipped = read("docs/agents/workflow.md").toLowerCase()
+test("AUD-09: a skill dev-workflow entregue não carrega nenhuma mecânica só do template", () => {
+  const shipped = read(".agents/skills/dev-workflow/SKILL.md").toLowerCase()
   for (const literal of TEMPLATE_ONLY_MECHANICS) {
     assert.ok(
       !shipped.includes(literal.toLowerCase()),
-      `docs/agents/workflow.md ainda carrega "${literal}", que depende de um artefato que só o template tem`
+      `.agents/skills/dev-workflow/SKILL.md ainda carrega "${literal}", que depende de um artefato que só o template tem`
     )
   }
 })
@@ -181,27 +181,42 @@ test("AUD-10: as quatro estão sob docs/platform/, e esse arquivo não é entreg
 // convenção. Um "reparo" que tirasse isso do doc entregue deixaria o filho sem regra de
 // branch nenhuma — a asserção existe para barrar esse reparo.
 test("AUD-09 (limite): a convenção de worktree do filho continua no doc entregue", () => {
-  const shipped = read("docs/agents/workflow.md")
+  const shipped = read(".agents/skills/dev-workflow/SKILL.md")
   assert.ok(shipped.includes(".worktrees/<slug>"))
   assert.ok(shipped.includes(".claude/hooks/branch-only-in-worktree.mjs"))
 })
 
-test("AUD-11: toda linha da tabela de docs/agents/README.md resolve no conjunto entregue", () => {
+// D-08: docs/agents/README.md foi absorvido pelo router (AGENTS.md.jinja), não convertido —
+// a tabela "Read before you touch" é hoje o único índice situação→arquivo entregue ao filho.
+test("AUD-11: toda linha da tabela de AGENTS.md.jinja resolve no conjunto entregue", () => {
   const shipped = shippedSet()
-  const rows = read("docs/agents/README.md")
-    .split("\n")
-    .filter((line) => line.startsWith("| ["))
+  const lines = read("AGENTS.md.jinja").split("\n")
+  const headingIndex = lines.indexOf("## Read before you touch")
+  assert.ok(
+    headingIndex >= 0,
+    "AGENTS.md.jinja tem de carregar a tabela do router"
+  )
+  const tableLines = []
+  for (let index = headingIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index]
+    if (!line.startsWith("|")) {
+      if (tableLines.length > 0) break
+      continue
+    }
+    tableLines.push(line)
+  }
+  const rows = tableLines
+    .filter((line) => line.includes("]("))
     .map((line) => /\[[^\]]*\]\(([^)\s]+)\)/.exec(line)?.[1])
   assert.ok(
     rows.length >= 5,
     `a tabela tem de ter linhas para conferir — ${rows.length} encontradas`
   )
   for (const target of rows) {
-    assert.ok(target, "toda linha da tabela abre com um link para o arquivo")
-    const resolved = path.posix.join("docs/agents", target)
+    assert.ok(target, "toda linha da tabela carrega um link para o arquivo")
     assert.ok(
-      shipped.has(resolved),
-      `docs/agents/README.md manda ler ${resolved}, que o filho não recebe`
+      shipped.has(target),
+      `AGENTS.md.jinja manda ler ${target}, que o filho não recebe`
     )
   }
 })

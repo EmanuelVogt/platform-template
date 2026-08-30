@@ -4,9 +4,9 @@ import path from "node:path"
 import { test } from "node:test"
 import { fileURLToPath } from "node:url"
 
-// TOOL-09 — "WHEN workflow.md or deploy.md.jinja describes the pre-push gate
+// TOOL-09 — "WHEN dev-workflow or deploy.md.jinja describes the pre-push gate
 // or the CI jobs THEN it SHALL match the real pipeline and name no Jest
-// construct." Cross-checks docs/agents/workflow.md's prose against the real
+// construct." Cross-checks .agents/skills/dev-workflow/SKILL.md's prose against the real
 // lefthook.yml pre-push chain and .github/workflows/ci.yml job keys.
 
 const TESTS_DIR = path.dirname(fileURLToPath(import.meta.url))
@@ -14,8 +14,8 @@ const REPO_ROOT = path.resolve(TESTS_DIR, "..", "..", "..")
 
 const read = (rel) => readFileSync(path.join(REPO_ROOT, rel), "utf8")
 
-test("workflow.md names no Jest construct (testRegex) for the api test include", () => {
-  const workflow = read("docs/agents/workflow.md")
+test("dev-workflow names no Jest construct (testRegex) for the api test include", () => {
+  const workflow = read(".agents/skills/dev-workflow/SKILL.md")
   assert.doesNotMatch(
     workflow,
     /testRegex/,
@@ -26,7 +26,7 @@ test("workflow.md names no Jest construct (testRegex) for the api test include",
   )
   assert.ok(
     match,
-    "workflow.md must cite the line of vitest.config.mts's include array"
+    "dev-workflow must cite the line of vitest.config.mts's include array"
   )
   const cited = read("apps/api/vitest.config.mts").split("\n")[
     Number(match[1]) - 1
@@ -38,7 +38,7 @@ test("workflow.md names no Jest construct (testRegex) for the api test include",
   )
 })
 
-test("workflow.md's pre-push chain matches lefthook.yml's real command order", () => {
+test("dev-workflow's pre-push chain matches lefthook.yml's real command order", () => {
   const commandsBlock = read("lefthook.yml").slice(
     read("lefthook.yml").indexOf("commands:")
   )
@@ -48,13 +48,13 @@ test("workflow.md's pre-push chain matches lefthook.yml's real command order", (
   assert.deepEqual(commandKeys, ["migrations", "typecheck", "test-coverage"])
 
   assert.match(
-    read("docs/agents/workflow.md"),
+    read(".agents/skills/dev-workflow/SKILL.md"),
     /`migrations`[\s\S]{0,120}?`typecheck`[\s\S]{0,120}?`test-coverage`/,
-    "workflow.md's pre-push description must name migrations -> typecheck -> test-coverage in order"
+    "dev-workflow's pre-push description must name migrations -> typecheck -> test-coverage in order"
   )
 })
 
-test("workflow.md's CI job names exist as real job keys in ci.yml", () => {
+test("dev-workflow's CI job names exist as real job keys in ci.yml", () => {
   const ci = read(".github/workflows/ci.yml")
   const jobsBlock = ci.slice(ci.indexOf("\njobs:\n"))
   const jobKeys = [...jobsBlock.matchAll(/^\s{2}([a-z-]+):\s*$/gm)].map(
@@ -65,8 +65,8 @@ test("workflow.md's CI job names exist as real job keys in ci.yml", () => {
   }
 
   assert.match(
-    read("docs/agents/workflow.md"),
+    read(".agents/skills/dev-workflow/SKILL.md"),
     /`quality`[^`]*`test-unit`[^`]*`test-coverage`/,
-    "workflow.md must name quality/test-unit/test-coverage as the real CI jobs"
+    "dev-workflow must name quality/test-unit/test-coverage as the real CI jobs"
   )
 })

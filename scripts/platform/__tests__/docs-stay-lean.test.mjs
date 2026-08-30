@@ -31,8 +31,14 @@ const write = (file_path, content) => ({
 const bash = (command) => ({ tool_name: "Bash", tool_input: { command } })
 
 test("growth: an edit adding up to 30 lines passes, 31 is blocked", () => {
-  assert.equal(runHook(edit(doc("docs/code-quality.md"), lines(31))).status, 0)
-  const blocked = runHook(edit(doc("docs/code-quality.md"), lines(32)))
+  assert.equal(
+    runHook(edit(doc(".agents/skills/code-quality/SKILL.md"), lines(31)))
+      .status,
+    0
+  )
+  const blocked = runHook(
+    edit(doc(".agents/skills/code-quality/SKILL.md"), lines(32))
+  )
   assert.equal(blocked.status, 2)
   assert.match(blocked.stderr, /grows .* by 31 lines \(cap 30\)/)
 })
@@ -41,7 +47,7 @@ test("growth: MultiEdit sums the net growth of every edit", () => {
   const result = runHook({
     tool_name: "MultiEdit",
     tool_input: {
-      file_path: doc("docs/code-quality.md"),
+      file_path: doc(".agents/skills/code-quality/SKILL.md"),
       edits: [
         { old_string: "a", new_string: lines(20) },
         { old_string: "b", new_string: lines(20) },
@@ -51,12 +57,16 @@ test("growth: MultiEdit sums the net growth of every edit", () => {
   assert.equal(result.status, 2)
 })
 
-test("growth: .md.jinja handbooks and AGENTS.md.jinja count as handbooks", () => {
+test("growth: .md.jinja handbooks, .agents/skills/** and AGENTS.md.jinja count as handbooks", () => {
   assert.equal(
     runHook(edit(doc("docs/dev/deploy.md.jinja"), lines(40))).status,
     2
   )
   assert.equal(runHook(edit(doc("AGENTS.md.jinja"), lines(40))).status, 2)
+  assert.equal(
+    runHook(edit(doc(".agents/skills/infra/SKILL.md.jinja"), lines(40))).status,
+    2
+  )
 })
 
 test("new file: handbook cap 80, ADR cap 60", () => {
@@ -73,24 +83,11 @@ test("new file: handbook cap 80, ADR cap 60", () => {
 })
 
 test("rationale: heading or pt-BR phrase in a handbook is blocked; code spans are ignored", () => {
-  assert.equal(
-    runHook(edit(doc("docs/agents/workflow.md"), "## Why this design\ntext"))
-      .status,
-    2
-  )
-  assert.equal(
-    runHook(edit(doc("docs/agents/workflow.md"), "## Alternatives\ntext"))
-      .status,
-    2
-  )
-  assert.equal(
-    runHook(edit(doc("docs/agents/workflow.md"), "Optamos por isso.")).status,
-    2
-  )
-  assert.equal(
-    runHook(edit(doc("docs/agents/workflow.md"), "run `porque --why`")).status,
-    0
-  )
+  const skill = doc(".agents/skills/dev-workflow/SKILL.md")
+  assert.equal(runHook(edit(skill, "## Why this design\ntext")).status, 2)
+  assert.equal(runHook(edit(skill, "## Alternatives\ntext")).status, 2)
+  assert.equal(runHook(edit(skill, "Optamos por isso.")).status, 2)
+  assert.equal(runHook(edit(skill, "run `porque --why`")).status, 0)
 })
 
 test("scope: ADRs accept rationale; advisories, .specs and source are not handbooks", () => {
@@ -115,12 +112,15 @@ test("scope: ADRs accept rationale; advisories, .specs and source are not handbo
 test("bash: shell writes into a handbook are blocked, reads and git mv pass", () => {
   assert.equal(runHook(bash("cat > docs/dev/x.md <<'EOF'\nhi\nEOF")).status, 2)
   assert.equal(
-    runHook(bash('sed -i "" "s/a/b/" docs/agents/workflow.md')).status,
+    runHook(bash('sed -i "" "s/a/b/" docs/dev/local-environment.md')).status,
     2
   )
   assert.equal(runHook(bash("echo x | tee docs/dev/deploy.md.jinja")).status, 2)
   assert.equal(runHook(bash("echo x >> AGENTS.md.jinja")).status, 2)
-  assert.equal(runHook(bash("grep -n foo docs/agents/workflow.md")).status, 0)
+  assert.equal(
+    runHook(bash("grep -n foo docs/dev/local-environment.md")).status,
+    0
+  )
   assert.equal(runHook(bash("git mv docs/a.md docs/b.md")).status, 0)
   assert.equal(runHook(bash("pnpm check")).status, 0)
 })

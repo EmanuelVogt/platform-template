@@ -14,8 +14,9 @@ const read = (rel) => readFileSync(path.join(REPO_ROOT, rel), "utf8")
 // ca-full-cycle/**` is vendored as-is (out of scope) and carries its own
 // generic "availability/booking" P0-category example, unrelated to any
 // pilot's domain — same exemption `audience-contract.mjs` gives the skills
-// tree. `docs/agents/harness.md` is the one surviving template-owned site.
-const TAXONOMY_FILES = ["docs/agents/harness.md"]
+// tree. `.agents/skills/agent-harness/SKILL.md` is the one surviving
+// template-owned site (docs/agents/harness.md's replacement, plan-02 T3).
+const TAXONOMY_FILES = [".agents/skills/agent-harness/SKILL.md"]
 
 test("no P0-taxonomy site names booking/availability domain rules", () => {
   for (const rel of TAXONOMY_FILES) {

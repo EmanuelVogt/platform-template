@@ -60,10 +60,15 @@ test("a mensagem nomeia file:line e o token (AUD-07)", () => {
 })
 
 test("edge case — um `.jinja` linkado pelo nome renderizado está presente", () => {
-  assert.deepEqual(auditText("Veja [infra](agents/infra.md)."), [])
   assert.deepEqual(
-    auditText("Veja [infra](agents/infra.md.jinja).").map((f) => f.token),
-    ["agents/infra.md.jinja"],
+    auditText("Veja [infra](../.agents/skills/infra/SKILL.md)."),
+    []
+  )
+  assert.deepEqual(
+    auditText("Veja [infra](../.agents/skills/infra/SKILL.md.jinja).").map(
+      (f) => f.token
+    ),
+    ["../.agents/skills/infra/SKILL.md.jinja"],
     "o filho nunca recebe o nome com `.jinja` — nomeá-lo assim é defeito"
   )
 })
@@ -203,8 +208,17 @@ test("buraco conhecido: token em bloco cercado não é varrido, inline é", () =
   )
 })
 
+// Reescrita inline, não a fixture compartilhada (docs-workflow-names.test.mjs também a usa):
+// o link do `.jinja` e a citação de linha precisavam de um alvo que o filho ainda recebe.
 test("as quatro situações que não são defeito passam juntas", () => {
-  assert.deepEqual(auditFixture("four-situations"), [])
+  const text = [
+    "Acesso operacional está em [`infra`](../.agents/skills/infra/SKILL.md), um `.jinja` no template.",
+    "A camada compartilhada da API mora em `apps/api/src/shared`.",
+    "Uma migration nasce como `apps/api/drizzle/0000_*.sql` e uma entrada é `catalog/<entry>`.",
+    "O spec do filho vive em `.specs/features/x/spec.md` e o contrato em `generated/`.",
+    "`.agents/skills/dev-workflow/SKILL.md:120` cita `apps/api/vitest.config.mts:20`.",
+  ].join("\n")
+  assert.deepEqual(auditText(text), [])
 })
 
 // O instalador é o segundo canal de entrega: `catalog/<dir>/api/**` vira

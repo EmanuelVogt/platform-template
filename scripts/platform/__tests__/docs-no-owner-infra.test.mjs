@@ -7,11 +7,27 @@ import { fileURLToPath } from "node:url"
 const TESTS_DIR = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(TESTS_DIR, "..", "..", "..")
 
+// The 9 skills the guidance docs became (name map in .ca-plans/harness-to-skills/plan-02.md).
+const MAPPED_SKILL_DIRS = [
+  "agent-harness",
+  "backend-architecture",
+  "code-quality",
+  "communication",
+  "dev-workflow",
+  "frontend-architecture",
+  "infra",
+  "issue-tracker",
+  "testing",
+]
+
 function scannedFiles() {
-  const agentsDir = path.join(REPO_ROOT, "docs", "agents")
-  const files = readdirSync(agentsDir)
-    .filter((name) => !name.startsWith("."))
-    .map((name) => path.posix.join("docs", "agents", name))
+  const skillsDir = path.join(REPO_ROOT, ".agents", "skills")
+  const files = MAPPED_SKILL_DIRS.map((name) => {
+    const entry = readdirSync(path.join(skillsDir, name)).find(
+      (f) => f === "SKILL.md" || f === "SKILL.md.jinja"
+    )
+    return path.posix.join(".agents", "skills", name, entry)
+  })
   files.push("docs/dev/deploy.md.jinja")
   return files.sort()
 }
@@ -70,19 +86,22 @@ function infraHits(text) {
   return hits
 }
 
-test("scope: the literal docs/agents/** plus deploy.md.jinja", () => {
+test("scope: the literal 9 mapped skills plus deploy.md.jinja", () => {
   assert.deepEqual(scannedFiles(), [
-    "docs/agents/README.md",
-    "docs/agents/communication.md",
-    "docs/agents/harness.md",
-    "docs/agents/infra.md.jinja",
-    "docs/agents/issue-tracker.md.jinja",
-    "docs/agents/workflow.md",
+    ".agents/skills/agent-harness/SKILL.md",
+    ".agents/skills/backend-architecture/SKILL.md",
+    ".agents/skills/code-quality/SKILL.md",
+    ".agents/skills/communication/SKILL.md",
+    ".agents/skills/dev-workflow/SKILL.md",
+    ".agents/skills/frontend-architecture/SKILL.md",
+    ".agents/skills/infra/SKILL.md.jinja",
+    ".agents/skills/issue-tracker/SKILL.md.jinja",
+    ".agents/skills/testing/SKILL.md",
     "docs/dev/deploy.md.jinja",
   ])
 })
 
-test("no owner-domain (pilot hospitality) noun survives in the scanned docs", () => {
+test("no owner-domain (pilot hospitality) noun survives in the scanned skills", () => {
   for (const rel of scannedFiles()) {
     const hits = domainHits(read(rel))
     assert.deepEqual(
@@ -93,7 +112,7 @@ test("no owner-domain (pilot hospitality) noun survives in the scanned docs", ()
   }
 })
 
-test("no owner-infra noun survives in the scanned docs", () => {
+test("no owner-infra noun survives in the scanned skills", () => {
   for (const rel of scannedFiles()) {
     const hits = infraHits(read(rel))
     assert.deepEqual(

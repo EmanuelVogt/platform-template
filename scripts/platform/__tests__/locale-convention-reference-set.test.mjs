@@ -16,11 +16,11 @@ const REPO_ROOT = path.resolve(TESTS_DIR, "..", "..", "..")
 
 const read = (rel) => readFileSync(path.join(REPO_ROOT, rel), "utf8")
 
-test("docs/test/testing.md defers to the code-quality language convention instead of restating a locale", () => {
+test("testing skill defers to the code-quality language convention instead of restating a locale", () => {
   assert.match(
-    read("docs/test/testing.md"),
+    read(".agents/skills/testing/SKILL.md"),
     /follows the code-quality language convention/,
-    "testing.md must defer to code-quality.md instead of hard-coding a locale"
+    "testing/SKILL.md must defer to code-quality/SKILL.md instead of hard-coding a locale"
   )
 })
 

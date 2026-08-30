@@ -21,23 +21,23 @@ const matches = (pattern, filePath) => excludeMatcher(pattern).test(filePath)
 test("o conjunto entregue vem do copier.yml a cada chamada, nunca de uma lista no teste", () => {
   const real = shippedSet()
   assert.ok(
-    real.has("docs/agents/workflow.md"),
-    "docs/agents/workflow.md é entregue ao filho antes da entrada sintética"
+    real.has(".agents/skills/dev-workflow/SKILL.md"),
+    ".agents/skills/dev-workflow/SKILL.md é entregue ao filho antes da entrada sintética"
   )
 
   const withSynthetic = shippedSet({
-    excludes: [...readExcludes(), "/docs/agents"],
+    excludes: [...readExcludes(), "/.agents/skills/dev-workflow"],
   })
   assert.ok(
-    !withSynthetic.has("docs/agents/workflow.md"),
+    !withSynthetic.has(".agents/skills/dev-workflow/SKILL.md"),
     "uma entrada `_exclude` a mais tem de mudar o conjunto — se não muda, ele veio de uma lista embutida (AUD-08)"
   )
   assert.ok(
     withSynthetic.size < real.size,
-    `excluir /docs/agents tem de reduzir o conjunto (${real.size} -> ${withSynthetic.size})`
+    `excluir /.agents/skills/dev-workflow tem de reduzir o conjunto (${real.size} -> ${withSynthetic.size})`
   )
   assert.ok(
-    shippedSet().has("docs/agents/workflow.md"),
+    shippedSet().has(".agents/skills/dev-workflow/SKILL.md"),
     "a chamada seguinte recalcula do copier.yml e volta ao conjunto real"
   )
 })
@@ -108,8 +108,8 @@ test("classes de caracteres e curingas seguem gitwildmatch", () => {
 
 test("nomes renderizados: `.jinja` some e as raízes condicionais viram apps/web", () => {
   assert.equal(
-    renderedDestination("docs/agents/infra.md.jinja"),
-    "docs/agents/infra.md"
+    renderedDestination(".agents/skills/infra/SKILL.md.jinja"),
+    ".agents/skills/infra/SKILL.md"
   )
   assert.equal(
     renderedDestination("apps/web-vite/Dockerfile"),
@@ -127,11 +127,11 @@ test("nomes renderizados: `.jinja` some e as raízes condicionais viram apps/web
 
   const shipped = shippedSet()
   assert.ok(
-    shipped.has("docs/agents/infra.md"),
-    "um doc entregue pode linkar infra.md pelo nome renderizado"
+    shipped.has(".agents/skills/infra/SKILL.md"),
+    "um doc entregue pode linkar infra pelo nome renderizado"
   )
   assert.ok(
-    !shipped.has("docs/agents/infra.md.jinja"),
+    !shipped.has(".agents/skills/infra/SKILL.md.jinja"),
     "o filho nunca recebe o nome com `.jinja`"
   )
   for (const member of [

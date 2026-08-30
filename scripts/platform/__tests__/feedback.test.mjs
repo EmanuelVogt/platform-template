@@ -236,6 +236,10 @@ test("classifyPath espelha a tabela de ownership", () => {
   const lock = new Set(["tag"])
   assert.equal(classifyPath("apps/api/src/shared/tx/tx.ts", lock).ok, true)
   assert.equal(classifyPath("docs/arch/back.md", lock).ok, true)
+  assert.equal(
+    classifyPath(".agents/skills/backend-architecture/SKILL.md", lock).ok,
+    true
+  )
   assert.equal(classifyPath("docs/adr/0003-decisao.md", lock).ok, false)
   assert.equal(classifyPath("README.md", lock).ok, false)
   assert.equal(

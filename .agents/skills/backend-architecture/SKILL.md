@@ -7,7 +7,7 @@ description: Backend architecture handbook for apps/api — module anatomy, laye
 
 Quick-read handbook of `apps/api`, a modular monolith with spec-verified boundaries: each concept, the rules it implies
 and the spec that enforces it. See [`code-quality`](../code-quality/SKILL.md), [`testing`](../testing/SKILL.md),
-[`docs/adr`](../../../docs/adr/README.md), [`catalog.md`](../../../docs/catalog/catalog.md) and [`frontend-architecture`](../frontend-architecture/SKILL.md). The template ships
+[`domain-modeling`](../domain-modeling/ADR-FORMAT.md), [`catalog.md`](../../../docs/catalog/catalog.md) and [`frontend-architecture`](../frontend-architecture/SKILL.md). The template ships
 **only the kernel**; business modules are catalog entries installed into the product.
 
 ## Source layout, kernel and boot
@@ -192,7 +192,7 @@ shape snapshot.
 20. `RequestContext` over ALS. Never in a signature.
 21. `application/` depends on ports. `infrastructure/` implements them.
 22. Cross-module: facade (point fact), BFF (detail), MV/view + ADR (aggregate), facade aggregator (listing).
-23. Structural decision or exception: an ADR in `docs/adr/`.
+23. Structural decision or exception: an AD entry in `.ca-plans/DECISIONS.md` (`domain-modeling` skill).
 24. `RequestContext` provides the actor, `correlationId` and `tenantId`. Never in a signature.
 25. `throw` is the only error path. No `Result<T>`/`Either`.
 26. `eventId` is a ULID. `traceparent` travels in the outbox envelope.

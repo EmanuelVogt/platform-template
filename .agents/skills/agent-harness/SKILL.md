@@ -74,7 +74,7 @@ navigation volume after that date is the habit taking — or not.
 priced on the **last stop row per agent** — a `SendMessage` resume re-emits a stop row whose
 context is the whole transcript again, so the earlier per-row pricing overstated ~4.8×):
 $660 across 478 unique agents, **$12.95 per commit** over the whole log (≈ $7 on the pilot
-feature's waves 2–11 alone); spec-worker warm-up before the first code edit: median **21 turns / 7.2 min**,
+feature's waves 2–11 alone); worker warm-up before the first code edit: median **21 turns / 7.2 min**,
 16 % of workers never reached one. Those two numbers — dollars per commit and warm-up — are what
 the vertical-cluster rule and the direct worker gates (both 2026-08-21) are meant to move; the
 measurement method and the raw figures live in the memory note `medicao-tokens-delegacao-2026-08-17`.
@@ -94,7 +94,7 @@ The 1M window is why: nothing ever forced a break.
   recent turns are still the working set (a follow-up of a few turns, a wave mid-feature
   whose plan is in `tasks.md`) — say what must survive the summary. `/clear` when what
   remains is a new stretch of work (dozens of turns) or the direction changed: the work's
-  memory is on disk (`.specs/`, `STATE.md`, git), so write the Handoff first and give the
+  memory is on disk (`.ca-plans/`, git), so write the Handoff first and give the
   user a **ready-to-paste prompt** for the next session — what to load, checkout and
   branch, the exact next step, the 1–3 constraints that must not be lost. **Never clear
   mid-task** — rebuilding from disk costs more than it saves. The signal comes from
@@ -114,8 +114,7 @@ The 1M window is why: nothing ever forced a break.
   blocks the third onward with the exact `Agent(subagent_type: "repo-scout", model: …)`
   call to make instead. Inside a subagent (`agent_id` in the hook input) it exits with no
   enforcement at all unless the subagent's type is in `ENFORCED_AGENTS` — empty today,
-  since the prior framework's `spec-worker`/`spec-verifier`, the only agents it ever named, are
-  gone and no `ca-full-cycle` agent type has been wired into their place: every subagent,
+  since no `ca-full-cycle` agent type has been wired into it: every subagent,
   the scout included, currently navigates and runs commands with zero enforcement from this
   hook. Subagents can spawn subagents here (verified 2026-08-17: a worker called
   `repo-scout` and got its answer), which is what makes that nesting real.
@@ -163,19 +162,19 @@ The 1M window is why: nothing ever forced a break.
   because the hop cost more than it saved (2026-08-21: 73 of 196 worker→runner dispatches
   had to be escalated to sonnet just to slice a red log). Output redirected to a file (`> log`) is never blocked, and
   `PLATFORM_DELEGATE_OFF=1` disables the hook while debugging the harness itself.
-- **Read specs by section, never whole.** `STATE.md` (37k chars after the 2026-08-17
-  prune — its Handoff carries only open work; closed features' entries live in
-  `.specs/features/done/<feature>/handoff-archive.md`), a `tasks.md` (40k) and the
-  `ca-full-cycle` references (`research.md` 10k, `implement.md` 9k) are the most
-  re-read documents here, and each one lands in context for the rest of the session. Use
-  `offset`/`limit` or grep for the section — measured habit is 150 whole-file reads
-  against 39 with a range. Workers and the Verifier read only their card
-  (`references/cards/*.md`) whole and never `STATE.md`; the orchestrator's own contract is
-  `cards/orchestrator.md`. Measured 2026-08-20, of the bytes the main window Read after
-  delegating Execute: `.specs` 50 % (`STATE.md` alone 577 KB over 31 reads), skill
-  references read whole 23 %, chained ranged reads paging through one file 22 %, code
-  3 % — so `delegate-to-subagent.mjs` now caps the main thread at 48 KB of `Read` per user
-  turn, any directory, ranged or not; past it the read is blocked and the cheap path named.
+- **Read run artifacts by section, never whole.** The project's decision log
+  (`.ca-plans/DECISIONS.md`) and a run's own `research.md`/`plan.md`/`review.md` — a run's
+  `plan.md` carries a `## Handoff` section only while paused or blocked, deleted once acted
+  on, never archived — are the most re-read documents here, and each one lands in context
+  for the rest of the session. Use `offset`/`limit` or grep for the section — measured habit
+  (pre-migration, 2026-08-17) was 150 whole-file reads against 39 with a range. Workers and
+  the wave verifier read only their card (`references/cards/*.md`) whole and never the
+  project's decision log; the orchestrator reads its current phase reference whole. Measured
+  2026-08-20, of the bytes the main window Read after delegating Implement: run/decision
+  artifacts 50 % (the heaviest single file alone 577 KB over 31 reads), skill references
+  read whole 23 %, chained ranged reads paging through one file 22 %, code 3 % — so
+  `delegate-to-subagent.mjs` now caps the main thread at 48 KB of `Read` per user turn, any
+  directory, ranged or not; past it the read is blocked and the cheap path named.
 - **Everything under `.ca-plans/` is English, enforced.** Those are the most re-read files in
   the repo and agents are their only readers; pt-BR tokenizes ~30% heavier, so a decision
   recorded in pt-BR is a surcharge on every Design and every resume for the life of the
@@ -185,8 +184,7 @@ The 1M window is why: nothing ever forced a break.
   exempt, and fewer than 12 words never trip it. Quoted product strings inside English
   sentences stay under the bar by construction. The rule is Critical Rule 6 of
   `ca-full-cycle` and `.agents/skills/dev-workflow/SKILL.md`; `PLATFORM_SPECS_LANG_OFF=1` disables the
-  hook while debugging the harness. Legacy: `.specs/STATE.md` still holds ~20 pt-BR
-  decisions from before 2026-08-17 — translate an entry when you touch it.
+  hook while debugging the harness.
 - **Browser inspection: `take_snapshot` first.** The accessibility-tree snapshot costs a
   fraction of a screenshot and is the right input for finding and clicking elements.
   Screenshot only when the question is genuinely visual — color, alignment, design token.
@@ -238,10 +236,9 @@ never recreate `.cursor/skills` — Cursor reads `.agents` directly.
   thread and inside subagents alike; `PLATFORM_SPECS_LANG_OFF=1` disables it. Rule in
   `.agents/skills/dev-workflow/SKILL.md` and `ca-full-cycle` Critical Rule 6.
 - `.claude/hooks/docs-stay-lean.mjs` — `PreToolUse(Edit|Write|MultiEdit|Bash)`: blocks a
-  handbook edit (`docs/` outside `adr/` and `advisories/`, `CLAUDE.md`/`AGENTS.md`, the
-  `.md.jinja` variants included) that grows the file by more than 30 lines, a new handbook
-  over 80 lines or a new ADR over 60, rationale prose outside `docs/adr` (`porque`,
-  `descartado`, a `Context`/`Alternatives`/`Why` heading…), and any shell write into those
+  handbook edit (`docs/` outside `advisories/`, `CLAUDE.md`/`AGENTS.md`, the
+  `.md.jinja` variants included) that grows the file by more than 30 lines or a new handbook
+  over 80 lines, and any shell write into those
   files (heredoc, `sed -i`, `tee`, `open(…, 'w')`) so the text always passes through
   Edit/Write. Constants at the top of the file; `PLATFORM_DOCS_LEAN_OFF=1` disables it. Rule
   in `.agents/skills/code-quality/SKILL.md` § Documentation.
@@ -268,9 +265,8 @@ head` isn't navigation — a filter after a pipe reduces what enters the context
   `.agents/`, `docs/` or outside the project stay free — `no-huge-reads.mjs` remains the
   separate hard size cap. Silent inside subagents
   (`agent_id`), for output redirected to a file, and with `PLATFORM_DELEGATE_OFF=1`.
-  `ENFORCED_AGENTS` is empty today — the prior framework's `spec-worker`/`spec-verifier`, the
-  only agents it ever named, are gone, and no `ca-full-cycle` agent type is wired in their
-  place — so the Read **byte** budget for an agent's lifetime (`READ_BYTES_FREE_PER_AGENT`
+  `ENFORCED_AGENTS` is empty today — no `ca-full-cycle` agent type is wired into it — so the
+  Read **byte** budget for an agent's lifetime (`READ_BYTES_FREE_PER_AGENT`
   = 120 000), the guard against reading a 30 kB reference whole before the first edit,
   currently applies to none: a worker's own turn-budget discipline (the `ca-full-cycle`
   card) is what limits it instead. Every `Read`
@@ -287,8 +283,7 @@ head` isn't navigation — a filter after a pipe reduces what enters the context
   of the file); every other dispatch, worker/wave-verifier/Reviewer included, is only
   tagged with its `model` (or `inherit`) and passed through. Fires in the main thread and
   inside nesting subagents alike. Also holds the nesting shape: `NESTING_AGENTS` is empty
-  today — the prior framework's `spec-worker`/`spec-verifier`, the only agents it ever
-  restricted, are gone, so no agent type is blocked from nesting through this hook —
+  today — no agent type is blocked from nesting through this hook —
   while `repo-scout`/`shell-runner` (`LEAF_AGENTS`) still never dispatch further. The
   `shell-runner` guide names its two callers — the orchestrator's Build gate and the
   Verifier's Final gate — since a worker runs its own scoped gate. The `model:` in each
@@ -320,7 +315,7 @@ head` isn't navigation — a filter after a pipe reduces what enters the context
   state in the tmpdir (`platform-wave-<session>.json`). Rule in
   [Token economy](#token-economy) and `ca-full-cycle` implement.md § *Dispatch the wave*.
 - `wave-plan-check.mjs` (removed) — `PostToolUse(Edit|Write|MultiEdit)` on
-  `.specs/**/tasks.md`: re-runs two rules of the Wave/Cluster Cross-Check after every write
+  `.ca-plans/*/plan*.md`: re-runs two rules of the Wave/Cluster Cross-Check after every write
   of a task plan — sibling clusters of one wave share no path (exact, or glob containment:
   `a/b/**`, `a/b/*`, `a/b/` cover a file under `a/b/`) and an `Exclusive: yes` task is alone
   in its wave — from the `### T<n>` `Touches` fields and the `## Wave Plan` table (the

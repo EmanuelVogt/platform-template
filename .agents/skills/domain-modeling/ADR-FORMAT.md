@@ -1,30 +1,20 @@
-# ADR Format
+# Decision Log Format
 
-ADRs live in `docs/adr/` and use sequential numbering: `0001-slug.md`, `0002-slug.md`, etc.
+Project decisions live in `.ca-plans/DECISIONS.md` as a flat, append-only log — one line per
+decision, no per-decision file.
 
-Create the `docs/adr/` directory lazily — only when the first ADR is needed.
+Create `.ca-plans/DECISIONS.md` lazily — only when the first decision needs recording.
 
-## Template
+## Format
 
-```md
-# {Short title of the decision}
-
-{1-3 sentences: what's the context, what did we decide, and why.}
+```
+AD-nn · active | superseded by AD-mm · <decision essence> · <origin, date>
 ```
 
-That's it. An ADR can be a single paragraph. The value is in recording *that* a decision was made and *why* — not in filling out sections.
-
-## Optional sections
-
-Only include these when they add genuine value. Most ADRs won't need them.
-
-- **Status** frontmatter (`proposed | accepted | deprecated | superseded by ADR-NNNN`) — useful when decisions are revisited
-- **Considered Options** — only when the rejected alternatives are worth remembering
-- **Consequences** — only when non-obvious downstream effects need to be called out
-
-## Numbering
-
-Scan `docs/adr/` for the highest existing number and increment by one.
+`AD-nn` numbers increment across the log's whole history and are never reused. `<decision
+essence>` is the normative kernel — what future work must conform to; a fuller write-up, when
+one exists, stays wherever the decision was made (a design doc, a PR description, a research
+brief). Mark a superseded row `superseded by AD-mm` in place; never delete a row.
 
 ## When to offer an ADR
 

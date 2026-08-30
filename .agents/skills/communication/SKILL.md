@@ -15,7 +15,7 @@ error messages follow `.agents/skills/code-quality/SKILL.md` as always.
   and diacritics; only what the user reads pays the tokenizer surcharge of a non-English
   reply.
 - **Agent-facing docs: English** — this file, the sibling `dev-workflow`, `agent-harness`,
-  `infra` and `issue-tracker` skills, and everything born in `.specs/`.
+  `infra` and `issue-tracker` skills, and everything born in `.ca-plans/`.
 - **Human handbooks: English too** — the rest of `docs/`. The user is addressed per the Two
   standing rules; the docs are not.
 - Product strings quoted from the UI (screen labels, error messages) stay in the product's
@@ -33,12 +33,12 @@ mechanics of how it was assembled. Plain language, short sentences.
 (customer, front-desk staff, service provider). Mechanics — data structures, call order,
 types, pattern names — only when asked.
 
-> Bad: "o comparador ordena as alocações por data de criação e o primeiro elemento vence
-> o desempate."
+> Bad: "the comparator sorts the allocations by creation date and the first element
+> wins the tie-break."
 >
-> Good: "quando dois pedidos disputam o mesmo horário de atendimento, fica com quem
-> chegou primeiro. O que chegou depois vai pra lista de espera em vez de simplesmente
-> sumir da tela."
+> Good: "when two requests compete for the same appointment slot, whoever arrived
+> first keeps it. Whoever arrived later goes to the waiting list instead of just
+> vanishing from the screen."
 
 **Don't name variables, functions, classes or files** mid-explanation. Point at what the
 thing does ("a tela de configurações da conta") and put the file link beside it. If a

@@ -86,10 +86,10 @@ platform files**.
   `.github/`, Dockerfiles, root configs) → take the template side. If the product had
   edited that file, the edit is a smell: port what the product needed to a kernel port or
   to a PR upstream, and say so in the report. Do not keep a local fork of a platform file.
-- **Product-owned path** (business modules, `product-routes.tsx`, UI kit, `docs/adr/`,
-  `.specs/`, `README.md`, `APPLIED.md`, `.platform-modules.lock`) → copier does not
-  touch these (`_skip_if_exists`); a conflict there means the product put code in a
-  platform file — move it.
+- **Product-owned path** (business modules, `product-routes.tsx`, UI kit, `.ca-plans/`, a
+  pre-migration spec directory the product still carries, `README.md`, `APPLIED.md`,
+  `.platform-modules.lock`) → copier does not touch these (`_skip_if_exists`); a conflict
+  there means the product put code in a platform file — move it.
 - **Composition root** (`app.module.ts`, `db/schema.ts`, `platform-modules.ts`) → product
   side; `platform-modules.ts` and `platform-schema.ts` are regenerated, never merged.
 - **`package.json`** → keep both: the template's scripts/devDependencies and the product's

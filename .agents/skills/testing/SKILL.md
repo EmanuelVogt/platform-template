@@ -14,7 +14,7 @@ Done = `pnpm check && pnpm test:coverage` passing (with Docker up).
 
 ## What counts as proof
 
-Rules confirmed by the lessons loop (`.specs/LESSONS.md`, promoted by recurrence across distinct
+Rules confirmed by the lessons loop (`.ca-plans/LESSONS.md`, promoted by recurrence across distinct
 features). They apply to any test in the monorepo, inside or outside the spec flow:
 
 - **Assert the exact value the criterion or the test title promises.** `toBeDefined`, "the field
@@ -27,7 +27,7 @@ features). They apply to any test in the monorepo, inside or outside the spec fl
   Without the assert, deleting the value breaks nothing (L-010).
 
 A new lesson is born from the Verifier, not from here: recorded in
-`.specs/lessons-vocabulary.md`.
+`.ca-plans/LESSONS.md`.
 
 ## Commands
 
@@ -237,5 +237,5 @@ Repo / tx / outbox / idempotency (database)?   → <name>.int-spec.ts next to it
 End-to-end HTTP flow?                          → apps/api/test/<flow>.e2e-spec.ts (a catalog entry: api/__e2e__/)
 React component?                               → <name>.test.tsx next to it
 Public facade between modules?                 → <facade>.spec.ts (contract snapshot)
-Structural test decision (exception)?          → docs/adr/NNNN-title.md
+Structural test decision (exception)?          → .ca-plans/DECISIONS.md (AD entry)
 ```

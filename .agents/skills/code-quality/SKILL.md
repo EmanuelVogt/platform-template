@@ -45,7 +45,7 @@ Not one of the 4 → badly named/badly structured code, fix the cause.
 
 ## Documentation
 
-**A handbook (`docs/`, `CLAUDE.md`, `AGENTS.md`) is a manual: mechanism, command, the trap that bites.** Rationale, rejected alternatives and history only in the ADR (`docs/adr/README.md`: "Why" in at most 4 sentences) — the handbook links the ADR, never repeats it. Surgical edit: one edit grows at most 30 lines; a new handbook ≤ 80, a new ADR ≤ 60. No diagram in prose, no "Context"/"Alternatives" section. Longer text is the user's decision, never the agent's. Hook: `.claude/hooks/docs-stay-lean.mjs`.
+**A handbook (`docs/`, `CLAUDE.md`, `AGENTS.md`) is a manual: mechanism, command, the trap that bites.** Rationale, rejected alternatives and history stay out of it — record the decision in the project's log (`.ca-plans/DECISIONS.md`, `domain-modeling` skill: one line, the full reasoning stays wherever it was decided) — the handbook links the entry, never repeats the reasoning. Surgical edit: one edit grows at most 30 lines; a new handbook ≤ 80. No diagram in prose, no "Context"/"Alternatives" section. Longer text is the user's decision, never the agent's. Hook: `.claude/hooks/docs-stay-lean.mjs`.
 
 ## Language
 

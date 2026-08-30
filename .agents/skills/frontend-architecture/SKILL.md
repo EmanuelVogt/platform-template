@@ -16,7 +16,7 @@ access vocabulary — with no session, login or UI kit (the product picks one); 
 features arrive as catalog entries. Contract, transport and routing rules always apply; slice,
 form and UI-kit rules apply once the product builds on this stack. Code rules:
 [`code-quality`](../code-quality/SKILL.md); tests: [`testing`](../testing/SKILL.md);
-backend: [`backend-architecture`](../backend-architecture/SKILL.md); exceptions: ADRs ([`docs/adr`](../../../docs/adr/README.md)). The
+backend: [`backend-architecture`](../backend-architecture/SKILL.md); exceptions: ADRs ([`domain-modeling`](../domain-modeling/ADR-FORMAT.md)). The
 `feature-sliced-design` skill is the FSD base; this document states the project overrides.
 
 ## Layers and segments

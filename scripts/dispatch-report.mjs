@@ -7,7 +7,7 @@
 // sub-agent fires another SubagentStop whose ctx/turns/commits are already
 // cumulative over the whole transcript (dispatch-log.mjs re-reads it from the
 // top on every stop), so pricing every stop row counted the same tokens once
-// per resume — 45 spec-workers produced 295 stop rows and inflated the total
+// per resume — 45 workers produced 295 stop rows and inflated the total
 // ~4.8x (2026-08-21). Only the LAST stop row per agent_id is priced. The why
 // of each rule it measures is in .agents/skills/agent-harness/SKILL.md § Token economy.
 //

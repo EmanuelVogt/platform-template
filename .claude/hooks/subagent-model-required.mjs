@@ -5,11 +5,11 @@
 // call to repo-scout or shell-runner without an explicit `model` is blocked
 // with that agent's tier guide, and the call comes back with the chosen
 // tier. It applies on the main thread. Rationale in .agents/skills/agent-harness/SKILL.md.
-// It also holds the nesting shape: NESTING_AGENTS is empty now that
-// tlc-spec-driven's spec-worker and spec-verifier are gone, so no agent type
-// may nest through this hook; repo-scout and shell-runner (LEAF_AGENTS) still
+// It also holds the nesting shape: NESTING_AGENTS is empty — this repo defines
+// no agent type that nests through this hook (a predecessor framework's worker
+// and verifier roles once did); repo-scout and shell-runner (LEAF_AGENTS) still
 // never dispatch further.
-// Measured 2026-08-20: 24 of 24 `fork` agents spawned by spec-workers were
+// Measured 2026-08-20: 24 of 24 `fork` agents spawned by workers were
 // `Agent(subagent_type: "fork", prompt: "noop")` placeholders "to wait for a
 // background notification" — each one re-served the worker's whole context
 // for nothing, since a dispatched scout/runner re-invokes its caller when it

@@ -137,8 +137,8 @@ mid-tier one — spend it where a wrong answer costs a re-verify loop, not by ha
 **Harness mapping (Claude Code):** workers/verifiers/Reviewer dispatch as
 `Agent(subagent_type: "general-purpose", model: <tier>)` with the card path in the payload; scouts
 as the native `Explore` agent. Of ca-spec-driven's installed role templates, prefer only
-`repo-scout` — the others (`spec-worker`, `spec-verifier`, `shell-runner`) embed the parent's
-contract and artifact paths and will hunt files that do not exist here. **Resuming a live
+`repo-scout` and `shell-runner` — the others embed the parent's contract and artifact paths and
+will hunt files that do not exist here. **Resuming a live
 sub-agent** (fix loops, gap re-checks) is `SendMessage` to the agent id from its dispatch result,
 held in the orchestrator's context; agents die with the session, so after a restart every "resume"
 degrades to a fresh dispatch carrying the resumed scope. **No heavy command raw in a window** —

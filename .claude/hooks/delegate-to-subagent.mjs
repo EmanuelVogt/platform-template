@@ -6,8 +6,8 @@
 // Measured in .agents/skills/agent-harness/SKILL.md: 87% of all shell output is navigation
 // (968 direct calls against 52 delegations), and every character that lands in
 // the main context is repaid on every turn until the end of the session. It
-// applies to the main agent only — ENFORCED_AGENTS is empty (tlc-spec-driven's
-// spec-worker and spec-verifier, the only agents it ever named, are gone);
+// applies to the main agent only — ENFORCED_AGENTS is empty (a predecessor
+// framework's worker/verifier roles, the only agents it ever named, are gone);
 // every subagent (agent_id present) now exits silently at the top of the
 // file, otherwise it would block repo-scout itself.
 //
@@ -26,9 +26,9 @@
 // Read BYTE budget for the agent's lifetime (READ_BYTES_FREE_PER_AGENT), the
 // guard against reading a 30 kB reference whole before the first edit —
 // measured the same day, a worker spent a median 21 turns and 94k of context
-// warming up. ENFORCED_AGENTS is empty today: tlc-spec-driven's spec-worker
-// and spec-verifier are gone, and no ca-full-cycle agent type is wired in
-// their place.
+// warming up. ENFORCED_AGENTS is empty today: the predecessor framework's
+// worker and verifier roles are gone, and no ca-full-cycle agent type is
+// wired in their place.
 // A piped command is classified by its first command only (a filter after a
 // pipe like `| tail` or `| head` reduces what enters the context, it isn't
 // navigation); the redirect-to-file check still runs on the whole statement.

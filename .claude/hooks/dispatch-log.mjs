@@ -3,7 +3,7 @@
 // append-only log of every sub-agent run in this repo — who dispatched what,
 // at which tier, in which wave/cluster, and what it cost and returned — so the
 // delegation model is measured instead of remembered. Measured 2026-08-20 by
-// hand over the transcripts: 24 of 24 `fork` agents spawned by spec-workers
+// hand over the transcripts: 24 of 24 `fork` agents spawned by workers
 // were "noop" placeholders, 16 of 17 declared multi-cluster waves went out
 // across several messages; nothing in the repo could say so without a day of
 // jq. `pnpm dispatch:report` (scripts/dispatch-report.mjs) reads this log.

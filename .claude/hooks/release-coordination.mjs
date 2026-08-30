@@ -114,18 +114,18 @@ function block(message) {
 }
 
 function corruptMessage() {
-  return `Lease de release ilegível — tratada como release em andamento.
-Rode \`pnpm platform release --status\` para inspecionar, ou \`pnpm platform release --abort --force\` para descartar.`
+  return `Release lease unreadable — treated as a release in progress.
+Run \`pnpm platform release --status\` to inspect it, or \`pnpm platform release --abort --force\` to discard it.`
 }
 
 function draftReleaseMessage(lease) {
-  return `Release v${lease.version} em preparação por outra sessão (estágio "draft", titular ${lease.holder?.id}, há ${ageMinutes(lease)} min).
-Um segundo \`platform release\` agora colidiria com o preflight em andamento — rode \`pnpm platform release --status\` para acompanhar.`
+  return `Release v${lease.version} is being prepared by another session (stage "draft", holder ${lease.holder?.id}, ${ageMinutes(lease)} min ago).
+A second \`platform release\` right now would collide with the preflight in progress — run \`pnpm platform release --status\` to follow it.`
 }
 
 function frozenMessage(lease) {
-  return `Release v${lease.version} em andamento (estágio "${lease.stage}", titular ${lease.holder?.id}, há ${ageMinutes(lease)} min).
-Um push para main agora derrubaria o gate do release em curso — rode \`pnpm platform release --status\`: se a tag v${lease.version} já existir em origin ele libera o lease e este push volta a passar; se não, acompanhe por ali ou espere o titular terminar.`
+  return `Release v${lease.version} is in progress (stage "${lease.stage}", holder ${lease.holder?.id}, ${ageMinutes(lease)} min ago).
+A push to main right now would knock over the in-flight release's gate — run \`pnpm platform release --status\`: if tag v${lease.version} already exists on origin it releases the lease and this push goes through again; if not, follow it there or wait for the holder to finish.`
 }
 
 try {

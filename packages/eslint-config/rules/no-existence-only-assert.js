@@ -3,7 +3,7 @@
  * `toBeTruthy`, `not.toThrow()`) continua verde sob a implementação errada —
  * ele prova que algo aconteceu, não *o que* aconteceu. A regra reprova o corpo
  * inteiro, não a asserção isolada: uma checagem de existência antes de uma
- * asserção de valor é legítima. Ver docs/test/testing.md.
+ * asserção de valor é legítima. Ver .agents/skills/testing/SKILL.md.
  *
  * `not.toThrow(<matcher>)` conta como existência junto da forma sem argumento —
  * não é isenção. No Vitest ele afirma só "não lançou *este* tipo": passa quando

@@ -183,7 +183,7 @@ export class OutboxDispatcher implements OnModuleInit, OnApplicationShutdown {
           )
           // FIFO-local: ordena por aggregate dentro do batch (occurred_at dentro
           // de cada aggregate). Não é ordering global — entre workers/batches a
-          // ordem é best-effort (docs/arch/back.md § Communication and asynchronous
+          // ordem é best-effort (.agents/skills/backend-architecture/SKILL.md § Communication and asynchronous
           // work promete só FIFO por aggregate).
           .orderBy(asc(outbox.aggregateId), asc(outbox.occurredAt))
           .limit(BATCH_SIZE)

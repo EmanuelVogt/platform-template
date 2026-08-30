@@ -58,7 +58,7 @@ describe("harness-hygiene — os bans de duplicação sobre a árvore", () => {
     const keys = files.map(canonicalKey)
     // No template as entradas moram em `catalog/<entrada>/api/`; num filho, em
     // `apps/api/src/modules/<entrada>/`. A regra cobrada é a de
-    // `docs/test/testing.md` § *Entry `testing/` convention*: a entrada **que
+    // `.agents/skills/testing/SKILL.md` § *Entry `testing/` convention*: a entrada **que
     // traz helper de teste** guarda tudo atrás de um `index.ts`, nunca um
     // import de arquivo solto. Entrada que não traz helper nenhum não deve
     // barril algum e o laço a pula — como pula um filho kernel-only, sem

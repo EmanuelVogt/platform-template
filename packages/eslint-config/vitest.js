@@ -13,7 +13,7 @@ const TEST_SUPPORT_FILES = [
 /**
  * Regras de teste do Vitest, sem Testing Library — api e scripts.
  *
- * Contrato do suite em `docs/test/testing.md`. Arquivos de suporte (setup,
+ * Contrato do suite em `.agents/skills/testing/SKILL.md`. Arquivos de suporte (setup,
  * helpers de `shared/test`, `test/**`) recebem só o `recommended` do plugin;
  * o endurecimento (`.only`/`.skip` barrados, teste sem asserção etc.) vale
  * para os arquivos de teste de fato — é lá que a disciplina importa.

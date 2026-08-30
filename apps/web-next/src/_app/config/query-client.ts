@@ -1,6 +1,6 @@
 import { QueryClient } from "@tanstack/react-query"
 
-// Defaults conservadores (ver docs/arch/front.md § Bootstrap, transport and errors).
+// Defaults conservadores (ver .agents/skills/frontend-architecture/SKILL.md § Bootstrap, transport and errors).
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

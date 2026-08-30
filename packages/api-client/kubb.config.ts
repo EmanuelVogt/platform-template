@@ -5,7 +5,7 @@ import { pluginTs } from "@kubb/plugin-ts"
 import { pluginZod } from "@kubb/plugin-zod"
 
 // Lê o contrato versionado na raiz do monorepo e gera o client em ./generated.
-// generated/ é commitado e NUNCA editado à mão (docs/arch/front.md Golden Rule 10).
+// generated/ é commitado e NUNCA editado à mão (.agents/skills/frontend-architecture/SKILL.md Golden Rule 10).
 export default defineConfig({
   root: ".",
   input: { path: "../../openapi.json" },

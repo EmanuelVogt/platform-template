@@ -49,7 +49,7 @@ const input = data.tool_input ?? {}
 
 function block(message) {
   process.stderr.write(
-    `${message}\nRule: docs/code-quality.md § Documentation; hook .claude/hooks/docs-stay-lean.mjs. A longer text is the user's call — ask, or PLATFORM_DOCS_LEAN_OFF=1 for this session.\n`
+    `${message}\nRule: .agents/skills/code-quality/SKILL.md § Documentation; hook .claude/hooks/docs-stay-lean.mjs. A longer text is the user's call — ask, or PLATFORM_DOCS_LEAN_OFF=1 for this session.\n`
   )
   process.exit(2)
 }

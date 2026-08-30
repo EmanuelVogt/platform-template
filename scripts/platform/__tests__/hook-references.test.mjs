@@ -21,11 +21,10 @@ const SETTINGS_FILE = path.join(REPO_ROOT, ".claude", "settings.json")
 // TOOL-07 (spec.md AC7) says "hook or handbook"; `docs/advisories/ADV-*.md`
 // and `template-changelog.md` are historical ledgers (immutable once
 // written, per their own preambles), not current-state manuals, so a path
-// they name may have moved since — same reason ADRs are excluded.
+// they name may have moved since.
 const HANDBOOK_EXCLUDED = [
   /^docs\/advisories\/ADV-.*\.md$/,
   /^docs\/dev\/template-changelog\.md$/,
-  /^docs\/adr\//,
 ]
 
 // A handful of known, pre-existing gaps this cluster does not own the fix

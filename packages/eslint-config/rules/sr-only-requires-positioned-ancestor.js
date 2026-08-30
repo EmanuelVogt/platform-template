@@ -4,7 +4,7 @@
  * contêiner com `overflow-y-auto` e infla o `scrollHeight` do documento
  * (produção: 3069px de documento contra 806px de viewport, scrollbar fantasma).
  * `isolate` não resolve — isolação de stacking context não estabelece bloco
- * contido para `position: absolute`. Ver docs/adr/0090.
+ * contido para `position: absolute`.
  */
 
 const POSITIONING_CLASSES = new Set(["relative", "absolute", "fixed", "sticky"])
@@ -139,13 +139,12 @@ export const srOnlyRequiresPositionedAncestor = {
   meta: {
     type: "problem",
     docs: {
-      description:
-        "Exige ancestral posicionado para elemento com `sr-only` (docs/adr/0090)",
+      description: "Exige ancestral posicionado para elemento com `sr-only`",
     },
     schema: [],
     messages: {
       unpositionedAncestor:
-        "`sr-only` é `position: absolute`: sem ancestral posicionado ele escapa do contêiner com scroll e infla a altura do documento (scrollbar fantasma). Adicione `relative` ao `<{{parent}}>` que envolve este elemento. Ver docs/adr/0090-sr-only-exige-ancestral-posicionado.md",
+        "`sr-only` é `position: absolute`: sem ancestral posicionado ele escapa do contêiner com scroll e infla a altura do documento (scrollbar fantasma). Adicione `relative` ao `<{{parent}}>` que envolve este elemento.",
     },
   },
 

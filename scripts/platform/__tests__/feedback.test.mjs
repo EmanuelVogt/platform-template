@@ -240,7 +240,7 @@ test("classifyPath espelha a tabela de ownership", () => {
     classifyPath(".agents/skills/backend-architecture/SKILL.md", lock).ok,
     true
   )
-  assert.equal(classifyPath("docs/adr/0003-decisao.md", lock).ok, false)
+  assert.equal(classifyPath(".ca-plans/DECISIONS.md", lock).ok, false)
   assert.equal(classifyPath("README.md", lock).ok, false)
   assert.equal(
     classifyPath(

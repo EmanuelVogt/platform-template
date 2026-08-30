@@ -30,7 +30,7 @@ history. Never edit that file by hand.
 | Product layout slot (Next)                                                                                | product                                      | `src/_app/layout/product-shell.tsx`                                                                       |
 | Product routes (Next)                                                                                     | product                                      | `app/<route>/page.tsx` + `src/_pages/<route>`                                                             |
 | Agent harness (hooks, agents, skills, `AGENTS.md`), handbooks, CI, Docker, deploy                         | platform                                     | `.claude/`, `.agents/`, `docs/`, `.github/`, `apps/*/Dockerfile`                                          |
-| ADRs, specs, README                                                                                       | product                                      | `docs/adr/`, `.specs/`, `README.md`                                                                       |
+| Decision log, specs, README                                                                               | product                                      | `.ca-plans/`, `.specs/`, `README.md`                                                                      |
 
 The rule that keeps `copier update` conflict-free: **the product adds files; it does not
 edit platform files**. Where the platform needs to be extended, it exposes a catalog entry

@@ -70,7 +70,6 @@ _exclude:
 
 _skip_if_exists:
   - README.md
-  - docs/adr/*.md
   - .specs/
   - .platform-modules.lock
   - docs/advisories/APPLIED.md

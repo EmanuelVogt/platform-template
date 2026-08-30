@@ -46,7 +46,7 @@ const PLATFORM_FILES = new Set([
   "vitest.coverage.mts",
   "vitest.integration.mts",
 ])
-const PRODUCT_PREFIXES = ["docs/adr/", ".specs/"]
+const PRODUCT_PREFIXES = [".ca-plans/", ".specs/"]
 const KERNEL_MIGRATION_RE = /^apps\/api\/drizzle\/migrations\/\d{4}_kernel_/
 const MODULE_PATH_RE =
   /^apps\/(?:api\/src\/modules|web\/src\/entities)\/([^/]+)\//
@@ -70,7 +70,7 @@ const SECRET_PATTERNS = [
 export function classifyPath(rawPath, lockModules) {
   const clean = rawPath.replace(/^\.\//, "")
   if (PRODUCT_PREFIXES.some((prefix) => clean.startsWith(prefix))) {
-    return { ok: false, reason: "ADRs e specs são do produto" }
+    return { ok: false, reason: "decisões e specs são do produto" }
   }
   if (clean === "README.md") {
     return { ok: false, reason: "o README é do produto" }

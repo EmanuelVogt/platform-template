@@ -24,14 +24,9 @@ test("testing skill defers to the code-quality language convention instead of re
   )
 })
 
-test("docs/adr/README.md and docs/advisories/README.md point at AGENTS.md for the product's language instead of hard-coding a locale", () => {
+test("docs/advisories/README.md points at AGENTS.md for the product's language instead of hard-coding a locale", () => {
   const linksToAgents =
     /in the product's language \(see \[`AGENTS\.md`\]\([^)]*AGENTS\.md\)/
-  assert.match(
-    read("docs/adr/README.md"),
-    linksToAgents,
-    "adr/README.md must defer to AGENTS.md instead of restating the locale"
-  )
   assert.match(
     read("docs/advisories/README.md"),
     linksToAgents,

@@ -69,7 +69,7 @@ test("growth: .md.jinja handbooks, .agents/skills/** and AGENTS.md.jinja count a
   )
 })
 
-test("new file: handbook cap 80, ADR cap 60", () => {
+test("new file: handbook cap is 80, uniformly (no ADR carve-out survives)", () => {
   assert.equal(
     runHook(write(doc("docs/dev/new-thing.md"), lines(80))).status,
     0
@@ -78,8 +78,10 @@ test("new file: handbook cap 80, ADR cap 60", () => {
     runHook(write(doc("docs/dev/new-thing.md"), lines(81))).status,
     2
   )
-  assert.equal(runHook(write(doc("docs/adr/9999-new.md"), lines(60))).status, 0)
-  assert.equal(runHook(write(doc("docs/adr/9999-new.md"), lines(61))).status, 2)
+  // A path under the removed docs/adr/ gets no special cap anymore — it is
+  // just another handbook, capped at 80 like any other.
+  assert.equal(runHook(write(doc("docs/adr/9999-new.md"), lines(80))).status, 0)
+  assert.equal(runHook(write(doc("docs/adr/9999-new.md"), lines(81))).status, 2)
 })
 
 test("rationale: heading or pt-BR phrase in a handbook is blocked; code spans are ignored", () => {
@@ -90,10 +92,10 @@ test("rationale: heading or pt-BR phrase in a handbook is blocked; code spans ar
   assert.equal(runHook(edit(skill, "run `porque --why`")).status, 0)
 })
 
-test("scope: ADRs accept rationale; advisories, .specs and source are not handbooks", () => {
+test("scope: a former ADR path blocks rationale like any handbook; advisories, .specs and source are not handbooks", () => {
   assert.equal(
     runHook(edit(doc("docs/adr/0001-x.md"), "## Why\nporque sim")).status,
-    0
+    2
   )
   assert.equal(
     runHook(

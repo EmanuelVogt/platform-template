@@ -88,8 +88,8 @@ test("code-quality's and communication's language rules point at AGENTS.md inste
   )
   assert.match(
     codeQuality,
-    /\*\*Fixed language\*\* — see \[`AGENTS\.md`\]\([^)]*AGENTS\.md\)/,
-    "code-quality/SKILL.md:17's Fixed language bullet must point at AGENTS.md, not restate the locale"
+    /\*\*Fixed language\*\* — see \[`AGENTS\.md`\]\([^)]*AGENTS\.md\) \(Two standing rules\)/,
+    "code-quality/SKILL.md:17's Fixed language bullet must point at AGENTS.md's Two standing rules section, not just the file"
   )
   const communication = readFileSync(
     path.join(REPO_ROOT, ".agents", "skills", "communication", "SKILL.md"),

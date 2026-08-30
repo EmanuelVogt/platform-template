@@ -354,12 +354,25 @@ const OLD_DOC_PATHS = [
   "docs/agents/issue-tracker.md.jinja",
 ]
 
+// The router's exact `##` heading set — a restored `## Tripwires` (the 46->55-line
+// re-inline mutant) must fail this even though it stays under the 60-line cap.
+const ROUTER_HEADING_WHITELIST = ["Two standing rules", "Read before you touch"]
+
 test("AC-01: AGENTS.md.jinja is a <=60-line router whose table resolves to real skills, naming no old doc path", () => {
   const content = readFileSync(path.join(REPO_ROOT, "AGENTS.md.jinja"), "utf8")
   const lines = content.split("\n")
   assert.ok(
     lines.length <= 60,
     `AGENTS.md.jinja has ${lines.length} lines (cap 60)`
+  )
+
+  const headings = lines
+    .filter((line) => line.startsWith("## "))
+    .map((line) => line.slice(3))
+  assert.deepEqual(
+    headings,
+    ROUTER_HEADING_WHITELIST,
+    `AGENTS.md.jinja's \`##\` headings are ${JSON.stringify(headings)}, expected exactly ${JSON.stringify(ROUTER_HEADING_WHITELIST)} — no inlined rule body (e.g. a restored Tripwires block) may add a heading`
   )
 
   for (const oldPath of OLD_DOC_PATHS) {
@@ -401,6 +414,21 @@ test("AC-01: AGENTS.md.jinja is a <=60-line router whose table resolves to real 
     assert.ok(
       existsSync(full) || existsSync(`${full}.jinja`),
       `AGENTS.md.jinja points at ${target}, which does not exist`
+    )
+  }
+})
+
+// Locks T10: every dangling pointer to the removed Tripwires block was retargeted, and
+// AC-01's "no inlined rule bodies" promise holds across the shipped skill set, not just
+// the router file itself.
+test("AC-01: no shipped skill references a Tripwires anchor (locks T10)", () => {
+  for (const doc of shippedDocs()) {
+    if (!doc.destination.startsWith(".agents/skills/")) continue
+    const content = readFileSync(path.join(REPO_ROOT, doc.source), "utf8")
+    assert.doesNotMatch(
+      content,
+      /Tripwires/,
+      `${doc.destination} still references the removed Tripwires anchor`
     )
   }
 })

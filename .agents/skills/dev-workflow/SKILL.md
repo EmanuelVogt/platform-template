@@ -12,7 +12,7 @@ them.
 ## Commands (from the repo root)
 
 ```
-pnpm dev                    turbo dev — brings everything up (front on :3001 with the Next.js web stack)
+pnpm dev                    turbo dev — brings everything up (:3001 on the Next.js stack; the Vite stack resolves its own dev port)
 pnpm check                  lint + typecheck — run before asking for review
 pnpm build | typecheck | lint:fix | format | clean
 pnpm test | test:coverage | test:int | test:e2e | test:db

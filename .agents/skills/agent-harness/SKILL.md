@@ -258,7 +258,7 @@ never recreate `.cursor/skills` — Cursor reads `.agents` directly.
   piped Bash command is classified by its first pipe segment only (`git status --short |
 head` isn't navigation — a filter after a pipe reduces what enters the context); the
   redirect-to-file check still runs on the whole statement. A Bash statement whose path
-  arguments are **all** under `.claude/`, `.agents/`, `docs/agents/`, `scripts/` or
+  arguments are **all** under `.claude/`, `.agents/`, `.agents/skills/`, `scripts/` or
   `.ca-plans/` (`HARNESS_DIRS`) doesn't count as navigation — the quota exists to push
   exploration of _product_ code to `repo-scout`, while editing the harness itself is work
   the main thread does directly; a statement with no path argument, or with one path

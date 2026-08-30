@@ -56,6 +56,11 @@ const OWNER_DOMAIN_TERMS = [
   /acomodaç(?:[aã]o|[oõ]es)/i,
   /recepç(?:[aã]o|[oõ]es)/i,
   /agendamento/i,
+  // creating-issues' pt-BR area-label list swapped these pilot entries out (T10); no
+  // exclusion needed like RESERVA_EXCLUDE — the swept files are English-only plus that
+  // one declared label list, so no legitimate prose collides with these stems.
+  /cr[eé]ditos?/i,
+  /espa[cç]os?/i,
   /\bquartos?\b/i,
   /\bguests?\b/i,
   /\bbookings?\b/i,

@@ -253,11 +253,26 @@ test("no hook, top-level script or agent card references the removed spec-worker
 // `.specs`/tlc-spec-driven mention is never inside `{{ }}`/`{% %}`
 // templating, so the source text is a faithful proxy for what ships; the
 // real-render probe (copier copy + grep) is the verifier's job.
+//
+// Extension-less dotfiles (.prettierignore, .gitignore-class configs) carry
+// no extension at all — path.extname() returns "" for them — so the plain
+// extension filter silently dropped them. The wave-2 verifier's real-render
+// probe caught exactly this gap: .prettierignore:13 ships a literal
+// `.specs/` this sweep never saw (D-13).
+function isDotfile(source) {
+  const base = path.basename(source)
+  return path.extname(source) === "" && base.startsWith(".") && base.length > 1
+}
+
 function shippedTextFiles() {
   const excludes = readExcludes()
   const files = []
   for (const source of trackedFiles()) {
-    if (!TLC_SWEEP_EXTENSIONS.includes(path.extname(source))) continue
+    if (
+      !TLC_SWEEP_EXTENSIONS.includes(path.extname(source)) &&
+      !isDotfile(source)
+    )
+      continue
     const destination = renderedDestination(source)
     if (destination === null) continue
     if (isExcluded(destination, excludes)) continue
@@ -270,9 +285,14 @@ function shippedTextFiles() {
 
 // `.specs/` also names the CHILD's own (still-existing) specs directory,
 // distinct from the removed spec-driven-framework artifact AC-03 targets.
-// T2 kept both on purpose (docs/dev/template.md's ownership row,
-// feedback.mjs's PRODUCT_PREFIXES) — named here, not silently swallowed,
-// same idiom as KNOWN_HANDBOOK_EXCEPTIONS above.
+// Declared exemption trio (D-13, wave-2 verify gap): docs/dev/template.md's
+// ownership row and feedback.mjs's PRODUCT_PREFIXES (both T2/D-10), plus
+// .prettierignore — it protects the child's kept legacy `.specs/` (and the
+// template's own frozen history) from repo-wide format. Named here, not
+// silently swallowed, same idiom as KNOWN_HANDBOOK_EXCEPTIONS above; the test
+// below asserts each entry is both reachable by the sweep and still carries
+// the literal, so a stale exemption fails loud instead of quietly widening
+// the hole.
 const DOT_SPECS_LITERAL_EXCEPTIONS = [
   path.join(DOCS_DIR, "dev", "template.md"),
   path.join(
@@ -283,6 +303,7 @@ const DOT_SPECS_LITERAL_EXCEPTIONS = [
     "commands",
     "feedback.mjs"
   ),
+  path.join(REPO_ROOT, ".prettierignore"),
 ]
 
 test("AC-03: no file in the full shipped set references .specs, tlc-spec-driven, spec-worker or spec-verifier (static half)", () => {
@@ -291,10 +312,22 @@ test("AC-03: no file in the full shipped set references .specs, tlc-spec-driven,
     files.length >= 200,
     `only ${files.length} candidate files found — the sweep's file set likely stopped resolving`
   )
+  for (const exception of DOT_SPECS_LITERAL_EXCEPTIONS) {
+    assert.ok(
+      files.includes(exception),
+      `${path.relative(REPO_ROOT, exception)} is declared as a .specs exemption but is not in the shipped set the sweep walks`
+    )
+  }
   for (const file of files) {
     const content = readFileSync(file, "utf8")
     const relFile = path.relative(REPO_ROOT, file)
-    if (!DOT_SPECS_LITERAL_EXCEPTIONS.includes(file)) {
+    if (DOT_SPECS_LITERAL_EXCEPTIONS.includes(file)) {
+      assert.match(
+        content,
+        /\.specs\b/,
+        `${relFile} is a declared .specs exemption but no longer contains the literal — remove the stale exemption`
+      )
+    } else {
       assert.doesNotMatch(
         content,
         /\.specs\b/,

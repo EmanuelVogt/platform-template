@@ -8,6 +8,7 @@ import { cookieHeader } from "../../../shared/test/e2e/http"
 import { resetDb } from "../../../shared/test/int/db"
 import { seedUser, TEST_PASSWORD } from "../testing"
 
+import type { Clock } from "../../../shared/kernel/clock/clock"
 import type { E2eApp } from "../../../shared/test/e2e/app"
 
 const EXISTING = "anti-enum-existe@example.com"
@@ -76,11 +77,18 @@ describe("Login — anti-enumeração byte-idêntica (e2e)", () => {
 describe("Login — 429 do bucket por conta não distingue e-mail (e2e)", () => {
   let e2e: E2eApp
 
+  // Congelado, não real: os dois `exhaust()` abaixo são 22 round-trips reais;
+  // com o clock correndo, cada laço grava seu "oldest" em instante de parede
+  // diferente e `Math.ceil` pode divergir ±1s entre as duas chaves (flake da
+  // CI v4.0.0: '900' vs '899'). Parado, retryAfterSeconds cola em
+  // windowSeconds para as duas — determinístico sem afrouxar a igualdade.
+  const frozenClock: Clock = { now: () => new Date("2026-01-01T00:00:00.000Z") }
+
   beforeAll(async () => {
     await resetDb(db.pool, ["identity", "_kernel"])
     e2e = await createE2eApp({
       rateLimiter: "real",
-      overrides: [[RATE_LIMITER, new InMemoryRateLimiter()]],
+      overrides: [[RATE_LIMITER, new InMemoryRateLimiter(frozenClock)]],
     })
     await seedUser(e2e.app, db.pool, {
       email: EXISTING,

@@ -4,6 +4,17 @@ Formato [keep a changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 [semver](https://semver.org/lang/pt-BR/). Toda versão que leva código lista os advisories
 (`docs/advisories/ADV-*.md`) que carrega.
 
+## [3.1.1]
+
+### Fixed
+
+- `auth-anti-enum.e2e-spec.ts`: o 429 do bucket por conta comparava o `Retry-After` de dois
+  `InMemoryRateLimiter` correndo no relógio real — os 22 round-trips dos dois `exhaust()`
+  podiam cruzar bordas de segundo diferentes e `Math.ceil` divergia por ±1s entre as duas
+  chaves, piscando o teste (visto na CI de release da `v4.0.0`: `'900'` vs `'899'`). Sem
+  mudança de comportamento: o teste agora congela o clock do rate limiter em memória. Ver
+  `ADV-20260831-01`.
+
 ## [3.1.0]
 
 ### Changed

@@ -4,6 +4,32 @@ Version truth = git tag + this entry (AD-006); `package.json` is not bumped on
 release. Each version lists the contract-breaking changes and the steps for the child
 to apply on `copier update`.
 
+## v4.0.1
+
+Patch release: two fixes in the platform CLI's module-rollback path and one determinism fix
+in the `identity/single-tenant` catalog entry's e2e spec (entry bumped to 3.1.1). No shipped
+files move or disappear — `copier update` from v4.0.0 only touches `scripts/platform/**`.
+
+### Changes
+
+1. **`module add --rollback` leaves a valid zero-module schema.** `renderPlatformSchema()`
+   now emits `export {}` when the last module is rolled back, so the child's `schema.ts`
+   re-export no longer breaks (TS2306) and `pnpm contract` stays green.
+2. **Rollback keeps `drizzle/migrations/meta/_journal.json` consistent.** The journal entries
+   of the migration `.sql` files rollback deletes are removed with them; re-adding the same
+   module no longer fails `db:check:journal`.
+3. **`identity/single-tenant` 3.1.1.** The anti-enumeration e2e ("MESMO 429") injects a frozen
+   clock into `InMemoryRateLimiter`, removing a Retry-After second-boundary flake; every
+   assertion stays strict. Advisory `ADV-20260831-01` covers children that already vendored
+   the entry.
+
+### Child migration steps (copier update from v4.0.0)
+
+1. `copier update` — only `scripts/platform/**` changes; nothing is deleted and no
+   `pnpm skills:sync` re-run is needed.
+2. `pnpm platform module list` — if `identity/single-tenant` shows as installed, port entry
+   3.1.1 (the `port-module-update` skill) or apply advisory `ADV-20260831-01` by hand.
+
 ## v4.0.0
 
 Three segments land together as one breaking release: the dev framework swaps from

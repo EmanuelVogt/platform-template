@@ -245,6 +245,26 @@ test("writeRegistry emite imports em ordem alfabética antes do import type, sat
   )
 })
 
+test("writeRegistry com zero módulos emite um platform-schema.ts que ainda é um módulo TS válido", () => {
+  const child = makeChild()
+  const platformModulesPath = path.join(
+    child,
+    "apps/api/src/platform-modules.ts"
+  )
+  const platformSchemaPath = path.join(
+    child,
+    "apps/api/src/db/platform-schema.ts"
+  )
+
+  writeRegistry({ entries: [], platformModulesPath, platformSchemaPath })
+  const schema = readFileSync(platformSchemaPath, "utf8")
+
+  // Sem essa linha o arquivo vira só um comentário: TS2306 ("File is not a
+  // module") em quem faz `export * from "./platform-schema"` — reproduzido ao
+  // remover o último módulo instalado via `--rollback`.
+  assert.match(schema, /^export \{\};$/m)
+})
+
 test("writeLock calcula sha256 de cada arquivo copiado e persiste no lock", () => {
   const child = makeChild()
   const lockPath = path.join(child, ".platform-modules.lock")

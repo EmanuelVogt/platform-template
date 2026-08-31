@@ -162,7 +162,10 @@ function renderPlatformSchema(entries) {
       (exportPath) => `export * from "../${exportPath}";`
     )
   )
-  return lines.length > 0 ? `${header}\n${lines.join("\n")}\n` : `${header}\n`
+  if (lines.length === 0) {
+    return `${header}\nexport {};\n`
+  }
+  return `${header}\n${lines.join("\n")}\n`
 }
 
 export function writeRegistry({

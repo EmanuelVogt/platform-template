@@ -1,5 +1,11 @@
 import { spawnSync } from "node:child_process"
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
 import path from "node:path"
 import { childLayout } from "./child-layout.mjs"
 import { EXIT_CODES } from "./exit-codes.mjs"
@@ -27,15 +33,45 @@ function migrationsDir(child) {
   return childLayout(child).migrationsDir
 }
 
+function journalPath(child) {
+  return path.join(migrationsDir(child), "meta/_journal.json")
+}
+
 function journalEntries(child) {
-  const journalPath = path.join(migrationsDir(child), "meta/_journal.json")
-  if (!existsSync(journalPath)) return []
-  const journal = JSON.parse(readFileSync(journalPath, "utf8"))
+  const jPath = journalPath(child)
+  if (!existsSync(jPath)) return []
+  const journal = JSON.parse(readFileSync(jPath, "utf8"))
   return journal.entries ?? []
 }
 
 function slugFromCustomMigration(fileName) {
   return fileName.replace(/^\d+_/, "").replace(/\.sql$/, "")
+}
+
+// O rollback apaga o .sql de cada migração revertida; sem tirar a entrada
+// correspondente do journal, `db:check:journal` acusa par quebrado (tag no
+// journal sem .sql) e reinstalar o mesmo módulo falha com MIGRATION_FAILURE.
+export function removeMigrations(child, fileNames) {
+  const dir = migrationsDir(child)
+  for (const fileName of fileNames) {
+    const migrationFile = path.join(dir, fileName)
+    if (existsSync(migrationFile)) rmSync(migrationFile)
+  }
+
+  const jPath = journalPath(child)
+  if (!existsSync(jPath)) return
+  const journal = JSON.parse(readFileSync(jPath, "utf8"))
+  const removedTags = new Set(
+    fileNames.map((fileName) => fileName.replace(/\.sql$/, ""))
+  )
+  const entries = (journal.entries ?? []).filter(
+    (entry) => !removedTags.has(entry.tag)
+  )
+  writeFileSync(
+    jPath,
+    `${JSON.stringify({ ...journal, entries }, null, 2)}\n`,
+    "utf8"
+  )
 }
 
 function runStep(run, step, args, options) {

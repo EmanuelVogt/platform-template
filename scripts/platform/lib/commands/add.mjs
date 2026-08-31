@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process"
-import { existsSync, readFileSync, rmSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { parse as parseYaml } from "yaml"
 import {
@@ -29,7 +29,11 @@ import {
 import { EXIT_CODES } from "../exit-codes.mjs"
 import { readLock } from "../lock.mjs"
 import { readManifest } from "../manifest.mjs"
-import { MigrationFailureError, generateForModule } from "../migrations.mjs"
+import {
+  MigrationFailureError,
+  generateForModule,
+  removeMigrations,
+} from "../migrations.mjs"
 import {
   AlreadyInstalledError,
   CyclicDependencyError,
@@ -204,10 +208,7 @@ function runRollback({
   )
 
   for (const moduleName of targets) {
-    for (const fileName of lock.modules[moduleName].migrations ?? []) {
-      const migrationPath = path.join(childLayout(cwd).migrationsDir, fileName)
-      if (existsSync(migrationPath)) rmSync(migrationPath)
-    }
+    removeMigrations(cwd, lock.modules[moduleName].migrations ?? [])
     applyRollback({
       lockPath,
       name: moduleName,

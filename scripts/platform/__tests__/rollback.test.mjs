@@ -46,6 +46,47 @@ function platformModulesOf(child) {
   )
 }
 
+function migrationsDir(child) {
+  return path.join(child, "apps/api/drizzle/migrations")
+}
+
+function migrationFile(child, tag) {
+  return path.join(migrationsDir(child), `${tag}.sql`)
+}
+
+function journalOf(child) {
+  return JSON.parse(
+    readFileSync(path.join(migrationsDir(child), "meta/_journal.json"), "utf8")
+  )
+}
+
+// `generateForModule` normalmente é quem grava journal + lock — os testes de rollback
+// rodam com `run` stubado (sem drizzle-kit de verdade), então este helper simula o
+// resultado dele para exercitar o rollback sobre um módulo que tem migração de fato.
+function seedMigration(child, moduleName, tag) {
+  const dir = migrationsDir(child)
+  const journalPath = path.join(dir, "meta/_journal.json")
+  const journal = journalOf(child)
+  const idx = journal.entries.length
+  journal.entries.push({
+    idx,
+    version: "7",
+    when: idx + 1,
+    tag,
+    breakpoints: true,
+  })
+  writeFileSync(journalPath, `${JSON.stringify(journal, null, 2)}\n`, "utf8")
+  writeFileSync(migrationFile(child, tag), "-- stub\n", "utf8")
+
+  const lockPath = path.join(child, ".platform-modules.lock")
+  const lock = lockOf(child)
+  lock.modules[moduleName].migrations = [
+    ...(lock.modules[moduleName].migrations ?? []),
+    `${tag}.sql`,
+  ]
+  writeFileSync(lockPath, `${JSON.stringify(lock, null, 2)}\n`, "utf8")
+}
+
 function stubRun() {
   return () => ({ status: 0, stdout: "", stderr: "" })
 }
@@ -193,4 +234,28 @@ test("rollback sem --with-deps continua revertendo só o módulo indicado, prese
   assert.equal(existsSync(moduleFile(child, "alpha")), true)
   assert.ok(lockOf(child).modules.alpha)
   assert.equal(lockOf(child).modules.beta, undefined)
+})
+
+test("rollback apaga também a entrada do journal do .sql que remove, não só o arquivo — reinstalar o módulo não esbarra mais em db:check:journal", async () => {
+  const child = makeChild()
+  assert.equal(await installModule(child, "alpha"), EXIT_CODES.OK)
+  assert.equal(await installModule(child, "beta"), EXIT_CODES.OK)
+  seedMigration(child, "alpha", "0000_alpha_baseline")
+  seedMigration(child, "beta", "0001_beta_baseline")
+
+  const exitCode = await rollbackModule(child, "beta", CATALOG_ROOT)
+
+  assert.equal(exitCode, EXIT_CODES.OK)
+  assert.equal(existsSync(migrationFile(child, "0001_beta_baseline")), false)
+  assert.equal(existsSync(migrationFile(child, "0000_alpha_baseline")), true)
+  const journal = journalOf(child)
+  assert.deepEqual(
+    journal.entries.map((entry) => entry.tag),
+    ["0000_alpha_baseline"]
+  )
+  // Cada tag que sobra no journal ainda tem seu .sql — é exatamente o que
+  // `db:check:journal` (checkFilePairing) cobra antes de reinstalar o módulo.
+  for (const entry of journal.entries) {
+    assert.equal(existsSync(migrationFile(child, entry.tag)), true)
+  }
 })

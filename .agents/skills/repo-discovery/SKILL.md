@@ -38,7 +38,8 @@ integration fixtures (~57k each). Reading one of those costs more than the peak 
 a whole session. A range (`offset`/`limit`), `grep -n` or `head` still work fine —
 what doesn't work is the whole file. In Claude Code, one hook blocks this by size
 (`no-huge-reads.mjs`) and another blocks direct navigation in the main agent from
-the turn's third call onward, routing it to the `repo-scout` subagent
+the turn's fifth call onward (plain listings — `ls`, `stat`, `wc`, `fd`/`find` scoped to
+a directory — never count), routing it to the `repo-scout` subagent
 (`delegate-to-subagent.mjs`); in Cursor and Codex, you are the safeguard.
 
 ## The two blind spots grep has here

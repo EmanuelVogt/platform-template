@@ -110,9 +110,10 @@ The 1M window is why: nothing ever forced a break.
   `grep` cannot see — so Cursor and Codex get it too. `.claude/agents/repo-scout.md` is
   only the Claude Code mechanism on top of it.
   **In Claude Code this is enforced, not advised:** `delegate-to-subagent.mjs` lets the
-  main agent make two navigation calls per user turn (`ls`, `grep -n` on a known file) and
-  blocks the third onward with the exact `Agent(subagent_type: "repo-scout", model: …)`
-  call to make instead. Inside a subagent (`agent_id` in the hook input) it exits with no
+  main agent make four navigation calls per user turn (`grep -n` on a known file, `cat` of
+  a small config) and blocks the fifth onward with the exact
+  `Agent(subagent_type: "repo-scout", model: …)` call to make instead; plain listings
+  (`ls`, `stat`, `wc`, `file`, and `fd`/`find` scoped to a repo directory) never count. Inside a subagent (`agent_id` in the hook input) it exits with no
   enforcement at all unless the subagent's type is in `ENFORCED_AGENTS` — empty today,
   since no `ca-full-cycle` agent type has been wired into it: every subagent,
   the scout included, currently navigates and runs commands with zero enforcement from this
@@ -250,11 +251,15 @@ never recreate `.cursor/skills` — Cursor reads `.agents` directly.
   `pending-advisories.mjs`, which does the same for catalog advisories. Rule in
   `docs/dev/template.md`.
 - `.claude/hooks/delegate-to-subagent.mjs` — `PreToolUse(Bash|Grep|Glob|Read)`: blocks
-  navigation in the main thread past a per-turn quota (2) and every test/typecheck/lint/
-  build run (quota 0), naming the subagent to call — `repo-scout` or `shell-runner`. A
-  piped Bash command is classified by its first pipe segment only (`git status --short |
-head` isn't navigation — a filter after a pipe reduces what enters the context); the
-  redirect-to-file check still runs on the whole statement. A Bash statement whose path
+  navigation in the main thread past a per-turn quota (4, raised from 2 on 2026-09-03:
+  parallel calls in one turn all count, and a scout round-trip for a 6-line `ls` cost more
+  than the context it saved) and every test/typecheck/lint/build run (quota 0), naming the
+  subagent to call — `repo-scout` or `shell-runner`. Listing commands never count: `ls`
+  (non-recursive), `stat`, `file`, `wc`, and `fd`/`find` given a directory inside the repo
+  (not `.`/the root). A piped Bash command is classified by its first pipe segment only
+  (`git status --short | head` isn't navigation — a filter after a pipe reduces what
+  enters the context); the redirect-to-file check still runs on the whole statement, and a
+  `{ …; } > file` group counts as one redirect. A Bash statement whose path
   arguments are **all** under `.claude/`, `.agents/`, `.agents/skills/`, `scripts/` or
   `.ca-plans/` (`HARNESS_DIRS`) doesn't count as navigation — the quota exists to push
   exploration of _product_ code to `repo-scout`, while editing the harness itself is work

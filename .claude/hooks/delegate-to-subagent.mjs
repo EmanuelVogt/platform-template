@@ -11,8 +11,17 @@
 // every subagent (agent_id present) now exits silently at the top of the
 // file, otherwise it would block repo-scout itself.
 //
-// Free quota per user turn: NAV_FREE_PER_TURN quick navigations (one `ls`, one
-// `grep -n` in a known file) pass; from there on, delegate. A heavy command
+// Free quota per user turn: NAV_FREE_PER_TURN quick navigations (a `grep -n`
+// in a known file, a `cat` of a small config) pass; from there on, delegate.
+// Raised 2 → 4 on 2026-09-03: parallel tool calls in one turn all count, so a
+// batch of 5 small reads passed 2 and blocked 3 in arbitrary order, and the
+// round-trip to a scout (1–2 min + a lossy summary that then gets re-read as a
+// range) cost more than the 2–4k of context the quota saved. Listing commands
+// never count: `ls` (non-recursive), `stat`, `file`, `wc` return a handful of
+// lines by nature, and `fd`/`find` scoped to a directory inside the repo (not
+// the root) are a bounded listing, not exploration — `fd`/`find` with no
+// directory, or with `.`/the root, still count. A `{ …; } > file` /
+// `( … ) > file` group is one redirect, not N statements. A heavy command
 // (test, typecheck, lint, build) has no quota on the main thread: it goes to
 // shell-runner, which returns the exit code and literal failures with the log
 // in a file.
@@ -73,7 +82,7 @@ import {
 import { tmpdir } from "node:os"
 import path from "node:path"
 
-const NAV_FREE_PER_TURN = 2
+const NAV_FREE_PER_TURN = 4
 const RUN_FREE_PER_TURN = 0
 const READ_FREE_LINES = 200
 const READ_BYTES_FREE_PER_TURN = 48_000
@@ -109,6 +118,8 @@ const NAV_CMDS = new Set([
   "file",
   "read",
 ])
+const LISTING_CMDS = new Set(["ls", "stat", "file", "wc"])
+const SCOPED_LISTING_CMDS = new Set(["fd", "find"])
 const RUN_CMDS = new Set(["vitest", "tsc", "eslint", "turbo", "playwright"])
 const RUN_PNPM_SCRIPTS = /^(test(:\w+)?|typecheck|check|lint(:\w+)?|build)$/
 
@@ -157,7 +168,10 @@ const sessionId = data.agent_id
   : baseSessionId
 
 // strips `rtk` (global proxy) and env prefixes like `FOO=bar cmd`
-const head = (tokens) => {
+const head = (rawTokens) => {
+  const tokens = [...rawTokens]
+  if (tokens[0]) tokens[0] = tokens[0].replace(/^[({]+/, "")
+  if (tokens[0] === "") tokens.shift()
   let i = 0
   while (i < tokens.length && /^[A-Z_][A-Z0-9_]*=/.test(tokens[i])) i++
   if (tokens[i] === "rtk") i++
@@ -166,6 +180,30 @@ const head = (tokens) => {
 }
 
 const redirectsToFile = (seg) => /<<|(^|[^0-9&])>{1,2}(?!&)\s*[^&\s]/.test(seg)
+
+// `{ a; b; } > file` or `( a; b ) > file`: the whole group lands in the file,
+// so it is dropped before the statement split (which would otherwise see `a`
+// and `b` as bare navigation)
+const REDIRECTED_GROUP =
+  /^\s*[({][\s\S]*?[)}]\s*\d?>{1,2}(?!&)\s*[^&\s]\S*(\s*2>&1)?/
+const stripRedirectedGroup = (command) => command.replace(REDIRECTED_GROUP, "")
+
+const unquote = (token) => token.replace(/^['"]|['"]$/g, "")
+
+const isRecursiveListing = (rest) =>
+  rest.some((a) => a === "--recursive" || /^-[a-zA-Z]*R/.test(a))
+
+// a positional argument that is a directory inside the repo, not the root
+const scopedToRepoDir = (rest) =>
+  rest.some((token) => {
+    const t = unquote(token)
+    if (!t || t.startsWith("-") || repoRel(t) === "") return false
+    try {
+      return statSync(path.resolve(cwd, t)).isDirectory()
+    } catch {
+      return false
+    }
+  })
 
 // path-like arguments of a segment: a token with a `/`, or a dotted name that
 // exists on disk (`ls .claude`); `git show HEAD:<path>` keeps only the path.
@@ -229,7 +267,7 @@ const pnpmScript = (rest) => {
 // scoped to HARNESS_DIRS is skipped, so a compound command only counts when at
 // least one of its statements navigates outside the harness.
 const classify = (command) => {
-  for (const statement of command.split(/&&|\|\||;|\n/)) {
+  for (const statement of stripRedirectedGroup(command).split(/&&|\|\||;|\n/)) {
     const stmt = statement.trim()
     if (!stmt) continue
     if (redirectsToFile(stmt)) continue
@@ -250,6 +288,8 @@ const classify = (command) => {
       continue
     }
     if (cmd === "sed" && rest.some((a) => /^-[a-zA-Z]*i/.test(a))) continue
+    if (LISTING_CMDS.has(cmd) && !isRecursiveListing(rest)) continue
+    if (SCOPED_LISTING_CMDS.has(cmd) && scopedToRepoDir(rest)) continue
     if (NAV_CMDS.has(cmd)) {
       if (harnessScoped(rest)) continue
       return "nav"
@@ -394,7 +434,7 @@ Free: Read with limit <= ${READ_FREE_LINES}; anything under .ca-plans/, .claude/
   block(
     `Direct navigation blocked (#${state.nav} in this turn; ${NAV_FREE_PER_TURN} free) — \`${summarize(target)}\`.
 Delegate the question, not the command: Agent(subagent_type: "repo-scout", model: "haiku"|"sonnet", prompt: "<where X is defined / who consumes Y / what exists in Z>") — haiku pinpoint, sonnet for a module map (one call). Returns file:line + one sentence.
-Known file:line? Read with offset/limit (<= ${READ_FREE_LINES}) is free.
+Known file:line? Read with offset/limit (<= ${READ_FREE_LINES}) is free. Also free: ls/stat/wc/file, fd/find scoped to a repo directory, output redirected to a file, paths all under ${HARNESS_DIRS.join("/ ")}/.
 `
   )
 }

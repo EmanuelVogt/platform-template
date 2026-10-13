@@ -68,3 +68,16 @@ Only offer to create an ADR when all three are true:
 3. **The result of a real trade-off** — there were genuine alternatives and you picked one for specific reasons
 
 If any of the three is missing, skip the ADR. Use the format in [ADR-FORMAT.md](./ADR-FORMAT.md).
+
+## In this repo
+
+Single context unless a `CONTEXT-MAP.md` says otherwise — `apps/api` and `apps/web` share one
+domain and one Zod contract. The glossary is `CONTEXT.md` (root, per the structure above; other
+skills also look in `docs/` — check both before creating one). Decisions live in the cross-run
+AD log `.ca-plans/DECISIONS.md` (format in ADR-FORMAT.md) that `ca-full-cycle` appends to and
+creates on its first decision; a product that also keeps ADR files under `docs/adr/` reads
+both, and the format of the files already there wins. Before exploring: read the glossary, the
+ADRs and AD entries touching the area, and the matching area skill (`backend-architecture`,
+`frontend-architecture`, `code-quality`). Name a domain concept with the glossary's term,
+never one of the synonyms its `_Avoid_` lines list. Flag a conflict with an existing ADR or
+AD instead of silently overwriting it.

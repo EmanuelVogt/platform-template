@@ -9,14 +9,19 @@ const REPO_ROOT = path.resolve(TESTS_DIR, "..", "..", "..")
 
 const read = (rel) => readFileSync(path.join(REPO_ROOT, rel), "utf8")
 
-// The tlc-spec-driven skill, `.claude/agents/spec-verifier.md` and the P0 tier
-// guide once inside `subagent-model-required.mjs` are gone; `.agents/skills/
-// ca-full-cycle/**` is vendored as-is (out of scope) and carries its own
-// generic "availability/booking" P0-category example, unrelated to any
-// pilot's domain — same exemption `audience-contract.mjs` gives the skills
-// tree. `.agents/skills/agent-harness/SKILL.md` is the one surviving
-// template-owned site (docs/agents/harness.md's replacement, plan-02 T3).
-const TAXONOMY_FILES = [".agents/skills/agent-harness/SKILL.md"]
+// The tlc-spec-driven skill is gone. `.agents/skills/ca-full-cycle/**` and
+// `.agents/skills/ca-spec-driven/**` are vendored as-is (out of scope) and
+// carry their own generic "availability/booking" P0-category example,
+// unrelated to any pilot's domain — same exemption `audience-contract.mjs`
+// gives the skills tree. The template-owned P0 sites are the agent-harness
+// skill (docs/agents/harness.md's replacement, plan-02 T3), the P0 tier guide
+// inside `subagent-model-required.mjs` and the spec-verifier card, both back
+// in v4.1.0 with ca-spec-driven.
+const TAXONOMY_FILES = [
+  ".agents/skills/agent-harness/SKILL.md",
+  ".claude/hooks/subagent-model-required.mjs",
+  ".claude/agents/spec-verifier.md",
+]
 
 test("no P0-taxonomy site names booking/availability domain rules", () => {
   for (const rel of TAXONOMY_FILES) {
@@ -46,13 +51,16 @@ test("every P0-taxonomy site names generic categories and defers to the product'
   }
 })
 
-test("tlc-spec-driven and the spec-worker/spec-verifier agent cards no longer ship", () => {
+test("tlc-spec-driven no longer ships; the spec-worker/spec-verifier cards ship as ca-spec-driven's", () => {
+  assert.equal(
+    existsSync(path.join(REPO_ROOT, ".agents/skills/tlc-spec-driven")),
+    false
+  )
   for (const rel of [
-    ".agents/skills/tlc-spec-driven",
     ".claude/agents/spec-worker.md",
     ".claude/agents/spec-verifier.md",
   ]) {
-    assert.equal(existsSync(path.join(REPO_ROOT, rel)), false, rel)
+    assert.match(read(rel), /ca-spec-driven/, rel)
   }
 })
 

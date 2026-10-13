@@ -13,14 +13,16 @@ here: making the problem understood. Spend the questions here or pay for them as
 Take the user's statement as-is. Read `.ca-plans/DECISIONS.md` first if it exists — every `active`
 AD-nn is a standing constraint: the brief conforms to it or explicitly supersedes it (mark the old
 line `superseded by AD-mm`, append the new one), never silently ignores it; ground scouts and grill
-questions on the ADs that touch this feature. Then create `.ca-plans/[feature]/` (short English
+questions on the ADs that touch this feature. Read `.ca-plans/LESSONS.md` next if it exists —
+every lesson is a known failure mode: ground scouts on the ones touching this feature's area and
+carry the relevant `L-nn` into the brief as constraints. Then create `.ca-plans/[feature]/` (short English
 kebab-case slug) and start two files: `research.md` from the template below with
 `Status: Research`, and the `plan.md` stub — `Status: Research`, `Started: <ISO datetime>`, brief
 pointer — so the run is discoverable by resume from minute one. One line to the user: the slug and
 what happens next (scouts + questions in parallel).
 
-**Classify the input before the first question — concept or defined.** *Defined*: reproducible
-behavior, a named flow/file, a precise expected outcome → straight to § 2 + § 3. *Concept*: a
+**Classify the input before the first question — concept or defined.** _Defined_: reproducible
+behavior, a named flow/file, a precise expected outcome → straight to § 2 + § 3. _Concept_: a
 solution named without its problem ("I want a notifications system"), no observable outcome, no
 failure case the user can cite, no boundary → route through § 2.5 first. One judgement, stated in
 the intake line; the user can shortcut it ("it's defined, converge"). Misreading defined as
@@ -95,15 +97,15 @@ change?") — grounded questions get real answers, abstract ones get vibes.
 
 Cover, when the feature has the dimension at all (skip what plainly does not apply):
 
-| Dimension | The question behind it |
-| --- | --- |
-| Outcome | What does done look like, observably? What would you demo? |
-| Boundary | What is explicitly OUT? (record it — it is the anti-scope-creep anchor) |
-| Behavior grays | User-facing choices that could go multiple ways (layout, errors, tone, formats) |
-| Failure/partial states | Timeouts, partial saves, retries, duplicates |
-| Auth & limits | Who may call this; rate/permission boundaries |
-| State & concurrency | Transitions, ordering, races |
-| Data lifecycle | TTL, deletion, migration of existing rows |
+| Dimension              | The question behind it                                                          |
+| ---------------------- | ------------------------------------------------------------------------------- |
+| Outcome                | What does done look like, observably? What would you demo?                      |
+| Boundary               | What is explicitly OUT? (record it — it is the anti-scope-creep anchor)         |
+| Behavior grays         | User-facing choices that could go multiple ways (layout, errors, tone, formats) |
+| Failure/partial states | Timeouts, partial saves, retries, duplicates                                    |
+| Auth & limits          | Who may call this; rate/permission boundaries                                   |
+| State & concurrency    | Transitions, ordering, races                                                    |
+| Data lifecycle         | TTL, deletion, migration of existing rows                                       |
 
 Rules of the grill:
 
@@ -135,41 +137,52 @@ flagged.
 **P0:** yes/no — [auth, payments, money movement, availability/booking, data integrity — or "no"]
 
 ## Problem
+
 [≤5 lines: the pain, why now, what done looks like.]
 [Evidence: `file:line` or a concrete account — who hit this, when. A problem with no trace is an
 assumption, not a fact.]
 [Why this and not <simplest rejected alternative> — one line. Mandatory for concept inputs.]
 
 ## Context Map
+
 [file:line facts from scouts — the vertical today, the pattern to copy, the risk surface. One line
 each. This section is why Plan needs no re-discovery.]
+
 - `src/…/handler.ts:42` — current entry point for X
 - `src/…/similar-feature/` — structural template to copy
 - gate commands: unit `<cmd>`, e2e `<cmd>`, typecheck `<cmd>`, lint `<cmd>`
 
 ## Decisions
+
 [One line per settled gray, from the grill. D-01, D-02… Workers receive these as payload pointers.]
 
 ## Acceptance Criteria
+
 [Numbered, WHEN/THEN, each with a precise outcome and a proof the Reviewer will check.]
+
 - AC-01 — WHEN [event] THEN [system] SHALL [precise outcome]. Proof: test
-- AC-02 — … Proof: gate   (build/typecheck/lint-class outcomes ONLY — a behavioral AC marked
+- AC-02 — … Proof: gate (build/typecheck/lint-class outcomes ONLY — a behavioral AC marked
   `gate` passes on any green suite; it needs a `test` or a `probe`)
-- AC-03 — … Proof: probe: `<command>`   (≤3 probes; a 4th means it should be a test)
+- AC-03 — … Proof: probe: `<command>` (≤3 probes; a 4th means it should be a test)
 
 ## Edge Cases
+
 [Each edge case IS an AC: numbered in the same AC-nn sequence, with a proof — listed here for
 readability. An edge case outside the AC numbering is invisible to every verifier downstream.]
+
 - AC-07 — WHEN [boundary/error] THEN SHALL [handling]. Proof: test
 
 ## Out of Scope
+
 | What | Why out |
 
 ## Assumptions
+
 | Assumption | Chosen default | Rationale |
 [Everything unanswered or flagged-uncertain lands here. Nothing is silently unclear.]
 
 ## Segments
+
 [Only when Plan segments the run (plan.md § 0): one line per segment — `plan-01 · AC-01..05 ·
 Done` — updated at each segment close. Single-plan runs omit this section.]
 ```
@@ -189,5 +202,5 @@ and the assumptions you chose. Then the contract, explicit:
 - User confirms → set `Status: Confirmed`, record `Base: <current HEAD>` in the brief, flip the
   `plan.md` stub to `Status: Planning`. A settled decision that binds future runs, not just
   this feature, is appended to `.ca-plans/DECISIONS.md` as the next AD-nn (one line). Recommend
-  the tier switch if applicable (SKILL.md § *Model Economics*, one line, never blocking), and go
+  the tier switch if applicable (SKILL.md § _Model Economics_, one line, never blocking), and go
   straight to [plan.md](plan.md). No further permission exists between here and QA.

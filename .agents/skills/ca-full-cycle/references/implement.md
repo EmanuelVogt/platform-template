@@ -75,15 +75,15 @@ Return: verdict per the card, ≤1 kB.
 
 ## 4. Failure handling (condensed; the routes that get invented wrong)
 
-| Signal | Orchestrator does |
-| --- | --- |
-| `gate-failed` | FIRST intersect the failing paths/import chain with sibling Touches: clusters are file-disjoint, not import-disjoint — a sibling's mid-edit shared module reds an innocent gate. Overlap → wait for that sibling's commit, resume the stopped worker, **no strike**. Otherwise: resume the same worker with the blocker + log path. 2nd failure at that tier → fresh worker one tier up. 3 attempts → escalate. |
-| `blocked-by-ownership` | The plan is wrong, not the worker: add the file to that task's `Touches`; unowned → resume the worker with the expanded grant; owned by a sibling → wait, then resume. 2nd one in the run → stop dispatching, re-audit Touches over every undispatched cluster. |
-| DONE with a Touches layer unwritten | Not done — resume with the precedent; never record a partial delivery. |
-| `spec-ambiguity` / `test-contradicts-spec` | Rule-1 escalation: settle with the user (or an existing D-nn), record the decision in `research.md`, re-dispatch. Never guess on a worker's behalf. |
-| Worker silent / died | Resume the same agent first ("diff what landed vs. intended, repair, continue"); only then treat as STOPPED and re-dispatch from `git log`. |
-| Summary carries a `Flaky:` line | Not a stop. Record it in the wave's `plan.md` row and pass it as `Known flaky` in every later wave-verifier and Reviewer payload — a flaky test proves nothing. If it is an AC's declared proof, a deflake fix task ships before Review. |
-| Plan proven structurally wrong (wrong decomposition, missed vertical — beyond a Touches fix) | Surgical repair, never a restart: one scout over the invalidated area only, re-derive only the undispatched waves, log the delta in `plan.md` ("Re-planned waves k..N: <reason>"). The brief is unchanged, so no gate is owed. A brief invalidated → Rule-1 escalation, as always. |
+| Signal                                                                                       | Orchestrator does                                                                                                                                                                                                                                                                                                                                                                                               |
+| -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `gate-failed`                                                                                | FIRST intersect the failing paths/import chain with sibling Touches: clusters are file-disjoint, not import-disjoint — a sibling's mid-edit shared module reds an innocent gate. Overlap → wait for that sibling's commit, resume the stopped worker, **no strike**. Otherwise: resume the same worker with the blocker + log path. 2nd failure at that tier → fresh worker one tier up. 3 attempts → escalate. |
+| `blocked-by-ownership`                                                                       | The plan is wrong, not the worker: add the file to that task's `Touches`; unowned → resume the worker with the expanded grant; owned by a sibling → wait, then resume. 2nd one in the run → stop dispatching, re-audit Touches over every undispatched cluster.                                                                                                                                                 |
+| DONE with a Touches layer unwritten                                                          | Not done — resume with the precedent; never record a partial delivery.                                                                                                                                                                                                                                                                                                                                          |
+| `spec-ambiguity` / `test-contradicts-spec`                                                   | Rule-1 escalation: settle with the user (or an existing D-nn), record the decision in `research.md`, re-dispatch. Never guess on a worker's behalf.                                                                                                                                                                                                                                                             |
+| Worker silent / died                                                                         | Resume the same agent first ("diff what landed vs. intended, repair, continue"); only then treat as STOPPED and re-dispatch from `git log`.                                                                                                                                                                                                                                                                     |
+| Summary carries a `Flaky:` line                                                              | Not a stop. Record it in the wave's `plan.md` row and pass it as `Known flaky` in every later wave-verifier and Reviewer payload — a flaky test proves nothing. If it is an AC's declared proof, a deflake fix task ships before Review.                                                                                                                                                                        |
+| Plan proven structurally wrong (wrong decomposition, missed vertical — beyond a Touches fix) | Surgical repair, never a restart: one scout over the invalidated area only, re-derive only the undispatched waves, log the delta in `plan.md` ("Re-planned waves k..N: <reason>"). The brief is unchanged, so no gate is owed. A brief invalidated → Rule-1 escalation, as always.                                                                                                                              |
 
 Sibling clusters are never cancelled by one failure — they finish; the wave verifier waits for the
 fix.
@@ -115,6 +115,75 @@ A dispatch is a form fill, not an essay. Never: paraphrase summaries back · run
 fix a one-line failure inline · edit `plan.md` mid-wave · dispatch a placeholder agent to wait (a
 finished sub-agent re-invokes you). After the last wave's verifier passes →
 [review.md](review.md), immediately and unannounced (Rule 5).
+
+## Codex as the executor — native dispatch (standing user rule, 2026-09-27)
+
+When the user picks Codex as the executor, the orchestrator stays here and only the **workers**
+move: each cluster runs in Codex CLI through `codex exec`; wave verifier, Reviewer, fix routing
+and QA stay in Claude Code, unchanged.
+
+- **Payload** — the § 1 form, written to a file (`$TMPDIR/codex-workers/<slug>-w<w>-C<k>.md`),
+  `Tier` line dropped (the tier travels as the script's argument instead), two lines first: `You run under codex exec — nobody answers questions:
+decide within the brief or stop with the card's STOPPED line.` · `Run the heavy-run guard
+--wait in the foreground, never in background.`
+- **Dispatch** — `bash <skill dir>/scripts/codex-worker.sh <checkout> <label> <low|mid|high> <payload file>`,
+  Bash with `run_in_background: true`, one per cluster, same ≤4 cap. The tier is the same
+  judgement as a Claude dispatch (SKILL.md § tiers — mid always first, high escalation-only); the
+  script maps it: low → `gpt-6-luna`/low effort · mid → `gpt-6-sol`/medium · high →
+  `gpt-6-astra`/high. The mapping lives only in the script. The script is the only door:
+  never `codex` raw, never its flags by hand. Its **auth lock** refuses unless Codex is logged in
+  with the ChatGPT plan — an API key would bill per token; never bypass it, never set a key, never
+  touch the login. It needs a Bash permission rule for itself; a denial → one chat line, run on
+  Claude workers.
+- **Collect** by the script's last line, `CODEX_RESULT:`:
+
+| Result      | Orchestrator does                                                                                                                                                                                                                                                                                                                                                              |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ok`        | The printed last message is the worker's compact summary — route it like any summary. Tokens + seconds from the `[label]` line go into the wave row (plan-quota tokens, not dollars).                                                                                                                                                                                          |
+| `limit`     | **Continue in Claude, never wait for the quota.** Re-dispatch this cluster as a Claude `Agent` worker (mid), payload prefixed `Codex hit its plan limit mid-cluster: diff what landed (git log <wave start>..HEAD -- <Touches>, git status) vs intended, repair, continue.` Every later cluster of the run goes to Claude workers too — no Codex retry this run. Not a strike. |
+| `auth-lock` | The whole run on Claude workers; one chat line with the reason. Fixing the login is the user's call.                                                                                                                                                                                                                                                                           |
+| `failed`    | The § 4 "worker silent / died" route, re-dispatched as a Claude worker (a Codex run cannot be resumed by `SendMessage`).                                                                                                                                                                                                                                                       |
+
+- **Resume / fix rounds** (`gate-failed`, verifier gaps) while Codex is healthy: a new
+  `codex-worker.sh` run, fresh label, payload = the original + the blocker and the previous summary
+  pasted first. Strikes and tier escalation count as in § 4 — the second failure at a tier
+  re-runs at the next tier up (mid → high = Sol → Astra); a failure past high goes to a Claude
+  worker at high.
+- **Record** in `plan.md`'s header `Executor: Codex` — on a fallback, `Executor: Codex → Claude
+from wave <w> (<limit|auth-lock|failed>)`, one edit, and one chat line to the user.
+- **P0 second review (review.md § 1b)** — its point is a family other than the author's. Every
+  cluster ran in Codex → the Claude Reviewer already is that read: log `Second review: skipped —
+author was Codex, Reviewer is cross-model`. Any cluster fell back to Claude → § 1b runs as usual.
+
+## Implement in a foreign harness (Codex CLI, Cursor) — Review comes back here
+
+`.agents/skills/` is shared, so a window outside Claude Code can read this skill and run Implement
+from `plan.md`. What it cannot run is the close: **Review always returns to Claude Code** — the
+fresh Reviewer, the tier-per-dispatch economics and the sub-agent contract exist only here, and a
+window that authored the code cannot be its own independent reviewer (Rule 5). A foreign window
+therefore owns Implement and nothing past it.
+
+Its last act, after the last task is committed and the wave gate is green: set `Status: Review` in
+`plan.md`, tell the user **in their language** that the review is done in Claude Code, and print
+ONE ready-to-paste block for a fresh Claude Code window (suggest `/clear` or a new session first).
+
+```
+Resume ca-full-cycle for feature <slug> at Review — checkout <abs path>, branch <branch>.
+Read .ca-plans/<slug>/research.md whole (ACs + proofs) and plan.md "## Wave Plan".
+Implement ran in <Codex CLI | Cursor | …>, not here — no wave-verifier evidence in this window.
+Commit range: <first>..HEAD. Final gate: `<cmd>` — last run <green | red: what failed>.
+Pre-run test count: <n>. P0: <yes|no>. Light (≤3 tasks): <yes|no>.
+Known flaky: <file:line list | none>. Plan deviations: <one line | none>.
+Dispatch the fresh Reviewer per references/review.md § 1, then run QA.
+```
+
+Every field is something only the executing window knows — without them the Reviewer starts blind
+and re-derives from git what was already in hand. Never hand back a run whose gate is red without
+saying so on the `Final gate` line: a silent red ships a stale green to the human.
+
+The same harness comes back once more on a **P0 run**, after the Reviewer's PASS, as the read-only
+cross-model second reviewer (review.md § 1b, card `cards/second-reviewer.md`) — it appends one
+section to `review.md` and closes, again, by printing the resume prompt.
 
 ## Pause / blocked — the run-level handoff
 

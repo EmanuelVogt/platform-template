@@ -4,7 +4,7 @@ description: End-to-end feature pipeline with ONE human gate before code — Res
 license: CC-BY-4.0
 metadata:
   author: Emanuel Vogt - github.com/EmanuelVogt
-  version: 1.0.0
+  version: 1.2.0
   based-on: ca-spec-driven 1.0.0 (same author), itself derived from TLC Spec-Driven 3.2.0 by Felipe Rodrigues (github.com/felipfr), CC-BY-4.0. Keeps the wave/cluster delegation model, the tier-per-dispatch economics and the independent-verification stance; trims four phase gates down to one, adds a per-wave verifier and closes with a human QA loop.
 ---
 
@@ -21,7 +21,9 @@ One human gate before code, one human loop after it. Everything between runs alo
 ```
 
 The human's job is to make the problem understood (Research) and to judge the result (QA). The
-pipeline's job is everything else — and it never stops in the middle to ask whether it may continue.
+pipeline's job is everything else — including every QA step an agent can execute itself; the
+human keeps only what strictly needs a person or where their opinion is the acceptance
+([review.md](references/review.md) § 2). The pipeline — and it never stops in the middle to ask whether it may continue.
 
 ## Critical Rules (read before acting)
 
@@ -50,7 +52,9 @@ orchestrator reads its current phase reference whole.
    the feature (author ≠ reviewer, evidence-or-zero). Neither is optional, neither is offered as a
    question. Declared limit: the wave verifier anchors on the plan, the Reviewer on the brief — a
    wrong plan is caught by the brief-anchored close; a wrong brief is caught only by human QA.
-   That is what QA is for.
+   That is what QA is for. **P0 adds a second, read-only review by a different model family**
+   (Codex CLI here) between the Reviewer's PASS and QA — fresh context does not decorrelate a
+   family's blind spots; the fix loop never leaves this window (review.md § 1b).
 6. **Artifacts in English, chat in the user's language.** Everything under `.ca-plans/` plus
    slugs, payloads, summaries and verdicts is English — agents are the only readers, and English
    re-reads are cheaper. The QA script is chat, so it follows the user; product text (UI labels,
@@ -60,16 +64,17 @@ orchestrator reads its current phase reference whole.
 
 No ceremony table — the task count decides, after Plan:
 
-| Plan size | Implement | Wave verifier | Reviewer |
-| --- | --- | --- | --- |
+| Plan size            | Implement                                                                        | Wave verifier            | Reviewer                                      |
+| -------------------- | -------------------------------------------------------------------------------- | ------------------------ | --------------------------------------------- |
 | **≤3 tasks** (light) | Inline in the planning window, per-task cycle, gates via the log-on-disk pattern | One, after the last task | Always — mid tier when non-P0, high otherwise |
-| **4+ tasks** | Workers, one per cluster, waves in parallel | One per wave | Always — high tier by default |
+| **4+ tasks**         | Workers, one per cluster, waves in parallel                                      | One per wave             | Always — high tier by default                 |
 
 ## .ca-plans Structure
 
 ```
 .ca-plans/
 ├── DECISIONS.md        # cross-run project decisions — lean AD log (below)
+├── LESSONS.md          # cross-run error ledger — escaped bugs and their guards (review.md § 3.5)
 ├── RUNS.md             # one entry per completed run: size, wall time, tokens, est. cost (review.md § Closeout)
 └── [feature]/          # short English kebab-case slug (guest-agenda-load, not a translated one)
     ├── research.md     # the brief: problem, context map, decisions, ACs with proofs
@@ -80,10 +85,10 @@ No ceremony table — the task count decides, after Plan:
 `plan.md` is born as a stub with the slug and is the run's whole state: the header `Status:` line —
 `Research → Planning → Implementing (wave k/N) → Review → QA → Done`, each transition written the
 moment the phase changes — cluster statuses (written at dispatch and at wave close), and, only when
-a run pauses or blocks, a `## Handoff` section (implement.md § *Pause / blocked*). No per-run state
+a run pauses or blocks, a `## Handoff` section (implement.md § _Pause / blocked_). No per-run state
 file beyond it. A brief whose ACs decompose into independently shippable slices segments at Plan
 into sequential `plan-NN.md`, each closing its own Review and QA before the next is authored
-(plan.md § *One plan or several?*); `research.md` § Segments carries the map.
+(plan.md § _One plan or several?_); `research.md` § Segments carries the map.
 
 **DECISIONS.md is the project's memory across runs.** One line per project-level decision:
 `AD-nn · active | superseded by AD-mm · <decision> · <run slug, date>`. Appended when Research or
@@ -92,14 +97,22 @@ feature-local D-nn stay in the run's `research.md`. Read at the start of every R
 `active` AD is a constraint the new brief conforms to or explicitly supersedes, never silently
 ignores.
 
+**LESSONS.md is the error ledger across runs.** One line per escaped-bug pattern:
+`L-nn · <layer: type|test|static-guard|tripwire|lesson> · <pattern> · guard: <file/commit> ·
+<run slug, date> · hits: <n>`. Appended by the QA retro (review.md § 3.5), read at the start of
+every Research next to DECISIONS.md. A recurrence is never a new line — it increments `hits` and
+escalates the guard at least one layer up the ladder (type > test > static-guard > tripwire >
+lesson): hits: 2 buys a cheap enforcement (a tripwire or a regression test), hits: 3 forces a hard
+one (a static-guard script or a type-level constraint).
+
 ## Phases
 
-| Phase | Who | Reference |
-| --- | --- | --- |
-| Research — intake, concept stress-test, scout fan-out, grilling, the brief, the gate | human + AI | [research.md](references/research.md) |
-| Plan — tasks, clusters, waves, tiers; auto-proceeds | AI (top tier) | [plan.md](references/plan.md) |
-| Implement — dispatch, collect, verify per wave | AI | [implement.md](references/implement.md) |
-| Review + QA — independent review, QA script, correction loop | AI, then human | [review.md](references/review.md) |
+| Phase                                                                                      | Who            | Reference                               |
+| ------------------------------------------------------------------------------------------ | -------------- | --------------------------------------- |
+| Research — intake, concept stress-test, scout fan-out, grilling, the brief, the gate       | human + AI     | [research.md](references/research.md)   |
+| Plan — tasks, clusters, waves, tiers; auto-proceeds                                        | AI (top tier)  | [plan.md](references/plan.md)           |
+| Implement — dispatch, collect, verify per wave                                             | AI             | [implement.md](references/implement.md) |
+| Review + QA — independent review, P0 cross-model second review, QA script, correction loop | AI, then human | [review.md](references/review.md)       |
 
 **Resume:** step 0 — `git status --short`: a dirty tree means a worker died mid-task or a
 verifier died between inject and restore; restore any modification no resumable cluster owns
@@ -121,24 +134,30 @@ session. During Implement it dispatches, collects, records; it never edits code,
 itself (measured in ca-spec-driven's origin project: a worker pays a median 21 turns and 94k of
 context before its first edit — which is why clusters are vertical slices, not single tasks).
 
-| Role | Does | Tier per dispatch | Card / contract |
-| --- | --- | --- | --- |
-| **Scout** | Maps code during Research and audits Touches during Plan: returns `file:line` + one-line facts, never file content, ≤1.5 kB | low for a pointed question, mid for a module map | contract in the payload |
-| **Worker** | Executes ONE cluster: tasks in order, tests from ACs, scoped gate logged to disk, atomic commit each | low mechanics · **mid default** · high domain-critical | [cards/worker.md](references/cards/worker.md) |
-| **Wave verifier** | Closes a wave, alone: runs the wave gate itself, checks delivery against the plan, kills one mutant on the wave's riskiest task, returns PASS/gaps | mid · high for a P0/exclusive wave | [cards/wave-verifier.md](references/cards/wave-verifier.md) |
-| **Reviewer** | Closes the feature, fresh and independent: AC evidence check, Final gate, discrimination sensor, `review.md` | high default; mid only for light non-P0 runs | [cards/reviewer.md](references/cards/reviewer.md) |
+| Role                          | Does                                                                                                                                                                         | Tier per dispatch                                           | Card / contract                                                 |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------- |
+| **Scout**                     | Maps code during Research and audits Touches during Plan: returns `file:line` + one-line facts, never file content, ≤1.5 kB                                                  | low for a pointed question, mid for a module map            | contract in the payload                                         |
+| **Worker**                    | Executes ONE cluster: tasks in order, tests from ACs, scoped gate logged to disk, atomic commit each                                                                         | low mechanics · **mid always first** · high escalation-only | [cards/worker.md](references/cards/worker.md)                   |
+| **Wave verifier**             | Closes a wave, alone: runs the wave gate itself, checks delivery against the plan, kills one mutant on the wave's riskiest task, returns PASS/gaps                           | mid · high for a P0/exclusive wave                          | [cards/wave-verifier.md](references/cards/wave-verifier.md)     |
+| **Reviewer**                  | Closes the feature, fresh and independent: AC evidence check, Final gate, discrimination sensor, `review.md`                                                                 | mid default; high only for a P0 feature                     | [cards/reviewer.md](references/cards/reviewer.md)               |
+| **Second reviewer** (P0 only) | Cross-model read after the Reviewer's PASS, in a foreign harness (Codex CLI): re-derives ACs from the diff, probes, appends `## Second Review`; never fixes, never re-checks | n/a — the other harness's model; one pass per run           | [cards/second-reviewer.md](references/cards/second-reviewer.md) |
+
 **Tier is judgement per dispatch, never hard-coded** — passed as `model` on every call (Claude
-Code: haiku/sonnet/opus). Worker high is narrow: domain entities/transitions, transactions/outbox,
-migrations, contract regen, an ADR-governed rule. **P0** (auth, payments, money movement,
-availability/booking, data integrity) raises the Reviewer to high even on a light run. Twice failed
-at one tier → one tier up (measured in the parent's origin project: a high-tier agent costs ≈5× a
-mid-tier one — spend it where a wrong answer costs a re-verify loop, not by habit).
+Code: haiku/sonnet/opus). **High is an escalation tier, never a first-dispatch category**: every
+cluster starts at mid — including domain entities/transitions, transactions/outbox, migrations and
+ADR-governed rules — and goes up only after that same cluster failed at mid (verifier FAIL, stall,
+DONE-with-gaps) or when the plan marks it **P0** (auth, payments, money movement,
+availability/booking, data integrity); name the trigger in the dispatch line (`escalation: …`).
+Contract regen and other mechanics are low. P0 also raises the Reviewer to high; otherwise the
+Reviewer runs mid. Twice failed at one tier → one tier up (measured on a sibling harness 2026-08-21→31:
+high-tier workers ran $9.44/commit vs $1.53 at mid — 6.2× — with a worse never-edit rate, and the
+old category list leaked copy tweaks, lint fixes and merge conflicts into high).
 
 **Harness mapping (Claude Code):** workers/verifiers/Reviewer dispatch as
 `Agent(subagent_type: "general-purpose", model: <tier>)` with the card path in the payload; scouts
 as the native `Explore` agent. Of ca-spec-driven's installed role templates, prefer only
-`repo-scout` and `shell-runner` — the others embed the parent's contract and artifact paths and
-will hunt files that do not exist here. **Resuming a live
+`repo-scout` and `shell-runner` — the others (`spec-worker`, `spec-verifier`) embed the parent's
+contract and artifact paths and will hunt files that do not exist here. **Resuming a live
 sub-agent** (fix loops, gap re-checks) is `SendMessage` to the agent id from its dispatch result,
 held in the orchestrator's context; agents die with the session, so after a restart every "resume"
 degrades to a fresh dispatch carrying the resumed scope. **No heavy command raw in a window** —
@@ -146,7 +165,16 @@ any gate or count an agent runs itself uses the log-on-disk pattern (worker card
 file, `grep`/`head` back the ≤30 lines that matter. **Degraded mode (no sub-agents):** say so
 first, then run cluster by cluster in wave order in the current window under the same
 ownership/git/gate rules, with a self-review pass at the end (reduced assurance — same window,
-author ≠ reviewer does not hold). Never fall back silently.
+author ≠ reviewer does not hold). Never fall back silently. **Codex as the executor (native):**
+the orchestrator stays here and dispatches each cluster to Codex CLI through
+`scripts/codex-worker.sh` with the same tier (low/mid/high → Luna/Sol/Astra) — ChatGPT-plan login only (auth lock), and on a plan limit the run
+continues on Claude workers, never waits ([implement.md](references/implement.md) § _Codex as the
+executor_). **Implement outside Claude Code** (the manual route): Codex CLI and
+Cursor read this same `.agents/skills/` copy — such a window owns Implement and nothing past it;
+Review always returns to a fresh Claude Code window, and the foreign window closes by printing the
+paste-ready resume prompt ([implement.md](references/implement.md) § _Implement in a foreign
+harness_). The one thing a foreign window does own past Implement is the **P0 second review**
+(review.md § 1b) — read-only, and it too closes by printing the resume prompt.
 
 ## Model Economics (the point of the pipeline)
 
@@ -160,6 +188,20 @@ author ≠ reviewer does not hold). Never fall back silently.
   summaries ≤1.5 kB — every character a sub-agent returns is paid on every later orchestrator turn.
 - **Review**: one high-tier fresh read of the whole diff beats three mid-tier passes over slices —
   it is the last independent check before a human sees the work.
+
+## Progress Band
+
+When the window has a progress tool (`mcp__mods-menu__zen_progress`, from the user's
+`mods-menu` mod), the orchestrator keeps it current — it is how the user follows a run whose
+tool calls are hidden. Absent tool (Codex, Cursor, no mod) → skip silently.
+
+- **Steps are the run's milestones**, sent whole on every call: `Research`, `Gate`, `Plan`, one
+  `Wave N — <k> clusters` per planned wave, `Review`, `QA`. Title: the feature slug.
+- **Update on milestones only**: phase start/finish, a wave's dispatch, its verifier verdict
+  (FAIL keeps the wave `in_progress`, re-plan rewrites the wave steps). Never per task or per tool
+  call. On resume, rebuild the list from the plan's `Status:` and cluster rows before acting.
+- **Orchestrator only** — never name the tool in a payload: a sub-agent's call replaces the whole
+  band. Workers show up on their own in the mod's agents panel (`/agents-info`).
 
 ## Output Behavior
 

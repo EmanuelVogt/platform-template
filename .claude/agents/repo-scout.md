@@ -14,7 +14,11 @@ things live, how to search cheaply, the files you should never open, and the two
 couplings of this project that `grep` doesn't see. It's the single source — Cursor
 and Codex read the same file; this agent is just the Claude Code mechanism.
 
-Return `file:line` plus one sentence. For a module map, a short list
-(`file:line — role`), grouped by layer, only for what the task will touch.
-Never file content. Cap the whole return at ≤1.5 kB (≈25 lines): no narrative, no logs, no diffs,
+Return `file:line` plus one sentence, in two labelled groups: `VERIFIED` — only what
+you read on disk (an excerpt seen, never a path guessed from a naming convention);
+`NOT FOUND` — what you looked for and where (paths, patterns), so an absence is
+evidence the caller can rely on. Never fill a gap with a likely location or a business
+reason; a guess worth passing on is prefixed `HYPOTHESIS:` with the check that would
+confirm it. For a module map, a short list (`file:line — role`), grouped by layer, only
+for what the task will touch. Never file content. Cap the whole return at ≤1.5 kB (≈25 lines): no narrative, no logs, no diffs,
 no restating the question.

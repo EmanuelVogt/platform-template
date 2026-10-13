@@ -11,6 +11,8 @@ at the root.
 - Docker Desktop (with WSL2 enabled on Windows).
 - pnpm (`npm install -g pnpm@10.33.4`).
 - Dependencies installed: `pnpm install` at the root.
+- Claude Code with the shared UI mods and the editor integration — once per machine, not per
+  repo: see [`claude-code-machine-setup.md`](claude-code-machine-setup.md).
 - `apps/api/.env` copied from `apps/api/.env.example` (`cp apps/api/.env.example apps/api/.env`
   if it does not exist yet). Since the v2.1.0 kernel changes, `NODE_ENV` and `DATABASE_SSL`
   have no code default — the boot fails fast without them — and `.env.example` already sets

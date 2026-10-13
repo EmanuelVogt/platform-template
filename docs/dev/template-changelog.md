@@ -15,6 +15,7 @@ The Claude Code harness a child ported from a sibling repo comes back into the t
 3. **Changed hooks.** `delegate-to-subagent` (statement split outside quotes/heredocs, `ENFORCED_AGENTS` = `spec-worker`/`spec-verifier`, `.specs/` free), `subagent-model-required` (four-agent guide, opus escalation-only), `comment-policy` (unsourced-narrative nudge), `dispatch-log` (fallback `~/.claude/<repo>-dispatch-log.jsonl`).
 4. **Hook tests ship**: `.claude/hooks/__tests__/`, `pnpm harness:test`, pre-push `harness`.
 5. **Agents and skills.** `ca-spec-driven` with `spec-worker`/`spec-verifier` returns beside `ca-full-cycle`; `ca-full-cycle` gains § 3.5 (QA retro + `LESSONS.md`); `repo-scout` returns VERIFIED / NOT FOUND / HYPOTHESIS; `creating-issues` drops the triage mode and the boilerplate area labels (`gh label list`); router rows for `ca-spec-driven`, `domain-modeling`, `creating-issues`; rendered docs name rendered paths, never `.jinja`.
+6. **Machine-scope setup doc.** `docs/dev/claude-code-machine-setup.md` — the UI mods (`rituaali-mods` marketplace), the Neovim button and the zellij tab titles are user scope, enabled once per machine; the repo's `.claude/settings.json` keeps declaring no plugin or marketplace. Linked from `docs/dev/local-environment.md`.
 
 ### Child migration steps (copier update from v4.0.1)
 

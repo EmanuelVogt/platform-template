@@ -11,7 +11,8 @@
 // Log: <projectsDir>/dispatch-log.jsonl, where <projectsDir> is the directory
 // holding the main transcript `<session_id>.jsonl` (the hook also fires inside
 // a subagent, whose transcript_path points under `<session>/subagents/`);
-// fallback ~/.claude/platform-dispatch-log.jsonl. A log never blocks a tool:
+// fallback ~/.claude/<repo>-dispatch-log.jsonl, <repo> being the main checkout's
+// directory name (a worktree session logs under its repo). A log never blocks a tool:
 // every failure exits 0 silently. PLATFORM_DISPATCH_DEBUG=1 also appends the
 // raw stdin (prompt truncated) to dispatch-debug.jsonl — the SubagentStart and
 // SubagentStop fields are undocumented; `raw_keys` on every start row and the
@@ -66,6 +67,14 @@ const readStdin = () => {
     return null
   }
 }
+
+const repoName = (input) =>
+  path.basename(
+    String(process.env.CLAUDE_PROJECT_DIR || input.cwd || "").replace(
+      /[/\\](\.claude[/\\]worktrees|\.worktrees)[/\\][^/\\]+[/\\]?$/,
+      ""
+    )
+  ) || "platform"
 
 // The nearest ancestor of transcript_path that holds `<session_id>.jsonl`.
 const projectsDirOf = (input) => {
@@ -465,7 +474,7 @@ try {
   const projectsDir = projectsDirOf(input)
   const file = projectsDir
     ? path.join(projectsDir, "dispatch-log.jsonl")
-    : path.join(homedir(), ".claude", "platform-dispatch-log.jsonl")
+    : path.join(homedir(), ".claude", `${repoName(input)}-dispatch-log.jsonl`)
   if (process.env.PLATFORM_DISPATCH_DEBUG === "1")
     append(file.replace(/[^/\\]+$/, "dispatch-debug.jsonl"), debugRow(input))
 

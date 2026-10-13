@@ -17,6 +17,12 @@
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/template-behind.mjs\"",
             "timeout": 15,
             "statusMessage": "Checking the template version"
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/main-sync-guard.mjs\" --session",
+            "timeout": 20,
+            "statusMessage": "Checking the default branch against origin"
           }
         ]
       }
@@ -34,6 +40,21 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/release-coordination.mjs\"",
             "statusMessage": "Checking the release lease"
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/main-sync-guard.mjs\"",
+            "statusMessage": "Checking the default branch against origin"
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/heavy-run-guard.mjs\"",
+            "statusMessage": "Checking whether the machine is already busy"
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/commit-no-stubs.mjs\"",
+            "statusMessage": "Checking the commit for stubs, skips and focused tests"
           }
         ]
       },
@@ -190,6 +211,11 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/contract-consumers.mjs\"",
             "statusMessage": "Mapping contract consumers"
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/wave-plan-check.mjs\"",
+            "statusMessage": "Checking the wave plan"
           }
         ]
       }
@@ -204,6 +230,22 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/claim-evidence.mjs\"",
+            "statusMessage": "Checking the reply for unsourced claims"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(bash *.agents/skills/ca-full-cycle/scripts/codex-worker.sh *)"
     ]
   }
 }

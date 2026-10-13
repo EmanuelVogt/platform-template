@@ -12,6 +12,8 @@
 // event is dropped from the batch after STALE_MIN; kill-orphan-dev-servers.mjs
 // (SessionEnd) remains the backstop for whatever survives all of it.
 //
+// Only servers that carry this session's CLAUDE_CODE_SESSION_ID are listed: a
+// parallel session's fan-out shares the process table too.
 // State per session in the tmpdir, as in dispatch-log.mjs. A stop event never
 // fails: every failure exits 0. PLATFORM_SERVER_SWEEP_OFF=1 disables the sweep
 // (a server booted by an agent for the main thread to use survives).
@@ -78,7 +80,7 @@ if (mode === "arm") {
   const baseline =
     live.length > 0 && Array.isArray(state.baseline)
       ? state.baseline
-      : listServers(projectDir).map((server) => server.pid)
+      : listServers(projectDir, { session }).map((server) => server.pid)
 
   writeState({ baseline, live: [...live, { agent, at: Date.now() }] })
   process.exit(0)
@@ -98,7 +100,7 @@ if (live.length > 0) {
 }
 
 const known = new Set(state.baseline)
-const killed = listServers(projectDir)
+const killed = listServers(projectDir, { session })
   .filter((server) => !known.has(server.pid))
   .filter((server) => server.detached || server.worktree)
   .filter(terminate)

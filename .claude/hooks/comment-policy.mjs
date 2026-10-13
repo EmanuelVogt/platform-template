@@ -101,8 +101,19 @@ const sample = blocks
   .map((b) => "  " + b[0] + (b.length > 1 ? ` (+${b.length - 1} lines)` : ""))
   .join("\n")
 
+// A comment that tells a business story ("came from legacy", "usually") with no source on
+// the same line is the code-level twin of the unsourced reply — a nudge, not a block.
+const NARRATIVE =
+  /(legado|legacy|[ée] comum|costuma|geralmente|normalmente|historicamente|a ideia [ée]|sempre foi|por conven[çc][ãa]o|historically|usually|typically|it'?s common|always been|the idea (is|was)|by convention)/i
+const SOURCED = /(\bAD-\d+\b|\bADR\b|\bspec\b|#\d+|\.md\b|usu[áa]rio|\buser\b)/i
+const unsourced = flat.filter((t) => NARRATIVE.test(t) && !SOURCED.test(t))
+const narrative =
+  unsourced.length === 0
+    ? ""
+    : `\nUnsourced narrative (${unsourced.length}): ${unsourced.slice(0, 3).join(" | ")} — a comment states a business reason, history or frequency only with its source beside it (AD-nn, spec, the user's words); without one, delete it or ask the user.`
+
 const context = `Comment added in this edit (${blocks.length} block(s)) — ${APPLIED}
-${sample}
+${sample}${narrative}
 Validate against .agents/skills/code-quality/SKILL.md (default ZERO; valid cases: an invariant the type does not capture / an external workaround with a reference / a domain constraint outside the adjacent code / a counterintuitive decision another dev would "fix"; JSDoc only on public API). If any does not fit, remove it with a NEW Edit; while you are there, clean up pre-existing noise comments in the region you touched.`
 
 process.stdout.write(

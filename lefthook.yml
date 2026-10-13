@@ -1,3 +1,15 @@
+# Só avisa (nunca barra): uma linha com o drift quando o commit/merge caiu no branch
+# padrão enquanto ele está atrás de origin (.claude/hooks/main-sync-guard.mjs).
+post-commit:
+  commands:
+    main-drift:
+      run: node .claude/hooks/main-sync-guard.mjs --git-hook
+
+post-merge:
+  commands:
+    main-drift:
+      run: node .claude/hooks/main-sync-guard.mjs --git-hook
+
 pre-push:
   piped: true # pipeline: se typecheck OU test falhar, o push é barrado
   commands:
@@ -20,3 +32,7 @@ pre-push:
     test-coverage:
       priority: 4
       run: pnpm test:coverage
+    # os testes dos hooks do harness (.claude/hooks/__tests__): segundos, sem Docker.
+    harness:
+      priority: 5
+      run: pnpm harness:test

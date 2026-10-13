@@ -52,12 +52,23 @@ test("the prune task removes every template-only script", () => {
   }
 })
 
+// `scripts/platform/__tests__` is excluded from the child; `.claude/hooks/__tests__`
+// ships with the harness, so `harness:test` stays in the child manifest.
 test("no template-only script escapes the prune list", () => {
   for (const [name, command] of Object.entries(manifest.scripts)) {
-    if (!/catalog|template-smoke|__tests__/.test(command)) continue
+    if (!/catalog|template-smoke|scripts\/platform\/__tests__/.test(command))
+      continue
     assert.ok(
       TEMPLATE_ONLY_SCRIPTS.includes(name),
       `"${name}" depende do catálogo e não está na lista de poda`
     )
   }
+})
+
+test("harness:test ships to the child — the prune task keeps it", () => {
+  assert.match(
+    manifest.scripts["harness:test"] ?? "",
+    /\.claude\/hooks\/__tests__/
+  )
+  assert.ok(!pruneTask.command.includes("'harness:test'"))
 })

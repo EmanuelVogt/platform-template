@@ -39,18 +39,23 @@ test("dev-workflow names no Jest construct (testRegex) for the api test include"
 })
 
 test("dev-workflow's pre-push chain matches lefthook.yml's real command order", () => {
-  const commandsBlock = read("lefthook.yml").slice(
-    read("lefthook.yml").indexOf("commands:")
-  )
+  const lefthook = read("lefthook.yml")
+  const prePush = lefthook.slice(lefthook.indexOf("\npre-push:"))
+  const commandsBlock = prePush.slice(prePush.indexOf("commands:"))
   const commandKeys = [...commandsBlock.matchAll(/^\s{4}([a-z-]+):\s*$/gm)].map(
     (m) => m[1]
   )
-  assert.deepEqual(commandKeys, ["migrations", "typecheck", "test-coverage"])
+  assert.deepEqual(commandKeys, [
+    "migrations",
+    "typecheck",
+    "test-coverage",
+    "harness",
+  ])
 
   assert.match(
     read(".agents/skills/dev-workflow/SKILL.md"),
-    /`migrations`[\s\S]{0,120}?`typecheck`[\s\S]{0,120}?`test-coverage`/,
-    "dev-workflow's pre-push description must name migrations -> typecheck -> test-coverage in order"
+    /`migrations`[\s\S]{0,120}?`typecheck`[\s\S]{0,120}?`test-coverage`[\s\S]{0,120}?`harness`/,
+    "dev-workflow's pre-push description must name migrations -> typecheck -> test-coverage -> harness in order"
   )
 })
 

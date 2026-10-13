@@ -114,10 +114,9 @@ The 1M window is why: nothing ever forced a break.
   a small config) and blocks the fifth onward with the exact
   `Agent(subagent_type: "repo-scout", model: …)` call to make instead; plain listings
   (`ls`, `stat`, `wc`, `file`, and `fd`/`find` scoped to a repo directory) never count. Inside a subagent (`agent_id` in the hook input) it exits with no
-  enforcement at all unless the subagent's type is in `ENFORCED_AGENTS` — empty today,
-  since no `ca-full-cycle` agent type has been wired into it: every subagent,
-  the scout included, currently navigates and runs commands with zero enforcement from this
-  hook. Subagents can spawn subagents here (verified 2026-08-17: a worker called
+  enforcement at all unless the subagent's type is in `ENFORCED_AGENTS` — `spec-worker` and
+  `spec-verifier` (ca-spec-driven), where only the Read byte budget applies; `ca-full-cycle`
+  workers dispatch as `general-purpose`, outside the set. Subagents can spawn subagents here (verified 2026-08-17: a worker called
   `repo-scout` and got its answer), which is what makes that nesting real.
 - **Spec execution is delegated from 4 tasks up, in parallel.** In the `ca-full-cycle` skill a
   plan of ≤3 tasks runs **inline in the planning window** (a worker's warm-up costs more than the
@@ -132,13 +131,13 @@ The 1M window is why: nothing ever forced a break.
   `SendMessage` while it is under its turn budget. **The tier is judgement per dispatch,
   never hard-coded**: every `Agent` call — to a worker, wave verifier or Reviewer, or to
   `repo-scout`/`shell-runner` — carries an explicit `model`, chosen by what that dispatch
-  touches (mechanics → haiku, CRUD/UI → sonnet, domain/contract/migration/ADR-governed →
-  opus; Reviewer → opus for auth, payments, data integrity, or a rule the
-  product's own domain doc marks critical; scout → haiku for a pointed question, sonnet
-  for a module map; runner → haiku). `subagent-model-required.mjs` hook-blocks only the
-  `repo-scout`/`shell-runner` call without it, printing that agent's tier guide; a
-  worker/verifier/Reviewer's `model` is the `ca-full-cycle` card's own rule, unenforced by
-  this hook. The `model:` in the agent's frontmatter is only the fallback for when the hook
+  touches (mechanics → haiku, every other first dispatch → sonnet, opus only as an escalation
+  after a failure at sonnet or for a P0 plan; Reviewer → opus only for a P0 feature — auth,
+  payments, data integrity, or a rule the product's own domain doc marks critical; scout →
+  haiku for a pointed question, sonnet for a module map; runner → haiku).
+  `subagent-model-required.mjs` hook-blocks a `repo-scout`/`shell-runner`/`spec-worker`/
+  `spec-verifier` call without it, printing that agent's tier guide; a `general-purpose`
+  worker/verifier/Reviewer is only tagged with its tier. The `model:` in the agent's frontmatter is only the fallback for when the hook
   is off. Waves and clusters are authored in the Tasks phase from `Depends on` /
   `Touches` / `Exclusive`. Parallel workers share the checkout, so they commit
   pathspec-limited (`git commit -m … -- <files>`) and never `stash`/`add -A`. Model and
@@ -148,9 +147,8 @@ The 1M window is why: nothing ever forced a break.
   payload — there is no per-role agent definition file.
   **Fragility to know:** nested `Agent` calls inside subagents are not documented by
   Anthropic; if a Claude Code update removes them, an enforced worker can neither
-  navigate nor delegate — the fix, if a `ca-full-cycle` agent type is ever wired into
-  `ENFORCED_AGENTS`, is to drop it from that set until nesting is back; moot today since
-  the set is empty.
+  navigate nor delegate — the fix is to drop `spec-worker`/`spec-verifier` from
+  `ENFORCED_AGENTS` until nesting is back.
 - **The main window's gates go to `shell-runner`.** Test, typecheck, lint and build are
   blocked in the main thread by the same hook and delegated to `.claude/agents/shell-runner.md`
   (haiku on almost every dispatch, `Bash` + `Read`). It saves the whole log to a file and returns exit code
@@ -229,8 +227,10 @@ never recreate `.cursor/skills` — Cursor reads `.agents` directly.
 - `.claude/hooks/reinject-tripwires.mjs` — re-injects the CLAUDE.md Two standing rules
   section on the next prompt every ~2 MB of transcript growth, so long sessions don't
   drift from the initial instructions.
-- `.claude/hooks/edit-reminders.mjs` — design-system and comment-policy reminders on
-  edit, rate-limited per session to once every ~2 MB of transcript instead of every edit.
+- `.claude/hooks/edit-reminders.mjs` — on an `apps/web` edit, a pointer to the
+  `frontend-architecture` skill (FSD boundaries, no barrels, the Kubb client; the UI kit is
+  the product's); on any code edit, the comment policy. Rate-limited per session to once
+  every ~2 MB of transcript instead of every edit.
 - `.claude/hooks/plans-in-english.mjs` — `PreToolUse(Edit|Write|MultiEdit)`: blocks a
   write under `.ca-plans/` whose new text reads as pt-BR prose (thresholds and exemptions in
   [Token economy](#token-economy); constants at the top of the file). Fires in the main
@@ -260,21 +260,19 @@ never recreate `.cursor/skills` — Cursor reads `.agents` directly.
   (`git status --short | head` isn't navigation — a filter after a pipe reduces what
   enters the context); the redirect-to-file check still runs on the whole statement, and a
   `{ …; } > file` group counts as one redirect. A Bash statement whose path
-  arguments are **all** under `.claude/`, `.agents/`, `.agents/skills/`, `scripts/` or
+  arguments are **all** under `.claude/`, `.agents/`, `docs/`, `scripts/`, `.specs/` or
   `.ca-plans/` (`HARNESS_DIRS`) doesn't count as navigation — the quota exists to push
   exploration of _product_ code to `repo-scout`, while editing the harness itself is work
   the main thread does directly; a statement with no path argument, or with one path
   outside the list, counts as before. A `Read` counts as one navigation against the same
   quota when it's a whole-file or large read of source (`limit` absent or >
-  `READ_FREE_LINES` = 200 lines); ranged reads and anything under `.ca-plans/`, `.claude/`,
-  `.agents/`, `docs/` or outside the project stay free — `no-huge-reads.mjs` remains the
-  separate hard size cap. Silent inside subagents
-  (`agent_id`), for output redirected to a file, and with `PLATFORM_DELEGATE_OFF=1`.
-  `ENFORCED_AGENTS` is empty today — no `ca-full-cycle` agent type is wired into it — so the
-  Read **byte** budget for an agent's lifetime (`READ_BYTES_FREE_PER_AGENT`
-  = 120 000), the guard against reading a 30 kB reference whole before the first edit,
-  currently applies to none: a worker's own turn-budget discipline (the `ca-full-cycle`
-  card) is what limits it instead. Every `Read`
+  `READ_FREE_LINES` = 200 lines); ranged reads and anything under `.specs/`, `.ca-plans/`,
+  `.claude/`, `.agents/`, `docs/` or outside the project stay free — `no-huge-reads.mjs` remains the
+  separate hard size cap. Statements split outside quotes and heredoc bodies
+  (`lib/shell-statements.mjs`), so a commit message is text. Silent inside subagents other
+  than `ENFORCED_AGENTS` (`spec-worker`, `spec-verifier`), for output redirected to a file,
+  and with `PLATFORM_DELEGATE_OFF=1`; inside those two only the Read **byte** budget for the
+  agent's lifetime (`READ_BYTES_FREE_PER_AGENT` = 120 000) applies. Every `Read`
   counts **bytes** against a budget (`READ_BYTES_FREE_PER_TURN` = 48 000 per user turn on
   the main thread), in any directory, ranged or
   not — a ranged read by the byte length of its lines, a whole read by the file size; over
@@ -283,13 +281,14 @@ never recreate `.cursor/skills` — Cursor reads `.agents` directly.
   main thread's quota and byte budget each user turn. Quotas, budget and the enforced list
   are the constants at the top of the file. Rule in [Token economy](#token-economy).
 - `.claude/hooks/subagent-model-required.mjs` — `PreToolUse(Agent)`: blocks a dispatch of
-  `repo-scout` or `shell-runner` whose `model` is missing or outside
+  `repo-scout`, `shell-runner`, `spec-worker` or `spec-verifier` whose `model` is missing or outside
   `haiku|sonnet|opus|fable`, and prints that agent's tier guide (the `GUIDE` map at the top
   of the file); every other dispatch, worker/wave-verifier/Reviewer included, is only
   tagged with its `model` (or `inherit`) and passed through. Fires in the main thread and
-  inside nesting subagents alike. Also holds the nesting shape: `NESTING_AGENTS` is empty
-  today — no agent type is blocked from nesting through this hook —
-  while `repo-scout`/`shell-runner` (`LEAF_AGENTS`) still never dispatch further. The
+  inside nesting subagents alike. Also holds the nesting shape: a `spec-worker`/`spec-verifier`
+  (`NESTING_AGENTS`) dispatches only `repo-scout`/`shell-runner`, never a `fork`, and those
+  two (`LEAF_AGENTS`) never dispatch further; opus for a nesting agent needs
+  `escalation: <reason>` in the dispatch. The
   `shell-runner` guide names its two callers — the orchestrator's Build gate and the
   Verifier's Final gate — since a worker runs its own scoped gate. The `model:` in each
   agent's frontmatter is only the fallback for when the hook is off (`PLATFORM_DELEGATE_OFF=1`).
@@ -297,7 +296,7 @@ never recreate `.cursor/skills` — Cursor reads `.agents` directly.
 - `.claude/hooks/dispatch-log.mjs` — `PreToolUse(Agent)` (`dispatch`), `SubagentStart`
   (`start`), `SubagentStop` (`stop`): appends one JSON line per event to
   `~/.claude/projects/<slug>/dispatch-log.jsonl` (the directory of the session's main
-  transcript; fallback `~/.claude/platform-dispatch-log.jsonl`) — who dispatched what, tier,
+  transcript; fallback `~/.claude/<repo>-dispatch-log.jsonl`) — who dispatched what, tier,
   wave/cluster parsed from the payload, and on stop the run's turns, context, output,
   commit hashes, outcome and last text read from the subagent transcript (assistant rows
   deduped by `message.id`; a fork's inherited rows skipped by uuid). Never blocks: any
@@ -319,11 +318,11 @@ never recreate `.cursor/skills` — Cursor reads `.agents` directly.
   multi-cluster waves were dispatched one worker at a time, 26–60 min apart. Per-session
   state in the tmpdir (`platform-wave-<session>.json`). Rule in
   [Token economy](#token-economy) and `ca-full-cycle` implement.md § *Dispatch the wave*.
-- `wave-plan-check.mjs` (removed) — `PostToolUse(Edit|Write|MultiEdit)` on
-  `.ca-plans/*/plan*.md`: re-runs two rules of the Wave/Cluster Cross-Check after every write
-  of a task plan — sibling clusters of one wave share no path (exact, or glob containment:
-  `a/b/**`, `a/b/*`, `a/b/` cover a file under `a/b/`) and an `Exclusive: yes` task is alone
-  in its wave — from the `### T<n>` `Touches` fields and the `## Wave Plan` table (the
+- `.claude/hooks/wave-plan-check.mjs` — `PostToolUse(Edit|Write|MultiEdit)` on
+  `.ca-plans/*/plan*.md` and `.specs/**/tasks.md`: re-runs three rules of the Wave/Cluster
+  Cross-Check after every write of a task plan — sibling clusters of one wave share no path
+  (exact, or glob containment: `a/b/**`, `a/b/*`, `a/b/` cover a file under `a/b/`), an
+  `Exclusive: yes` task is alone in its wave, and no wave holds 3+ single-task clusters — from the `### T<n>` `Touches` fields and the `## Wave Plan` table (the
   table's files column is the fallback when a task has no parsed `Touches`). One stderr line
   per violation, exit 2; a missing section exits 0. Measured 2026-08-20: 3 of 4
   `blocked-by-ownership` stops were unlisted files (the Touches audit in `ca-full-cycle`
@@ -350,12 +349,16 @@ never recreate `.cursor/skills` — Cursor reads `.agents` directly.
   booted and never killed holds the port and keeps compiling until the machine reboots.
   With a sibling still running the sweep is deferred: a fan-out shares the process table,
   and only the last agent out tells a leak from a server another worker is still using. An
-  agent that dies without its stop event drops out of the batch after 90 min. Per-session
+  agent that dies without its stop event drops out of the batch after 90 min. Only families
+  carrying this session's `CLAUDE_CODE_SESSION_ID` count — a parallel session's are not its own. Per-session
   state in the tmpdir (`platform-servers-<session>.json`), never blocks a stop,
   `PLATFORM_SERVER_SWEEP_OFF=1` disables it — the escape hatch for a server an agent booted
   for the main thread to use.
 - `.claude/hooks/kill-orphan-dev-servers.mjs` — `SessionEnd`: the backstop of the one
-  above, over every checkout sharing the repo's git dir (linked worktrees included).
+  above — kills the servers THIS session started (they inherit its `CLAUDE_CODE_SESSION_ID`,
+  read from `/proc/<pid>/environ` on Linux, `ps -E` on macOS) in every checkout sharing the
+  repo's git dir; another session's servers survive. Test seams: `PLATFORM_PS_OUTPUT`,
+  `PLATFORM_KILL_DRY_RUN=1`.
   Detection in `lib/dev-servers.mjs`, shared by both: a process holding a port or a watcher
   (vite, `nest start`, `next dev`, a `--watch` tsc/vitest/jest, nodemon/tsx, drizzle studio,
   `node dist/main`, an attached `docker compose up`), climbing from the leaf to the wrapper
@@ -363,6 +366,27 @@ never recreate `.cursor/skills` — Cursor reads `.agents` directly.
   leaf alone leaves the wrapper respawning it. A one-shot run (`vite build`, `vitest run`)
   is not a server, and what runs in a **terminal of the main checkout** is the user's and is
   never touched. **Claude Code only** — in Cursor and Codex, kill the server by hand.
+- `.claude/hooks/main-sync-guard.mjs` — `SessionStart` (`--session`), `PreToolUse(Bash)`,
+  lefthook `post-commit`/`post-merge` (`--git-hook`): blocks landing on (or pushing) the
+  default branch while it is behind origin, and reminds that pushing unpushed work is the
+  user's call; never pushes. The branch is detected (`PLATFORM_MAIN_BRANCH`, else
+  origin/HEAD, else `main`/`master`), never assumed.
+- `.claude/hooks/heavy-run-guard.mjs` — `PreToolUse(Bash)`: denies a heavy run (test,
+  typecheck, lint, build, contract regen, dev, install) while another one is alive or the
+  machine is under load/memory pressure; `--wait` blocks until free. Escape hatch, the
+  user's call only: a `PLATFORM_HEAVY_GUARD_OFF=1` prefix.
+- `.claude/hooks/commit-no-stubs.mjs` — `PreToolUse(Bash)` on `git commit`: holds a commit
+  whose diff adds `.only`, a bare `.skip`/`.todo`, a literal-on-literal `expect`, a "not
+  implemented" throw, a lint/ts suppression or an unconditioned `TODO`;
+  `PLATFORM_COMMIT_STUBS_OFF=1` prefix on the user's say-so only.
+- `.claude/hooks/comment-policy.mjs` — `PostToolUse(Edit|Write|MultiEdit)`: blocks a
+  mechanical comment violation (unconditioned `TODO`, `eslint-disable`, banner); any other
+  new comment, and an unsourced narrative one ("usually", "legacy"), comes back as context.
+- `.claude/hooks/claim-evidence.mjs` — `Stop`: re-opens the turn once when the reply states a
+  frequency, history or intent with no source and no hypothesis label;
+  `PLATFORM_CLAIMS_OFF=1` disables it.
+- Tests: `.claude/hooks/__tests__/` — `run-hook.mjs` spawns each hook as Claude Code does;
+  `pnpm harness:test`, also a lefthook pre-push step.
 - `.claude/statusline.mjs` — status line showing the session's current context, dim below
   150k, yellow above, red above 300k. Both read the exact figure from the last `usage`
   entry in the transcript via `.claude/hooks/lib/transcript-context.mjs` — the file size

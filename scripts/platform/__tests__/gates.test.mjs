@@ -106,15 +106,17 @@ test("GAT-07: apps/api/package.json não tem mais nenhum script test* nem o bloc
   assert.equal(manifest.jest, undefined)
 })
 
-test("GAT-05: lefthook.yml pre-push é piped e roda migrations → typecheck → test-coverage nessa ordem", () => {
+test("GAT-05: lefthook.yml pre-push é piped e roda migrations → typecheck → test-coverage → harness nessa ordem", () => {
   const { "pre-push": prePush } = readYaml(LEFTHOOK_PATH)
   assert.equal(prePush.piped, true)
   assert.deepEqual(Object.keys(prePush.commands), [
     "migrations",
     "typecheck",
     "test-coverage",
+    "harness",
   ])
   assert.equal(prePush.commands["test-coverage"].run, "pnpm test:coverage")
+  assert.equal(prePush.commands.harness.run, "pnpm harness:test")
 })
 
 test("GAT-05: lefthook.yml não tem mais os comandos test-api/test-web", () => {
@@ -135,7 +137,7 @@ test("GAT-05: lefthook-local.yml mantém catalog-typecheck no pre-push", () => {
 // comentário sobre `migrations`), não de AD-027 — AD-027 decide o gate de
 // cobertura (`pnpm test:coverage`, com Docker) e os pisos por glob; não decide
 // ordem de execução do pre-push.
-test("T38: pre-push roda mais barato primeiro — migrations/freeze-guard → typecheck → catalog-typecheck → test-coverage → platform-scripts", () => {
+test("T38: pre-push roda mais barato primeiro — migrations/freeze-guard → typecheck → catalog-typecheck → test-coverage → harness → platform-scripts", () => {
   const commands = mergedPrePushCommands()
   for (const name of [
     "freeze-guard",
@@ -143,6 +145,7 @@ test("T38: pre-push roda mais barato primeiro — migrations/freeze-guard → ty
     "typecheck",
     "catalog-typecheck",
     "test-coverage",
+    "harness",
     "platform-scripts",
   ]) {
     assert.equal(
@@ -161,6 +164,7 @@ test("T38: pre-push roda mais barato primeiro — migrations/freeze-guard → ty
     "typecheck",
     "catalog-typecheck",
     "test-coverage",
+    "harness",
     "platform-scripts",
   ])
 })
@@ -174,12 +178,13 @@ test("T38: o pre-push do template roda a suíte de scripts da plataforma", () =>
   assert.match(command?.run ?? "", /scripts\/platform\/__tests__/)
 })
 
-test("T38: num filho renderizado (sem lefthook-local.yml) a ordem continua mais barato primeiro — migrations → typecheck → test-coverage", () => {
+test("T38: num filho renderizado (sem lefthook-local.yml) a ordem continua mais barato primeiro — migrations → typecheck → test-coverage → harness", () => {
   const { "pre-push": prePush } = readYaml(LEFTHOOK_PATH)
   assert.deepEqual(orderByPriority(prePush.commands), [
     "migrations",
     "typecheck",
     "test-coverage",
+    "harness",
   ])
 })
 

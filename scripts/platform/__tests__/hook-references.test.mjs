@@ -45,12 +45,14 @@ const KNOWN_HANDBOOK_EXCEPTIONS = [
 const PATH_RE =
   /(?<![/~])(?:\.{1,2}\/)*[A-Za-z0-9_-]{2,}(?:\/[A-Za-z0-9_.-]+)+\.[A-Za-z0-9]+\b/g
 
+// `__tests__/` ships with the hooks (run by `pnpm harness:test`) but holds
+// fixtures, not hooks — its fixture paths are not repo references.
 function listHookFiles() {
   const files = []
   for (const entry of readdirSync(HOOKS_DIR, { withFileTypes: true })) {
     if (entry.isFile() && entry.name.endsWith(".mjs")) {
       files.push(path.join(HOOKS_DIR, entry.name))
-    } else if (entry.isDirectory()) {
+    } else if (entry.isDirectory() && entry.name !== "__tests__") {
       const subDir = path.join(HOOKS_DIR, entry.name)
       for (const sub of readdirSync(subDir, { withFileTypes: true })) {
         if (sub.isFile() && sub.name.endsWith(".mjs")) {
@@ -142,8 +144,24 @@ function isKnownHandbookException(relFile, reference) {
   )
 }
 
-test("the harness ships exactly 21 hook files under .claude/hooks", () => {
-  assert.equal(listHookFiles().length, 21)
+test("the harness ships exactly 29 hook files under .claude/hooks (24 hooks + 5 in lib/)", () => {
+  assert.equal(listHookFiles().length, 29)
+})
+
+test("the hook tests ship with the harness and `harness:test` runs them", () => {
+  const testsDir = path.join(HOOKS_DIR, "__tests__")
+  const tests = readdirSync(testsDir).filter((name) =>
+    name.endsWith(".test.mjs")
+  )
+  assert.ok(tests.length >= 11, `only ${tests.length} hook test files`)
+  assert.ok(shippedSet().has(".claude/hooks/__tests__/run-hook.mjs"))
+  const manifest = JSON.parse(
+    readFileSync(path.join(REPO_ROOT, "package.json"), "utf8")
+  )
+  assert.match(
+    manifest.scripts["harness:test"] ?? "",
+    /node --test '\.claude\/hooks\/__tests__\/\*\*\/\*\.test\.mjs'/
+  )
 })
 
 test("ca-full-cycle ships in the skill set and .claude/skills/ca-full-cycle resolves to it (AC-04)", () => {
@@ -204,29 +222,23 @@ test("no shipped doc or skill under .agents/skills/**, .claude/agents/** names t
   }
 })
 
-test("plans-in-english.mjs is registered; specs-in-english.mjs and wave-plan-check.mjs are gone", () => {
+// v4.1.0 brings `wave-plan-check.mjs` back (ca-spec-driven `tasks.md` and
+// ca-full-cycle `plan*.md`); `.specs/` is ca-spec-driven's artifact directory
+// again, so the v4.0.0 `.specs` bans on hooks and the shipped set are gone —
+// only the removed `tlc-spec-driven` framework stays banned.
+test("plans-in-english.mjs and wave-plan-check.mjs are registered; specs-in-english.mjs is gone", () => {
   const settings = readFileSync(SETTINGS_FILE, "utf8")
   assert.match(settings, /plans-in-english\.mjs/)
+  assert.match(settings, /wave-plan-check\.mjs/)
   assert.doesNotMatch(settings, /specs-in-english\.mjs/)
-  assert.doesNotMatch(settings, /wave-plan-check\.mjs/)
   assert.equal(existsSync(path.join(HOOKS_DIR, "plans-in-english.mjs")), true)
+  assert.equal(existsSync(path.join(HOOKS_DIR, "wave-plan-check.mjs")), true)
   assert.equal(existsSync(path.join(HOOKS_DIR, "specs-in-english.mjs")), false)
-  assert.equal(existsSync(path.join(HOOKS_DIR, "wave-plan-check.mjs")), false)
-})
-
-test("no hook references a live `.specs` path, slash or bare (AC-09)", () => {
-  for (const file of listHookFiles()) {
-    assert.doesNotMatch(
-      readFileSync(file, "utf8"),
-      /\.specs\b/,
-      `${path.relative(REPO_ROOT, file)} still references .specs`
-    )
-  }
 })
 
 // .claude/agents/** joins the sweep per plan-01 QA carry-over (review.md item 9), same
 // reasoning as the tlc-spec-driven sweep above.
-test("no hook, top-level script or agent card references the removed spec-worker/spec-verifier cards (AC-09)", () => {
+test("every spec-worker/spec-verifier card a hook, top-level script or agent card names exists (AC-09)", () => {
   const scriptsDir = path.join(REPO_ROOT, "scripts")
   const topLevelScripts = readdirSync(scriptsDir, { withFileTypes: true })
     .filter((entry) => entry.isFile() && entry.name.endsWith(".mjs"))
@@ -236,17 +248,19 @@ test("no hook, top-level script or agent card references the removed spec-worker
     .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
     .map((entry) => path.join(agentsDir, entry.name))
   for (const file of [...listHookFiles(), ...topLevelScripts, ...agentCards]) {
-    assert.doesNotMatch(
-      readFileSync(file, "utf8"),
-      /spec-(worker|verifier)\.md/,
-      `${path.relative(REPO_ROOT, file)} still references a removed spec-worker/spec-verifier card`
-    )
+    for (const [card] of readFileSync(file, "utf8").matchAll(
+      /spec-(worker|verifier)\.md/g
+    )) {
+      assert.ok(
+        existsSync(path.join(agentsDir, card)),
+        `${path.relative(REPO_ROOT, file)} names ${card}, which does not exist`
+      )
+    }
   }
 })
 
 // AC-03 sweep hardening: the checks above are scoped to individual harness
-// roots; this extends the same patterns, plus the literal `.specs` itself,
-// across the FULL shipped set (every tracked, non-excluded file a child
+// roots; this extends the tlc-spec-driven ban across the FULL shipped set (every tracked, non-excluded file a child
 // actually receives — derived the same way shipped-set.test.mjs proves
 // AC-10, never a list hand-picked here). Read from source, not a render: a
 // `.specs`/tlc-spec-driven mention is never inside `{{ }}`/`{% %}`
@@ -282,66 +296,17 @@ function shippedTextFiles() {
   return files
 }
 
-// `.specs/` also names the CHILD's own (still-existing) specs directory,
-// distinct from the removed spec-driven-framework artifact AC-03 targets.
-// Declared exemption trio (D-13, wave-2 verify gap): docs/dev/template.md's
-// ownership row and feedback.mjs's PRODUCT_PREFIXES (both T2/D-10), plus
-// .prettierignore — it protects the child's kept legacy `.specs/` (and the
-// template's own frozen history) from repo-wide format. Named here, not
-// silently swallowed, same idiom as KNOWN_HANDBOOK_EXCEPTIONS above; the test
-// below asserts each entry is both reachable by the sweep and still carries
-// the literal, so a stale exemption fails loud instead of quietly widening
-// the hole.
-const DOT_SPECS_LITERAL_EXCEPTIONS = [
-  path.join(DOCS_DIR, "dev", "template.md"),
-  path.join(
-    REPO_ROOT,
-    "scripts",
-    "platform",
-    "lib",
-    "commands",
-    "feedback.mjs"
-  ),
-  path.join(REPO_ROOT, ".prettierignore"),
-]
-
-test("AC-03: no file in the full shipped set references .specs, tlc-spec-driven, spec-worker or spec-verifier (static half)", () => {
+test("AC-03: no file in the full shipped set references tlc-spec-driven (static half)", () => {
   const files = shippedTextFiles()
   assert.ok(
     files.length >= 200,
     `only ${files.length} candidate files found — the sweep's file set likely stopped resolving`
   )
-  for (const exception of DOT_SPECS_LITERAL_EXCEPTIONS) {
-    assert.ok(
-      files.includes(exception),
-      `${path.relative(REPO_ROOT, exception)} is declared as a .specs exemption but is not in the shipped set the sweep walks`
-    )
-  }
   for (const file of files) {
-    const content = readFileSync(file, "utf8")
-    const relFile = path.relative(REPO_ROOT, file)
-    if (DOT_SPECS_LITERAL_EXCEPTIONS.includes(file)) {
-      assert.match(
-        content,
-        /\.specs\b/,
-        `${relFile} is a declared .specs exemption but no longer contains the literal — remove the stale exemption`
-      )
-    } else {
-      assert.doesNotMatch(
-        content,
-        /\.specs\b/,
-        `${relFile} still references .specs`
-      )
-    }
     assert.doesNotMatch(
-      content,
+      readFileSync(file, "utf8"),
       /tlc-spec-driven/,
-      `${relFile} still references tlc-spec-driven`
-    )
-    assert.doesNotMatch(
-      content,
-      /spec-(worker|verifier)\b/,
-      `${relFile} still references spec-worker/spec-verifier`
+      `${path.relative(REPO_ROOT, file)} still references tlc-spec-driven`
     )
   }
 })

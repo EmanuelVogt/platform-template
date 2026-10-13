@@ -94,6 +94,15 @@ const SELF_REFERENCE = HOOK_PATH
 // harness text.
 const PT_SWEEP_EXCLUDED = [
   path.join(REPO_ROOT, "docs", "dev", "template-changelog.md"),
+  // Fixture data, not prose: the pt-BR replies `claim-evidence.mjs` must catch
+  // (the hook itself is swept and reads as English).
+  path.join(
+    REPO_ROOT,
+    ".claude",
+    "hooks",
+    "__tests__",
+    "claim-evidence.test.mjs"
+  ),
 ]
 
 // Read straight off the hook's own source rather than re-declared as a

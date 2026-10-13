@@ -3,13 +3,24 @@
 // agent to delegate navigation and heavy commands to a subagent (the tier is
 // chosen by whoever dispatches — subagent-model-required.mjs demands the
 // `model`).
-// Measured in .agents/skills/agent-harness/SKILL.md: 87% of all shell output is navigation
-// (968 direct calls against 52 delegations), and every character that lands in
-// the main context is repaid on every turn until the end of the session. It
-// applies to the main agent only — ENFORCED_AGENTS is empty (a predecessor
-// framework's worker/verifier roles, the only agents it ever named, are gone);
-// every subagent (agent_id present) now exits silently at the top of the
-// file, otherwise it would block repo-scout itself.
+// Measured in .agents/skills/agent-harness/SKILL.md: 87% of all shell output is
+// navigation (968 direct calls against 52 delegations), and every character
+// that lands in the main context is repaid on every turn until the end of the
+// session. It applies to the main agent and to the
+// subagents that also delegate (ENFORCED_AGENTS: spec-worker and
+// spec-verifier from ca-spec-driven, which nest repo-scout and
+// shell-runner); inside the other subagents (agent_id present, type outside
+// the list) it exits silently, otherwise it would block repo-scout itself.
+// Inside an enforced subagent neither navigation nor heavy runs are counted
+// (decided 2026-08-21 on the sibling harness this hook was ported from): the
+// worker and the Verifier run their own scoped gates directly
+// (`cmd > log 2>&1; echo exit=$?`, then grep on the log), because 73 of 196
+// worker→runner dispatches had to be escalated to sonnet just to slice a red
+// log — the hop, not the tier, was the cost. shell-runner keeps exactly two
+// callers: the orchestrator's Build gate and the Verifier's Final gate. What
+// stays enforced inside those agents is the Read BYTE budget for the agent's
+// lifetime (READ_BYTES_FREE_PER_AGENT) — the guard against reading a 30 kB
+// reference whole before the first edit.
 //
 // Free quota per user turn: NAV_FREE_PER_TURN quick navigations (a `grep -n`
 // in a known file, a `cat` of a small config) pass; from there on, delegate.
@@ -21,53 +32,38 @@
 // lines by nature, and `fd`/`find` scoped to a directory inside the repo (not
 // the root) are a bounded listing, not exploration — `fd`/`find` with no
 // directory, or with `.`/the root, still count. A `{ …; } > file` /
-// `( … ) > file` group is one redirect, not N statements. A heavy command
-// (test, typecheck, lint, build) has no quota on the main thread: it goes to
-// shell-runner, which returns the exit code and literal failures with the log
-// in a file.
-// Inside an ENFORCED_AGENTS subagent neither navigation nor heavy runs are
-// counted, decided 2026-08-21: the worker and the Verifier run their own
-// scoped gates directly (`cmd > log 2>&1; echo exit=$?`, then grep on the
-// log), because 73 of 196 worker→runner dispatches had to be escalated to
-// sonnet just to slice a red log — the hop, not the tier, was the cost.
-// shell-runner keeps exactly two callers: the orchestrator's Build gate and
-// the Verifier's Final gate. What stays enforced inside those agents is the
-// Read BYTE budget for the agent's lifetime (READ_BYTES_FREE_PER_AGENT), the
-// guard against reading a 30 kB reference whole before the first edit —
-// measured the same day, a worker spent a median 21 turns and 94k of context
-// warming up. ENFORCED_AGENTS is empty today: the predecessor framework's
-// worker and verifier roles are gone, and no ca-full-cycle agent type is
-// wired in their place.
-// A piped command is classified by its first command only (a filter after a
-// pipe like `| tail` or `| head` reduces what enters the context, it isn't
-// navigation); the redirect-to-file check still runs on the whole statement.
-// A Bash statement whose path arguments are ALL under HARNESS_DIRS (.claude/,
-// .agents/, .agents/skills/, scripts/, .ca-plans/) does not count as navigation: the
-// quota exists to push exploration of PRODUCT code to repo-scout, while editing
-// the harness itself (hooks, skills, agents, agent docs, scripts, specs) is work
-// the main thread does directly. Until 2026-08-21 the way through was the
-// `git show HEAD:<path>` form — `git` is not a NAV_CMD — and that loophole is
-// what made that day's delegation analysis possible; the exemption states the
-// intent instead of leaving it to an accident. A statement with no path argument
-// keeps the old behaviour, and a single path outside the list (`cat .claude/x
-// apps/y`) makes the whole statement count again. The exemption is for the
-// navigation COUNT only — the per-turn Read byte budget below is untouched.
-// On the main thread a Read counts as one navigation against the same quota
-// when it is a whole-file or large read of source (limit absent or >
-// READ_FREE_LINES = 200 lines); ranged reads and anything under .ca-plans/,
-// .claude/, .agents/, docs/ or outside the project stay free — no-huge-reads.mjs is the separate hard
+// `( … ) > file` group is one redirect, not N statements. A Bash statement
+// whose path arguments are ALL under HARNESS_DIRS (.claude/, .agents/, docs/,
+// scripts/, .specs/, .ca-plans/) does not count either: the quota exists to
+// push exploration of PRODUCT code to repo-scout, while editing the harness
+// itself is work the main thread does directly; a statement with no path
+// argument, or with one path outside the list, counts as before.
+// A heavy command (test, typecheck, lint, build, contract regen) has no quota on the
+// main thread: it always goes to shell-runner, which returns the exit code and
+// literal failures with the log in a file.
+// Statements are split outside quotes and heredoc bodies
+// (lib/shell-statements.mjs), so a commit message that mentions `tree` or
+// `pnpm test` is text, not a command. A piped command is classified by its
+// first command only (a filter after a pipe like `| tail` or `| head`
+// reduces what enters the context, it isn't navigation); the redirect-to-file
+// check still runs on the whole statement.
+// A Read counts as one navigation against the same quota when it is a
+// whole-file or large read of source (limit absent or > READ_FREE_LINES = 200
+// lines); ranged reads and anything under .specs/, .ca-plans/, .claude/,
+// .agents/, docs/ or outside the project stay free — no-huge-reads.mjs is the separate hard
 // size cap, this is only the delegate-or-not budget.
 // Output redirected to a file (`> log`) does not enter the context and passes.
 // Every Read also counts BYTES against a budget — READ_BYTES_FREE_PER_TURN on
 // the main thread, reset each user turn; READ_BYTES_FREE_PER_AGENT inside an
 // enforced subagent, for its whole life — whatever the directory and ranged or
 // not; the free-dir exemption above is for the navigation COUNT only. Measured
-// 2026-08-20 over the bytes the main window Read after delegating Execute:
-// `.ca-plans` 50% (`STATE.md` alone 577 KB over 31 reads), skill references read
-// whole 23%, chained ranged reads paging through one file 22%; code 3%. A
-// ranged read is priced by the byte length of its lines (files over 2 MB are
-// estimated from the average line length of the first 2 MB); a whole read by
-// the file size. Over budget, the read is blocked with the cheap path.
+// 2026-08-20 on the sibling harness over the bytes the main window Read after
+// delegating Execute: `.specs` 50% (`STATE.md` alone 577 KB over 31 reads),
+// skill references read whole 23%, chained ranged reads paging through one
+// file 22%; code 3%. A ranged read is priced by the byte length of its lines
+// (files over 2 MB are estimated from the average line length of the first
+// 2 MB); a whole read by the file size. Over budget, the read is blocked with
+// the cheap path.
 // Escape hatch for debugging the harness itself: PLATFORM_DELEGATE_OFF=1.
 // Harness tooling — not app code.
 import {
@@ -81,6 +77,7 @@ import {
 } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { firstSegment, statements } from "./lib/shell-statements.mjs"
 
 const NAV_FREE_PER_TURN = 4
 const RUN_FREE_PER_TURN = 0
@@ -88,15 +85,16 @@ const READ_FREE_LINES = 200
 const READ_BYTES_FREE_PER_TURN = 48_000
 const READ_BYTES_FREE_PER_AGENT = 120_000
 const READ_SCAN_CAP = 2 * 1024 * 1024
-const READ_FREE_DIRS = [".ca-plans", ".claude", ".agents", "docs"]
+const READ_FREE_DIRS = [".specs", ".ca-plans", ".claude", ".agents", "docs"]
 const HARNESS_DIRS = [
   ".claude",
   ".agents",
-  ".agents/skills",
+  "docs",
   "scripts",
+  ".specs",
   ".ca-plans",
 ]
-const ENFORCED_AGENTS = new Set([])
+const ENFORCED_AGENTS = new Set(["spec-worker", "spec-verifier"])
 
 const NAV_CMDS = new Set([
   "grep",
@@ -120,8 +118,18 @@ const NAV_CMDS = new Set([
 ])
 const LISTING_CMDS = new Set(["ls", "stat", "file", "wc"])
 const SCOPED_LISTING_CMDS = new Set(["fd", "find"])
-const RUN_CMDS = new Set(["vitest", "tsc", "eslint", "turbo", "playwright"])
-const RUN_PNPM_SCRIPTS = /^(test(:\w+)?|typecheck|check|lint(:\w+)?|build)$/
+const RUN_CMDS = new Set([
+  "jest",
+  "vitest",
+  "tsc",
+  "eslint",
+  "turbo",
+  "playwright",
+  "next",
+  "nest",
+])
+const RUN_PNPM_SCRIPTS =
+  /^(test(:\w+)?|typecheck|check(:\w+)?|lint(:\w+)?|build|contract(:check)?)$/
 
 const stateFile = (sessionId) =>
   path.join(tmpdir(), `platform-delegate-${sessionId}.json`)
@@ -190,6 +198,44 @@ const stripRedirectedGroup = (command) => command.replace(REDIRECTED_GROUP, "")
 
 const unquote = (token) => token.replace(/^['"]|['"]$/g, "")
 
+// repo-relative form of a path argument; '' when it points outside the repo or at its root
+const repoRel = (token) => {
+  const rel = path.relative(projectDir, path.resolve(cwd, token))
+  return !rel || rel.startsWith("..") || path.isAbsolute(rel) ? "" : rel
+}
+
+// path-like arguments of a segment: a token with a `/`, or a dotted name that
+// exists on disk (`ls .claude`); `git show HEAD:<path>` keeps only the path.
+// A pattern that happens to look like a path (`grep 'a/b'`) is counted as one —
+// the error falls on the safe side, which is the quota staying in force.
+const pathArgs = (rest) =>
+  rest
+    .map(unquote)
+    .filter((token) => token && !token.startsWith("-"))
+    .map((token) => {
+      const colon = token.indexOf(":")
+      const suffix = colon > 0 ? token.slice(colon + 1) : ""
+      return suffix.includes("/") || suffix.startsWith(".") ? suffix : token
+    })
+    .filter(
+      (token) =>
+        token.includes("/") ||
+        (token.startsWith(".") && existsSync(path.resolve(cwd, token)))
+    )
+
+// every path argument under HARNESS_DIRS, and there is at least one
+const harnessScoped = (rest) => {
+  const args = pathArgs(rest)
+  if (args.length === 0) return false
+  return args.every((token) => {
+    const rel = repoRel(token)
+    return (
+      rel !== "" &&
+      HARNESS_DIRS.some((dir) => rel === dir || rel.startsWith(`${dir}/`))
+    )
+  })
+}
+
 const isRecursiveListing = (rest) =>
   rest.some((a) => a === "--recursive" || /^-[a-zA-Z]*R/.test(a))
 
@@ -204,44 +250,6 @@ const scopedToRepoDir = (rest) =>
       return false
     }
   })
-
-// path-like arguments of a segment: a token with a `/`, or a dotted name that
-// exists on disk (`ls .claude`); `git show HEAD:<path>` keeps only the path.
-// A pattern that happens to look like a path (`grep 'a/b'`) is counted as one —
-// the error falls on the safe side, which is the quota staying in force.
-const pathArgs = (rest) =>
-  rest
-    .map((token) => token.replace(/^['"]|['"]$/g, ""))
-    .filter((token) => token && !token.startsWith("-"))
-    .map((token) => {
-      const colon = token.indexOf(":")
-      const suffix = colon > 0 ? token.slice(colon + 1) : ""
-      return suffix.includes("/") || suffix.startsWith(".") ? suffix : token
-    })
-    .filter(
-      (token) =>
-        token.includes("/") ||
-        (token.startsWith(".") && existsSync(path.resolve(cwd, token)))
-    )
-
-// repo-relative form of a path argument; '' when it points outside the repo
-const repoRel = (token) => {
-  const rel = path.relative(projectDir, path.resolve(cwd, token))
-  return !rel || rel.startsWith("..") || path.isAbsolute(rel) ? "" : rel
-}
-
-// every path argument under HARNESS_DIRS, and there is at least one
-const harnessScoped = (rest) => {
-  const args = pathArgs(rest)
-  if (args.length === 0) return false
-  return args.every((token) => {
-    const rel = repoRel(token)
-    return (
-      rel !== "" &&
-      HARNESS_DIRS.some((dir) => rel === dir || rel.startsWith(`${dir}/`))
-    )
-  })
-}
 
 const pnpmScript = (rest) => {
   let i = 0
@@ -260,19 +268,16 @@ const pnpmScript = (rest) => {
   return rest[i] ?? ""
 }
 
-// A statement is split on &&, ||, ; and newline; the redirect-to-file check
-// runs on the whole statement. Within a statement, only the first pipe segment
-// is classified — a filter after a pipe (`| tail`, `| head`, `| grep`) reduces
-// what enters the context, it doesn't add navigation. A navigation statement
-// scoped to HARNESS_DIRS is skipped, so a compound command only counts when at
-// least one of its statements navigates outside the harness.
+// A statement is split on &&, ||, ; and newline — outside quotes and heredoc
+// bodies (lib/shell-statements.mjs); the redirect-to-file check runs on the
+// whole statement. Within a statement, only the first pipe segment is
+// classified — a filter after a pipe (`| tail`, `| head`, `| grep`) reduces
+// what enters the context, it doesn't add navigation.
 const classify = (command) => {
-  for (const statement of stripRedirectedGroup(command).split(/&&|\|\||;|\n/)) {
-    const stmt = statement.trim()
-    if (!stmt) continue
+  for (const stmt of statements(stripRedirectedGroup(command))) {
     if (redirectsToFile(stmt)) continue
 
-    const firstSeg = stmt.split("|")[0].trim()
+    const firstSeg = firstSegment(stmt)
     const tokens = firstSeg.split(/\s+/).filter(Boolean)
     if (tokens.length === 0) continue
     const { cmd, rest } = head(tokens)
@@ -390,7 +395,7 @@ if (tool === "Grep" || tool === "Glob") {
   if (used + bytes > budget) {
     block(
       `Read budget ${data.agent_id ? `for this ${data.agent_type}` : "for this turn"} exhausted (${kb(used)} KB of ${kb(budget)} KB; this read adds ${kb(bytes)} KB — \`${filePath}\`).
-Paging through a file by ranges is a whole-file read in instalments: ask \`repo-scout\` (sonnet) for the section or the answer and read only the range it names; for \`.ca-plans/<run>/plan*.md\` read one section (\`grep -n '^## '\` first); the skill's references have cards (\`references/cards/*.md\`) — read the card, not the reference.
+Paging through a file by ranges is a whole-file read in instalments: ask \`repo-scout\` (sonnet) for the section or the answer and read only the range it names; for \`.ca-plans/<run>/plan*.md\` or \`.specs/STATE.md\` read one section (\`grep -n '^## '\` first); the skill's references have cards (\`references/cards/*.md\`) — read the card, not the reference.
 `
     )
   }
@@ -427,7 +432,7 @@ if (kind === "nav") {
     block(
       `Direct navigation blocked (#${state.nav} in this turn; ${NAV_FREE_PER_TURN} free) — \`Read ${summarize(target)}\`.
 Whole-file source read: delegate — Agent(subagent_type: "repo-scout", model: "haiku", prompt: "<where is X / what does Y contain>") returns file:line, then Read the range.
-Free: Read with limit <= ${READ_FREE_LINES}; anything under .ca-plans/, .claude/, .agents/, docs/.
+Free: Read with limit <= ${READ_FREE_LINES}; anything under .specs/, .ca-plans/, .claude/, .agents/, docs/.
 `
     )
   }

@@ -7,7 +7,8 @@ description: How a change gets from idea to main in this repo — sizing a task,
 
 How a change gets from idea to `main` in this repo. Code rules live in
 `.agents/skills/code-quality/SKILL.md`; this file is only about the mechanics around
-them.
+them. `main` here means the repo's default branch — `main` or `master`; the hooks resolve
+it (`PLATFORM_MAIN_BRANCH`, then `origin/HEAD`, then whichever of the two exists).
 
 ## Commands (from the repo root)
 
@@ -21,6 +22,7 @@ pnpm contract               Zod → openapi.json → Kubb client
 pnpm contract:consumers     which screens consume an operationId/route
 pnpm contract:diff          readable pt-BR summary of an openapi.json change
 pnpm skills:sync            re-link .claude/skills → .agents/skills
+pnpm harness:test           the Claude Code hook tests (.claude/hooks/__tests__) — seconds, no Docker
 pnpm platform module add    install a catalog entry into this product
 pnpm platform status        template installed vs latest tag, lock modules, pending advisories
 pnpm platform feedback      prepare an upstream issue for a platform defect (skill platform-feedback)
@@ -120,7 +122,7 @@ file you didn't create signals another session in flight, not your mess to delet
 
 **Pre-push (lefthook).** `git push` runs, in order, `migrations` (journal check) →
 `typecheck` (`turbo typecheck`) → `test-coverage` (`pnpm test:coverage`, all four Vitest
-projects), and fails on the first failing step — it blocks before the Docker build.
+projects) → `harness` (`pnpm harness:test`), and fails on the first failing step — it blocks before the Docker build.
 Self-installs on `pnpm install` (`prepare` script). Emergency escape: `git push --no-verify`
 (the prod build still typechecks).
 
@@ -135,5 +137,5 @@ A **local commit triggers neither gate.** Run `pnpm check` before asking for rev
 
 **Deploy.** A push to `main` fires whatever hook the product's environment configures —
 push = deploy (`docs/dev/deploy.md#deploy-flow`, operational access in
-`.agents/skills/infra/SKILL.md.jinja`). An agent never pushes `main` on its own and never moves a deploy
+`.agents/skills/infra/SKILL.md`). An agent never pushes `main` on its own and never moves a deploy
 branch — those are the user's acts; the agent stops at the local commit and says so.

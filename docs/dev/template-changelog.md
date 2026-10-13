@@ -4,6 +4,25 @@ Version truth = git tag + this entry (AD-006); `package.json` is not bumped on
 release. Each version lists the contract-breaking changes and the steps for the child
 to apply on `copier update`.
 
+## v4.1.0
+
+The Claude Code harness a child ported from a sibling repo comes back into the template, with its tests. Nothing in the kernel or the catalog moves.
+
+### Changes
+
+1. **New hooks.** `main-sync-guard` (+ `lib/main-sync.mjs`; default branch from `PLATFORM_MAIN_BRANCH` → `origin/HEAD` → `main`|`master`; also lefthook `post-commit`/`post-merge`), `heavy-run-guard` (+ `lib/heavy-runs.mjs`; Linux `/proc/meminfo` before macOS `memory_pressure`), `commit-no-stubs`, `claim-evidence` (Stop), `wave-plan-check` (back from v4.0.0; also `.ca-plans/<slug>/plan*.md`), `lib/shell-statements.mjs`.
+2. **Dev-server cleanup is session-scoped** (`CLAUDE_CODE_SESSION_ID` via `/proc/<pid>/environ`): Linux tty `?`, the never-list matched by binary, and a candidate must be a JS runtime or docker — a shell that merely names vite's entry is never killed.
+3. **Changed hooks.** `delegate-to-subagent` (statement split outside quotes/heredocs, `ENFORCED_AGENTS` = `spec-worker`/`spec-verifier`, `.specs/` free), `subagent-model-required` (four-agent guide, opus escalation-only), `comment-policy` (unsourced-narrative nudge), `dispatch-log` (fallback `~/.claude/<repo>-dispatch-log.jsonl`).
+4. **Hook tests ship**: `.claude/hooks/__tests__/`, `pnpm harness:test`, pre-push `harness`.
+5. **Agents and skills.** `ca-spec-driven` with `spec-worker`/`spec-verifier` returns beside `ca-full-cycle`; `ca-full-cycle` gains § 3.5 (QA retro + `LESSONS.md`); `repo-scout` returns VERIFIED / NOT FOUND / HYPOTHESIS; `creating-issues` drops the triage mode and the boilerplate area labels (`gh label list`); router rows for `ca-spec-driven`, `domain-modeling`, `creating-issues`; rendered docs name rendered paths, never `.jinja`.
+
+### Child migration steps (copier update from v4.0.1)
+
+1. `copier update --trust` — a product that already ported these files by hand takes the template side and keeps only its product-specific lines.
+2. `pnpm skills:sync` — links `.claude/skills/ca-spec-driven`.
+3. `lefthook install` — activates `post-commit`/`post-merge` (`prepare` also does it on the next `pnpm install`).
+4. `pnpm harness:test` — the hook suite must be green.
+
 ## v4.0.1
 
 Patch release: two fixes in the platform CLI's module-rollback path and one determinism fix

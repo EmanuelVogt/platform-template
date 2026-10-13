@@ -55,15 +55,17 @@ sends the file clicked in the file tree to it. It needs, on the machine:
   `git clone git@github.com:EmanuelVogt/nvim-config.git ~/.config/nvim`, then
   `nvim --headless "+Lazy! install" +qa`; mason installs the language servers on first start.
 - The launchers the mod calls, `nvim-claude` (Neovim listening on one socket per git
-  toplevel) and `nvim-claude-ctl` (`open | close | toggle | edit <file> [line]`), both on
-  `PATH`. Not versioned anywhere yet — copy them from a machine where the button works.
+  toplevel) and `nvim-claude-ctl` (`open | close | toggle | edit <file> [line]`), ship in
+  that config's `~/.config/nvim/bin/`; symlink both onto `PATH`.
 
 After `open`, the mod waits for Neovim's IDE lock (`~/.claude/ide/<port>.lock`) and runs
 `/ide`; confirm with ↑ then Enter. `/ide` only lists an editor that is already open.
 
-Optional, same status as the launchers: the zellij tab shows the conversation title and state
-through user-scope hooks in `~/.claude/settings.json` (`zj-tabtitle`, `zj-claude-estado`,
-`retomar-conversas`, all on `PATH`) and a `claude()` wrapper at the end of `~/.zshrc`.
+Optional: the zellij tab shows the conversation title and state through user-scope hooks in
+`~/.claude/settings.json` (`zj-tabtitle`, `zj-claude-estado`, `retomar-conversas`) and a
+`claude()` wrapper at the end of `~/.zshrc`. Settings and scripts travel together in
+`git@github.com:EmanuelVogt/dotfiles-claude.git`, cloned as `~/.claude`, scripts in
+`~/.claude/bin/` symlinked onto `PATH`.
 
 ## 3. Checking a machine without opening a session
 
